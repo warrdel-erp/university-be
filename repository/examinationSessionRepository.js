@@ -492,35 +492,43 @@ export async function findCurriculumSubjectsByCourseAndTerm(
  * Term is already enforced by the curriculum subject list passed in.
  */
 export async function findMappedSubjectIdsForCourseSessionTerm(
-  { courseId, sessionId, subjectIds },
+  { courseId, sessionId, batchId, subjectIds },
   options = {},
 ) {
   if (!subjectIds.length) {
     return [];
   }
 
+  const where = {
+    subjectId: { [Op.in]: subjectIds },
+  };
+  if (batchId != null) {
+    where.batchId = Number(batchId);
+  }
+
   const rows = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
-    where: {
-      subjectId: { [Op.in]: subjectIds },
-    },
-    include: [
-      {
-        model: model.batchModel,
-        as: "batch",
-        attributes: ["batchId", "sessionId"],
-        where: sessionId ? { sessionId: Number(sessionId) } : undefined,
-        required: Boolean(sessionId),
-        include: [
-          {
-            model: model.sessionModel,
-            as: "session",
-            attributes: ["sessionId", "courseId"],
-            where: courseId ? { courseId: Number(courseId) } : undefined,
-            required: Boolean(courseId),
-          },
-        ],
-      },
-    ],
+    where,
+    include:
+      batchId != null
+        ? []
+        : [
+            {
+              model: model.batchModel,
+              as: "batch",
+              attributes: ["batchId", "sessionId"],
+              where: sessionId ? { sessionId: Number(sessionId) } : undefined,
+              required: Boolean(sessionId),
+              include: [
+                {
+                  model: model.sessionModel,
+                  as: "session",
+                  attributes: ["sessionId", "courseId"],
+                  where: courseId ? { courseId: Number(courseId) } : undefined,
+                  required: Boolean(courseId),
+                },
+              ],
+            },
+          ],
     attributes: ["subjectId"],
     transaction: options.transaction,
   });
@@ -1887,8 +1895,8 @@ export async function getDashboardOverviewStats({
     if (sessionId != null) resultClause.sessionId = sessionId;
     resultOr.push(resultClause);
 
-    if (courseId != null && sessionId != null) {
-      const key = `${sessionId}_${courseId}_${term}_${batchId || 0}`;
+    if (batchId != null || (courseId != null && sessionId != null)) {
+      const key = `${sessionId || 0}_${courseId || 0}_${term}_${batchId || 0}`;
       if (!groupSeen.has(key)) {
         groupSeen.add(key);
         studentGroups.push({

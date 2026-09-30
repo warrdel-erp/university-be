@@ -434,7 +434,13 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
   // Fetch terms for this session.
   const termQueryOptions = {
     where: { examinationSessionId },
-    attributes: ["term", "examinationSessionTermId", "courseId", "sessionId"],
+    attributes: [
+      "term",
+      "examinationSessionTermId",
+      "courseId",
+      "sessionId",
+      "batchId",
+    ],
     transaction,
   };
 
@@ -458,22 +464,27 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
 
   const termRows = await scoped(model.examinationSessionTermModel).findAll(termQueryOptions);
   const sessionTermNumbers = [];
+  const sessionBatchIds = [];
   const termToEstMap = {};
   for (const row of termRows) {
     const termNumber = Number(row.term);
     sessionTermNumbers.push(termNumber);
     termToEstMap[termNumber] = row.examinationSessionTermId;
+    if (row.batchId != null) {
+      sessionBatchIds.push(Number(row.batchId));
+    }
   }
 
   if (filterCombinations.length === 0) {
     const sessionCombMap = new Map();
     for (const row of termRows) {
-      if (row.courseId != null && row.sessionId != null) {
-        const key = `${row.courseId}_${row.sessionId}`;
+      if (row.batchId != null || (row.courseId != null && row.sessionId != null)) {
+        const key = `${row.courseId || 0}_${row.sessionId || 0}_${row.batchId || 0}`;
         if (!sessionCombMap.has(key)) {
           sessionCombMap.set(key, {
-            courseId: Number(row.courseId),
-            sessionId: Number(row.sessionId),
+            courseId: row.courseId != null ? Number(row.courseId) : null,
+            sessionId: row.sessionId != null ? Number(row.sessionId) : null,
+            batchId: row.batchId != null ? Number(row.batchId) : null,
             terms: [],
           });
         }
@@ -503,7 +514,10 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
   const expansion = await expandClassSectionTermIdsByTerms(
     sessionTermNumbers,
     academicYearId,
-    { transaction },
+    {
+      batchIds: sessionBatchIds.length > 0 ? sessionBatchIds : undefined,
+      transaction,
+    },
   );
   const termIds = expansion.classSectionTermIds;
   const termIdSet = new Set(termIds);
@@ -547,9 +561,17 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
 
       const termIdsForComb = [];
       for (const group of expandedGroups) {
+        const matchesCourse =
+          comb.courseId == null || group.courseId === Number(comb.courseId);
+        const matchesSession =
+          comb.sessionId == null || group.sessionId === Number(comb.sessionId);
+        const matchesBatch =
+          comb.batchId == null || group.batchId === Number(comb.batchId);
+
         if (
-          group.courseId === Number(comb.courseId) &&
-          group.sessionId === Number(comb.sessionId) &&
+          matchesCourse &&
+          matchesSession &&
+          matchesBatch &&
           termSet.has(group.term)
         ) {
           termIdsForComb.push(group.classSectionTermId);

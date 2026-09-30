@@ -1,4 +1,5 @@
-import * as curriculumBatchTermRepository from "../repository/curriculumBatchTermRepository.js";
+import { Op } from "sequelize";
+import * as model from "../models/index.js";
 import * as studentCountRepository from "../repository/studentCountRepository.js";
 import {
   buildTermCohortGroupKey,
@@ -6,34 +7,38 @@ import {
 } from "../utility/studentCount.js";
 
 async function enrichTermCohortGroups(groups, options = {}) {
-  const needIds = [];
+  const cstmIds = [];
   for (const g of groups) {
-    if (
-      g.curriculumBatchTermMappingId != null &&
-      (g.batchYear == null || g.yearNumber == null)
-    ) {
-      needIds.push(Number(g.curriculumBatchTermMappingId));
+    if (g.curriculumSubjectTermMappingId != null) {
+      cstmIds.push(Number(g.curriculumSubjectTermMappingId));
     }
   }
-  if (!needIds.length) return groups;
+  const uniqueCstmIds = [...new Set(cstmIds.filter(Boolean))];
+  if (!uniqueCstmIds.length) return groups;
 
-  const rows = await curriculumBatchTermRepository.findEnrichmentByIds(
-    needIds,
-    options,
-  );
+  const rows = await model.curriculumSubjectTermMappingModel.findAll({
+    where: { curriculumSubjectTermMappingId: { [Op.in]: uniqueCstmIds } },
+    attributes: ["curriculumSubjectTermMappingId", "term"],
+    raw: true,
+    transaction: options.transaction,
+  });
 
-  const byId = new Map();
+  const termByCstmId = new Map();
   for (const row of rows) {
-    byId.set(row.curriculumBatchTermMappingId, row);
+    termByCstmId.set(
+      Number(row.curriculumSubjectTermMappingId),
+      Number(row.term),
+    );
   }
 
   for (const g of groups) {
-    if (g.curriculumBatchTermMappingId == null) continue;
-    const ctx = byId.get(Number(g.curriculumBatchTermMappingId));
-    if (!ctx) continue;
-    g.term = ctx.term;
-    g.yearNumber = ctx.yearNumber;
-    g.batchYear = ctx.batchYear;
+    if (g.curriculumSubjectTermMappingId == null) continue;
+    const resolvedTerm = termByCstmId.get(
+      Number(g.curriculumSubjectTermMappingId),
+    );
+    if (resolvedTerm != null && !isNaN(resolvedTerm)) {
+      g.term = resolvedTerm;
+    }
   }
 
   return groups;
@@ -69,10 +74,27 @@ export async function getStudentCountMapByGroups(groups, options = {}) {
 
   await Promise.all(
     unique.map(async (g) => {
-      countMap.set(
-        buildTermCohortGroupKey(g),
-        await studentCountRepository.countTermCohortStudents(g, options),
+      const count = await studentCountRepository.countTermCohortStudents(
+        g,
+        options,
       );
+      countMap.set(buildTermCohortGroupKey(g), count);
+      if (g.curriculumSubjectTermMappingId && g.batchId) {
+        countMap.set(
+          `cstm_${Number(g.curriculumSubjectTermMappingId)}_batch_${Number(g.batchId)}`,
+          count,
+        );
+      }
+      if (g.batchId && g.term) {
+        countMap.set(`batch_${Number(g.batchId)}_term_${Number(g.term)}`, count);
+      }
+      const fallbackKey = [
+        g.sessionId || 0,
+        g.courseId || 0,
+        g.term || 0,
+        g.batchId || 0,
+      ].join("_");
+      countMap.set(fallbackKey, count);
     }),
   );
 

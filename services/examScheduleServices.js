@@ -108,9 +108,11 @@ export async function allocateSeatsByStrategy(examScheduleId, userId, strategy =
             cohort.term,
             cohort.academicYearId,
             {
+                batchId: cohort.batchId,
                 batchYear: cohort.batchYear,
                 yearNumber: cohort.yearNumber,
                 curriculumBatchTermMappingId: cohort.curriculumBatchTermMappingId,
+                curriculumSubjectTermMappingId: cohort.curriculumSubjectTermMappingId,
                 transaction,
             },
         );
@@ -260,15 +262,14 @@ export async function getExamScheduleStudents(filters) {
 
     if (!resolvedAcademicYearId) {
         const activeCtx = await resolveActiveAcademicYearContext();
-        resolvedAcademicYearId = activeCtx?.activeAcademicYearId || null;
+        resolvedAcademicYearId = activeCtx?.academicYearId || null;
     }
 
-    if (
-        resolvedSessionId == null ||
-        resolvedCourseId == null ||
-        resolvedTerm == null ||
-        resolvedAcademicYearId == null
-    ) {
+    const hasCohortContext =
+        (resolvedBatchId != null && resolvedTerm != null) ||
+        (resolvedSessionId != null && resolvedCourseId != null && resolvedTerm != null);
+
+    if (!hasCohortContext) {
         return {
             result: [],
             totalCount: 0,

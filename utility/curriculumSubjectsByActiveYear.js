@@ -13,24 +13,26 @@ import {
  * (e.g. 2026-07-01 → activeYear 2026).
  */
 export async function resolveActiveAcademicYearContext(options = {}) {
-  let academicYearId = getAcademicYearId();
+  const store = getTenantStore();
   let academicYear = null;
 
-  if (academicYearId) {
-    academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
-      academicYearId,
-      options,
-    );
-  }
-
-  if (!academicYear) {
-    const store = getTenantStore();
+  if (store?.instituteId) {
     const activeYears =
       await acedmicYearRepository.getActiveAcedmicYearByInstitute(
         store.instituteId,
         store.universityId,
       );
     academicYear = activeYears?.[0] || null;
+  }
+
+  if (!academicYear) {
+    const academicYearId = getAcademicYearId();
+    if (academicYearId) {
+      academicYear = await acedmicYearRepository.getSingleacedmicYearDetails(
+        academicYearId,
+        options,
+      );
+    }
   }
 
   if (!academicYear?.academicYearId || !academicYear?.startingDate) {
