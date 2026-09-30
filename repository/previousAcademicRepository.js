@@ -3,6 +3,7 @@ import sequelize from '../database/sequelizeConfig.js';
 import * as models from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 import { decimalAdd, decimalSubtract, toIntegerNumber } from '../utility/decimalMoney.js';
+import { studentClassSectionTermWithSectionInclude } from '../utility/classSectionIncludes.js';
 
 export async function findProgrammesWithSessions(filters = {}) {
   const courseWhere = { isActive: true };
@@ -263,46 +264,42 @@ export async function getAcademicRegulationCourseMappings(courseIds) {
 }
 
 export async function getAssessmentPlanSubjectMappings(batchTermMappingIds, courseIds, sessionId = null) {
-  const where = {};
-  const orConditions = [];
-
-  if (batchTermMappingIds.length > 0) {
-    orConditions.push({
-      curriculumBatchTermMappingId: { [Op.in]: batchTermMappingIds },
-    });
+  const planWhere = {};
+  if (Array.isArray(courseIds) && courseIds.length > 0) {
+    planWhere.courseId = { [Op.in]: courseIds.map(Number) };
   }
 
-  if (courseIds.length > 0) {
-    const nullTermWhere = {
-      curriculumBatchTermMappingId: null,
-      courseId: { [Op.in]: courseIds },
-    };
-    if (sessionId) {
-      nullTermWhere.sessionId = { [Op.or]: [Number(sessionId), null] };
-    }
-    orConditions.push(nullTermWhere);
-  }
-
-  if (orConditions.length === 0) {
-    return [];
-  }
-
-  if (orConditions.length === 1) {
-    Object.assign(where, orConditions[0]);
-  } else {
-    where[Op.or] = orConditions;
-  }
-
-  return scoped(models.assessmentPlanSubjectMappingModel).findAll({
-    where,
+  const rows = await scoped(models.assessmentPlanSubjectMappingModel).findAll({
+    include: [
+      {
+        model: models.assessmentPlanModel,
+        as: 'assessmentPlan',
+        required: true,
+        attributes: ['assessmentPlanId', 'courseId'],
+        where: Object.keys(planWhere).length > 0 ? planWhere : undefined,
+      },
+    ],
     attributes: [
       'assessmentPlanSubjectMappingId',
       'assessmentPlanId',
       'subjectId',
-      'curriculumBatchTermMappingId',
-      'courseId',
-      'sessionId',
+      'batchId',
+      'curriculumSubjectTermMappingId',
     ],
+  });
+
+  return rows.map((r) => {
+    const plain = r.get ? r.get({ plain: true }) : r;
+    return {
+      assessmentPlanSubjectMappingId: plain.assessmentPlanSubjectMappingId,
+      assessmentPlanId: plain.assessmentPlanId,
+      subjectId: plain.subjectId,
+      batchId: plain.batchId,
+      curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId,
+      courseId: plain.assessmentPlan?.courseId || null,
+      sessionId: sessionId ? Number(sessionId) : null,
+      curriculumBatchTermMappingId: null,
+    };
   });
 }
 
@@ -567,6 +564,92 @@ export async function findStudentsByCourseBatch(courseId, batchYear, sessionId, 
   });
 }
 
+/**
+ * Get student list by batchId + year.
+ * Filters students by batchId, year (study year number or academic year), and optional filters (sessionId, courseId).
+ */
+export async function findStudentsByBatchAndYear(batchId, year = null, options = {}) {
+  const bId = Number(batchId);
+  if (!bId) {
+    return [];
+  }
+
+  const where = {
+    batchId: bId,
+  };
+  if (options.sessionId) {
+    where.sessionId = Number(options.sessionId);
+  }
+  if (options.courseId) {
+    where.courseId = Number(options.courseId);
+  }
+
+  const sectionWhere = {};
+  if (year != null && year !== '') {
+    const yNum = Number(year);
+    if (!Number.isNaN(yNum)) {
+      if (yNum <= 10) {
+        // Study year: 1st year, 2nd year, etc.
+        sectionWhere.year = yNum;
+      } else {
+        // Calendar / batch year: e.g. 2025, 2026
+        sectionWhere[Op.or] = [
+          { activeYear: yNum },
+          { '$students.batch_year$': yNum },
+        ];
+      }
+    }
+  }
+
+  return scoped(models.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findAll({
+    where,
+    attributes: [
+      'studentId',
+      'firstName',
+      'middleName',
+      'lastName',
+      'enrollNumber',
+      'scholarNumber',
+      'batchId',
+      'batchYear',
+      'classSectionTermId',
+      'sessionId',
+    ],
+    include: [
+      {
+        model: models.batchModel,
+        as: 'batch',
+        required: false,
+        attributes: ['batchId', 'batch', 'sessionId'],
+      },
+      studentClassSectionTermWithSectionInclude({
+        includeSectionTerms: false,
+        termRequired: false,
+        sectionRequired: Object.keys(sectionWhere).length > 0,
+        sectionWhere: Object.keys(sectionWhere).length > 0 ? sectionWhere : undefined,
+        sectionAttributes: ['classSectionsId', 'year', 'batchId', 'activeYear'],
+      }),
+      {
+        model: models.sessionModel,
+        as: 'studentSession',
+        required: false,
+        attributes: ['sessionId', 'sessionName'],
+        where: buildScope(models.sessionModel, {
+          scopeConfig: { academicYear: false },
+        }),
+      },
+    ],
+    order: [
+      ['scholarNumber', 'ASC'],
+      ['enrollNumber', 'ASC'],
+      ['firstName', 'ASC'],
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function findStudentsWithTermResultItems(
   courseId,
   batchYear,
@@ -651,30 +734,18 @@ export async function findAssessmentPlanSubjectsForTerm(
   sessionId,
   courseId = null,
 ) {
-  const orConditions = [{ curriculumBatchTermMappingId }];
-
+  const planWhere = {};
   if (courseId) {
-    const nullTermWhere = {
-      curriculumBatchTermMappingId: null,
-      courseId: Number(courseId),
-    };
-    if (sessionId) {
-      nullTermWhere.sessionId = { [Op.or]: [Number(sessionId), null] };
-    }
-    orConditions.push(nullTermWhere);
+    planWhere.courseId = Number(courseId);
   }
 
-  const where = orConditions.length === 1 ? orConditions[0] : { [Op.or]: orConditions };
-
-  return scoped(models.assessmentPlanSubjectMappingModel).findAll({
-    where,
+  const rows = await scoped(models.assessmentPlanSubjectMappingModel).findAll({
     attributes: [
       'assessmentPlanSubjectMappingId',
       'assessmentPlanId',
       'subjectId',
-      'curriculumBatchTermMappingId',
-      'courseId',
-      'sessionId',
+      'batchId',
+      'curriculumSubjectTermMappingId',
     ],
     include: [
       {
@@ -687,10 +758,13 @@ export async function findAssessmentPlanSubjectsForTerm(
         model: models.assessmentPlanModel,
         as: 'assessmentPlan',
         required: true,
-        attributes: ['assessmentPlanId', 'planName', 'planCode', 'gradingId', 'regulationId'],
-        where: buildScope(models.assessmentPlanModel, {
-          scopeConfig: { academicYear: false },
-        }),
+        attributes: ['assessmentPlanId', 'planName', 'planCode', 'gradingId', 'regulationId', 'courseId'],
+        where: {
+          ...buildScope(models.assessmentPlanModel, {
+            scopeConfig: { academicYear: false },
+          }),
+          ...(Object.keys(planWhere).length > 0 ? planWhere : {}),
+        },
         include: [
           gradingSchemeInclude(),
           academicRegulationInclude(false),
@@ -719,6 +793,7 @@ export async function findAssessmentPlanSubjectsForTerm(
       },
     ],
   });
+  return rows;
 }
 
 export async function findSubjectTermMappingsByCurriculumTerm(curriculumId, term) {
