@@ -817,12 +817,16 @@ async function loadTermMarksContext(curriculumBatchTermMappingId, sessionId = nu
   const courseId = Number(curriculum.courseId);
   const curriculumId = Number(curriculum.curriculumId);
   const term = Number(termMapping.term);
+  const batchId = batchMapping?.batchId || batchMapping?.batch?.batchId;
+  const year = termMapping.yearNumber ?? termMapping.year ?? batch;
 
-  const studentRows = await previousAcademicRepository.findStudentsByCourseBatch(
-    courseId,
-    batch,
-    sessionId,
-  );
+  const studentRows = batchId
+    ? await getStudentsByBatchAndYear(batchId, year, { sessionId, courseId })
+    : await previousAcademicRepository.findStudentsByCourseBatch(
+        courseId,
+        batch,
+        sessionId,
+      );
   const assessmentPlanSubjectMappings =
     await previousAcademicRepository.findAssessmentPlanSubjectsForTerm(
       curriculumBatchTermMappingId,
@@ -938,6 +942,10 @@ export async function getTermMarksTemplate(curriculumBatchTermMappingId, session
     students: context.students,
     subjects: context.subjects,
   };
+}
+
+export async function getStudentsByBatchAndYear(batchId, year = null, options = {}) {
+  return previousAcademicRepository.findStudentsByBatchAndYear(batchId, year, options);
 }
 
 function buildStudentTermReview(student, context) {
@@ -1786,12 +1794,16 @@ export async function getTermSubjects(curriculumBatchTermMappingId, sessionId = 
   const courseId = Number(curriculum.courseId);
   const curriculumId = Number(curriculum.curriculumId);
   const term = Number(termMapping.term);
+  const batchId = batchMapping?.batchId || batchMapping?.batch?.batchId;
+  const year = termMapping.yearNumber ?? termMapping.year ?? batch;
 
-  const studentRows = await previousAcademicRepository.findStudentsByCourseBatch(
-    courseId,
-    batch,
-    sessionId,
-  );
+  const studentRows = batchId
+    ? await getStudentsByBatchAndYear(batchId, year, { sessionId, courseId })
+    : await previousAcademicRepository.findStudentsByCourseBatch(
+        courseId,
+        batch,
+        sessionId,
+      );
   const curriculumSubjectTermMappings =
     await previousAcademicRepository.findSubjectTermMappingsByCurriculumTerm(
       curriculumId,
