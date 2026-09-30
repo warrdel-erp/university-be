@@ -1,8 +1,6 @@
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
-import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
-import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
 import {
   lookupStudentCount,
@@ -21,8 +19,6 @@ import {
   EXAM_SCHEDULE_FILTER_STATUS,
   QUESTION_STATUS,
   ELIGIBILITY_STATUS,
-  ELIGIBILITY_STATUS_LABEL,
-  HALL_TICKET_STUDENT_QUERY_PURPOSE,
 } from "../constant.js";
 import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
 import { AUDIT_EVENTS } from "../const/auditEvents.js";
@@ -513,38 +509,76 @@ async function getAssessmentPlanIds(examSetupTypeId, options = {}) {
   );
 }
 
+
 async function initializeEligibilityRecords(
   examinationSessionId,
-  defaultAcademicYearId,
+  termRows,
   transaction,
 ) {
-  const session =
-    await examinationSessionRepository.getExaminationSessionById(
-      examinationSessionId,
-      { transaction },
-    );
-  if (!session) return;
+  if (!termRows || !termRows.length) return;
 
-  let academicYearId = Number(
-    defaultAcademicYearId != null
-      ? defaultAcademicYearId
-      : session.academicYearId,
-  );
-  if (!academicYearId) {
-    const activeYear = await scoped(model.acedmicYearModel).findOne({
-      where: { isActive: true },
+  // Collect all classSectionTermIds by querying class_section_term joined to
+  // class_sections on batchId + term. This avoids the academicYearId dependency.
+  const allClassSectionTermIds = [];
+  const seenCstIds = new Set();
+
+  for (const termRow of termRows) {
+    const batchId = termRow.batchId != null ? Number(termRow.batchId) : null;
+    const term = termRow.term != null ? Number(termRow.term) : null;
+    if (!batchId || !term) continue;
+
+    const cstRows = await model.classSectionTermModel.findAll({
+      attributes: ["classSectionTermId"],
+      where: { term },
+      include: [
+        {
+          model: model.classSectionModel,
+          as: "classSection",
+          attributes: [],
+          required: true,
+          where: { batchId },
+        },
+      ],
+      raw: true,
       transaction,
     });
-    academicYearId = activeYear ? Number(activeYear.academicYearId) : 1;
+
+    for (const row of cstRows) {
+      const cstId = Number(row.classSectionTermId);
+      if (!seenCstIds.has(cstId)) {
+        seenCstIds.add(cstId);
+        allClassSectionTermIds.push(cstId);
+      }
+    }
   }
 
-  const rawStudentsList =
-    await studentHallTicketRepository.getStudentsByExaminationSessionId(
-      examinationSessionId,
-      { purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC, academicYearId },
-      transaction,
-    );
-  if (!rawStudentsList || !rawStudentsList.length) return;
+  if (!allClassSectionTermIds.length) return;
+
+  // Also gather student IDs from history for these classSectionTermIds.
+  const historyRows = await model.studentClassSectionsHistoryModel.findAll({
+    attributes: ["studentId"],
+    where: { classSectionTermId: { [Op.in]: allClassSectionTermIds } },
+    raw: true,
+    transaction,
+  });
+  const historyStudentIds = historyRows.map((r) => Number(r.studentId));
+
+  // Fetch students whose current classSectionTermId is in the set.
+  const studentRows = await scoped(model.studentModel).findAll({
+    attributes: ["studentId", "universityId", "instituteId"],
+    where: {
+      [Op.or]: [
+        { classSectionTermId: { [Op.in]: allClassSectionTermIds } },
+        ...(historyStudentIds.length
+          ? [{ studentId: { [Op.in]: historyStudentIds } }]
+          : []),
+      ],
+    },
+    raw: true,
+    transaction,
+  });
+
+  if (!studentRows.length) return;
 
   const existingMap =
     await examinationSessionEligibilityRepo.getEligibilityStatusesMap(
@@ -555,43 +589,18 @@ async function initializeEligibilityRecords(
   const eligibilityRecords = [];
   const seenStudentIds = new Set();
 
-  for (const raw of rawStudentsList) {
-    const student = raw.student;
-    if (!student) continue;
+  for (const student of studentRows) {
     const studentId = Number(student.studentId);
     if (!studentId || seenStudentIds.has(studentId) || existingMap.has(studentId)) continue;
     seenStudentIds.add(studentId);
 
-    let initialStatus = ELIGIBILITY_STATUS.REVIEW;
-    let reviewReason = null;
-    try {
-      const calculated =
-        examinationSessionEligibilityServices.calculateStudentEligibility(raw);
-      if (calculated.eligibilityStatus === ELIGIBILITY_STATUS_LABEL.READY) {
-        initialStatus = ELIGIBILITY_STATUS.READY;
-      } else {
-        reviewReason = calculated.reasonText;
-        if (
-          !reviewReason &&
-          calculated.reviewReasons &&
-          calculated.reviewReasons.length > 0
-        ) {
-          reviewReason = calculated.reviewReasons[0].message;
-        }
-      }
-    } catch (_error) {
-      initialStatus = ELIGIBILITY_STATUS.REVIEW;
-      reviewReason = null;
-    }
-
     eligibilityRecords.push({
-      universityId: student.universityId || session.universityId,
-      instituteId: student.instituteId || session.instituteId,
-      academicYearId,
+      universityId: student.universityId,
+      instituteId: student.instituteId,
       studentId,
       examinationSessionId: Number(examinationSessionId),
-      status: initialStatus,
-      reviewReason,
+      status: ELIGIBILITY_STATUS.REVIEW,
+      reviewReason: null,
     });
   }
 
@@ -650,7 +659,7 @@ export async function createExaminationSession(sessionData, options = {}) {
       );
       await initializeEligibilityRecords(
         record.examinationSessionId,
-        mainData.academicYearId,
+        termsToCreate,
         transaction,
       );
     }
@@ -736,6 +745,7 @@ export async function updateExaminationSession(
       );
     }
 
+    let newTermsForEligibility = [];
     if (Array.isArray(terms) && terms.length) {
       const existingTerms =
         await examinationSessionRepository.findExaminationSessionTerms(
@@ -783,14 +793,17 @@ export async function updateExaminationSession(
           termsToCreate,
           tx,
         );
+        newTermsForEligibility = termsToCreate;
       }
     }
 
-    await initializeEligibilityRecords(
-      sessionId,
-      mainUpdateData.academicYearId,
-      transaction,
-    );
+    if (newTermsForEligibility.length) {
+      await initializeEligibilityRecords(
+        sessionId,
+        newTermsForEligibility,
+        transaction,
+      );
+    }
 
     return getExaminationSessionById(sessionId, tx);
   });
