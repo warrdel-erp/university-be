@@ -136,7 +136,7 @@ export async function getExamScheduleById(examScheduleId, options = {}) {
                                 {
                                     model: model.studentModel,
                                     as: "student",
-                                    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
+                                    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber", "admissionNumber"],
                                 },
                             ],
                         },

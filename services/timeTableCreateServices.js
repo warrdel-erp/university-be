@@ -4734,7 +4734,7 @@ export async function getRoutineByTeacherAndAcademicYear(
       weekStart,
       weekEnd,
       batchId,
-      publishedOnly: options.publishedOnly === true,
+      publishedOnly: options.publishedOnly !== false,
     },
   );
 
@@ -5166,7 +5166,7 @@ function getSectionRoutineNavigationBounds(routines) {
     return { navStart: publishedStart, navEnd: publishedEnd };
   }
 
-  return { navStart: anyStart, navEnd: anyEnd };
+  return { navStart: null, navEnd: null };
 }
 
 function routineContainsDate(routine, date) {
@@ -5197,7 +5197,6 @@ function isDateWithinRange(date, rangeStart, rangeEnd) {
 
 function pickSectionRoutineForWeek(routines, week, anchorDate) {
   const publishedMatches = [];
-  const draftMatches = [];
 
   for (const routine of routines) {
     const plain = routine.get ? routine.get({ plain: true }) : routine;
@@ -5206,25 +5205,22 @@ function pickSectionRoutineForWeek(routines, week, anchorDate) {
     }
     if (plain.isPublish) {
       publishedMatches.push(routine);
-      continue;
     }
-    draftMatches.push(routine);
   }
 
-  const pool = publishedMatches.length ? publishedMatches : draftMatches;
-  if (!pool.length) {
+  if (!publishedMatches.length) {
     return null;
   }
 
   if (anchorDate) {
-    for (const routine of pool) {
+    for (const routine of publishedMatches) {
       if (routineContainsDate(routine, anchorDate)) {
         return routine;
       }
     }
   }
 
-  return pool[0];
+  return publishedMatches[0];
 }
 
 function buildRoutinePeriodGrid(
@@ -5488,9 +5484,10 @@ export async function getDateWiseCellsBySection(
   }
 
   const routines =
-    await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(
-      scope,
-    );
+    await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository({
+      ...scope,
+      isPublish: true,
+    });
 
   // console.log("termRow:", termRow);
   // console.log("courseRow:", courseRow?.courseName);
@@ -5533,6 +5530,7 @@ export async function getDateWiseCellsBySection(
         [timeTableNameId],
         null,
         [selectedRoutine],
+        { isPublish: true },
       );
     const toDateStr = (d) => (d ? new Date(d).toISOString().split("T")[0] : "");
     const selectedStart = toDateStr(plainSelected.startingDate);

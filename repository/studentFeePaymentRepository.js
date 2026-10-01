@@ -220,6 +220,7 @@ async function findStudentIdsMatchingPaymentSearch(search, options = {}) {
         { lastName: pattern },
         { scholarNumber: pattern },
         { enrollNumber: pattern },
+        { admissionNumber: pattern },
         { email: pattern },
         { mobileNumber: pattern },
       ],
@@ -305,6 +306,7 @@ export async function findStudentForPaymentDetails(studentId, options = {}) {
       "email",
       "mobileNumber",
       "enrollNumber",
+      "admissionNumber",
       "courseId",
       "sessionId",
       "batchId",
@@ -423,6 +425,7 @@ export async function findStudentsByIdsForPaymentList(studentIds, options = {}) 
       "email",
       "mobileNumber",
       "enrollNumber",
+      "admissionNumber",
     ],
     include: [
       {
@@ -455,6 +458,7 @@ export async function findStudentCourseSessionById(studentId, options = {}) {
       "email",
       "mobileNumber",
       "enrollNumber",
+      "admissionNumber",
     ],
     include: [
       {

@@ -54,7 +54,7 @@ export async function getAdminRegisterStudent() {
           model: model.studentModel,
           as: "studentDetails",
           required: true,
-          attributes: ["studentId", "scholarNumber", "enrollNumber", "firstName"],
+          attributes: ["studentId", "scholarNumber", "enrollNumber", "admissionNumber", "firstName"],
           where: buildScope(model.studentModel),
           include: [
             {

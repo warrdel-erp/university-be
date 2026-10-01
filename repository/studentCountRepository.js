@@ -132,6 +132,7 @@ export async function findTermCohortStudents(group, options = {}) {
       { middleName: { [Op.like]: like } },
       { scholarNumber: { [Op.like]: like } },
       { enrollNumber: { [Op.like]: like } },
+      { admissionNumber: { [Op.like]: like } },
       { fatherName: { [Op.like]: like } },
     ];
   }
@@ -144,6 +145,7 @@ export async function findTermCohortStudents(group, options = {}) {
       "lastName",
       "scholarNumber",
       "enrollNumber",
+      "admissionNumber",
       "fatherName",
       "classSectionTermId",
       "batchId",

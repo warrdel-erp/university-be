@@ -2442,6 +2442,7 @@ function routineCellsInclude({
 export async function getNormalRoutinesBySectionScopeRepository(scope = {}) {
   const where = {
     timeTableType: "normal",
+    ...(scope.isPublish !== undefined && { isPublish: scope.isPublish }),
     ...(scope.classSectionTermId != null && {
       classSectionTermId: Number(scope.classSectionTermId),
     }),
@@ -2487,9 +2488,11 @@ export async function getElectiveRoutinesByTableNamesRepository(
   timeTableNameIds,
   userId,
   normalRoutines,
+  options = {},
 ) {
   const whereClause = {
     timeTableType: "elective",
+    ...(options.isPublish !== undefined && { isPublish: options.isPublish }),
   };
 
   if (normalRoutines && normalRoutines.length) {
@@ -2770,6 +2773,7 @@ async function fetchElectiveCellsForTeacher(
   sessionId,
   timeTableNameIds,
   normalRoutines,
+  options = {},
 ) {
   if (!timeTableNameIds.length) {
     return new Map();
@@ -2777,6 +2781,7 @@ async function fetchElectiveCellsForTeacher(
 
   const electiveWhere = {
     timeTableType: "elective",
+    ...(options.publishedOnly === true && { isPublish: true }),
   };
   if (courseId != null) {
     electiveWhere[Op.or] = [
@@ -2926,6 +2931,7 @@ export async function getTeacherRoutineBundle(
     sessionId,
     timeTableNameIds,
     safeNormalRoutines,
+    options,
   );
 
   const routines = [];

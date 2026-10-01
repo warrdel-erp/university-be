@@ -405,7 +405,7 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const result = await employee.getUniqueClassSectionSubjects(userId, );
+    const result = await employee.getUniqueClassSectionSubjects(userId);
 
     const total = result.combinations.length;
     const paginatedData = hasPagination
@@ -462,7 +462,7 @@ export const getMyUniqueClassSectionSubjects = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const result = await employee.getUniqueClassSectionSubjects(userId, );
+    const result = await employee.getUniqueClassSectionSubjects(userId);
 
     const total = result.combinations.length;
     const paginatedData = hasPagination
