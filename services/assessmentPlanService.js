@@ -12,7 +12,11 @@ import {
   toIntegerNumber,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
-import { resolveTotalTerms, termsPerYear } from "../utility/courseTerms.js";
+import {
+  resolveBatchCurrentPosition,
+  resolveTotalTerms,
+  termsPerYear,
+} from "../utility/courseTerms.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 
@@ -340,6 +344,12 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
       const regMapping = batch.regulationBatchMappings?.[0] || null;
       const reg = regMapping?.academicRegulation || null;
 
+      const position = resolveBatchCurrentPosition({
+        batchYear,
+        course,
+        activeCalendarYear: activeBatchYear,
+      });
+
       nest.batches.push({
         batchId: batch.batchId,
         batch: batchYear,
@@ -365,6 +375,11 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
           subjectIds.length,
           assignedSubjects,
         ),
+        currentYear: position.currentYear,
+        currentYearLabel: position.currentYearLabel,
+        currentTerms: position.currentTerms,
+        currentTermsLabel: position.currentTermsLabel,
+        currentPositionLabel: position.currentPositionLabel,
       });
     }
 

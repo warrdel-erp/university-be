@@ -2,8 +2,12 @@ import * as repo from '../repository/batchRepository.js';
 import * as model from '../models/index.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
 import {
+  buildCurrentPositionLabel,
+  buildCurrentTermsForYear,
+  buildCurrentTermsLabel,
   buildTermName,
   monthsPerTermFromTermType,
+  resolveBatchCurrentPosition,
   resolveTotalTerms,
   termsForYear,
   termsPerYear,
@@ -33,37 +37,6 @@ function resolveCurrentTermSlotInYear({ startingDate, termType, perYear, referen
   return slot;
 }
 
-function buildCurrentTermsForYear(course, yearNumber) {
-  const currentTerms = [];
-  for (const term of termsForYear(yearNumber, course)) {
-    currentTerms.push({
-      term,
-      termName: buildTermName(course.termType, term),
-    });
-  }
-  return currentTerms;
-}
-
-function buildCurrentTermsLabel(currentTerms) {
-  if (!currentTerms || !currentTerms.length) {
-    return null;
-  }
-  if (currentTerms.length === 1) {
-    return currentTerms[0].termName;
-  }
-  return `${currentTerms[0].termName} - ${currentTerms[currentTerms.length - 1].termName}`;
-}
-
-function buildCurrentPositionLabel(currentTerms, yearNumber) {
-  if (!currentTerms.length) {
-    return `Year ${yearNumber}`;
-  }
-  if (currentTerms.length === 1) {
-    return `${currentTerms[0].termName} · Year ${yearNumber}`;
-  }
-  return `${currentTerms[0].termName} – ${currentTerms[currentTerms.length - 1].termName} · Year ${yearNumber}`;
-}
-
 function parseCapacity(val) {
   if (val != null && !isNaN(Number(val))) {
     return Number(val);
@@ -91,11 +64,11 @@ export async function getAllBatches(filters = {}) {
     const batches = [];
 
     for (const batch of plain.batches || []) {
-      const batchYear = Number(batch.batch);
-      const currentYear = activeCalendarYear - batchYear + 1;
-      const inRange = currentYear >= 1 && currentYear <= duration;
-      const currentTerms = inRange ? buildCurrentTermsForYear(course, currentYear) : [];
-      const currentTermsLabel = inRange ? buildCurrentTermsLabel(currentTerms) : null;
+      const position = resolveBatchCurrentPosition({
+        batchYear: batch.batch,
+        course,
+        activeCalendarYear,
+      });
 
       batches.push({
         batchId: batch.batchId,
@@ -106,13 +79,11 @@ export async function getAllBatches(filters = {}) {
         capacity: parseCapacity(course?.capacity),
         createdAt: batch.createdAt,
         createdBy: batch.createdBy,
-        currentYear: inRange ? currentYear : null,
-        currentYearLabel: inRange ? `Year ${currentYear}` : null,
-        currentTerms,
-        currentTermsLabel,
-        currentPositionLabel: inRange
-          ? buildCurrentPositionLabel(currentTerms, currentYear)
-          : null,
+        currentYear: position.currentYear,
+        currentYearLabel: position.currentYearLabel,
+        currentTerms: position.currentTerms,
+        currentTermsLabel: position.currentTermsLabel,
+        currentPositionLabel: position.currentPositionLabel,
       });
     }
 
