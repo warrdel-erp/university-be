@@ -16,6 +16,16 @@ const sessionBodyObject = z.object({
     required_error: "assessmentTypeId is required",
   }),
   sessionName: z.string().min(1, "sessionName is required"),
+  executionType: z
+    .preprocess(
+      (val) => (val === "" || val === null ? null : val),
+      z.string().trim().optional().nullable(),
+    ),
+  executionProfile: z
+    .preprocess(
+      (val) => (val === "" || val === null ? null : val),
+      z.string().trim().optional().nullable(),
+    ),
   examStartDate: dateStringSchema.optional(),
   examEndDate: dateStringSchema.optional(),
   hallTicketReleaseDate: dateStringSchema.optional(),
@@ -124,6 +134,8 @@ const getSessionsSchema = {
   query: z.object({
     status: examinationSessionLifecycleStatusSchema,
     search: z.string().optional(),
+    executionType: z.string().optional(),
+    executionProfile: z.string().optional(),
     academicYearId: positiveIntegerQueryId.optional(),
     assessmentTypeId: positiveIntegerQueryId.optional(),
     universityId: positiveIntegerQueryId.optional(),
