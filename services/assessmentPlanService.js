@@ -59,7 +59,9 @@ function buildBatchName(batch, batchEndYear) {
 }
 
 function resolveSubjectKind(subjectType) {
-  const normalized = String(subjectType || "").trim().toLowerCase();
+  const normalized = String(subjectType || "")
+    .trim()
+    .toLowerCase();
   if (!normalized) return null;
   if (normalized.includes("elective")) return "elective";
   if (normalized === "core" || normalized.includes("foundation")) return "core";
@@ -103,15 +105,6 @@ function mapAssessmentPlanMapping(mapping) {
       ? {
           assessmentPlanId: plan.assessmentPlanId,
           planName: plan.planName,
-          planCode: plan.planCode,
-          description: plan.description,
-          courseId: plan.courseId,
-          regulationId: plan.regulationId,
-          gradingId: plan.gradingId,
-          status: plan.status,
-          isActive: plan.isActive,
-          academicRegulation: plan.academicRegulation || null,
-          components: plan.components || [],
         }
       : null,
   };
@@ -148,10 +141,7 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
       termMapping.year ||
       (batchYear && termMapping.yearNumber
         ? toIntegerNumber(
-            decimalSubtract(
-              decimalAdd(batchYear, termMapping.yearNumber),
-              1,
-            ),
+            decimalSubtract(decimalAdd(batchYear, termMapping.yearNumber), 1),
           )
         : null);
 
@@ -188,9 +178,11 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
       status: null,
     };
 
-    const assessmentPlanMappings = (plain.assessmentPlanMappings || subject.assessmentPlanMappings || []).map(
-      mapAssessmentPlanMapping,
-    );
+    const assessmentPlanMappings = (
+      plain.assessmentPlanMappings ||
+      subject.assessmentPlanMappings ||
+      []
+    ).map(mapAssessmentPlanMapping);
 
     subjects.push({
       curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId,
@@ -345,6 +337,9 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
         }
       }
 
+      const regMapping = batch.regulationBatchMappings?.[0] || null;
+      const reg = regMapping?.academicRegulation || null;
+
       nest.batches.push({
         batchId: batch.batchId,
         batch: batchYear,
@@ -356,6 +351,14 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
         curriculumBatchMappingId,
         curriculumId,
         curriculum: curriculumData,
+        academicRegulationId: reg?.academicRegulationId || null,
+        academicRegulation: reg
+          ? {
+              academicRegulationId: reg.academicRegulationId,
+              regulationCode: reg.regulationCode,
+              regulationName: reg.regulationName,
+            }
+          : null,
         totalSubjects: subjectIds.length,
         assignedSubjects,
         assignmentStatus: buildAssignmentStatus(
@@ -386,7 +389,7 @@ export async function createAssessmentPlan({ payload, user }) {
 
     const planData = {
       ...payload,
-      courseId: payload.courseId ? Number(payload.courseId) : null,
+      batchId: payload.batchId ? Number(payload.batchId) : null,
       regulationId: payload.regulationId ? Number(payload.regulationId) : null,
       academicYearId,
       universityId: user?.universityId ? Number(user.universityId) : null,
@@ -400,7 +403,9 @@ export async function createAssessmentPlan({ payload, user }) {
     delete planData.term;
     delete planData.sessionId;
 
-    return await assessmentPlanRepo.createAssessmentPlan(planData, { transaction: t });
+    return await assessmentPlanRepo.createAssessmentPlan(planData, {
+      transaction: t,
+    });
   });
 }
 
@@ -418,9 +423,16 @@ export async function getAssessmentPlanById(assessmentPlanId) {
   return plan;
 }
 
-export async function updateAssessmentPlan({ assessmentPlanId, payload, user }) {
+export async function updateAssessmentPlan({
+  assessmentPlanId,
+  payload,
+  user,
+}) {
   return await sequelize.transaction(async (t) => {
-    const existing = await assessmentPlanRepo.getAssessmentPlanById(assessmentPlanId, { transaction: t });
+    const existing = await assessmentPlanRepo.getAssessmentPlanById(
+      assessmentPlanId,
+      { transaction: t },
+    );
     if (!existing) {
       const error = new Error("Assessment plan not found");
       error.statusCode = 404;
@@ -432,14 +444,22 @@ export async function updateAssessmentPlan({ assessmentPlanId, payload, user }) 
       updatedBy: user?.userId || null,
     };
 
-    if (payload.courseId !== undefined) updateData.courseId = payload.courseId ? Number(payload.courseId) : null;
-    if (payload.regulationId !== undefined) updateData.regulationId = payload.regulationId ? Number(payload.regulationId) : null;
+    if (payload.batchId !== undefined)
+      updateData.batchId = payload.batchId ? Number(payload.batchId) : null;
+    if (payload.regulationId !== undefined)
+      updateData.regulationId = payload.regulationId
+        ? Number(payload.regulationId)
+        : null;
 
     delete updateData.term;
     delete updateData.sessionId;
     delete updateData.academicYearId;
 
-    return await assessmentPlanRepo.updateAssessmentPlan(assessmentPlanId, updateData, { transaction: t });
+    return await assessmentPlanRepo.updateAssessmentPlan(
+      assessmentPlanId,
+      updateData,
+      { transaction: t },
+    );
   });
 }
 
@@ -458,7 +478,10 @@ export async function deleteAssessmentPlan(assessmentPlanId) {
       throw error;
     }
 
-    const result = await assessmentPlanRepo.deleteAssessmentPlan(assessmentPlanId, { transaction: t });
+    const result = await assessmentPlanRepo.deleteAssessmentPlan(
+      assessmentPlanId,
+      { transaction: t },
+    );
     if (!result) {
       const error = new Error("Assessment plan not found");
       error.statusCode = 404;
@@ -473,25 +496,38 @@ export async function createAssessmentPlanComponent({ payload, user }) {
     const componentData = {
       ...payload,
       assessmentPlanId: Number(payload.assessmentPlanId),
-      academicYearId: payload.academicYearId ? Number(payload.academicYearId) : (user?.academicYearId || null),
+      academicYearId: payload.academicYearId
+        ? Number(payload.academicYearId)
+        : user?.academicYearId || null,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
       createdBy: user?.userId || null,
       updatedBy: user?.userId || null,
     };
 
-    return await assessmentPlanRepo.createAssessmentPlanComponent(componentData, { transaction: t });
+    return await assessmentPlanRepo.createAssessmentPlanComponent(
+      componentData,
+      { transaction: t },
+    );
   });
 }
 
-export async function updateAssessmentPlanComponent({ assessmentPlanComponentId, payload, user }) {
+export async function updateAssessmentPlanComponent({
+  assessmentPlanComponentId,
+  payload,
+  user,
+}) {
   return await sequelize.transaction(async (t) => {
     const updateData = {
       ...payload,
       updatedBy: user?.userId || null,
     };
 
-    const updated = await assessmentPlanRepo.updateAssessmentPlanComponent(assessmentPlanComponentId, updateData, { transaction: t });
+    const updated = await assessmentPlanRepo.updateAssessmentPlanComponent(
+      assessmentPlanComponentId,
+      updateData,
+      { transaction: t },
+    );
     if (!updated) {
       const error = new Error("Assessment plan component not found");
       error.statusCode = 404;
@@ -503,7 +539,10 @@ export async function updateAssessmentPlanComponent({ assessmentPlanComponentId,
 
 export async function deleteAssessmentPlanComponent(assessmentPlanComponentId) {
   return await sequelize.transaction(async (t) => {
-    const result = await assessmentPlanRepo.deleteAssessmentPlanComponent(assessmentPlanComponentId, { transaction: t });
+    const result = await assessmentPlanRepo.deleteAssessmentPlanComponent(
+      assessmentPlanComponentId,
+      { transaction: t },
+    );
     if (!result) {
       const error = new Error("Assessment plan component not found");
       error.statusCode = 404;
@@ -544,7 +583,8 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
   const subjectTermWhere = {};
   const parsedSubjectId = parsePositiveId(subjectId);
   const parsedTerm = parsePositiveId(term);
-  if (parsedSubjectId !== undefined) subjectTermWhere.subjectId = parsedSubjectId;
+  if (parsedSubjectId !== undefined)
+    subjectTermWhere.subjectId = parsedSubjectId;
   if (parsedTerm !== undefined) subjectTermWhere.term = parsedTerm;
 
   const subjectWhere = {};
@@ -663,7 +703,10 @@ export async function getAssessmentPlanStats() {
 
 export async function createAssessmentPlanSubjectMapping({ payload, user }) {
   return await sequelize.transaction(async (t) => {
-    const plan = await assessmentPlanRepo.findPlanForMapping(payload.assessmentPlanId, { transaction: t });
+    const plan = await assessmentPlanRepo.findPlanForMapping(
+      payload.assessmentPlanId,
+      { transaction: t },
+    );
     if (!plan) {
       const error = new Error("Assessment plan not found");
       error.statusCode = 404;
@@ -671,22 +714,28 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
     }
 
     if (plan.status !== "Published" || !plan.isActive) {
-      const error = new Error("Cannot map an assessment plan in Draft status. Plan must be Published.");
+      const error = new Error(
+        "Cannot map an assessment plan in Draft status. Plan must be Published.",
+      );
       error.statusCode = 400;
       throw error;
     }
 
-    const batchRecord = await assessmentPlanRepo.findBatchForMapping(payload.batchId, { transaction: t });
+    const batchRecord = await assessmentPlanRepo.findBatchForMapping(
+      payload.batchId,
+      { transaction: t },
+    );
     if (!batchRecord) {
       const error = new Error(`Batch (ID: ${payload.batchId}) does not exist`);
       error.statusCode = 404;
       throw error;
     }
 
-    const cstmRecord = await assessmentPlanRepo.findCurriculumSubjectTermMappingForMapping(
-      payload.curriculumSubjectTermMappingId,
-      { transaction: t },
-    );
+    const cstmRecord =
+      await assessmentPlanRepo.findCurriculumSubjectTermMappingForMapping(
+        payload.curriculumSubjectTermMappingId,
+        { transaction: t },
+      );
     if (!cstmRecord) {
       const error = new Error(
         `Curriculum subject term mapping (ID: ${payload.curriculumSubjectTermMappingId}) does not exist`,
@@ -695,12 +744,17 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    const courseId = batchRecord.session?.courseId || cstmRecord.curriculum?.courseId || null;
+    const courseId =
+      batchRecord.session?.courseId || cstmRecord.curriculum?.courseId || null;
     const sessionId = batchRecord.sessionId || null;
 
-    if (plan.courseId && courseId && Number(plan.courseId) !== Number(courseId)) {
+    if (
+      plan.batchId &&
+      payload.batchId &&
+      Number(plan.batchId) !== Number(payload.batchId)
+    ) {
       const error = new Error(
-        `Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Course (ID: ${plan.courseId}), which does not match Batch/Curriculum Course (ID: ${courseId})`,
+        `Assessment Plan (ID: ${payload.assessmentPlanId}) is created for Batch (ID: ${plan.batchId}), which does not match Mapping Batch (ID: ${payload.batchId})`,
       );
       error.statusCode = 400;
       throw error;
@@ -720,7 +774,9 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
     const existingMapping = await assessmentPlanRepo.findExistingSubjectMapping(
       {
         batchId: Number(payload.batchId),
-        curriculumSubjectTermMappingId: Number(payload.curriculumSubjectTermMappingId),
+        curriculumSubjectTermMappingId: Number(
+          payload.curriculumSubjectTermMappingId,
+        ),
         assessmentPlanId: Number(payload.assessmentPlanId),
         universityId,
         instituteId,
@@ -731,7 +787,9 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
     const data = {
       assessmentPlanId: Number(payload.assessmentPlanId),
       batchId: Number(payload.batchId),
-      curriculumSubjectTermMappingId: Number(payload.curriculumSubjectTermMappingId),
+      curriculumSubjectTermMappingId: Number(
+        payload.curriculumSubjectTermMappingId,
+      ),
       subjectId: Number(payload.subjectId || cstmRecord.subjectId),
       universityId,
       instituteId,
@@ -745,12 +803,16 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
         await existingMapping.update(data, { transaction: t });
         return existingMapping;
       }
-      const error = new Error("Subject is already mapped to this assessment plan for this batch");
+      const error = new Error(
+        "Subject is already mapped to this assessment plan for this batch",
+      );
       error.statusCode = 409;
       throw error;
     }
 
-    return await assessmentPlanRepo.createAssessmentPlanSubjectMapping(data, { transaction: t });
+    return await assessmentPlanRepo.createAssessmentPlanSubjectMapping(data, {
+      transaction: t,
+    });
   });
 }
 
@@ -760,10 +822,10 @@ export async function getAssessmentPlanSubjectMappings(queryParams) {
 
 export async function deleteAssessmentPlanSubjectMapping(mappingId) {
   return await sequelize.transaction(async (t) => {
-    const mapping = await assessmentPlanRepo.findAssessmentPlanSubjectMappingById(
-      mappingId,
-      { transaction: t },
-    );
+    const mapping =
+      await assessmentPlanRepo.findAssessmentPlanSubjectMappingById(mappingId, {
+        transaction: t,
+      });
     if (!mapping) {
       const error = new Error("Subject assessment plan mapping not found");
       error.statusCode = 404;
@@ -808,11 +870,8 @@ export async function getBatchCoursesWithSessions(query = {}) {
     });
 
   const batchIds = collectBatchIds(sessions);
-  const assignedRows = await assessmentPlanRepo.findAssignedSubjectMappings(batchIds);
+  const assignedRows =
+    await assessmentPlanRepo.findAssignedSubjectMappings(batchIds);
 
-  return nestBatchCoursesWithSessions(
-    sessions,
-    assignedRows,
-    activeBatchYear,
-  );
+  return nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear);
 }

@@ -3,7 +3,11 @@ import { Op } from "sequelize";
 import { scoped } from "../utility/scoped.js";
 import * as examStructureScheduleRepository from "../repository/examStructureScheduleMappingRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
-import { getTimeSlotRange } from "../utility/timeSlot.js";
+import {
+  getTimeSlotRange,
+  minutesToTime,
+  doTimeSlotsOverlap,
+} from "../utility/timeSlot.js";
 import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
 import { AUDIT_EVENTS } from "../const/auditEvents.js";
 import {
@@ -28,7 +32,7 @@ const studentListFields = [
   "termName",
 ];
 
-async function resolveSlotDetails(examDetail) {
+async function resolveSlotDetails(examDetail, options = {}) {
   if (examDetail.examinationSessionSlotId) {
     const slot = await scoped(model.examinationSessionSlotModel).findOne({
       where: {
@@ -36,6 +40,7 @@ async function resolveSlotDetails(examDetail) {
       },
       attributes: ["startTime", "durationMinutes", "examinationSessionId"],
       raw: true,
+      transaction: options.transaction,
     });
     if (slot) {
       if (!examDetail.examTime && slot.startTime) {
@@ -48,13 +53,14 @@ async function resolveSlotDetails(examDetail) {
   }
 }
 
-async function resolveDurationFromAssessmentPlan(examDetail) {
+async function resolveDurationFromAssessmentPlan(examDetail, options = {}) {
   if (!examDetail.examinationSessionId) return;
 
   // 1. Fetch examinationSession → get examSetupTypeId (assessmentTypeId)
   const session =
     await examinationSessionRepository.findExaminationSessionAssessmentTypeById(
       examDetail.examinationSessionId,
+      options,
     );
 
   if (!session) {
@@ -71,11 +77,63 @@ async function resolveDurationFromAssessmentPlan(examDetail) {
     throw err;
   }
 
-  // 2. Fetch assessment plan component duration and marks using examSetupTypeId
-  const component =
-    await examinationSessionRepository.findAssessmentPlanComponentDurationBySetupTypeId(
-      session.assessmentTypeId,
+  const examSetupTypeId = Number(session.assessmentTypeId);
+  let component = null;
+
+  // 2. Fetch assessment plan component via assessmentPlanSubjectMappingModel
+  // Using subject batchId + curriculumSubjectTermMappingId
+  const mappingWhere = {};
+  if (examDetail.batchId) {
+    mappingWhere.batchId = Number(examDetail.batchId);
+  }
+  if (examDetail.curriculumSubjectTermMappingId) {
+    mappingWhere.curriculumSubjectTermMappingId = Number(
+      examDetail.curriculumSubjectTermMappingId,
     );
+  } else if (examDetail.subjectId) {
+    mappingWhere.subjectId = Number(examDetail.subjectId);
+  }
+
+  if (Object.keys(mappingWhere).length > 0) {
+    const planMapping = await scoped(
+      model.assessmentPlanSubjectMappingModel,
+    ).findOne({
+      where: mappingWhere,
+      attributes: [
+        "assessmentPlanSubjectMappingId",
+        "assessmentPlanId",
+        "batchId",
+        "curriculumSubjectTermMappingId",
+        "subjectId",
+      ],
+      transaction: options.transaction,
+    });
+
+    if (planMapping?.assessmentPlanId) {
+      component = await scoped(model.assessmentPlanComponentModel).findOne({
+        where: {
+          assessmentPlanId: Number(planMapping.assessmentPlanId),
+          examSetupTypeId,
+        },
+        attributes: [
+          "assessmentPlanComponentId",
+          "duration",
+          "weightagePercentage",
+        ],
+        raw: true,
+        transaction: options.transaction,
+      });
+    }
+  }
+
+  // Fallback: If not found by batch + CSTM mapping, try directly by examSetupTypeId
+  if (!component) {
+    component =
+      await examinationSessionRepository.findAssessmentPlanComponentDurationBySetupTypeId(
+        examSetupTypeId,
+        options,
+      );
+  }
 
   if (!component) {
     const err = new Error(
@@ -100,6 +158,138 @@ async function resolveDurationFromAssessmentPlan(examDetail) {
     component.weightagePercentage !== null
   ) {
     examDetail.maximumMarks = Number(component.weightagePercentage);
+  }
+}
+
+async function assertNoSlotTimeOverlap(
+  examDetail,
+  excludeExamScheduleId,
+  options = {},
+) {
+  const {
+    examinationSessionId,
+    examDate,
+    examinationSessionSlotId,
+    examTime,
+    duration,
+  } = examDetail;
+  if (
+    !examinationSessionId ||
+    !examDate ||
+    !examinationSessionSlotId ||
+    !examTime ||
+    !duration
+  ) {
+    return;
+  }
+
+  const currentSlotRange = getTimeSlotRange({
+    startTime: examTime,
+    duration: Number(duration),
+  });
+  if (!currentSlotRange) return;
+
+  const { startMinutes: examStartMin, endMinutes: examEndMin } =
+    currentSlotRange;
+
+  // 1. Fetch current slot and all slots in this session
+  const slots = await scoped(model.examinationSessionSlotModel).findAll({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    order: [["slotNumber", "ASC"]],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const currentSlot = slots.find(
+    (s) =>
+      Number(s.examinationSessionSlotId) === Number(examinationSessionSlotId),
+  );
+  const currentSlotLabel = currentSlot?.slotNumber
+    ? `Slot ${currentSlot.slotNumber}`
+    : `this slot`;
+
+  // 2. Fetch all other existing exam schedules on the same examDate for this examinationSession
+  const existingSchedules = await scoped(model.examScheduleModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+      examDate,
+      ...(excludeExamScheduleId && {
+        examScheduleId: { [Op.ne]: Number(excludeExamScheduleId) },
+      }),
+    },
+    include: [
+      {
+        model: model.examinationSessionSlotModel,
+        as: "examinationSessionSlot",
+        attributes: [
+          "examinationSessionSlotId",
+          "slotNumber",
+          "startTime",
+          "endTime",
+          "durationMinutes",
+        ],
+      },
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        attributes: ["subjectName"],
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  for (const existing of existingSchedules) {
+    // Overlap conflict across DIFFERENT slots on the same date
+    if (
+      Number(existing.examinationSessionSlotId) !==
+      Number(examinationSessionSlotId)
+    ) {
+      const existingSlot =
+        existing.examinationSessionSlot ||
+        slots.find(
+          (s) =>
+            Number(s.examinationSessionSlotId) ===
+            Number(existing.examinationSessionSlotId),
+        );
+
+      const existingSlotLabel = existingSlot?.slotNumber
+        ? `Slot ${existingSlot.slotNumber}`
+        : `another slot`;
+
+      const existingStartTime =
+        existing.examTime || existingSlot?.startTime;
+      const existingDuration =
+        existing.duration || existingSlot?.durationMinutes;
+
+      const existingRange = getTimeSlotRange({
+        startTime: existingStartTime,
+        duration: Number(existingDuration),
+      });
+
+      if (!existingRange) continue;
+
+      const { startMinutes: existStartMin, endMinutes: existEndMin } =
+        existingRange;
+
+      if (doTimeSlotsOverlap(currentSlotRange, existingRange)) {
+        const existingSubject =
+          existing.subjectSchedule?.subjectName || "an exam";
+
+        if (examStartMin < existStartMin) {
+          const err = new Error(
+            `Cannot schedule exam in ${currentSlotLabel}: Exam duration (${duration} mins) ends at ${minutesToTime(examEndMin)} and overlaps with ${existingSlotLabel} (${existingSubject} scheduled at ${minutesToTime(existStartMin)}) on ${examDate}.`,
+          );
+          err.statusCode = 400;
+          throw err;
+        } else {
+          const err = new Error(
+            `Cannot schedule exam in ${currentSlotLabel}: Existing exam (${existingSubject}) in ${existingSlotLabel} on ${examDate} extends until ${minutesToTime(existEndMin)} and overlaps with this slot (starts at ${minutesToTime(examStartMin)}).`,
+          );
+          err.statusCode = 400;
+          throw err;
+        }
+      }
+    }
   }
 }
 
@@ -549,13 +739,14 @@ export async function addExamSchedule(examDetail, createdBy, updatedBy) {
     examDetail.examSetupTypeTermId = null;
 
     await resolveBatchAndCurriculumSubjectTerm(examDetail, { transaction });
-    await resolveSlotDetails(examDetail);
+    await resolveSlotDetails(examDetail, { transaction });
 
     // Resolve duration and maximumMarks from assessment plan
-    await resolveDurationFromAssessmentPlan(examDetail);
+    await resolveDurationFromAssessmentPlan(examDetail, { transaction });
 
     delete examDetail.semesterId;
 
+    await assertNoSlotTimeOverlap(examDetail, null, { transaction });
     await assertNoStudentExamTimeConflict(examDetail);
     await assertUniqueExamScheduleMapping(examDetail);
 
@@ -647,6 +838,9 @@ export async function updateExamSchedule(
 
     examDetail.updatedBy = updatedBy;
 
+    if (!examDetail.subjectId && existing.subjectId) {
+      examDetail.subjectId = existing.subjectId;
+    }
     if (!examDetail.batchId && existing.batchId) {
       examDetail.batchId = existing.batchId;
     }
@@ -656,12 +850,26 @@ export async function updateExamSchedule(
     if (!examDetail.examinationSessionId && existing.examinationSessionId) {
       examDetail.examinationSessionId = existing.examinationSessionId;
     }
+    if (!examDetail.examinationSessionSlotId && existing.examinationSessionSlotId) {
+      examDetail.examinationSessionSlotId = existing.examinationSessionSlotId;
+    }
+    if (!examDetail.examDate && existing.examDate) {
+      examDetail.examDate = existing.examDate;
+    }
+    if (!examDetail.examTime && existing.examTime) {
+      examDetail.examTime = existing.examTime;
+    }
+
+    // Do NOT accept duration from frontend — always resolve from assessment plan
+    delete examDetail.duration;
 
     await resolveBatchAndCurriculumSubjectTerm(examDetail, { transaction });
-    await resolveSlotDetails(examDetail);
+    await resolveSlotDetails(examDetail, { transaction });
+    await resolveDurationFromAssessmentPlan(examDetail, { transaction });
 
     delete examDetail.semesterId;
 
+    await assertNoSlotTimeOverlap(examDetail, id, { transaction });
     await assertNoStudentExamTimeConflict(examDetail, id);
     await assertUniqueExamScheduleMapping(examDetail, id);
 
@@ -681,7 +889,7 @@ export async function updateExamSchedule(
       ...(examDetail.examDate && { examDate: examDetail.examDate }),
       ...(examDetail.examTime !== undefined && { examTime: examDetail.examTime }),
       ...(examDetail.type && { type: examDetail.type }),
-      ...(examDetail.duration !== undefined && { duration: examDetail.duration }),
+      duration: examDetail.duration,
       ...(examDetail.maximumMarks !== undefined && { maximumMarks: examDetail.maximumMarks }),
       ...(examDetail.examinationSessionSlotId !== undefined && {
         examinationSessionSlotId: examDetail.examinationSessionSlotId

@@ -253,7 +253,7 @@ function buildStudentListIncludes(examinationSessionId, termIds, eligibilityWher
         model: model.assessmentPlanModel,
         as: "assessmentPlans",
         required: false,
-        attributes: ["assessmentPlanId", "courseId", "regulationId", "isActive"],
+        attributes: ["assessmentPlanId", "batchId", "regulationId", "isActive"],
         include: [
           {
             model: model.academicRegulationModel,
@@ -591,8 +591,6 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
       }
 
       const clause = {};
-      if (comb.courseId != null) clause.courseId = comb.courseId;
-      if (comb.sessionId != null) clause.sessionId = comb.sessionId;
       if (comb.batchId != null) clause.batchId = comb.batchId;
 
       if (termIdsForComb.length > 0 || historyIdsForComb.length > 0) {
@@ -612,7 +610,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
       ? filters.sessionId.map(Number)
       : [Number(filters.sessionId)];
     combinedWhere[Op.and].push({
-      sessionId: { [Op.in]: allowedSessions },
+      "$batch.session_id$": { [Op.in]: allowedSessions },
     });
   }
 

@@ -4175,8 +4175,8 @@ studentModel.hasMany(attendanceModel, {
   as: "attendances",
 });
 studentModel.hasMany(assessmentPlanModel, {
-  foreignKey: "courseId",
-  sourceKey: "courseId",
+  foreignKey: "batchId",
+  sourceKey: "batchId",
   as: "assessmentPlans",
 });
 
@@ -4213,10 +4213,6 @@ academicRegulationModel.belongsTo(gradingModel, {
   foreignKey: "gradingSchemeId",
   as: "gradingScheme",
 });
-academicRegulationModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "academicYear",
-});
 academicRegulationModel.belongsTo(userModel, {
   foreignKey: "createdBy",
   as: "creator",
@@ -4242,34 +4238,26 @@ academicRegulationCourseMappingModel.belongsTo(academicRegulationModel, {
   foreignKey: "academicRegulationId",
   as: "academicRegulation",
 });
-academicRegulationCourseMappingModel.belongsTo(courseModel, {
-  foreignKey: "courseId",
-  as: "course",
+academicRegulationCourseMappingModel.belongsTo(batchModel, {
+  foreignKey: "batchId",
+  as: "batch",
 });
-academicRegulationCourseMappingModel.belongsTo(sessionModel, {
-  foreignKey: "sessionId",
-  as: "session",
-});
-courseModel.hasMany(academicRegulationCourseMappingModel, {
-  foreignKey: "courseId",
-  as: "regulationCourseMappings",
-});
-sessionModel.hasMany(academicRegulationCourseMappingModel, {
-  foreignKey: "sessionId",
-  as: "regulationCourseMappings",
+batchModel.hasMany(academicRegulationCourseMappingModel, {
+  foreignKey: "batchId",
+  as: "regulationBatchMappings",
 });
 
-courseModel.belongsToMany(academicRegulationModel, {
+batchModel.belongsToMany(academicRegulationModel, {
   through: academicRegulationCourseMappingModel,
-  foreignKey: "courseId",
+  foreignKey: "batchId",
   otherKey: "academicRegulationId",
-  as: "academicRegulations",
+  as: "mappedRegulations",
 });
-academicRegulationModel.belongsToMany(courseModel, {
+academicRegulationModel.belongsToMany(batchModel, {
   through: academicRegulationCourseMappingModel,
   foreignKey: "academicRegulationId",
-  otherKey: "courseId",
-  as: "courses",
+  otherKey: "batchId",
+  as: "batches",
 });
 
 // Subject Associations
@@ -4277,12 +4265,12 @@ subjectModel.belongsTo(courseModel, { foreignKey: "courseId", as: "course" });
 courseModel.hasMany(subjectModel, { foreignKey: "courseId", as: "subjects" });
 
 // Assessment Plan Associations
-assessmentPlanModel.belongsTo(courseModel, {
-  foreignKey: "courseId",
-  as: "course",
+assessmentPlanModel.belongsTo(batchModel, {
+  foreignKey: "batchId",
+  as: "batch",
 });
-courseModel.hasMany(assessmentPlanModel, {
-  foreignKey: "courseId",
+batchModel.hasMany(assessmentPlanModel, {
+  foreignKey: "batchId",
   as: "assessmentPlans",
 });
 

@@ -15,17 +15,19 @@ export async function findAcademicRegulationByCode(regulationCode, universityId,
 }
 
 export async function createAcademicRegulation(data, options = {}) {
-  const { courseMappings, ...regulationData } = data;
+  const { courseMappings, batchMappings, ...regulationData } = data;
+  const mappings = batchMappings || courseMappings;
   const record = await scoped(model.academicRegulationModel).create({
     ...regulationData,
     version: 1.0,
   }, options);
 
-  if (Array.isArray(courseMappings) && courseMappings.length > 0) {
-    const mappingsToCreate = courseMappings.map((item) => ({
+  if (Array.isArray(mappings) && mappings.length > 0) {
+    const mappingsToCreate = mappings.map((item) => ({
       academicRegulationId: record.academicRegulationId,
-      courseId: Number(item.courseId),
-      sessionId: Number(item.sessionId),
+      batchId: Number(item.batchId ?? item),
+      instituteId: record.instituteId,
+      universityId: record.universityId,
       createdBy: data.createdBy,
       updatedBy: data.updatedBy,
     }));
@@ -40,7 +42,7 @@ export async function createAcademicRegulation(data, options = {}) {
   return await getAcademicRegulationById(record.academicRegulationId, options);
 }
 
-export async function getAcademicRegulations({ search, status, courseId, academicYearId, academicYearRange, page = 1, limit = 10 }) {
+export async function getAcademicRegulations({ search, status, batchId, courseId, academicYearRange, page = 1, limit = 10 }) {
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
@@ -49,17 +51,38 @@ export async function getAcademicRegulations({ search, status, courseId, academi
   if (status) {
     where.status = status;
   }
-  if (courseId) {
+  if (batchId) {
     const matchingMappings = await scoped(model.academicRegulationCourseMappingModel).findAll({
       attributes: ['academicRegulationId'],
-      where: { courseId: Number(courseId) },
+      where: { batchId: Number(batchId) },
       raw: true,
     });
     const regulationIds = matchingMappings.map(m => m.academicRegulationId);
     where.academicRegulationId = { [Op.in]: regulationIds };
-  }
-  if (academicYearId) {
-    where.academicYearId = Number(academicYearId);
+  } else if (courseId) {
+    // If courseId is provided, resolve batchIds associated with the course
+    const matchingBatches = await scoped(model.batchModel).findAll({
+      attributes: ['batchId'],
+      include: [
+        {
+          model: model.sessionModel,
+          as: 'session',
+          where: { courseId: Number(courseId) },
+          attributes: [],
+        },
+      ],
+      raw: true,
+    });
+    const batchIds = matchingBatches.map(b => b.batchId);
+    if (batchIds.length > 0) {
+      const matchingMappings = await scoped(model.academicRegulationCourseMappingModel).findAll({
+        attributes: ['academicRegulationId'],
+        where: { batchId: { [Op.in]: batchIds } },
+        raw: true,
+      });
+      const regulationIds = matchingMappings.map(m => m.academicRegulationId);
+      where.academicRegulationId = { [Op.in]: regulationIds };
+    }
   }
   if (academicYearRange) {
     where.academicYearRange = academicYearRange;
@@ -81,12 +104,6 @@ export async function getAcademicRegulations({ search, status, courseId, academi
         required: false,
       },
       {
-        model: model.acedmicYearModel,
-        as: "academicYear",
-        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
-        required: false,
-      },
-      {
         model: model.academicRegulationClassificationModel,
         as: "classifications",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -96,8 +113,21 @@ export async function getAcademicRegulations({ search, status, courseId, academi
         model: model.academicRegulationCourseMappingModel,
         as: "courseMappings",
         include: [
-          { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
-          { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId", "status"],
+            include: [
+              {
+                model: model.sessionModel,
+                as: "session",
+                attributes: ["sessionId", "sessionName", "courseId"],
+                include: [
+                  { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+                ],
+              },
+            ],
+          },
         ],
         required: false,
       },
@@ -128,12 +158,6 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
         required: false,
       },
       {
-        model: model.acedmicYearModel,
-        as: "academicYear",
-        attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
-        required: false,
-      },
-      {
         model: model.academicRegulationClassificationModel,
         as: "classifications",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
@@ -143,8 +167,21 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
         model: model.academicRegulationCourseMappingModel,
         as: "courseMappings",
         include: [
-          { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
-          { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId", "status"],
+            include: [
+              {
+                model: model.sessionModel,
+                as: "session",
+                attributes: ["sessionId", "sessionName", "courseId"],
+                include: [
+                  { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+                ],
+              },
+            ],
+          },
         ],
         required: false,
       },
@@ -154,7 +191,8 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
 }
 
 export async function updateAcademicRegulation(academicRegulationId, data, options = {}) {
-  const { classifications, courseMappings, ...updatePayload } = data;
+  const { classifications, courseMappings, batchMappings, ...updatePayload } = data;
+  const mappings = batchMappings || courseMappings;
 
   const existing = await scoped(model.academicRegulationModel).findOne({
     where: { academicRegulationId: Number(academicRegulationId) },
@@ -202,42 +240,58 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
     }
   }
 
-  if (Array.isArray(courseMappings)) {
+  if (Array.isArray(mappings)) {
     const existingMappings = await scoped(model.academicRegulationCourseMappingModel).findAll({
       where: { academicRegulationId: Number(academicRegulationId) },
+      paranoid: false,
       transaction: options.transaction,
     });
 
-    const submittedSet = new Set(courseMappings.map(m => `${m.courseId}_${m.sessionId}`));
-    const existingSet = new Set(existingMappings.map(m => `${m.courseId}_${m.sessionId}`));
+    const submittedBatchIds = new Set(mappings.map(m => Number(m.batchId ?? m)));
+    const activeExistingBatchIds = new Set(
+      existingMappings.filter(m => !m.deletedAt).map(m => Number(m.batchId))
+    );
 
     const toDeleteIds = existingMappings
-      .filter(m => !submittedSet.has(`${m.courseId}_${m.sessionId}`))
+      .filter(m => !m.deletedAt && !submittedBatchIds.has(Number(m.batchId)))
       .map(m => m.academicRegulationCourseMappingId);
 
     if (toDeleteIds.length > 0) {
       await scoped(model.academicRegulationCourseMappingModel).destroy({
         where: { academicRegulationCourseMappingId: toDeleteIds },
+        force: true,
         transaction: options.transaction,
       });
     }
 
-    const mappingsToCreate = courseMappings
-      .filter(m => !existingSet.has(`${m.courseId}_${m.sessionId}`))
-      .map((item) => ({
-        academicRegulationId: Number(academicRegulationId),
-        courseId: Number(item.courseId),
-        sessionId: Number(item.sessionId),
-        createdBy: data.updatedBy,
-        updatedBy: data.updatedBy,
-      }));
-
-    if (mappingsToCreate.length > 0) {
-      await Promise.all(
-        mappingsToCreate.map((item) =>
-          scoped(model.academicRegulationCourseMappingModel).create(item, { transaction: options.transaction })
-        )
-      );
+    for (const item of mappings) {
+      const bId = Number(item.batchId ?? item);
+      if (!activeExistingBatchIds.has(bId)) {
+        const softDeleted = existingMappings.find(m => Number(m.batchId) === bId && m.deletedAt);
+        if (softDeleted) {
+          await softDeleted.restore({ transaction: options.transaction });
+          await softDeleted.update(
+            {
+              instituteId: existing.instituteId,
+              universityId: existing.universityId,
+              updatedBy: data.updatedBy,
+            },
+            { transaction: options.transaction }
+          );
+        } else {
+          await scoped(model.academicRegulationCourseMappingModel).create(
+            {
+              academicRegulationId: Number(academicRegulationId),
+              batchId: bId,
+              instituteId: existing.instituteId,
+              universityId: existing.universityId,
+              createdBy: data.updatedBy,
+              updatedBy: data.updatedBy,
+            },
+            { transaction: options.transaction }
+          );
+        }
+      }
     }
   }
 
@@ -271,13 +325,68 @@ export async function deleteAcademicRegulation(academicRegulationId, options = {
   };
 }
 
-export async function createCourseMapping(data, options = {}) {
-  const record = await scoped(model.academicRegulationCourseMappingModel).create(data, options);
+export async function findCourseMapping(academicRegulationId, batchId, options = {}) {
   return await scoped(model.academicRegulationCourseMappingModel).findOne({
-    where: { academicRegulationCourseMappingId: record.academicRegulationCourseMappingId },
+    where: {
+      academicRegulationId: Number(academicRegulationId),
+      batchId: Number(batchId),
+    },
+    paranoid: options.paranoid !== undefined ? options.paranoid : false,
+    transaction: options.transaction,
+  });
+}
+
+export async function createCourseMapping(data, options = {}) {
+  const existing = await scoped(model.academicRegulationCourseMappingModel).findOne({
+    where: {
+      academicRegulationId: Number(data.academicRegulationId),
+      batchId: Number(data.batchId),
+    },
+    paranoid: false,
+    transaction: options.transaction,
+  });
+
+  let mappingId;
+  if (existing) {
+    if (existing.deletedAt) {
+      await existing.restore({ transaction: options.transaction });
+      await existing.update(
+        {
+          universityId: data.universityId,
+          instituteId: data.instituteId,
+          updatedBy: data.updatedBy,
+        },
+        { transaction: options.transaction }
+      );
+      mappingId = existing.academicRegulationCourseMappingId;
+    } else {
+      const error = new Error("This batch is already mapped to the academic regulation");
+      error.statusCode = 400;
+      throw error;
+    }
+  } else {
+    const record = await scoped(model.academicRegulationCourseMappingModel).create(data, options);
+    mappingId = record.academicRegulationCourseMappingId;
+  }
+
+  return await scoped(model.academicRegulationCourseMappingModel).findOne({
+    where: { academicRegulationCourseMappingId: mappingId },
     include: [
-      { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
-      { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId", "status"],
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName", "courseId"],
+            include: [
+              { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+            ],
+          },
+        ],
+      },
     ],
     transaction: options.transaction,
   });
@@ -288,11 +397,8 @@ export async function getCourseMappings(filters = {}, options = {}) {
   if (filters.academicRegulationId) {
     where.academicRegulationId = Number(filters.academicRegulationId);
   }
-  if (filters.courseId) {
-    where.courseId = Number(filters.courseId);
-  }
-  if (filters.sessionId) {
-    where.sessionId = Number(filters.sessionId);
+  if (filters.batchId) {
+    where.batchId = Number(filters.batchId);
   }
 
   return await scoped(model.academicRegulationCourseMappingModel).findAll({
@@ -303,8 +409,21 @@ export async function getCourseMappings(filters = {}, options = {}) {
         as: "academicRegulation",
         attributes: ["academicRegulationId", "regulationCode", "regulationName", "status"],
       },
-      { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
-      { model: model.sessionModel, as: "session", attributes: ["sessionId", "sessionName"] },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId", "status"],
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName", "courseId"],
+            include: [
+              { model: model.courseModel, as: "course", attributes: ["courseId", "courseName", "courseCode"] },
+            ],
+          },
+        ],
+      },
     ],
     order: [["academicRegulationCourseMappingId", "DESC"]],
     transaction: options.transaction,
@@ -314,6 +433,7 @@ export async function getCourseMappings(filters = {}, options = {}) {
 export async function deleteCourseMapping(academicRegulationCourseMappingId, options = {}) {
   return await scoped(model.academicRegulationCourseMappingModel).destroy({
     where: { academicRegulationCourseMappingId: Number(academicRegulationCourseMappingId) },
+    force: true,
     transaction: options.transaction,
   });
 }

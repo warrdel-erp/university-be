@@ -97,13 +97,6 @@ export async function countTermCohortStudents(group, options = {}) {
   };
   if (group.batchId != null && !isNaN(Number(group.batchId))) {
     where.batchId = Number(group.batchId);
-  } else {
-    if (group.sessionId != null && !isNaN(Number(group.sessionId))) {
-      where.sessionId = Number(group.sessionId);
-    }
-    if (group.courseId != null && !isNaN(Number(group.courseId))) {
-      where.courseId = Number(group.courseId);
-    }
   }
 
   return scoped(model.studentModel).count({
@@ -130,13 +123,6 @@ export async function findTermCohortStudents(group, options = {}) {
   };
   if (group.batchId != null && !isNaN(Number(group.batchId))) {
     where.batchId = Number(group.batchId);
-  } else {
-    if (group.sessionId != null && !isNaN(Number(group.sessionId))) {
-      where.sessionId = Number(group.sessionId);
-    }
-    if (group.courseId != null && !isNaN(Number(group.courseId))) {
-      where.courseId = Number(group.courseId);
-    }
   }
   if (options.search) {
     const like = `%${options.search}%`;

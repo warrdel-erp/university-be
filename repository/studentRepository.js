@@ -73,14 +73,14 @@ function buildStudentListWhere(search, courseId, sessionId, batchId) {
         where.courseId = courseFilter;
     }
 
-    const sessionFilter = whereEqualOrIn(sessionId);
-    if (sessionFilter !== undefined) {
-        where.sessionId = sessionFilter;
-    }
-
     const batchFilter = whereEqualOrIn(batchId);
     if (batchFilter !== undefined) {
         where.batchId = batchFilter;
+    } else {
+        const sessionFilter = whereEqualOrIn(sessionId);
+        if (sessionFilter !== undefined) {
+            where.sessionId = sessionFilter;
+        }
     }
 
     if (search) {

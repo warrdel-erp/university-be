@@ -13,7 +13,7 @@ function examScheduleDetailInclude() {
       "examTime",
       "duration",
       "term",
-      "sessionId",
+      "batchId",
       "type",
       "examinationSessionId",
       "maximumMarks",
@@ -204,7 +204,7 @@ export async function getScopedStudent(studentId, transaction) {
 export async function getScopedExamSchedule(examScheduleId, transaction) {
   return scoped(model.examScheduleModel).findOne({
     where: { examScheduleId },
-    attributes: ["examScheduleId", "examinationSessionId", "sessionId", "term"],
+    attributes: ["examScheduleId", "examinationSessionId", "batchId", "term"],
     transaction,
   });
 }
@@ -1072,7 +1072,7 @@ export async function findMyEvaluationExaminationSessions(assignedToUserId) {
           "term",
           "type",
           "subjectId",
-          "sessionId",
+          "batchId",
           "maximumMarks",
         ],
         include: [

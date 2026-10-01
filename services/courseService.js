@@ -70,7 +70,12 @@ export const getTermsWithClassSections = async (query) => {
     ? academicCtx.academicYear.get({ plain: true })
     : academicCtx.academicYear;
   const currentYearNumber = activeCalendarYear - batchYear + 1;
-  const maxYear = duration > 0 ? duration : 1;
+  const maxYear =
+    duration > 0
+      ? duration
+      : totalTerms > 0
+        ? Math.ceil(totalTerms / 2)
+        : 1;
 
   const classSectionsIds = [];
   const sectionsByYear = new Map();
@@ -89,15 +94,14 @@ export const getTermsWithClassSections = async (query) => {
     await courseRepository.countStudentsByClassSectionIds(classSectionsIds);
 
   const academicRegulations = [];
-  for (const mapping of session.regulationCourseMappings || []) {
-    if (Number(mapping.courseId) !== Number(course.courseId)) {
-      continue;
-    }
+  for (const mapping of batch.regulationBatchMappings || []) {
     const regulation = mapping.academicRegulation;
+    if (!regulation) continue;
     academicRegulations.push({
       academicRegulationCourseMappingId:
         mapping.academicRegulationCourseMappingId,
       academicRegulationId: mapping.academicRegulationId,
+      batchId: mapping.batchId,
       regulationCode: regulation.regulationCode,
       regulationName: regulation.regulationName,
       description: regulation.description,
@@ -106,7 +110,6 @@ export const getTermsWithClassSections = async (query) => {
       effectiveFrom: regulation.effectiveFrom,
       effectiveUntil: regulation.effectiveUntil,
       gradingSchemeId: regulation.gradingSchemeId,
-      academicYearId: regulation.academicYearId,
       status: regulation.status,
       isActive: regulation.isActive,
     });
@@ -121,11 +124,8 @@ export const getTermsWithClassSections = async (query) => {
 
   const years = [];
   for (let year = 1; year <= maxYear; year++) {
-    if (yearFilter != null && year !== yearFilter) {
-      continue;
-    }
-
-    const sections = sectionsByYear.get(year) || [];
+    const shouldIncludeSections = yearFilter == null || year === yearFilter;
+    const sections = shouldIncludeSections ? (sectionsByYear.get(year) || []) : [];
     const classSections = [];
     for (const section of sections) {
       const terms = [];
@@ -149,11 +149,13 @@ export const getTermsWithClassSections = async (query) => {
       });
     }
 
+    const hasSectionsConfigured = (sectionsByYear.get(year) || []).length > 0;
+
     years.push({
       year,
       activeYear: batchYear + (year - 1),
       isCurrentYear: year === currentYearNumber,
-      configured: classSections.length > 0,
+      configured: hasSectionsConfigured,
       expectedTerms: termsForYear(year, course),
       classSections,
     });
@@ -230,6 +232,7 @@ export const getTermsWithClassSections = async (query) => {
           },
       years,
     },
+    years,
   };
 };
 

@@ -351,9 +351,6 @@ export async function findTermsWithClassSectionsByBatchId(batchId, filters = {})
   const classSectionWhere = {
     ...buildScope(model.classSectionModel),
   };
-  if (filters.year != null) {
-    classSectionWhere.year = Number(filters.year);
-  }
 
   const termInclude = classSectionTermsInclude({
     term: filters.term,
@@ -387,38 +384,36 @@ export async function findTermsWithClassSectionsByBatchId(batchId, filters = {})
             required: true,
             where: buildScope(model.courseModel),
           },
+        ],
+      },
+      {
+        model: model.academicRegulationCourseMappingModel,
+        as: 'regulationBatchMappings',
+        attributes: [
+          'academicRegulationCourseMappingId',
+          'academicRegulationId',
+          'batchId',
+        ],
+        required: false,
+        where: buildScope(model.academicRegulationCourseMappingModel),
+        include: [
           {
-            model: model.academicRegulationCourseMappingModel,
-            as: 'regulationCourseMappings',
+            model: model.academicRegulationModel,
+            as: 'academicRegulation',
             attributes: [
-              'academicRegulationCourseMappingId',
               'academicRegulationId',
-              'courseId',
-              'sessionId',
+              'regulationCode',
+              'regulationName',
+              'description',
+              'academicYearRange',
+              'applicableBatch',
+              'effectiveFrom',
+              'effectiveUntil',
+              'gradingSchemeId',
+              'status',
+              'isActive',
             ],
-            required: false,
-            where: buildScope(model.academicRegulationCourseMappingModel),
-            include: [
-              {
-                model: model.academicRegulationModel,
-                as: 'academicRegulation',
-                attributes: [
-                  'academicRegulationId',
-                  'regulationCode',
-                  'regulationName',
-                  'description',
-                  'academicYearRange',
-                  'applicableBatch',
-                  'effectiveFrom',
-                  'effectiveUntil',
-                  'gradingSchemeId',
-                  'academicYearId',
-                  'status',
-                  'isActive',
-                ],
-                required: true,
-              },
-            ],
+            required: true,
           },
         ],
       },

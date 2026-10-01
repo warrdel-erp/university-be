@@ -107,6 +107,7 @@ export async function getAssessmentPlans({
   search,
   status,
   courseId,
+  batchId,
   regulationId,
   gradingId,
   page = 1,
@@ -120,8 +121,8 @@ export async function getAssessmentPlans({
   if (status) {
     where.status = status;
   }
-  if (courseId) {
-    where.courseId = Number(courseId);
+  if (batchId) {
+    where.batchId = Number(batchId);
   }
   if (regulationId) {
     where.regulationId = Number(regulationId);
@@ -142,10 +143,27 @@ export async function getAssessmentPlans({
     where,
     include: [
       {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
-        required: false,
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId"],
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName", "courseId"],
+            where: courseId ? { courseId: Number(courseId) } : undefined,
+            required: !!courseId,
+            include: [
+              {
+                model: model.courseModel,
+                as: "course",
+                attributes: ["courseId", "courseName", "courseCode"],
+                required: false,
+              },
+            ],
+          },
+        ],
+        required: !!courseId,
       },
       {
         model: model.academicRegulationModel,
@@ -202,9 +220,25 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
     where: { assessmentPlanId: parsedId },
     include: [
       {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode"],
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId"],
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName", "courseId"],
+            include: [
+              {
+                model: model.courseModel,
+                as: "course",
+                attributes: ["courseId", "courseName", "courseCode"],
+                required: false,
+              },
+            ],
+            required: false,
+          },
+        ],
         required: false,
       },
       {
@@ -719,52 +753,11 @@ export async function findOverviewByCurriculumBatchMappingId({
                 attributes: [
                   "assessmentPlanId",
                   "planName",
-                  "planCode",
-                  "description",
-                  "courseId",
                   "regulationId",
-                  "gradingId",
-                  "status",
-                  "isActive",
                 ],
                 where:
                   Object.keys(planWhere).length > 0 ? planWhere : undefined,
                 required: Object.keys(planWhere).length > 0,
-                include: [
-                  {
-                    model: model.academicRegulationModel,
-                    as: "academicRegulation",
-                    attributes: [
-                      "academicRegulationId",
-                      "regulationCode",
-                      "regulationName",
-                      "evaluationPattern",
-                      "internalWeightage",
-                      "externalWeightage",
-                    ],
-                    required: false,
-                  },
-                  {
-                    model: model.assessmentPlanComponentModel,
-                    as: "components",
-                    attributes: [
-                      "assessmentPlanComponentId",
-                      "examSetupTypeId",
-                      "weightagePercentage",
-                      "maxAssessments",
-                      "duration",
-                    ],
-                    required: false,
-                    include: [
-                      {
-                        model: model.examSetupTypeModel,
-                        as: "examSetupType",
-                        attributes: ["examSetupTypeId", "examName"],
-                        required: false,
-                      },
-                    ],
-                  },
-                ],
               },
             ],
           },
@@ -961,7 +954,7 @@ export async function createAssessmentPlanSubjectMapping(data, options = {}) {
             "assessmentPlanId",
             "planName",
             "planCode",
-            "courseId",
+            "batchId",
             "status",
             "isActive",
           ],
@@ -1070,7 +1063,7 @@ export async function getAssessmentPlanSubjectMappings({
           "assessmentPlanId",
           "planName",
           "planCode",
-          "courseId",
+          "batchId",
           "status",
           "isActive",
         ],
@@ -1248,6 +1241,28 @@ export async function findCurriculumBatchCoursesWithSessions({
                   "term",
                   "yearNumber",
                   "year",
+                ],
+                required: false,
+              },
+            ],
+          },
+          {
+            model: model.academicRegulationCourseMappingModel,
+            as: "regulationBatchMappings",
+            attributes: [
+              "academicRegulationCourseMappingId",
+              "academicRegulationId",
+              "batchId",
+            ],
+            required: false,
+            include: [
+              {
+                model: model.academicRegulationModel,
+                as: "academicRegulation",
+                attributes: [
+                  "academicRegulationId",
+                  "regulationCode",
+                  "regulationName",
                 ],
                 required: false,
               },

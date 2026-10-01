@@ -1,4 +1,4 @@
-import { Op, col, where } from "sequelize";
+import { Op, col, where, fn } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
@@ -294,4 +294,174 @@ export async function deleteExaminationSessionSlot(
   }
 
   return slot.destroy({ transaction: options.transaction });
+}
+
+/**
+ * Count active students for a given batchId and term.
+ * 1. Find classSections related to batchId
+ * 2. Find classSectionTerms filtered by term
+ * 3. Count distinct students in those classSectionTermIds
+ */
+export async function countStudentsByBatchIdAndTerm(batchId, term, options = {}) {
+  if (!batchId || !term) return 0;
+
+  // 1. Get classSections related to batchId
+  const classSections = await scoped(model.classSectionModel).findAll({
+    where: { batchId: Number(batchId) },
+    attributes: ["classSectionsId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const classSectionIds = classSections
+    .map((cs) => Number(cs.classSectionsId))
+    .filter(Boolean);
+
+  if (!classSectionIds.length) {
+    return 0;
+  }
+
+  // 2. Filter classSectionTerm by term
+  const classSectionTerms = await scoped(model.classSectionTermModel).findAll({
+    where: {
+      classSectionsId: { [Op.in]: classSectionIds },
+      term: Number(term),
+    },
+    attributes: ["classSectionTermId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const classSectionTermIds = classSectionTerms
+    .map((cst) => Number(cst.classSectionTermId))
+    .filter(Boolean);
+
+  if (!classSectionTermIds.length) {
+    return 0;
+  }
+
+  // 3. Count students in those classSectionTermIds for this batchId
+  return scoped(model.studentModel).count({
+    distinct: true,
+    col: "student_id",
+    where: {
+      classSectionTermId: { [Op.in]: classSectionTermIds },
+      batchId: Number(batchId),
+    },
+    transaction: options.transaction,
+  });
+}
+
+/**
+ * Get student counts for multiple batchId + term pairs.
+ * 1. Find classSections related to batchIds
+ * 2. Find classSectionTerms filtered by classSectionsId and term
+ * 3. Count distinct students in those classSectionTermIds
+ * @param {Array<{batchId: number, term: number}>} pairs
+ * @returns {Promise<Map<string, number>>} Map with key `${batchId}_${term}` -> studentCount
+ */
+export async function countStudentsByBatchAndTermPairs(pairs, options = {}) {
+  const countMap = new Map();
+  if (!pairs || !pairs.length) return countMap;
+
+  const validPairs = pairs.filter(
+    (p) => p && p.batchId != null && p.term != null,
+  );
+  if (!validPairs.length) return countMap;
+
+  const uniquePairs = [];
+  const seenPairKeys = new Set();
+  for (const p of validPairs) {
+    const key = `${Number(p.batchId)}_${Number(p.term)}`;
+    if (!seenPairKeys.has(key)) {
+      seenPairKeys.add(key);
+      uniquePairs.push({ batchId: Number(p.batchId), term: Number(p.term) });
+    }
+  }
+
+  const batchIds = [...new Set(uniquePairs.map((p) => p.batchId))];
+  const terms = [...new Set(uniquePairs.map((p) => p.term))];
+
+  // 1. Get classSections related to batchIds
+  const classSections = await scoped(model.classSectionModel).findAll({
+    where: { batchId: { [Op.in]: batchIds } },
+    attributes: ["classSectionsId", "batchId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const sectionIdToBatchId = new Map();
+  for (const cs of classSections) {
+    sectionIdToBatchId.set(Number(cs.classSectionsId), Number(cs.batchId));
+  }
+  const classSectionIds = Array.from(sectionIdToBatchId.keys());
+  if (!classSectionIds.length) {
+    for (const p of uniquePairs) {
+      countMap.set(`${p.batchId}_${p.term}`, 0);
+    }
+    return countMap;
+  }
+
+  // 2. Filter classSectionTerm by term
+  const classSectionTerms = await scoped(model.classSectionTermModel).findAll({
+    where: {
+      classSectionsId: { [Op.in]: classSectionIds },
+      term: { [Op.in]: terms },
+    },
+    attributes: ["classSectionTermId", "classSectionsId", "term"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const pairToCstIds = new Map();
+  const allCstIds = [];
+  for (const row of classSectionTerms) {
+    const bId = sectionIdToBatchId.get(Number(row.classSectionsId));
+    const t = Number(row.term);
+    const key = `${bId}_${t}`;
+    if (!pairToCstIds.has(key)) {
+      pairToCstIds.set(key, []);
+    }
+    pairToCstIds.get(key).push(Number(row.classSectionTermId));
+    allCstIds.push(Number(row.classSectionTermId));
+  }
+
+  if (!allCstIds.length) {
+    for (const p of uniquePairs) {
+      countMap.set(`${p.batchId}_${p.term}`, 0);
+    }
+    return countMap;
+  }
+
+  // 3. Count distinct students in those classSectionTermIds
+  const studentRows = await scoped(model.studentModel).findAll({
+    attributes: [
+      "classSectionTermId",
+      [fn("COUNT", fn("DISTINCT", col("students.student_id"))), "studentCount"],
+    ],
+    where: {
+      classSectionTermId: { [Op.in]: allCstIds },
+      batchId: { [Op.in]: batchIds },
+    },
+    group: ["students.class_section_term_id"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const cstCounts = new Map();
+  for (const row of studentRows) {
+    cstCounts.set(Number(row.classSectionTermId), Number(row.studentCount) || 0);
+  }
+
+  for (const p of uniquePairs) {
+    const key = `${p.batchId}_${p.term}`;
+    const cstIds = pairToCstIds.get(key) || [];
+    let count = 0;
+    for (const id of cstIds) {
+      count += cstCounts.get(id) || 0;
+    }
+    countMap.set(key, count);
+  }
+
+  return countMap;
 }

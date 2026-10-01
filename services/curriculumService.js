@@ -438,7 +438,6 @@ export async function mapSubjects(curriculumId, subjects) {
   if (!curriculum) {
     httpError('Curriculum not found', 404);
   }
-  assertDraft(curriculum, 'map subjects to');
 
   if (!subjects?.length) {
     httpError('At least one subject is required', 400);
@@ -519,7 +518,6 @@ export async function updateSubjectTermMapping(
   if (!curriculum) {
     httpError('Curriculum not found', 404);
   }
-  assertDraft(curriculum, 'update subject mappings on');
 
   if (data.term !== undefined && curriculum.course?.totalTerms) {
     if (data.term > curriculum.course.totalTerms) {
@@ -548,7 +546,6 @@ export async function unmapSubject(curriculumSubjectTermMappingId) {
   if (!curriculum) {
     httpError('Curriculum not found', 404);
   }
-  assertDraft(curriculum, 'unmap subjects from');
 
   await curriculumRepository.deleteSubjectTermMapping(
     curriculumSubjectTermMappingId,

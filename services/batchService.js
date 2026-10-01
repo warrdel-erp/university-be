@@ -237,17 +237,9 @@ export async function getBatchFullDetails(batchId) {
       ? totalSubjects - configuredAssessmentSubjects
       : 0;
 
-  let regulationMapping = null;
-  let regulationMappedCount = 0;
-  for (const mapping of session.regulationCourseMappings || []) {
-    if (Number(mapping.courseId) !== Number(course.courseId)) {
-      continue;
-    }
-    regulationMappedCount += 1;
-    if (!regulationMapping) {
-      regulationMapping = mapping;
-    }
-  }
+  const regulationBatchMappings = batch.regulationBatchMappings || [];
+  const regulationMappedCount = regulationBatchMappings.length;
+  const regulationMapping = regulationBatchMappings[0] || null;
 
   const configuredYearsSet = new Set();
   let sectionCount = 0;
