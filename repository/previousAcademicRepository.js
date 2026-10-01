@@ -438,13 +438,28 @@ export async function findBatchMappingDetails(curriculumBatchMappingId) {
 }
 
 export async function countBatchStudents(courseId, sessionId, batchYear) {
-  const where = { courseId, batchYear };
-  if (sessionId) {
-    where.sessionId = sessionId;
+  const batchWhere = {};
+  if (sessionId != null) batchWhere.sessionId = Number(sessionId);
+  if (batchYear != null) batchWhere.batch = Number(batchYear);
+
+  const matchedBatch = await scoped(models.batchModel).findOne({
+    where: batchWhere,
+    include: courseId != null ? [
+      {
+        model: models.sessionModel,
+        as: 'session',
+        where: { courseId: Number(courseId) },
+        required: true,
+        attributes: [],
+      },
+    ] : [],
+    attributes: ['batchId'],
+  });
+
+  if (matchedBatch?.batchId) {
+    return countStudentsByBatchId(matchedBatch.batchId);
   }
-  return scoped(models.studentModel, {
-    scopeConfig: { academicYear: false },
-  }).count({ where });
+  return 0;
 }
 
 export async function countStudentsByBatchId(batchId) {
@@ -557,12 +572,32 @@ export async function findTermMappingWithBatch(curriculumBatchTermMappingId) {
 }
 
 export async function findStudentsByCourseBatch(courseId, batchYear, sessionId, batchId = null) {
-  const where = { courseId };
-  if (batchId) {
-    where.batchId = Number(batchId);
+  let resolvedBatchId = batchId ? Number(batchId) : null;
+  if (!resolvedBatchId && batchYear != null) {
+    const matchedBatch = await scoped(models.batchModel).findOne({
+      where: {
+        ...(sessionId != null && { sessionId: Number(sessionId) }),
+        batch: Number(batchYear),
+      },
+      include: courseId != null ? [
+        {
+          model: models.sessionModel,
+          as: 'session',
+          where: { courseId: Number(courseId) },
+          required: true,
+          attributes: [],
+        },
+      ] : [],
+      attributes: ['batchId'],
+    });
+    if (matchedBatch?.batchId) {
+      resolvedBatchId = Number(matchedBatch.batchId);
+    }
   }
-  if (sessionId) {
-    where.sessionId = sessionId;
+
+  const where = {};
+  if (resolvedBatchId) {
+    where.batchId = resolvedBatchId;
   }
 
   return scoped(models.studentModel, {
@@ -622,9 +657,6 @@ export async function findStudentsByBatchAndYear(batchId, year = null, options =
   const where = {
     batchId: bId,
   };
-  if (options.sessionId) {
-    where.sessionId = Number(options.sessionId);
-  }
   if (options.courseId) {
     where.courseId = Number(options.courseId);
   }
@@ -701,10 +733,61 @@ export async function findStudentsWithTermResultItems(
   sessionId,
   curriculumSubjectTermMappingIds,
   pagination = {},
+  extraOptions = {},
 ) {
-  const where = { courseId, batchYear };
-  if (sessionId) {
-    where.sessionId = sessionId;
+  let resolvedBatchId = extraOptions.batchId ? Number(extraOptions.batchId) : null;
+  if (!resolvedBatchId && batchYear != null) {
+    const matchedBatch = await scoped(models.batchModel).findOne({
+      where: {
+        ...(sessionId != null && { sessionId: Number(sessionId) }),
+        batch: Number(batchYear),
+      },
+      include: courseId != null ? [
+        {
+          model: models.sessionModel,
+          as: 'session',
+          where: { courseId: Number(courseId) },
+          required: true,
+          attributes: [],
+        },
+      ] : [],
+      attributes: ['batchId'],
+      transaction: extraOptions.transaction,
+    });
+    if (matchedBatch?.batchId) {
+      resolvedBatchId = Number(matchedBatch.batchId);
+    }
+  }
+
+  let classSectionTermIds = [];
+  if (resolvedBatchId && extraOptions.term != null) {
+    const classSections = await scoped(models.classSectionModel).findAll({
+      where: { batchId: resolvedBatchId },
+      attributes: ['classSectionsId'],
+      raw: true,
+      transaction: extraOptions.transaction,
+    });
+    const sectionIds = classSections.map((cs) => Number(cs.classSectionsId)).filter(Boolean);
+    if (sectionIds.length > 0) {
+      const cstRows = await scoped(models.classSectionTermModel).findAll({
+        where: {
+          classSectionsId: { [Op.in]: sectionIds },
+          term: Number(extraOptions.term),
+        },
+        attributes: ['classSectionTermId'],
+        raw: true,
+        transaction: extraOptions.transaction,
+      });
+      classSectionTermIds = cstRows.map((r) => Number(r.classSectionTermId)).filter(Boolean);
+    }
+  }
+
+  const where = {};
+  if (resolvedBatchId) {
+    where.batchId = resolvedBatchId;
+  }
+  if (classSectionTermIds.length > 0) {
+    where.classSectionTermId = { [Op.in]: classSectionTermIds };
   }
 
   const include = [

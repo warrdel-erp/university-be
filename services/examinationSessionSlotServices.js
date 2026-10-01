@@ -2,11 +2,6 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as examinationSessionSlotRepository from "../repository/examinationSessionSlotRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import * as examinationSessionServices from "./examinationSessionServices.js";
-import {
-  lookupStudentCount,
-  buildStudentGroupFromSchedule,
-} from "../utility/studentCount.js";
-import { getStudentCountMapByGroups } from "./studentCountServices.js";
 import { deriveScheduleRoomFlags } from "../utility/roomCapacity.js";
 import { EXAM_SCHEDULE_FILTER_STATUS } from "../constant.js";
 import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
@@ -187,29 +182,48 @@ async function loadEnrichedSlotSchedules(
     options,
   );
 
-  const studentGroups = allSchedules
-    .map((schedule) =>
-      buildStudentGroupFromSchedule(
-        schedule,
-        fallbackMap.get(Number(schedule.subjectId)),
-      ),
-    )
-    .filter(Boolean);
+  const schedulePairs = [];
+  for (const schedule of allSchedules) {
+    const fallback = fallbackMap.get(Number(schedule.subjectId)) || {};
+    const batchId =
+      schedule.batchId ??
+      schedule.batch?.batchId ??
+      fallback.batchId ??
+      null;
+    const term =
+      schedule.curriculumSubjectTermMapping?.term ??
+      schedule.term ??
+      fallback.term ??
+      null;
+    if (batchId != null && term != null) {
+      schedulePairs.push({ batchId, term });
+    }
+  }
 
-  const studentCountMap = await getStudentCountMapByGroups(
-    studentGroups,
-    options,
-  );
+  const studentCountMap =
+    await examinationSessionSlotRepository.countStudentsByBatchAndTermPairs(
+      schedulePairs,
+      options,
+    );
 
   for (const slot of slots) {
     slot.schedules = slot.schedules.map((schedule) => {
-      const studentCount = lookupStudentCount(
-        studentCountMap,
-        buildStudentGroupFromSchedule(
-          schedule,
-          fallbackMap.get(Number(schedule.subjectId)),
-        ),
-      );
+      const fallback = fallbackMap.get(Number(schedule.subjectId)) || {};
+      const batchId =
+        schedule.batchId ??
+        schedule.batch?.batchId ??
+        fallback.batchId ??
+        null;
+      const term =
+        schedule.curriculumSubjectTermMapping?.term ??
+        schedule.term ??
+        fallback.term ??
+        null;
+      const countKey =
+        batchId != null && term != null
+          ? `${Number(batchId)}_${Number(term)}`
+          : null;
+      const studentCount = countKey ? studentCountMap.get(countKey) || 0 : 0;
       return buildScheduleRow(schedule, studentCount, fallbackMap);
     });
   }
@@ -292,6 +306,19 @@ async function buildUnscheduledSchedules(
       options,
     );
 
+  const unscheduledPairs = [];
+  for (const sub of subjectsList) {
+    if (sub.batchId != null && sub.term != null) {
+      unscheduledPairs.push({ batchId: sub.batchId, term: sub.term });
+    }
+  }
+
+  const unscheduledCountMap =
+    await examinationSessionSlotRepository.countStudentsByBatchAndTermPairs(
+      unscheduledPairs,
+      options,
+    );
+
   const unscheduled = [];
   for (const sub of subjectsList) {
     const cstmId =
@@ -299,6 +326,15 @@ async function buildUnscheduledSchedules(
       sub.curriculumBatchTermMappingId ??
       null;
     const batchId = sub.batchId ?? null;
+    const term = sub.term != null ? Number(sub.term) : null;
+    const countKey =
+      batchId != null && term != null
+        ? `${Number(batchId)}_${Number(term)}`
+        : null;
+    const studentCount = countKey
+      ? unscheduledCountMap.get(countKey) ?? (sub.studentCount || 0)
+      : sub.studentCount || 0;
+
     const curriculumSubjectTermMapping =
       sub.curriculumSubjectTermMapping ||
       (cstmId
@@ -336,7 +372,7 @@ async function buildUnscheduledSchedules(
           termType: sub.termType || null,
         },
       },
-      studentCount: sub.studentCount || 0,
+      studentCount,
       courseName: sub.courseName || null,
       termType: sub.termType || null,
       roomNumbers: [],
@@ -349,6 +385,28 @@ async function buildUnscheduledSchedules(
     });
   }
   return unscheduled;
+}
+
+/**
+ * Count active students for a given batchId and term.
+ */
+export async function countStudentsByBatchIdAndTerm(batchId, term, options = {}) {
+  return examinationSessionSlotRepository.countStudentsByBatchIdAndTerm(batchId, term, options);
+}
+
+/**
+ * Get map of student counts for items by batchId + term.
+ */
+export async function getSubjectWiseStudentCountMap(items, options = {}) {
+  const pairs = [];
+  for (const item of items || []) {
+    const batchId = item.batchId ?? item.batch?.batchId ?? null;
+    const term = item.curriculumSubjectTermMapping?.term ?? item.term ?? null;
+    if (batchId != null && term != null) {
+      pairs.push({ batchId, term });
+    }
+  }
+  return examinationSessionSlotRepository.countStudentsByBatchAndTermPairs(pairs, options);
 }
 
 export async function getExaminationSessionSlots(

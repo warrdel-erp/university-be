@@ -753,52 +753,11 @@ export async function findOverviewByCurriculumBatchMappingId({
                 attributes: [
                   "assessmentPlanId",
                   "planName",
-                  "planCode",
-                  "description",
-                  "batchId",
                   "regulationId",
-                  "gradingId",
-                  "status",
-                  "isActive",
                 ],
                 where:
                   Object.keys(planWhere).length > 0 ? planWhere : undefined,
                 required: Object.keys(planWhere).length > 0,
-                include: [
-                  {
-                    model: model.academicRegulationModel,
-                    as: "academicRegulation",
-                    attributes: [
-                      "academicRegulationId",
-                      "regulationCode",
-                      "regulationName",
-                      "evaluationPattern",
-                      "internalWeightage",
-                      "externalWeightage",
-                    ],
-                    required: false,
-                  },
-                  {
-                    model: model.assessmentPlanComponentModel,
-                    as: "components",
-                    attributes: [
-                      "assessmentPlanComponentId",
-                      "examSetupTypeId",
-                      "weightagePercentage",
-                      "maxAssessments",
-                      "duration",
-                    ],
-                    required: false,
-                    include: [
-                      {
-                        model: model.examSetupTypeModel,
-                        as: "examSetupType",
-                        attributes: ["examSetupTypeId", "examName"],
-                        required: false,
-                      },
-                    ],
-                  },
-                ],
               },
             ],
           },

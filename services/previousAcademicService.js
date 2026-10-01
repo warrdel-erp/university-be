@@ -1620,6 +1620,11 @@ export async function getTermStudentMarks(
   );
   const { subjects, curriculumSubjectTermMappingIds } = buildTermSubjects(assessmentPlanSubjectMappings, curriculumSubjectTermMappings);
 
+  const batchId =
+    termMapping.batchMapping?.batchId ??
+    termMapping.batchMapping?.batch?.batchId ??
+    null;
+
   const [studentPage, regulationMappings] = await Promise.all([
     previousAcademicRepository.findStudentsWithTermResultItems(
       courseId,
@@ -1627,6 +1632,7 @@ export async function getTermStudentMarks(
       sessionId,
       curriculumSubjectTermMappingIds,
       {},
+      { batchId, term: Number(termMapping.term) },
     ),
     previousAcademicRepository.findAcademicRegulationForCourse(courseId, sessionId, batch),
   ]);

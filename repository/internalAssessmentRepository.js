@@ -403,27 +403,25 @@ function resolveContinuousPlan(
   return planMap.get(`subject:${subjectId}`) || null;
 }
 
-async function getStudentCountByTermAndSession(termSessionPairs) {
+async function getStudentCountByClassSectionTermIds(cstIds) {
   const countMap = new Map();
 
-  if (termSessionPairs.length === 0) {
+  if (!cstIds || cstIds.length === 0) {
     return countMap;
   }
 
   const rows = await scoped(model.studentModel).findAll({
-    where: { [Op.or]: termSessionPairs },
+    where: { classSectionTermId: { [Op.in]: cstIds } },
     attributes: [
       "classSectionTermId",
-      "sessionId",
-      [fn("COUNT", col("student_id")), "studentCount"],
+      [fn("COUNT", fn("DISTINCT", col("student_id"))), "studentCount"],
     ],
-    group: ["classSectionTermId", "sessionId"],
+    group: ["classSectionTermId"],
     raw: true,
   });
 
   for (const row of rows) {
-    const key = `${row.classSectionTermId}:${row.sessionId}`;
-    countMap.set(key, Number(row.studentCount));
+    countMap.set(Number(row.classSectionTermId), Number(row.studentCount));
   }
 
   return countMap;
@@ -640,18 +638,15 @@ export async function getUserInternalAssessments(userId, options = {}) {
       userId,
     });
 
-    const termSessionKey = `${entry.classSectionTermId}:${entry.sessionId}`;
-    if (!filteredTermSessionKeySet.has(termSessionKey)) {
-      filteredTermSessionKeySet.add(termSessionKey);
-      filteredTermSessionPairs.push({
-        classSectionTermId: entry.classSectionTermId,
-        sessionId: entry.sessionId,
-      });
+    const cstId = Number(entry.classSectionTermId);
+    if (!filteredTermSessionKeySet.has(cstId)) {
+      filteredTermSessionKeySet.add(cstId);
+      filteredTermSessionPairs.push(cstId);
     }
   }
 
   const [studentCountMap, assessments] = await Promise.all([
-    getStudentCountByTermAndSession(filteredTermSessionPairs),
+    getStudentCountByClassSectionTermIds(filteredTermSessionPairs),
     scoped(model.internalAssessmentModel).findAll({
       where: { [Op.or]: assessmentWhere },
       attributes: ["internalAssessmentId", "subjectId", "classSectionTermId"],
@@ -660,7 +655,7 @@ export async function getUserInternalAssessments(userId, options = {}) {
 
   for (const entry of continuousEntries) {
     entry.studentCount =
-      studentCountMap.get(`${entry.classSectionTermId}:${entry.sessionId}`) ||
+      studentCountMap.get(Number(entry.classSectionTermId)) ||
       0;
   }
 

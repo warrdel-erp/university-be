@@ -105,15 +105,6 @@ function mapAssessmentPlanMapping(mapping) {
       ? {
           assessmentPlanId: plan.assessmentPlanId,
           planName: plan.planName,
-          planCode: plan.planCode,
-          description: plan.description,
-          batchId: plan.batchId,
-          regulationId: plan.regulationId,
-          gradingId: plan.gradingId,
-          status: plan.status,
-          isActive: plan.isActive,
-          academicRegulation: plan.academicRegulation || null,
-          components: plan.components || [],
         }
       : null,
   };

@@ -706,8 +706,11 @@ async function getAssessmentPlanIds(examSetupTypeId, options = {}) {
 async function initializeEligibilityRecords(
   examinationSessionId,
   defaultAcademicYearId,
-  transaction,
+  transactionOrOptions,
 ) {
+  const transaction = transactionOrOptions?.commit
+    ? transactionOrOptions
+    : transactionOrOptions?.transaction || null;
   const session =
     await examinationSessionRepository.getExaminationSessionById(
       examinationSessionId,
@@ -734,13 +737,47 @@ async function initializeEligibilityRecords(
       { purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC, academicYearId },
       transaction,
     );
-  if (!rawStudentsList || !rawStudentsList.length) return;
 
   const existingMap =
     await examinationSessionEligibilityRepo.getEligibilityStatusesMap(
       examinationSessionId,
       { transaction },
     );
+
+  if (!rawStudentsList || !rawStudentsList.length) {
+    if (existingMap && existingMap.size > 0) {
+      await examinationSessionEligibilityRepo.deleteEligibilityRecordsBySessionAndStudents(
+        examinationSessionId,
+        Array.from(existingMap.keys()),
+        { transaction },
+      );
+    }
+    return;
+  }
+
+  const currentStudentIds = new Set();
+  for (const raw of rawStudentsList) {
+    const student = raw.student;
+    if (student && student.studentId) {
+      currentStudentIds.add(Number(student.studentId));
+    }
+  }
+
+  // Delete eligibility records for students no longer part of this examination session
+  const studentIdsToDelete = [];
+  for (const existingStudentId of existingMap.keys()) {
+    if (!currentStudentIds.has(Number(existingStudentId))) {
+      studentIdsToDelete.push(Number(existingStudentId));
+    }
+  }
+
+  if (studentIdsToDelete.length > 0) {
+    await examinationSessionEligibilityRepo.deleteEligibilityRecordsBySessionAndStudents(
+      examinationSessionId,
+      studentIdsToDelete,
+      { transaction },
+    );
+  }
 
   const eligibilityRecords = [];
   const seenStudentIds = new Set();
@@ -841,7 +878,7 @@ export async function createExaminationSession(sessionData, options = {}) {
       await initializeEligibilityRecords(
         record.examinationSessionId,
         mainData.academicYearId,
-        transaction,
+        tx,
       );
     }
 
@@ -1025,7 +1062,7 @@ export async function updateExaminationSession(
     await initializeEligibilityRecords(
       sessionId,
       mainUpdateData.academicYearId,
-      transaction,
+      tx,
     );
 
     return getExaminationSessionById(sessionId, tx);
