@@ -11,6 +11,7 @@ import {
   routineStructureInclude,
 } from "../utility/classSectionIncludes.js";
 import { formatQueryDate } from "../utility/helper.js";
+import { doTimeSlotsOverlap, getTimeSlotRange } from "../utility/timeSlot.js";
 
 async function assertScopedRoutine(timeTableRoutineId, options = {}) {
   if (timeTableRoutineId == null) return null;
@@ -97,6 +98,7 @@ export async function findCourseById(courseId) {
 export async function findClassSectionTermsWithRoutines({
   courseId,
   sessionId,
+  activeYear,
 } = {}) {
   const sectionScope = buildScope(model.classSectionModel);
   const sectionWhere = { ...sectionScope };
@@ -105,6 +107,9 @@ export async function findClassSectionTermsWithRoutines({
   }
   if (sessionId != null) {
     sectionWhere.sessionId = Number(sessionId);
+  }
+  if (activeYear != null) {
+    sectionWhere.activeYear = Number(activeYear);
   }
 
   return model.classSectionTermModel.findAll({
@@ -122,6 +127,7 @@ export async function findClassSectionTermsWithRoutines({
           "courseId",
           "sessionId",
           "academicYearId",
+          "activeYear",
         ],
         include: [
           {
@@ -601,6 +607,44 @@ export async function getPeriodInfoRepository(
 //   }
 // };
 
+async function pickTimeOverlappingConflict(
+  candidates,
+  startTime,
+  endTime,
+  options = {},
+  useCombinedException = true,
+) {
+  const requestedRange = getTimeSlotRange({ startTime, endTime });
+
+  for (const candidate of candidates) {
+    const period = candidate.timeTablecreation;
+    const existingRange = getTimeSlotRange({
+      startTime: period.startTime,
+      endTime: period.endTime,
+    });
+    if (!doTimeSlotsOverlap(requestedRange, existingRange)) {
+      continue;
+    }
+
+    const scopedConflict = await filterConflictByRoutineScope(candidate, {
+      transaction: options.transaction,
+    });
+
+    if (useCombinedException) {
+      if (isAllowedCombinedConflict(scopedConflict, options)) {
+        continue;
+      }
+      return scopedConflict;
+    }
+
+    if (scopedConflict) {
+      return scopedConflict;
+    }
+  }
+
+  return null;
+}
+
 export async function checkTeacherConflictRepository(
   userId,
   day,
@@ -611,7 +655,7 @@ export async function checkTeacherConflictRepository(
   options = {},
   transaction = null,
 ) {
-  const conflict = await model.timeTableCellModel.findOne({
+  const candidates = await model.timeTableCellModel.findAll({
     transaction: transaction ?? null,
     where: {
       day,
@@ -628,12 +672,7 @@ export async function checkTeacherConflictRepository(
         model: model.timeTableStructurePeriodsModel,
         as: "timeTablecreation",
         attributes: ["startTime", "endTime"],
-        where: {
-          [Op.and]: [
-            { startTime: { [Op.lt]: endTime } },
-            { endTime: { [Op.gt]: startTime } },
-          ],
-        },
+        required: true,
       },
       {
         model: model.timeTableRoutineModel,
@@ -657,15 +696,10 @@ export async function checkTeacherConflictRepository(
     ],
   });
 
-  const scopedConflict = await filterConflictByRoutineScope(conflict, {
+  return pickTimeOverlappingConflict(candidates, startTime, endTime, {
+    ...options,
     transaction,
   });
-
-  if (isAllowedCombinedConflict(scopedConflict, options)) {
-    return null;
-  }
-
-  return scopedConflict;
 }
 
 export async function checkElectiveSubjectConflictRepository(
@@ -694,7 +728,7 @@ export async function checkElectiveSubjectConflictRepository(
     routineWhere.timeTableRoutineId = { [Op.ne]: Number(excludeRoutineId) };
   }
 
-  const conflict = await model.timeTableCellModel.findOne({
+  const candidates = await model.timeTableCellModel.findAll({
     transaction: transaction ?? null,
     where: {
       electiveSubjectId: Number(electiveSubjectId),
@@ -707,12 +741,6 @@ export async function checkElectiveSubjectConflictRepository(
         as: "timeTablecreation",
         attributes: ["startTime", "endTime"],
         required: true,
-        where: {
-          [Op.and]: [
-            { startTime: { [Op.lt]: endTime } },
-            { endTime: { [Op.gt]: startTime } },
-          ],
-        },
       },
       {
         model: model.timeTableRoutineModel,
@@ -729,11 +757,13 @@ export async function checkElectiveSubjectConflictRepository(
     ],
   });
 
-  const scopedConflict = await filterConflictByRoutineScope(conflict, {
-    transaction,
-  });
-
-  return scopedConflict;
+  return pickTimeOverlappingConflict(
+    candidates,
+    startTime,
+    endTime,
+    { ...options, transaction },
+    false,
+  );
 }
 
 export async function findFirstDateWiseDateForCell(timeTableCellId, options = {}) {
@@ -1023,7 +1053,7 @@ export async function checkRoomConflictRepository(
   options = {},
   transaction = null,
 ) {
-  const conflict = await model.timeTableCellModel.findOne({
+  const candidates = await model.timeTableCellModel.findAll({
     transaction: transaction ?? null,
     where: {
       classRoomSectionId,
@@ -1041,12 +1071,7 @@ export async function checkRoomConflictRepository(
         model: model.timeTableStructurePeriodsModel,
         as: "timeTablecreation",
         attributes: ["startTime", "endTime"],
-        where: {
-          [Op.and]: [
-            { startTime: { [Op.lt]: endTime } },
-            { endTime: { [Op.gt]: startTime } },
-          ],
-        },
+        required: true,
       },
       {
         model: model.timeTableRoutineModel,
@@ -1070,15 +1095,10 @@ export async function checkRoomConflictRepository(
     ],
   });
 
-  const scopedConflict = await filterConflictByRoutineScope(conflict, {
+  return pickTimeOverlappingConflict(candidates, startTime, endTime, {
+    ...options,
     transaction,
   });
-
-  if (isAllowedCombinedConflict(scopedConflict, options)) {
-    return null;
-  }
-
-  return scopedConflict;
 }
 
 export async function getFullRoutineDetailsRepository(
@@ -2557,7 +2577,7 @@ const teacherRoutineStructureInclude = routineStructureInclude({
   structureWhere: buildScope(model.timeTableStructureModel),
 });
 
-const teacherClassSectionInclude = (courseId, sessionId) => {
+const teacherClassSectionInclude = (courseId, sessionId, options = {}) => {
   const sectionWhere = {
     ...buildScope(model.classSectionModel),
   };
@@ -2566,6 +2586,9 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
   }
   if (sessionId != null) {
     sectionWhere.sessionId = sessionId;
+  }
+  if (options.batchId != null) {
+    sectionWhere.batchId = options.batchId;
   }
 
   return timeTableRoutineClassSectionInclude({
@@ -2578,6 +2601,7 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
       "year",
       "sessionId",
       "courseId",
+      "batchId",
     ],
     sectionNestedIncludes: [
       {
@@ -2592,13 +2616,16 @@ const teacherClassSectionInclude = (courseId, sessionId) => {
   });
 };
 
-async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
+async function fetchTeacherRoutineContext(userId, courseId, sessionId, options = {}) {
   const classSectionWhere = {};
   if (courseId != null) {
     classSectionWhere.courseId = courseId;
   }
   if (sessionId != null) {
     classSectionWhere.sessionId = sessionId;
+  }
+  if (options.batchId != null) {
+    classSectionWhere.batchId = options.batchId;
   }
 
   return Promise.all([
@@ -2626,13 +2653,11 @@ async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
           attributes: [
             "sessionId",
             "sessionName",
-            "startingDate",
-            "endingDate",
             "academicYearId",
           ],
         })
       : Promise.resolve(null),
-    courseId != null && sessionId != null
+    (courseId != null || sessionId != null || options.batchId != null)
       ? scoped(model.classSectionModel).findAll({
           where: classSectionWhere,
           attributes: [
@@ -2641,6 +2666,7 @@ async function fetchTeacherRoutineContext(userId, courseId, sessionId) {
             "year",
             "courseId",
             "sessionId",
+            "batchId",
           ],
           include: [classSectionTermsInclude()],
           order: [
@@ -2698,7 +2724,7 @@ async function fetchNormalRoutinesForTeacher(
         cellSubjectWhere,
         required: true,
       }),
-      teacherClassSectionInclude(courseId, sessionId),
+      teacherClassSectionInclude(courseId, sessionId, options),
       {
         model: model.academicGroupModel,
         as: "academicGroup",
@@ -2875,7 +2901,7 @@ export async function getTeacherRoutineBundle(
 ) {
   const [[employee, course, session, classSections], normalRoutines] =
     await Promise.all([
-      fetchTeacherRoutineContext(userId, courseId, sessionId),
+      fetchTeacherRoutineContext(userId, courseId, sessionId, options),
       fetchNormalRoutinesForTeacher(userId, courseId, sessionId, subjectId, options),
     ]);
 

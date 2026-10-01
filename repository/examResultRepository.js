@@ -24,14 +24,16 @@ const studentListAttributes = [
 
 function studentIncludes(filters) {
   const classSectionWhere = {
-    academicYearId: Number(filters.academicYearId),
     ...buildScope(model.classSectionModel),
   };
+  if (filters.academicYearId != null) {
+    classSectionWhere.academicYearId = Number(filters.academicYearId);
+  }
   if (filters.classSectionOr?.length) {
     classSectionWhere[Op.or] = filters.classSectionOr;
   }
 
-  return [
+  const includes = [
     {
       model: model.courseModel,
       as: "course",
@@ -61,6 +63,21 @@ function studentIncludes(filters) {
       ],
     },
   ];
+
+  if (filters.examinationSessionId) {
+    includes.push({
+      model: model.studentHallTicketModel,
+      as: "hallTickets",
+      required: true,
+      attributes: ["id", "examinationSessionId"],
+      where: {
+        examinationSessionId: Number(filters.examinationSessionId),
+        ...buildScope(model.studentHallTicketModel),
+      },
+    });
+  }
+
+  return includes;
 }
 
 export async function findExaminationSession(examinationSessionId) {
@@ -74,7 +91,6 @@ export async function findExaminationSession(examinationSessionId) {
     attributes: [
       "examinationSessionId",
       "sessionName",
-      "academicYearId",
       "assessmentTypeId",
       "status",
     ],
@@ -83,7 +99,14 @@ export async function findExaminationSession(examinationSessionId) {
         model: model.examinationSessionTermModel,
         as: "examinationSessionTerms",
         required: false,
-        attributes: ["term"],
+        attributes: [
+          "examinationSessionTermId",
+          "examinationSessionId",
+          "courseId",
+          "sessionId",
+          "batchId",
+          "term",
+        ],
       },
     ],
     order: [["examinationSessionId", "DESC"]],
@@ -91,11 +114,16 @@ export async function findExaminationSession(examinationSessionId) {
 }
 
 export async function findSessionCourseMappingsByIds(mappingIds) {
-  return scoped(model.sessionCouseMappingModel).findAll({
-    where: { sessionCourseMappingId: { [Op.in]: mappingIds } },
-    attributes: ["sessionCourseMappingId", "courseId", "sessionId"],
+  const sessions = await scoped(model.sessionModel).findAll({
+    where: { sessionId: { [Op.in]: mappingIds } },
+    attributes: ["sessionId", "courseId"],
     raw: true,
   });
+  return sessions.map((s) => ({
+    sessionCourseMappingId: s.sessionId,
+    courseId: s.courseId,
+    sessionId: s.sessionId,
+  }));
 }
 
 /**
@@ -108,8 +136,8 @@ export async function findExamSchedulesByExaminationSessionId(
 ) {
   const where = { examinationSessionId: Number(examinationSessionId) };
 
-  if (filters.sessionIds?.length) {
-    where.sessionId = { [Op.in]: filters.sessionIds };
+  if (filters.batchIds?.length) {
+    where.batchId = { [Op.in]: filters.batchIds };
   }
   if (filters.terms?.length) {
     where.term = {
@@ -122,11 +150,16 @@ export async function findExamSchedulesByExaminationSessionId(
     subjectWhere.courseId = { [Op.in]: filters.courseIds };
   }
 
+  const batchWhere = {};
+  if (filters.sessionIds?.length) {
+    batchWhere.sessionId = { [Op.in]: filters.sessionIds };
+  }
+
   return scoped(model.examScheduleModel).findAll({
     where,
     attributes: [
       "examScheduleId",
-      "sessionId",
+      "batchId",
       "term",
       "subjectId",
       "examDate",
@@ -139,6 +172,13 @@ export async function findExamSchedulesByExaminationSessionId(
         required: true,
         attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
         where: subjectWhere,
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        required: Object.keys(batchWhere).length > 0,
+        attributes: ["batchId", "batch", "sessionId"],
+        where: Object.keys(batchWhere).length > 0 ? batchWhere : undefined,
       },
     ],
     order: [
@@ -293,10 +333,10 @@ export async function findExamScheduleContextsByExaminationSessionId(
     where: { examinationSessionId: Number(examinationSessionId) },
     attributes: [
       "examScheduleId",
-      "sessionId",
+      "batchId",
+      "curriculumSubjectTermMappingId",
       "term",
-      "academicYearId",
-      "curriculumBatchTermMappingId",
+      "subjectId",
     ],
     include: [
       {
@@ -307,22 +347,18 @@ export async function findExamScheduleContextsByExaminationSessionId(
         where: buildScope(model.subjectModel),
       },
       {
-        model: model.curriculumBatchTermMappingModel,
-        as: "curriculumBatchTermMapping",
-        attributes: [
-          "curriculumBatchTermMappingId",
-          "term",
-          "yearNumber",
-          "year",
-        ],
+        model: model.batchModel,
+        as: "batch",
         required: false,
-        include: [
-          {
-            model: model.curriculumBatchMappingModel,
-            as: "batchMapping",
-            attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
-            required: true,
-          },
+        attributes: ["batchId", "batch", "sessionId"],
+      },
+      {
+        model: model.curriculumSubjectTermMappingModel,
+        as: "curriculumSubjectTermMapping",
+        required: false,
+        attributes: [
+          "curriculumSubjectTermMappingId",
+          "term",
         ],
       },
     ],
@@ -337,9 +373,11 @@ export async function findApplicableStudentContexts(filters) {
   const studentWhere = { ...buildScope(model.studentModel) };
 
   const classSectionWhere = {
-    academicYearId: Number(filters.academicYearId),
     ...buildScope(model.classSectionModel),
   };
+  if (filters.academicYearId != null) {
+    classSectionWhere.academicYearId = Number(filters.academicYearId);
+  }
   if (filters.classSectionOr?.length) {
     classSectionWhere[Op.or] = filters.classSectionOr;
   }
@@ -355,27 +393,42 @@ export async function findApplicableStudentContexts(filters) {
     studentWhere[Op.or] = courseSessionOr;
   }
 
+  const includes = [
+    {
+      model: model.classSectionTermModel,
+      as: "studentClassSectionTerm",
+      required: true,
+      attributes: ["term"],
+      where: { term: { [Op.in]: filters.terms } },
+      include: [
+        {
+          model: model.classSectionModel,
+          as: "classSection",
+          required: true,
+          attributes: [],
+          where: classSectionWhere,
+        },
+      ],
+    },
+  ];
+
+  if (filters.examinationSessionId) {
+    includes.push({
+      model: model.studentHallTicketModel,
+      as: "hallTickets",
+      required: true,
+      attributes: ["id", "examinationSessionId"],
+      where: {
+        examinationSessionId: Number(filters.examinationSessionId),
+        ...buildScope(model.studentHallTicketModel),
+      },
+    });
+  }
+
   return scoped(model.studentModel).findAll({
     attributes: ["studentId", "courseId", "sessionId"],
     where: studentWhere,
-    include: [
-      {
-        model: model.classSectionTermModel,
-        as: "studentClassSectionTerm",
-        required: true,
-        attributes: ["term"],
-        where: { term: { [Op.in]: filters.terms } },
-        include: [
-          {
-            model: model.classSectionModel,
-            as: "classSection",
-            required: true,
-            attributes: [],
-            where: classSectionWhere,
-          },
-        ],
-      },
-    ],
+    include: includes,
     raw: true,
     nest: true,
   });

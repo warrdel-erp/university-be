@@ -4,7 +4,6 @@ import examinationSessionModel from "./examinationSessionModel.js";
 import userModel from "./userModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 
 const examinationSessionSlotModel = sequelize.define(
     'examination_session_slot',
@@ -40,15 +39,6 @@ const examinationSessionSlotModel = sequelize.define(
             references: {
                 model: instituteModel,
                 key: 'institute_id'
-            }
-        },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
             }
         },
         slotNumber: {
@@ -114,6 +104,6 @@ const examinationSessionSlotModel = sequelize.define(
     }
 );
 
-examinationSessionSlotModel.scopeConfig = { university: true, institute: true, academicYear: true };
+examinationSessionSlotModel.scopeConfig = { university: true, institute: true };
 
 export default examinationSessionSlotModel;

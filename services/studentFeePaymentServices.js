@@ -33,7 +33,6 @@ function formatPaymentListStudent(student) {
 
   const course = s.course ?? {};
   const session = s.studentSession ?? {};
-  const profile = s.studentFeePlanProfile ?? {};
 
   return {
     studentId: s.studentId,
@@ -45,8 +44,7 @@ function formatPaymentListStudent(student) {
     email: s.email ?? null,
     mobileNumber: s.mobileNumber ?? null,
     enrollNumber: s.enrollNumber ?? null,
-    feePlanProfileId: s.feePlanProfileId ?? profile.feePlanProfileId ?? null,
-    feePlanName: profile.name ?? null,
+    batchId: s.batchId ?? null,
     courseId: course.courseId ?? s.courseId ?? null,
     courseName: course.courseName ?? null,
     sessionId: session.sessionId ?? s.sessionId ?? null,

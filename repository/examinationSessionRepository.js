@@ -7,14 +7,9 @@ import * as studentCountRepository from "./studentCountRepository.js";
 import { curriculumBatchTermScheduleInclude } from "./curriculumBatchTermRepository.js";
 import { QUESTION_STATUS } from "../constant.js";
 import { decimalAdd, toIntegerNumber } from "../utility/decimalMoney.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
 
 const sessionInclude = [
-  {
-    model: model.acedmicYearModel,
-    as: "academicYear",
-    attributes: ["academicYearId", "yearTitle", "startingDate", "endingDate"],
-    required: false,
-  },
   {
     model: model.examSetupTypeModel,
     as: "assessmentType",
@@ -29,6 +24,7 @@ const sessionInclude = [
       "examinationSessionId",
       "courseId",
       "sessionId",
+      "batchId",
       "term",
       "includeElectives",
       "remarks",
@@ -155,7 +151,7 @@ export async function getExaminationSessionById(id, options = {}) {
 export async function findExaminationSessionAssessmentTypeById(id, options = {}) {
   return scoped(model.examinationSessionModel).findOne({
     where: { examinationSessionId: Number(id) },
-    attributes: ["assessmentTypeId", "status", "academicYearId"],
+    attributes: ["assessmentTypeId", "status"],
     raw: true,
     transaction: options.transaction,
   });
@@ -255,6 +251,7 @@ export async function findExaminationSessionTermById(examinationSessionTermId, o
       "examinationSessionId",
       "courseId",
       "sessionId",
+      "batchId",
       "term",
       "includeElectives",
       "remarks",
@@ -332,18 +329,89 @@ export async function findAssessmentPlanComponentDurationBySetupTypeId(examSetup
   });
 }
 
-export async function findAssessmentPlanSubjectMappings(where, options = {}) {
+export async function findAssessmentPlanSubjectMappings(where = {}, options = {}) {
+  const rootWhere = {};
+  const batchWhere = {};
+  const sessionWhere = {};
+
+  if (where.assessmentPlanId !== undefined) {
+    rootWhere.assessmentPlanId = where.assessmentPlanId;
+  }
+  if (where.subjectId !== undefined) {
+    rootWhere.subjectId = where.subjectId;
+  }
+  if (where.batchId !== undefined) {
+    rootWhere.batchId = where.batchId;
+  }
+  if (where.curriculumSubjectTermMappingId !== undefined) {
+    rootWhere.curriculumSubjectTermMappingId = where.curriculumSubjectTermMappingId;
+  }
+  if (where.sessionId !== undefined) {
+    batchWhere.sessionId = where.sessionId;
+  }
+  if (where.courseId !== undefined) {
+    sessionWhere.courseId = where.courseId;
+  }
+
   return scoped(model.assessmentPlanSubjectMappingModel).findAll({
-    where,
+    where: rootWhere,
     attributes: [
-      "subjectId",
-      "curriculumBatchTermMappingId",
-      "courseId",
-      "sessionId",
-      "academicYearId",
+      "assessmentPlanSubjectMappingId",
       "assessmentPlanId",
+      "batchId",
+      "curriculumSubjectTermMappingId",
+      "subjectId",
     ],
-    raw: true,
+    include: [
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch", "sessionId"],
+        where: Object.keys(batchWhere).length > 0 ? batchWhere : undefined,
+        required: Object.keys(batchWhere).length > 0,
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName", "courseId"],
+            where: Object.keys(sessionWhere).length > 0 ? sessionWhere : undefined,
+            required: Object.keys(sessionWhere).length > 0,
+          },
+        ],
+      },
+      {
+        model: model.curriculumSubjectTermMappingModel,
+        as: "curriculumSubjectTermMapping",
+        attributes: [
+          "curriculumSubjectTermMappingId",
+          "curriculumId",
+          "subjectId",
+          "term",
+          "credit",
+        ],
+        required: false,
+        include: [
+          {
+            model: model.curriculumModel,
+            as: "curriculum",
+            attributes: ["curriculumId", "name", "courseId"],
+            required: false,
+          },
+          {
+            model: model.subjectModel,
+            as: "subject",
+            attributes: ["subjectId", "subjectName", "subjectCode", "subjectType", "subjectCategory"],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.assessmentPlanModel,
+        as: "assessmentPlan",
+        attributes: ["assessmentPlanId", "planName", "planCode", "batchId"],
+        required: false,
+      },
+    ],
     transaction: options.transaction,
   });
 }
@@ -354,8 +422,7 @@ export async function findAssessmentPlansByIds(planIds, options = {}) {
     where: { assessmentPlanId: { [Op.in]: planIds } },
     attributes: [
       "assessmentPlanId",
-      "courseId",
-      "academicYearId",
+      "batchId",
       "planName",
       "planCode",
     ],
@@ -396,7 +463,15 @@ export async function findCurriculumSubjectsByCourseAndTerm(
           {
             model: model.curriculumBatchMappingModel,
             as: "batchMappings",
-            attributes: ["curriculumBatchMappingId", "batch"],
+            attributes: ["curriculumBatchMappingId", "batchId"],
+            include: [
+              {
+                model: model.batchModel,
+                as: "batch",
+                attributes: ["batchId", "batch", "sessionId"],
+                required: false,
+              },
+            ],
             required: true,
           },
         ],
@@ -417,19 +492,43 @@ export async function findCurriculumSubjectsByCourseAndTerm(
  * Term is already enforced by the curriculum subject list passed in.
  */
 export async function findMappedSubjectIdsForCourseSessionTerm(
-  { courseId, sessionId, subjectIds },
+  { courseId, sessionId, batchId, subjectIds },
   options = {},
 ) {
   if (!subjectIds.length) {
     return [];
   }
 
+  const where = {
+    subjectId: { [Op.in]: subjectIds },
+  };
+  if (batchId != null) {
+    where.batchId = Number(batchId);
+  }
+
   const rows = await scoped(model.assessmentPlanSubjectMappingModel).findAll({
-    where: {
-      courseId: Number(courseId),
-      sessionId: Number(sessionId),
-      subjectId: { [Op.in]: subjectIds },
-    },
+    where,
+    include:
+      batchId != null
+        ? []
+        : [
+            {
+              model: model.batchModel,
+              as: "batch",
+              attributes: ["batchId", "sessionId"],
+              where: sessionId ? { sessionId: Number(sessionId) } : undefined,
+              required: Boolean(sessionId),
+              include: [
+                {
+                  model: model.sessionModel,
+                  as: "session",
+                  attributes: ["sessionId", "courseId"],
+                  where: courseId ? { courseId: Number(courseId) } : undefined,
+                  required: Boolean(courseId),
+                },
+              ],
+            },
+          ],
     attributes: ["subjectId"],
     transaction: options.transaction,
   });
@@ -446,20 +545,7 @@ export async function findMappedSubjectIdsForCourseSessionTerm(
 }
 
 export async function findAssessmentPlanSubjectMappingsWithSession(where, options = {}) {
-  return scoped(model.assessmentPlanSubjectMappingModel).findAll({
-    where,
-    attributes: ["subjectId", "courseId", "sessionId"],
-    include: [
-      {
-        model: model.sessionModel,
-        as: "session",
-        attributes: ["sessionId", "sessionName"],
-        required: false,
-      },
-    ],
-    raw: true,
-    transaction: options.transaction,
-  });
+  return findAssessmentPlanSubjectMappings(where, options);
 }
 
 export async function findSubjects(where, options = {}) {
@@ -493,8 +579,7 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
     attributes: [
       "examScheduleId",
       "subjectId",
-      "sessionId",
-      "academicYearId",
+      "batchId",
       "examDate",
       "examTime",
       "type",
@@ -502,7 +587,7 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
       "maximumMarks",
       "examinationSessionSlotId",
       "term",
-      "curriculumBatchTermMappingId",
+      "curriculumSubjectTermMappingId",
       "published",
     ],
     include: [
@@ -511,7 +596,11 @@ export async function findExamSchedulesBySubjects(examinationSessionId, subjectI
         as: "subjectSchedule",
         attributes: ["courseId"],
       },
-      curriculumBatchTermScheduleInclude(),
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "sessionId", "batch"],
+      },
       {
         model: model.examinationSessionSlotModel,
         as: "examinationSessionSlot",
@@ -556,7 +645,7 @@ export async function findQuestionPapersByExamSchedules(examScheduleIds, options
   if (!examScheduleIds.length) return [];
   return scoped(model.questionPaperModel).findAll({
     where: { examScheduleId: { [Op.in]: examScheduleIds } },
-    attributes: ["id", "examScheduleId", "createdBy", "updatedBy", "status", "finalApproval", "createdAt", "updatedAt"],
+    attributes: ["id", "name", "examScheduleId", "createdBy", "updatedBy", "status", "finalApproval", "createdAt", "updatedAt"],
     include: [
       {
         model: model.userModel,
@@ -566,8 +655,6 @@ export async function findQuestionPapersByExamSchedules(examScheduleIds, options
       }
     ],
     transaction: options.transaction,
-    raw: true,
-    nest: true,
   });
 }
 
@@ -583,7 +670,7 @@ export async function findCoursesByIds(courseIds, options = {}) {
 export async function findSessionsByIds(sessionIds, options = {}) {
   return scoped(model.sessionModel).findAll({
     where: { sessionId: { [Op.in]: sessionIds } },
-    attributes: ["sessionId", "sessionName", "startingDate", "endingDate", "classTillDate"],
+    attributes: ["sessionId", "sessionName"],
     raw: true,
     transaction: options.transaction,
   });
@@ -703,8 +790,8 @@ export async function findExaminationSessionTerms(examinationSessionId, options 
       "examinationSessionId",
       "courseId",
       "sessionId",
+      "batchId",
       "term",
-      "academicYearId",
       "includeElectives",
       "remarks",
     ],
@@ -724,8 +811,8 @@ export async function findExaminationSessionTermsBySessionIds(
       "examinationSessionId",
       "courseId",
       "sessionId",
+      "batchId",
       "term",
-      "academicYearId",
       "includeElectives",
       "remarks",
     ],
@@ -749,8 +836,10 @@ function buildExamScheduleTermScopeOr(
     if (includeExaminationSessionId && termRow.examinationSessionId != null) {
       clause.examinationSessionId = Number(termRow.examinationSessionId);
     }
-    if (termRow.sessionId != null) {
-      clause.sessionId = Number(termRow.sessionId);
+    if (termRow.batchId != null) {
+      clause.batchId = Number(termRow.batchId);
+    } else if (termRow.sessionId != null) {
+      clause["$batch.session_id$"] = Number(termRow.sessionId);
     }
     if (termRow.courseId != null) {
       clause["$subjectSchedule.course_id$"] = Number(termRow.courseId);
@@ -770,9 +859,8 @@ export async function findSchedulesForSkuStats(examinationSessionId, options = {
       "examDate",
       "examinationSessionSlotId",
       "term",
-      "sessionId",
-      "academicYearId",
-      "curriculumBatchTermMappingId",
+      "batchId",
+      "curriculumSubjectTermMappingId",
       "published",
       "subjectId",
     ],
@@ -782,6 +870,12 @@ export async function findSchedulesForSkuStats(examinationSessionId, options = {
         as: "subjectSchedule",
         required: false,
         attributes: ["subjectId", "courseId"],
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        required: false,
+        attributes: ["batchId", "sessionId", "batch"],
       },
     ],
     transaction: options.transaction,
@@ -803,10 +897,9 @@ export async function findExamSchedulesForTimeline(
       "examTime",
       "duration",
       "term",
-      "sessionId",
+      "batchId",
       "subjectId",
-      "academicYearId",
-      "curriculumBatchTermMappingId",
+      "curriculumSubjectTermMappingId",
       "examinationSessionSlotId",
       "published",
       "type",
@@ -823,6 +916,12 @@ export async function findExamSchedulesForTimeline(
           "subjectCode",
           "courseId",
         ],
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        required: false,
+        attributes: ["batchId", "sessionId", "batch"],
       },
       {
         model: model.examinationSessionSlotModel,
@@ -1411,33 +1510,38 @@ export async function countStudentsAndHallTicketsForScheduleSessionIds(
   }
 
   if (!uniqueSessionIds.length) {
-    return { students: 0, hallTicketsGenerated: 0, hallTicketsPublished: 0 };
+    const sessionTerms = await scoped(model.examinationSessionTermModel).findAll({
+      where: { examinationSessionId: Number(examinationSessionId) },
+      attributes: ["sessionId"],
+      transaction: options.transaction,
+    });
+    for (const st of sessionTerms) {
+      const id = Number(st.sessionId);
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        uniqueSessionIds.push(id);
+      }
+    }
   }
 
-  const studentWhere = { sessionId: { [Op.in]: uniqueSessionIds } };
-
-  const [students, hallTicketsGenerated, hallTicketsPublished] =
+  const [eligibilityStudentCount, studentCount, hallTicketsGenerated, hallTicketsPublished] =
     await Promise.all([
-      scoped(model.studentModel).count({
-        where: studentWhere,
+      scoped(model.examinationSessionEligibilityModel).count({
+        where: { examinationSessionId: Number(examinationSessionId) },
         distinct: true,
         col: "student_id",
         transaction: options.transaction,
       }),
+      uniqueSessionIds.length
+        ? scoped(model.studentModel).count({
+            where: { sessionId: { [Op.in]: uniqueSessionIds } },
+            distinct: true,
+            col: "student_id",
+            transaction: options.transaction,
+          })
+        : 0,
       scoped(model.studentHallTicketModel).count({
         where: { examinationSessionId: Number(examinationSessionId) },
-        include: [
-          {
-            model: model.studentModel,
-            as: "student",
-            required: true,
-            attributes: [],
-            where: {
-              ...studentWhere,
-              ...buildScope(model.studentModel),
-            },
-          },
-        ],
         distinct: true,
         col: "id",
         transaction: options.transaction,
@@ -1447,23 +1551,14 @@ export async function countStudentsAndHallTicketsForScheduleSessionIds(
           examinationSessionId: Number(examinationSessionId),
           isPublished: true,
         },
-        include: [
-          {
-            model: model.studentModel,
-            as: "student",
-            required: true,
-            attributes: [],
-            where: {
-              ...studentWhere,
-              ...buildScope(model.studentModel),
-            },
-          },
-        ],
         distinct: true,
         col: "id",
         transaction: options.transaction,
       }),
     ]);
+
+  const students =
+    eligibilityStudentCount > 0 ? eligibilityStudentCount : studentCount;
 
   return {
     students: Number(students) || 0,
@@ -1750,6 +1845,12 @@ export async function getDashboardOverviewStats({
         required: true,
         attributes: ["subjectId", "courseId"],
       },
+      {
+        model: model.batchModel,
+        as: "batch",
+        required: false,
+        attributes: ["batchId", "sessionId", "batch"],
+      },
     ],
     subQuery: false,
   });
@@ -1787,23 +1888,22 @@ export async function getDashboardOverviewStats({
     const courseId = termRow.courseId != null ? Number(termRow.courseId) : null;
     const sessionId = termRow.sessionId != null ? Number(termRow.sessionId) : null;
     const term = Number(termRow.term);
-    const academicYearId =
-      termRow.academicYearId != null ? Number(termRow.academicYearId) : null;
+    const batchId = termRow.batchId != null ? Number(termRow.batchId) : null;
 
     const resultClause = { term };
     if (courseId != null) resultClause.courseId = courseId;
     if (sessionId != null) resultClause.sessionId = sessionId;
     resultOr.push(resultClause);
 
-    if (courseId != null && sessionId != null && academicYearId != null) {
-      const key = `${sessionId}_${courseId}_${term}_${academicYearId}`;
+    if (batchId != null || (courseId != null && sessionId != null)) {
+      const key = `${sessionId || 0}_${courseId || 0}_${term}_${batchId || 0}`;
       if (!groupSeen.has(key)) {
         groupSeen.add(key);
         studentGroups.push({
           sessionId,
           courseId,
           term,
-          academicYearId,
+          batchId,
         });
       }
     }

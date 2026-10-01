@@ -2,21 +2,8 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 
-function feePlanProfileStudentInclude() {
-  return {
-    model: model.feePlanProfileModel,
-    as: "studentFeePlanProfile",
-    attributes: {
-      exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"],
-    },
-    where: buildScope(model.feePlanProfileModel),
-    required: false,
-  };
-}
-
 function studentListIncludes() {
   return [
-    feePlanProfileStudentInclude(),
     studentClassSectionTermWithSectionInclude(),
   ];
 }

@@ -273,8 +273,11 @@ export async function getMyAnswerSheetSkuStats(req, res) {
       );
     }
 
+    const { examinationSessionId } = req.query;
+
     const result = await answerSheetQrServices.getMyAnswerSheetSkuStats(
       validation.userId,
+      examinationSessionId,
     );
 
     return SuccessResponse(
@@ -333,10 +336,14 @@ export async function getMyEvaluationSummary(req, res) {
       );
     }
 
+    const { examinationSessionId, examScheduleId } = req.query;
+
     const result = await answerSheetQrServices.getScriptsAssignedToTeacher(
       validation.userId,
       1,
       10000,
+      examinationSessionId,
+      examScheduleId,
     );
     const rows = result.data?.items || [];
     let evaluated = 0;

@@ -6,7 +6,7 @@ function resolveAcademicYearId(explicit) {
   if (explicit != null && explicit !== "") {
     return Number(explicit);
   }
-  return buildScope(model.examSetupTypeModel).academicYearId;
+  return buildScope(model.acedmicYearModel).academicYearId;
 }
 
 export async function addExamType(examDetail) {

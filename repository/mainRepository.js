@@ -86,20 +86,11 @@ export async function getAllCourse() {
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
             include: [
                 {
-                    model: model.sessionCouseMappingModel,
-                    as: 'sessionCourseMappings',
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId"] },
-                    where: buildScope(model.sessionCouseMappingModel),
+                    model: model.sessionModel,
+                    as: 'sessions',
+                    attributes: ["sessionId", "sessionName", "academicYearId", "courseId"],
+                    where: buildScope(model.sessionModel),
                     required: false,
-                    include: [
-                        {
-                            model: model.sessionModel,
-                            as: 'session',
-                            attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
-                            where: buildScope(model.sessionModel),
-                            required: false,
-                        }
-                    ]
                 },
                 {
                     model: model.instituteModel,
@@ -297,7 +288,7 @@ export async function addClassSections(data) {
 }
 
 export async function findClassSectionForYear(
-    { courseId, sessionId, section, year },
+    { courseId, sessionId, section, year, batchId },
     options = {},
 ) {
     try {
@@ -306,19 +297,48 @@ export async function findClassSectionForYear(
             return null;
         }
 
+        const whereClause = {
+            courseId: Number(courseId),
+            sessionId: Number(sessionId),
+            section: sectionName,
+            year: Number(year),
+        };
+
+        if (batchId !== undefined) {
+            whereClause.batchId = Number(batchId);
+        }
+
         return scoped(model.classSectionModel).findOne({
-            where: {
-                courseId: Number(courseId),
-                sessionId: Number(sessionId),
-                section: sectionName,
-                year: Number(year),
-            },
-            transaction: options.transaction,
+            where: whereClause,
+            ...options,
         });
     } catch (error) {
         console.error('Error finding class section for year:', error);
         throw error;
     }
+}
+
+export async function findClassSectionById(classSectionId, options = {}) {
+    return scoped(model.classSectionModel).findOne({
+        where: { classSectionsId: Number(classSectionId) },
+        attributes: [
+            'classSectionsId',
+            'section',
+            'expectedCapacity',
+            'year',
+            'batchId',
+            'courseId',
+            'sessionId',
+        ],
+        transaction: options.transaction,
+    });
+}
+
+export async function updateClassSectionById(classSectionId, fields, options = {}) {
+    return scoped(model.classSectionModel).update(fields, {
+        where: { classSectionsId: Number(classSectionId) },
+        transaction: options.transaction,
+    });
 }
 
 export async function createClassSectionRow(data, options = {}) {
@@ -332,13 +352,22 @@ export async function createClassSectionRow(data, options = {}) {
             throw new Error('section is required to create class sections');
         }
 
+        if (data.expectedCapacity == null || Number(data.expectedCapacity) < 1) {
+            throw new Error('expectedCapacity must be a non-zero positive integer');
+        }
+
         if (!data.departmentId && data.courseId) {
             const course = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
             if (course?.departmentId) data.departmentId = course.departmentId;
         }
 
         return scoped(model.classSectionModel).create(
-            { ...data, section: sectionName, year: Number(data.year) },
+            {
+                ...data,
+                section: sectionName,
+                year: Number(data.year),
+                expectedCapacity: Number(data.expectedCapacity),
+            },
             { transaction: options.transaction },
         );
     } catch (error) {
@@ -468,7 +497,7 @@ export async function getClassSectionSpecific(campusId, instituteId, academicYea
                                     model: model.classSectionModel,
                                     as: "courseSection",
                                     required: false,
-                                    attributes: ["classSectionsId", "sessionId", "section", "year"],
+                                    attributes: ["classSectionsId", "sessionId", "section", "expectedCapacity", "year"],
                                     where: {
                                         ...buildScope(model.classSectionModel),
                                         ...(sessionId && { sessionId }),
@@ -500,20 +529,11 @@ export async function getClassSectionSpecific(campusId, instituteId, academicYea
                                             attributes: ["employeeCodeMasterTypeId", "employeeCodeMasterId", "code",],
                                         },
                                         {
-                                            model: model.sessionCouseMappingModel,
-                                            as: "sessionCourseMappings",
+                                            model: model.sessionModel,
+                                            as: "sessions",
                                             required: false,
-                                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "universityId", "updatedBy", "createdBy",], },
-                                            where: buildScope(model.sessionCouseMappingModel),
-                                            include: [
-                                                {
-                                                    model: model.sessionModel,
-                                                    as: "session",
-                                                    required: false,
-                                                    attributes: ["sessionName", "startingDate", "endingDate", "classTillDate",],
-                                                    where: buildScope(model.sessionModel),
-                                                },
-                                            ],
+                                            attributes: ["sessionId", "sessionName", "academicYearId", "courseId"],
+                                            where: buildScope(model.sessionModel),
                                         },
                                     ]
                                     : [
@@ -588,9 +608,15 @@ async function findActiveCurriculumTermSlots(academicYearId) {
             {
                 model: model.curriculumBatchMappingModel,
                 as: 'batchMapping',
-                attributes: ['curriculumBatchMappingId', 'curriculumId', 'batch'],
+                attributes: ['curriculumBatchMappingId', 'curriculumId', 'batchId'],
                 required: true,
                 include: [
+                    {
+                        model: model.batchModel,
+                        as: 'batch',
+                        attributes: ['batchId', 'batch'],
+                        required: false,
+                    },
                     {
                         model: model.curriculumModel,
                         as: 'curriculum',
@@ -608,10 +634,11 @@ async function findActiveCurriculumTermSlots(academicYearId) {
         const plain = row.get ? row.get({ plain: true }) : row;
         const batchMapping = plain.batchMapping;
         if (!batchMapping?.curriculumId) continue;
+        const batchYear = Number(batchMapping.batch?.batch ?? batchMapping.batch ?? 0);
         slots.push({
             curriculumId: Number(batchMapping.curriculumId),
             curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
-            batch: Number(batchMapping.batch),
+            batch: batchYear,
             term: Number(plain.term),
             year: Number(plain.year),
             curriculum: batchMapping.curriculum || null,
@@ -883,8 +910,16 @@ export async function getSectionSubjectMapper(arg1, arg2) {
                                     {
                                         model: model.curriculumBatchMappingModel,
                                         as: 'batchMappings',
-                                        attributes: ['curriculumBatchMappingId', 'batch'],
+                                        attributes: ['curriculumBatchMappingId', 'batchId'],
                                         required: false,
+                                        include: [
+                                            {
+                                                model: model.batchModel,
+                                                as: 'batch',
+                                                attributes: ['batchId', 'batch'],
+                                                required: false,
+                                            },
+                                        ],
                                     },
                                 ],
                             },
@@ -915,13 +950,14 @@ export async function getSectionSubjectMapper(arg1, arg2) {
                         continue;
                     }
                     for (const batchMapping of batchMappings) {
+                        const batchYear = Number(batchMapping.batch?.batch ?? batchMapping.batch ?? 0);
                         mappings.push({
                             curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
                             curriculumId: Number(mapping.curriculumId),
                             curriculumName: mapping.curriculum?.name ?? null,
                             term: Number(mapping.term),
                             credit: mapping.credit,
-                            batch: Number(batchMapping.batch),
+                            batch: batchYear || null,
                             curriculumBatchMappingId: Number(batchMapping.curriculumBatchMappingId),
                         });
                     }
@@ -1048,7 +1084,7 @@ export async function getClassSectionsByFilter(sessionId, courseId, academicYear
                 where: { courseId },
             }),
             scoped(model.classSectionModel).findAll({
-                attributes: ['classSectionsId', 'section', 'year'],
+                attributes: ['classSectionsId', 'section', 'expectedCapacity', 'year'],
                 where: {
                     sessionId,
                     courseId,

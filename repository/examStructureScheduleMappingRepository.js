@@ -44,11 +44,10 @@ export async function addExamStructureSchedule(examDetailSchedule, options = {})
    await scoped(model.examScheduleModel).create(
   {
     subjectId: examDetailSchedule.subjectId,
-    curriculumBatchTermMappingId: examDetailSchedule.curriculumBatchTermMappingId || null,
+    batchId: examDetailSchedule.batchId || null,
+    curriculumSubjectTermMappingId: examDetailSchedule.curriculumSubjectTermMappingId || null,
     term: examDetailSchedule.term,
     examinationSessionId: examDetailSchedule.examinationSessionId,
-    academicYearId: examDetailSchedule.academicYearId,
-    sessionId: examDetailSchedule.sessionId,
     examDate: examDetailSchedule.examDate,
     examTime: slot.startTime,
     type: examDetailSchedule.type,
@@ -60,7 +59,6 @@ export async function addExamStructureSchedule(examDetailSchedule, options = {})
   {
     transaction: options.transaction,
   }
-
     );
   } catch (error) {
     console.error("Error adding exam structure schedule:", error);
@@ -156,6 +154,11 @@ export async function findScopedExamScheduleById(examScheduleId, options = {}) {
       "published",
       "examDate",
       "examinationSessionSlotId",
+      "batchId",
+      "curriculumSubjectTermMappingId",
+      "examinationSessionId",
+      "subjectId",
+      "term",
     ],
   });
 }
@@ -228,7 +231,7 @@ export async function findConflictingExamForStudentCohort({
   startMinutes,
   endMinutes,
   sessionId,
-  academicYearId,
+  batchId,
   courseId,
   term,
   excludeExamScheduleId,
@@ -240,9 +243,8 @@ export async function findConflictingExamForStudentCohort({
     attributes: ["examScheduleId", "examDate", "examTime", "duration", "subjectId"],
     where: {
       examDate,
-      ...(sessionId && { sessionId }),
-      ...(academicYearId && { academicYearId }),
-      ...(term != null && { term }),
+      ...(batchId && { batchId: Number(batchId) }),
+      ...(term != null && { term: Number(term) }),
       ...(excludeExamScheduleId && {
         examScheduleId: { [Op.ne]: excludeExamScheduleId },
       }),
@@ -256,9 +258,20 @@ export async function findConflictingExamForStudentCohort({
         model: model.subjectModel,
         as: "subjectSchedule",
         attributes: ["subjectName"],
-        where: { courseId },
-        required: true,
+        where: courseId ? { courseId: Number(courseId) } : undefined,
+        required: !!courseId,
       },
+      ...(sessionId && !batchId
+        ? [
+            {
+              model: model.batchModel,
+              as: "batch",
+              where: { sessionId: Number(sessionId) },
+              required: true,
+              attributes: [],
+            },
+          ]
+        : []),
     ],
     raw: true,
     nest: true,
@@ -407,8 +420,8 @@ export async function getExamScheduleById(examScheduleId) {
         },
 
         {
-          model: model.acedmicYearModel,
-          as: "acedmicYearSchedule",
+          model: model.batchModel,
+          as: "batch",
         },
       ],
     });

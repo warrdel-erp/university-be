@@ -22,42 +22,60 @@ const router = Router();
 const addScheduleSchema = {
   body: z.object({
     subjectId: z.coerce.number().int().positive("subjectId is required"),
-    curriculumBatchTermMappingId: z.coerce
+    batchId: z.coerce.number().int().positive("batchId is required"),
+    curriculumSubjectTermMappingId: z.coerce
       .number()
       .int()
-      .positive("curriculumBatchTermMappingId is required"),
-    // term is always resolved from curriculumBatchTermMappingId — ignored if sent
-    term: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
-    academicYearId: z.coerce.number().int().positive().optional().nullable(),
-    sessionId: z.coerce.number().int().positive().optional().nullable(),
-    examinationSessionSlotId: z.coerce.number().int().positive().optional().nullable(),
+      .positive("curriculumSubjectTermMappingId is required"),
+    term: z.coerce.number().int().positive("term is required"),
+    examinationSessionId: z.coerce
+      .number()
+      .int()
+      .positive("examinationSessionId is required"),
+    examinationSessionSlotId: z.coerce
+      .number()
+      .int()
+      .positive("examinationSessionSlotId is required"),
     examDate: z.string().min(1, "examDate is required"),
-    examTime: z.string().optional().nullable(),
     type: z.string().min(1, "type is required"),
+    examTime: z.string().optional().nullable(),
     duration: z.string().optional().nullable(),
+    maximumMarks: z.coerce.number().optional().nullable(),
   }),
 };
 
 const updateScheduleSchema = {
   body: z.object({
-    examScheduleId: z.coerce.number().int().positive({ message: "examScheduleId is required" }),
-    subjectId: z.coerce.number().int().positive("subjectId is required"),
-    curriculumBatchTermMappingId: z.coerce
+    examScheduleId: z.coerce
       .number()
       .int()
-      .positive("curriculumBatchTermMappingId is required"),
-    // term is always resolved from curriculumBatchTermMappingId — ignored if sent
+      .positive({ message: "examScheduleId is required" }),
+    subjectId: z.coerce.number().int().positive().optional(),
+    batchId: z.coerce.number().int().positive().optional().nullable(),
+    curriculumSubjectTermMappingId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .nullable(),
     term: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
-    examSetupTypeTermId: z.coerce.number().int().positive().optional().nullable(),
-    academicYearId: z.coerce.number().int().positive().optional().nullable(),
-    sessionId: z.coerce.number().int().positive().optional(),
-    examinationSessionSlotId: z.coerce.number().int().positive().optional().nullable(),
+    examinationSessionSlotId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .nullable(),
+    examinationSessionId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .nullable(),
     examDate: z.string().optional(),
     examTime: z.string().optional().nullable(),
     type: z.string().optional(),
     duration: z.string().optional().nullable(),
+    maximumMarks: z.coerce.number().optional().nullable(),
   }),
 };
 

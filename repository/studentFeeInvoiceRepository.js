@@ -6,37 +6,6 @@ function excludeTimestamps() {
   return ["createdAt", "updatedAt"];
 }
 
-function feePlanProfileInclude() {
-  return {
-    model: model.feePlanProfileModel,
-    as: "feePlanProfile",
-    required: false,
-    attributes: ["feePlanProfileId", "name", "planType", "category", "courseSessionId"],
-    include: [
-      {
-        model: model.sessionCouseMappingModel,
-        as: "courseSessionMapping",
-        required: false,
-        attributes: ["sessionCourseMappingId", "courseId", "sessionId", "instituteId"],
-        include: [
-          {
-            model: model.courseModel,
-            as: "courses",
-            required: false,
-            attributes: ["courseId", "courseName"],
-          },
-          {
-            model: model.sessionModel,
-            as: "session",
-            required: false,
-            attributes: ["sessionId", "sessionName"],
-          },
-        ],
-      },
-    ],
-  };
-}
-
 function feeInvoiceItemsInclude() {
   return {
     model: model.studentFeeInvoiceItemsModel,
@@ -76,7 +45,6 @@ function feePlanItemDetailInclude() {
     required: false,
     attributes: { exclude: excludeTimestamps() },
     include: [
-      feePlanProfileInclude(),
       {
         model: model.feePlanSubItemsModel,
         as: "feePlanSubItems",
@@ -100,7 +68,7 @@ function studentInclude() {
       "email",
       "mobileNumber",
       "enrollNumber",
-      "feePlanProfileId",
+      "batchId",
       "courseId",
       "sessionId",
     ],
@@ -120,7 +88,7 @@ function studentDetailInclude() {
       "email",
       "mobileNumber",
       "enrollNumber",
-      "feePlanProfileId",
+      "batchId",
       "courseId",
       "sessionId",
     ],
@@ -136,10 +104,6 @@ function studentDetailInclude() {
         as: "studentSession",
         required: false,
         attributes: ["sessionId", "sessionName"],
-      },
-      {
-        ...feePlanProfileInclude(),
-        as: "studentFeePlanProfile",
       },
     ],
   };
@@ -164,9 +128,40 @@ export async function findFeePlanItemById(feePlanItemId, options = {}) {
 export async function findStudentById(studentId, options = {}) {
   return scoped(model.studentModel).findOne({
     where: { studentId },
-    attributes: options.attributes ?? ["studentId", "instituteId", "feePlanProfileId"],
+    attributes: options.attributes ?? ["studentId", "instituteId", "batchId"],
     transaction: options.transaction,
   });
+}
+
+export async function findStudentsByBatchId(batchId, options = {}) {
+  return scoped(model.studentModel, { scopeConfig: { academicYear: false } }).findAll({
+    attributes: ["studentId", "instituteId", "batchId"],
+    where: { batchId: Number(batchId) },
+    transaction: options.transaction,
+  });
+}
+
+export async function findStudentsByIds(studentIds, options = {}) {
+  if (!studentIds.length) return [];
+  return scoped(model.studentModel, { scopeConfig: { academicYear: false } }).findAll({
+    attributes: ["studentId", "instituteId", "batchId"],
+    where: { studentId: { [Op.in]: studentIds } },
+    transaction: options.transaction,
+  });
+}
+
+export async function findExistingInvoiceStudentIdsByItem(feePlanItemId, studentIds = [], options = {}) {
+  const where = { feePlanItemId: Number(feePlanItemId) };
+  if (studentIds.length) {
+    where.studentId = { [Op.in]: studentIds };
+  }
+  const rows = await scoped(model.studentFeeInvoiceModel).findAll({
+    attributes: ["studentId"],
+    where,
+    raw: true,
+    transaction: options.transaction,
+  });
+  return new Set(rows.map((r) => Number(r.studentId)));
 }
 
 export async function findFeePlanSubItemsByFeePlanItemId(feePlanItemId, options = {}) {
@@ -220,14 +215,26 @@ export async function findStudentFeeInvoicesByStudentId(studentId, options = {})
   });
 }
 
-export async function findAllStudentFeeInvoicesByInstitute(options = {}) {
+export async function findStudentFeeInvoicesOverview({
+  feePlanItemId,
+  status = "all",
+  page,
+  limit,
+  options = {},
+}) {
   const where = { status: "generated" };
 
-  if (options.paymentStatuses?.length) {
-    where.paymentStatus = { [Op.in]: options.paymentStatuses };
+  if (feePlanItemId != null) {
+    where.feePlanItemId = Number(feePlanItemId);
   }
 
-  return scoped(model.studentFeeInvoiceModel).findAll({
+  if (status === "pending") {
+    where.paymentStatus = { [Op.in]: ["unpaid", "partial"] };
+  } else if (status === "completed") {
+    where.paymentStatus = "paid";
+  }
+
+  const queryOptions = {
     where,
     attributes: [
       "studentFeeInvoiceId",
@@ -245,12 +252,44 @@ export async function findAllStudentFeeInvoicesByInstitute(options = {}) {
       {
         model: model.studentModel,
         as: "studentFeeInvoiceStudent",
-        attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber"],
-        required: true,
+        attributes: [
+          "studentId",
+          "firstName",
+          "middleName",
+          "lastName",
+          "scholarNumber",
+          "enrollNumber",
+        ],
+        required: false,
       },
       feePlanItemInclude(),
     ],
     order: [["studentFeeInvoiceId", "DESC"]],
     transaction: options.transaction,
-  });
+  };
+
+  const isPaginated = page != null || limit != null;
+
+  if (isPaginated) {
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.max(1, Number(limit) || 10);
+    queryOptions.limit = limitNum;
+    queryOptions.offset = (pageNum - 1) * limitNum;
+  }
+
+  const { count: totalRecords, rows } = await scoped(
+    model.studentFeeInvoiceModel
+  ).findAndCountAll(queryOptions);
+
+  const limitNum = isPaginated ? Math.max(1, Number(limit) || 10) : totalRecords;
+  const pageNum = isPaginated ? Math.max(1, Number(page) || 1) : 1;
+
+  return {
+    totalRecords,
+    totalPages: isPaginated ? Math.ceil(totalRecords / limitNum) || 1 : 1,
+    currentPage: pageNum,
+    pageSize: limitNum,
+    isPaginated,
+    rows,
+  };
 }

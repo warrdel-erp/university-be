@@ -36,9 +36,13 @@ import {
   findActiveYearBatchTermsByCourseIds,
   resolveActiveAcademicYearContext,
 } from "../utility/curriculumSubjectsByActiveYear.js";
-import { resolveClassSectionTermIdsFromBatchTerm } from "./curriculumBatchTermServices.js";
+import {
+  resolveClassSectionTermIdsFromBatchTerm,
+  resolveClassSectionsFromBatchTerm,
+} from "./curriculumBatchTermServices.js";
 import * as curriculumBatchTermRepository from "../repository/curriculumBatchTermRepository.js";
 import * as acedmicYearRepository from "../repository/acedmicYearRepository.js";
+import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -92,6 +96,88 @@ function toPlain(record) {
   return record?.get ? record.get({ plain: true }) : record;
 }
 
+async function resolveTermItemsWithBatch(terms = [], transaction) {
+  if (!terms || !terms.length) return [];
+  const batchIds = terms.map((t) => t.batchId).filter(Boolean);
+  const batchMap = new Map();
+  if (batchIds.length > 0) {
+    const batches = await model.batchModel.findAll({
+      where: { batchId: batchIds },
+      attributes: ["batchId", "sessionId", "batch"],
+      include: [
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "courseId"],
+        },
+      ],
+      transaction,
+    });
+    for (const b of batches) {
+      batchMap.set(b.batchId, b);
+    }
+  }
+
+  const sessionBatchCache = new Map();
+
+  const resolved = [];
+  for (const t of terms) {
+    let courseId = t.courseId != null ? Number(t.courseId) : null;
+    let sessionId = t.sessionId != null ? Number(t.sessionId) : null;
+    let batchId = t.batchId != null ? Number(t.batchId) : null;
+
+    if (batchId && batchMap.has(Number(batchId))) {
+      const b = batchMap.get(Number(batchId));
+      sessionId = sessionId || b.sessionId;
+      if (b.session) {
+        courseId = courseId || b.session.courseId;
+      }
+    } else if (!batchId && sessionId && t.term != null) {
+      let sessionBatches = sessionBatchCache.get(sessionId);
+      if (!sessionBatches) {
+        sessionBatches = await model.batchModel.findAll({
+          where: { sessionId },
+          attributes: ["batchId", "batch"],
+          order: [["batch", "DESC"]],
+          transaction,
+        });
+        sessionBatchCache.set(sessionId, sessionBatches);
+      }
+      if (sessionBatches.length > 0) {
+        let termsPerYear = 2;
+        if (courseId) {
+          const c = await model.courseModel.findByPk(courseId, {
+            attributes: ["termType"],
+            transaction,
+          });
+          if (c) {
+            const tt = String(c.termType || "").toLowerCase();
+            if (tt.startsWith("year")) termsPerYear = 1;
+            else if (tt.startsWith("tri")) termsPerYear = 3;
+            else if (tt.startsWith("quar")) termsPerYear = 4;
+            else termsPerYear = 2;
+          }
+        }
+        const yearNum = Math.max(1, Math.ceil(Number(t.term) / termsPerYear));
+        const idx = yearNum - 1;
+        batchId =
+          idx >= 0 && idx < sessionBatches.length
+            ? sessionBatches[idx].batchId
+            : sessionBatches[sessionBatches.length - 1].batchId;
+      }
+    }
+
+    resolved.push({
+      ...t,
+      courseId,
+      sessionId,
+      batchId,
+    });
+  }
+
+  return resolved;
+}
+
 function extractTermNumbers(terms = []) {
   const result = [];
   for (const item of terms) {
@@ -108,7 +194,8 @@ function buildMissingTermRows(terms, examinationSessionId, existingTermSet = new
     const term = Number(item.term);
     const courseId = item.courseId != null ? Number(item.courseId) : null;
     const sessionId = item.sessionId != null ? Number(item.sessionId) : null;
-    const key = `${courseId}_${sessionId}_${term}`;
+    const batchId = item.batchId != null ? Number(item.batchId) : null;
+    const key = `${courseId}_${sessionId}_${term}_${batchId}`;
     if (seen.has(key) || existingTermSet.has(key)) {
       continue;
     }
@@ -117,6 +204,7 @@ function buildMissingTermRows(terms, examinationSessionId, existingTermSet = new
       term,
       courseId,
       sessionId,
+      batchId,
       examinationSessionId: Number(examinationSessionId),
       includeElectives: item.includeElectives,
       remarks: item.remarks,
@@ -159,39 +247,118 @@ async function assertNoTermOverlap(
  * must have assessment_plan_subject_mapping for the same courseId + sessionId.
  */
 async function assertCurriculumSubjectsHaveAssessmentPlanMapping(
-  { courseId, sessionId, term, academicYearId },
+  { courseId, sessionId, term, batchId, academicYearId },
   options = {},
 ) {
-  if (!courseId || !sessionId || !term) {
+  if ((!courseId && !batchId) || !term) {
     throw createBadRequestError(
-      "courseId, sessionId and term are required to validate assessment plan subject mappings.",
+      "courseId (or batchId) and term are required to validate assessment plan subject mappings.",
     );
   }
 
-  const curriculumFilters = {
-    courseId: Number(courseId),
-    terms: [Number(term)],
-  };
-  if (academicYearId != null) {
-    curriculumFilters.academicYearId = Number(academicYearId);
+  const subjectById = new Map();
+
+  if (batchId != null) {
+    const batchMappings = await model.curriculumBatchMappingModel.findAll({
+      where: { batchId: Number(batchId) },
+      attributes: ["curriculumId", "batchId"],
+      include: [
+        {
+          model: model.curriculumModel,
+          as: "curriculum",
+          attributes: ["curriculumId", "courseId"],
+          required: true,
+          where: {
+            ...buildScope(model.curriculumModel),
+            ...(courseId != null && { courseId: Number(courseId) }),
+          },
+          include: [
+            {
+              model: model.curriculumSubjectTermMappingModel,
+              as: "subjectTermMappings",
+              attributes: ["curriculumSubjectTermMappingId", "subjectId", "term"],
+              where: { term: Number(term) },
+              required: true,
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: "subject",
+                  attributes: ["subjectId", "subjectName", "subjectCode"],
+                  where: {
+                    ...buildScope(model.subjectModel),
+                    isActive: true,
+                  },
+                  required: true,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      transaction: options.transaction,
+    });
+
+    for (const bm of batchMappings) {
+      const plainBm = toPlain(bm);
+      const mappings = plainBm.curriculum?.subjectTermMappings || [];
+      for (const m of mappings) {
+        const sId = Number(m.subjectId);
+        if (!sId || subjectById.has(sId) || !m.subject) continue;
+        subjectById.set(sId, {
+          subjectId: sId,
+          subjectName: m.subject.subjectName,
+          subjectCode: m.subject.subjectCode,
+          term: Number(m.term),
+        });
+      }
+    }
   }
 
-  const { rows: activeYearRows } = await findCurriculumSubjectsForActiveYear(
-    curriculumFilters,
-    options,
-  );
+  if (subjectById.size === 0 && courseId != null) {
+    const cstmRows =
+      await examinationSessionRepository.findCurriculumSubjectsByCourseAndTerm(
+        courseId,
+        term,
+        options,
+      );
+    for (const row of cstmRows) {
+      const plain = toPlain(row);
+      const sId = Number(plain.subjectId);
+      if (!sId || subjectById.has(sId) || !plain.subject) continue;
+      subjectById.set(sId, {
+        subjectId: sId,
+        subjectName: plain.subject.subjectName,
+        subjectCode: plain.subject.subjectCode,
+        term: Number(plain.term),
+      });
+    }
+  }
 
-  const subjectById = new Map();
-  for (const row of activeYearRows) {
-    const subjectId = Number(row.subjectId);
-    if (subjectById.has(subjectId)) continue;
-    const subject = row.subject;
-    subjectById.set(subjectId, {
-      subjectId,
-      subjectName: subject.subjectName,
-      subjectCode: subject.subjectCode,
-      term: Number(row.term),
-    });
+  if (subjectById.size === 0 && courseId != null) {
+    const curriculumFilters = {
+      courseId: Number(courseId),
+      terms: [Number(term)],
+    };
+    if (academicYearId != null) {
+      curriculumFilters.academicYearId = Number(academicYearId);
+    }
+
+    const { rows: activeYearRows } = await findCurriculumSubjectsForActiveYear(
+      curriculumFilters,
+      options,
+    );
+
+    for (const row of activeYearRows) {
+      const subjectId = Number(row.subjectId);
+      if (subjectById.has(subjectId)) continue;
+      const subject = row.subject;
+      subjectById.set(subjectId, {
+        subjectId,
+        subjectName: subject.subjectName,
+        subjectCode: subject.subjectCode,
+        term: Number(row.term),
+      });
+    }
   }
 
   if (subjectById.size === 0) {
@@ -203,7 +370,7 @@ async function assertCurriculumSubjectsHaveAssessmentPlanMapping(
   const subjectIds = [...subjectById.keys()];
   const mappedIds =
     await examinationSessionRepository.findMappedSubjectIdsForCourseSessionTerm(
-      { courseId, sessionId, subjectIds },
+      { courseId, sessionId, batchId, subjectIds },
       options,
     );
   const mappedSet = new Set(mappedIds);
@@ -227,6 +394,7 @@ async function assertTermRowsHaveAssessmentPlanMappings(termRows, options = {}) 
       {
         courseId: row.courseId,
         sessionId: row.sessionId,
+        batchId: row.batchId,
         term: row.term,
         academicYearId:
           row.academicYearId != null
@@ -244,31 +412,7 @@ async function countMappedCoursesForSessionTerms(
   sessionAcademicYearId,
   options = {},
 ) {
-  if (!termsList.length || !assessmentTypeId) return 0;
-
-  const sessionTermCourseIds = [];
-  const sessionTermNumbers = [];
-  const sessionTermSessionIds = [];
-  const sessionTermMatchKeys = new Set();
-  let termAcademicYearId = null;
-
-  for (const row of termsList) {
-    const courseId = row.courseId != null ? Number(row.courseId) : null;
-    const term = Number(row.term);
-    if (courseId == null || !decimalGreaterThan(term, 0)) continue;
-
-    sessionTermCourseIds.push(courseId);
-    sessionTermNumbers.push(term);
-    if (row.sessionId != null) {
-      sessionTermSessionIds.push(Number(row.sessionId));
-    }
-    sessionTermMatchKeys.add(`${courseId}_${term}`);
-    if (termAcademicYearId == null && row.academicYearId != null) {
-      termAcademicYearId = Number(row.academicYearId);
-    }
-  }
-
-  if (!sessionTermCourseIds.length) return 0;
+  if (!termsList || !termsList.length || !assessmentTypeId) return 0;
 
   const assessmentPlanIds = await getAssessmentPlanIds(
     Number(assessmentTypeId),
@@ -276,10 +420,48 @@ async function countMappedCoursesForSessionTerms(
   );
   if (!assessmentPlanIds.length) return 0;
 
+  const sessionTermCourseIds = [];
+  const sessionTermNumbers = [];
+  const sessionTermSessionIds = [];
+  const sessionTermBatchIds = [];
+  const sessionTermMatchKeys = new Set();
+
+  for (const row of termsList) {
+    const courseId = row.courseId != null ? Number(row.courseId) : null;
+    const term = Number(row.term);
+    const sessionId = row.sessionId != null ? Number(row.sessionId) : null;
+    const batchId = row.batchId != null ? Number(row.batchId) : null;
+    if (courseId == null || !decimalGreaterThan(term, 0)) continue;
+
+    sessionTermCourseIds.push(courseId);
+    sessionTermNumbers.push(term);
+    if (sessionId != null) {
+      sessionTermSessionIds.push(sessionId);
+    }
+    if (batchId != null) {
+      sessionTermBatchIds.push(batchId);
+    }
+
+    if (batchId != null) {
+      sessionTermMatchKeys.add(`${courseId}_${sessionId || 0}_${term}_${batchId}`);
+      sessionTermMatchKeys.add(`${courseId}_${term}_${batchId}`);
+    } else {
+      sessionTermMatchKeys.add(`${courseId}_${sessionId || 0}_${term}`);
+      sessionTermMatchKeys.add(`${courseId}_${term}`);
+    }
+  }
+
+  if (!sessionTermCourseIds.length) return 0;
+
   const mappingWhere = {
     assessmentPlanId: { [Op.in]: assessmentPlanIds },
-    courseId: { [Op.in]: uniqueValues(sessionTermCourseIds) },
   };
+  if (sessionTermBatchIds.length > 0) {
+    mappingWhere.batchId = { [Op.in]: uniqueValues(sessionTermBatchIds) };
+  }
+  if (sessionTermCourseIds.length > 0) {
+    mappingWhere.courseId = { [Op.in]: uniqueValues(sessionTermCourseIds) };
+  }
   if (sessionTermSessionIds.length > 0) {
     mappingWhere.sessionId = { [Op.in]: uniqueValues(sessionTermSessionIds) };
   }
@@ -291,48 +473,39 @@ async function countMappedCoursesForSessionTerms(
     );
   if (!subjectMappings.length) return 0;
 
-  const mappingKeySet = new Set();
-  const planSubjectIds = [];
+  const matchedSubjectIds = new Set();
   for (const mapping of subjectMappings) {
-    if (mapping.curriculumBatchTermMappingId == null) continue;
-    mappingKeySet.add(
-      `${Number(mapping.curriculumBatchTermMappingId)}_${Number(mapping.subjectId)}`,
-    );
-    planSubjectIds.push(mapping.subjectId);
-  }
-  if (!mappingKeySet.size) return 0;
+    const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
+    const cstm = plain.curriculumSubjectTermMapping;
+    const subject = cstm?.subject;
+    const courseId =
+      plain.batch?.session?.courseId ||
+      cstm?.curriculum?.courseId ||
+      plain.assessmentPlan?.courseId;
+    const sessionId =
+      plain.batch?.sessionId || plain.batch?.session?.sessionId;
+    const term = cstm?.term != null ? Number(cstm.term) : null;
+    const batchId =
+      plain.batchId != null
+        ? Number(plain.batchId)
+        : plain.batch?.batchId != null
+        ? Number(plain.batch.batchId)
+        : null;
+    const subjectId =
+      cstm?.subjectId || subject?.subjectId || plain.subjectId;
 
-  const curriculumFilters = {
-    courseIds: uniqueValues(sessionTermCourseIds),
-    terms: uniqueValues(sessionTermNumbers),
-    subjectIds: uniqueValues(planSubjectIds),
-  };
-  const resolvedAcademicYearId = termAcademicYearId ?? sessionAcademicYearId;
-  if (resolvedAcademicYearId != null) {
-    curriculumFilters.academicYearId = resolvedAcademicYearId;
-  }
+    if (!courseId || !term || !subjectId) continue;
+    const matchesSessionTerm =
+      sessionTermMatchKeys.has(`${courseId}_${sessionId || 0}_${term}_${batchId || 0}`) ||
+      sessionTermMatchKeys.has(`${courseId}_${term}_${batchId || 0}`) ||
+      sessionTermMatchKeys.has(`${courseId}_${sessionId || 0}_${term}`) ||
+      sessionTermMatchKeys.has(`${courseId}_${term}`);
+    if (!matchesSessionTerm) continue;
 
-  const { rows: curriculumRows } = await findCurriculumSubjectsForActiveYear(
-    curriculumFilters,
-    options,
-  );
-  if (!curriculumRows.length) return 0;
-
-  const courseIds = new Set();
-  for (const row of curriculumRows) {
-    if (!sessionTermMatchKeys.has(`${row.courseId}_${row.term}`)) continue;
-    if (row.curriculumBatchTermMappingId == null) continue;
-    if (
-      !mappingKeySet.has(
-        `${Number(row.curriculumBatchTermMappingId)}_${Number(row.subjectId)}`,
-      )
-    ) {
-      continue;
-    }
-    courseIds.add(Number(row.courseId));
+    matchedSubjectIds.add(subjectId);
   }
 
-  return courseIds.size;
+  return matchedSubjectIds.size;
 }
 
 async function buildSessionSummary(sessionRecord, options = {}) {
@@ -343,43 +516,155 @@ async function buildSessionSummary(sessionRecord, options = {}) {
   const sessionPlain = toPlain(sessionRecord);
   let totalStudents = 0;
   const termsList = sessionPlain.examinationSessionTerms || [];
-  const academicYearId = Number(sessionPlain.academicYearId);
   const assessmentTypeId = Number(sessionPlain.assessmentTypeId);
+  const examinationSessionId = Number(sessionPlain.examinationSessionId);
 
-  const courseCount = await countMappedCoursesForSessionTerms(
-    termsList,
-    assessmentTypeId,
-    academicYearId,
-    options,
-  );
+  let courseCount = 0;
+  let mappedSubjects = [];
+  if (examinationSessionId) {
+    mappedSubjects = await getMappedSubjectsBySessionAndTerm(
+      { examinationSessionId },
+      { skipTeacherAndPaperEnrichment: true, ...options },
+    );
+    courseCount = mappedSubjects.length;
+  } else {
+    courseCount = await countMappedCoursesForSessionTerms(
+      termsList,
+      assessmentTypeId,
+      null,
+      options,
+    );
+  }
 
-  if (termsList.length && academicYearId) {
+  const subjectCohortMetaMap = new Map();
+  for (const sub of mappedSubjects) {
+    const bId = sub.batchId != null ? Number(sub.batchId) : null;
+    const t = sub.term != null ? Number(sub.term) : null;
+    const cId = sub.courseId != null ? Number(sub.courseId) : null;
+    const sId = sub.sessionId != null ? Number(sub.sessionId) : null;
+    const cstmId =
+      sub.curriculumSubjectTermMappingId != null
+        ? Number(sub.curriculumSubjectTermMappingId)
+        : null;
+
+    if (bId && t) {
+      const btKey = `batch_${bId}_term_${t}`;
+      if (!subjectCohortMetaMap.has(btKey)) {
+        subjectCohortMetaMap.set(btKey, {
+          batchId: bId,
+          term: t,
+          courseId: cId,
+          sessionId: sId,
+          curriculumSubjectTermMappingId: cstmId,
+          studentCount: Number(sub.studentCount) || 0,
+        });
+      }
+    }
+    if (cId && t) {
+      const cstKey = `course_${cId}_session_${sId || 0}_term_${t}`;
+      if (!subjectCohortMetaMap.has(cstKey)) {
+        subjectCohortMetaMap.set(cstKey, {
+          batchId: bId,
+          term: t,
+          courseId: cId,
+          sessionId: sId,
+          curriculumSubjectTermMappingId: cstmId,
+          studentCount: Number(sub.studentCount) || 0,
+        });
+      }
+      const ctKey = `course_${cId}_term_${t}`;
+      if (!subjectCohortMetaMap.has(ctKey)) {
+        subjectCohortMetaMap.set(ctKey, {
+          batchId: bId,
+          term: t,
+          courseId: cId,
+          sessionId: sId,
+          curriculumSubjectTermMappingId: cstmId,
+          studentCount: Number(sub.studentCount) || 0,
+        });
+      }
+    }
+  }
+
+  if (termsList.length) {
     const studentGroups = [];
-    const seen = new Set();
+    const groupByTermIndex = new Map();
 
-    for (const row of termsList) {
-      if (row.courseId == null || row.sessionId == null || row.term == null) {
+    for (let i = 0; i < termsList.length; i++) {
+      const row = termsList[i];
+      if (row.term == null) continue;
+
+      const term = Number(row.term);
+      const courseId = row.courseId != null ? Number(row.courseId) : null;
+      const sessionId = row.sessionId != null ? Number(row.sessionId) : null;
+      let batchId = row.batchId != null ? Number(row.batchId) : null;
+
+      const matchedMeta =
+        (batchId && subjectCohortMetaMap.get(`batch_${batchId}_term_${term}`)) ||
+        (courseId &&
+          subjectCohortMetaMap.get(
+            `course_${courseId}_session_${sessionId || 0}_term_${term}`,
+          )) ||
+        (courseId && subjectCohortMetaMap.get(`course_${courseId}_term_${term}`)) ||
+        null;
+
+      if (!batchId && matchedMeta?.batchId) {
+        batchId = matchedMeta.batchId;
+        row.batchId = batchId;
+      }
+
+      const group = {
+        sessionId: sessionId ?? matchedMeta?.sessionId ?? null,
+        courseId: courseId ?? matchedMeta?.courseId ?? null,
+        term,
+        batchId,
+        curriculumSubjectTermMappingId:
+          matchedMeta?.curriculumSubjectTermMappingId ?? null,
+      };
+
+      if (
+        group.batchId == null &&
+        (group.courseId == null || group.sessionId == null)
+      ) {
         continue;
       }
-      const group = {
-        sessionId: Number(row.sessionId),
-        courseId: Number(row.courseId),
-        term: Number(row.term),
-        academicYearId:
-          row.academicYearId != null
-            ? Number(row.academicYearId)
-            : academicYearId,
-      };
-      const key = `${group.sessionId}_${group.courseId}_${group.term}_${group.academicYearId}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
+
+      groupByTermIndex.set(i, group);
       studentGroups.push(group);
     }
 
-    if (studentGroups.length) {
-      const countMap = await getStudentCountMapByGroups(studentGroups, options);
-      for (const group of studentGroups) {
-        totalStudents += lookupStudentCount(countMap, group);
+    const countMap = studentGroups.length
+      ? await getStudentCountMapByGroups(studentGroups, options)
+      : new Map();
+
+    const countedCohortKeys = new Set();
+    for (let i = 0; i < termsList.length; i++) {
+      const row = termsList[i];
+      const group = groupByTermIndex.get(i);
+      if (!group) {
+        row.studentCount = 0;
+        continue;
+      }
+      const count = lookupStudentCount(countMap, group);
+      row.studentCount = count;
+
+      const cohortKey = group.batchId
+        ? `batch_${group.batchId}_term_${group.term}`
+        : `${group.sessionId || 0}_${group.courseId || 0}_${group.term}`;
+      if (!countedCohortKeys.has(cohortKey)) {
+        countedCohortKeys.add(cohortKey);
+        totalStudents += count;
+      }
+    }
+  } else if (mappedSubjects.length) {
+    const countedCohortKeys = new Set();
+    for (const sub of mappedSubjects) {
+      const cohortKey = sub.batchId
+        ? `batch_${sub.batchId}_term_${sub.term}`
+        : `${sub.sessionId || 0}_${sub.courseId || 0}_${sub.term}`;
+      if (!countedCohortKeys.has(cohortKey)) {
+        countedCohortKeys.add(cohortKey);
+        totalStudents += Number(sub.studentCount) || 0;
       }
     }
   }
@@ -388,6 +673,7 @@ async function buildSessionSummary(sessionRecord, options = {}) {
     ...sessionPlain,
     courseCount,
     totalStudents,
+    studentCount: totalStudents,
   };
 }
 
@@ -420,8 +706,11 @@ async function getAssessmentPlanIds(examSetupTypeId, options = {}) {
 async function initializeEligibilityRecords(
   examinationSessionId,
   defaultAcademicYearId,
-  transaction,
+  transactionOrOptions,
 ) {
+  const transaction = transactionOrOptions?.commit
+    ? transactionOrOptions
+    : transactionOrOptions?.transaction || null;
   const session =
     await examinationSessionRepository.getExaminationSessionById(
       examinationSessionId,
@@ -429,20 +718,25 @@ async function initializeEligibilityRecords(
     );
   if (!session) return;
 
-  const academicYearId = Number(
+  let academicYearId = Number(
     defaultAcademicYearId != null
       ? defaultAcademicYearId
       : session.academicYearId,
   );
-  if (!academicYearId) return;
+  if (!academicYearId) {
+    const activeYear = await scoped(model.acedmicYearModel).findOne({
+      where: { isActive: true },
+      transaction,
+    });
+    academicYearId = activeYear ? Number(activeYear.academicYearId) : 1;
+  }
 
   const rawStudentsList =
     await studentHallTicketRepository.getStudentsByExaminationSessionId(
       examinationSessionId,
-      { purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC },
+      { purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.ELIGIBILITY_SYNC, academicYearId },
       transaction,
     );
-  if (!rawStudentsList.length) return;
 
   const existingMap =
     await examinationSessionEligibilityRepo.getEligibilityStatusesMap(
@@ -450,13 +744,49 @@ async function initializeEligibilityRecords(
       { transaction },
     );
 
+  if (!rawStudentsList || !rawStudentsList.length) {
+    if (existingMap && existingMap.size > 0) {
+      await examinationSessionEligibilityRepo.deleteEligibilityRecordsBySessionAndStudents(
+        examinationSessionId,
+        Array.from(existingMap.keys()),
+        { transaction },
+      );
+    }
+    return;
+  }
+
+  const currentStudentIds = new Set();
+  for (const raw of rawStudentsList) {
+    const student = raw.student;
+    if (student && student.studentId) {
+      currentStudentIds.add(Number(student.studentId));
+    }
+  }
+
+  // Delete eligibility records for students no longer part of this examination session
+  const studentIdsToDelete = [];
+  for (const existingStudentId of existingMap.keys()) {
+    if (!currentStudentIds.has(Number(existingStudentId))) {
+      studentIdsToDelete.push(Number(existingStudentId));
+    }
+  }
+
+  if (studentIdsToDelete.length > 0) {
+    await examinationSessionEligibilityRepo.deleteEligibilityRecordsBySessionAndStudents(
+      examinationSessionId,
+      studentIdsToDelete,
+      { transaction },
+    );
+  }
+
   const eligibilityRecords = [];
   const seenStudentIds = new Set();
 
   for (const raw of rawStudentsList) {
     const student = raw.student;
+    if (!student) continue;
     const studentId = Number(student.studentId);
-    if (seenStudentIds.has(studentId) || existingMap.has(studentId)) continue;
+    if (!studentId || seenStudentIds.has(studentId) || existingMap.has(studentId)) continue;
     seenStudentIds.add(studentId);
 
     let initialStatus = ELIGIBILITY_STATUS.REVIEW;
@@ -482,8 +812,8 @@ async function initializeEligibilityRecords(
     }
 
     eligibilityRecords.push({
-      universityId: student.universityId,
-      instituteId: student.instituteId,
+      universityId: student.universityId || session.universityId,
+      instituteId: student.instituteId || session.instituteId,
       academicYearId,
       studentId,
       examinationSessionId: Number(examinationSessionId),
@@ -492,23 +822,23 @@ async function initializeEligibilityRecords(
     });
   }
 
-  await examinationSessionEligibilityRepo.bulkCreateRecords(
-    eligibilityRecords,
-    { transaction },
-  );
+  if (eligibilityRecords.length > 0) {
+    await examinationSessionEligibilityRepo.bulkCreateRecords(
+      eligibilityRecords,
+      { transaction },
+    );
+  }
 }
 
 export async function createExaminationSession(sessionData, options = {}) {
   return sequelize.transaction(async (transaction) => {
-    const { terms, ...mainData } = sessionData;
+    const { terms, academicYearId, ...mainData } = sessionData;
     const tx = { ...options, transaction };
-    const termsToCreate = buildMissingTermRows(terms, 0);
+    const resolvedTerms = await resolveTermItemsWithBatch(terms, transaction);
+    const termsToCreate = buildMissingTermRows(resolvedTerms, 0);
 
     if (termsToCreate.length) {
-      await assertTermRowsHaveAssessmentPlanMappings(termsToCreate, {
-        ...tx,
-        academicYearId: mainData.academicYearId,
-      });
+      await assertTermRowsHaveAssessmentPlanMappings(termsToCreate, tx);
     }
 
     if (mainData.assessmentTypeId) {
@@ -548,7 +878,7 @@ export async function createExaminationSession(sessionData, options = {}) {
       await initializeEligibilityRecords(
         record.examinationSessionId,
         mainData.academicYearId,
-        transaction,
+        tx,
       );
     }
 
@@ -560,7 +890,6 @@ export async function getExaminationSessions(filters = {}, options = {}) {
   const {
     search,
     status = "all",
-    academicYearId,
     assessmentTypeId,
     universityId,
     instituteId,
@@ -572,7 +901,6 @@ export async function getExaminationSessions(filters = {}, options = {}) {
   const offset = (pageNum - 1) * limitNum;
   const where = {};
 
-  if (academicYearId) where.academicYearId = Number(academicYearId);
   if (assessmentTypeId) where.assessmentTypeId = Number(assessmentTypeId);
   if (universityId) where.universityId = Number(universityId);
   if (instituteId) where.instituteId = Number(instituteId);
@@ -617,7 +945,7 @@ export async function updateExaminationSession(
 ) {
   return sequelize.transaction(async (transaction) => {
     const sessionId = Number(id);
-    const { terms, ...mainUpdateData } = updateData;
+    const { terms, academicYearId, ...mainUpdateData } = updateData;
     const tx = { ...options, transaction };
 
     const currentSession =
@@ -642,17 +970,65 @@ export async function updateExaminationSession(
           tx,
         );
       const existingTermSet = new Set();
+      const existingByCourseSessionTerm = new Map();
       for (const row of existingTerms) {
         const courseId = row.courseId != null ? Number(row.courseId) : null;
         const sessionIdValue =
           row.sessionId != null ? Number(row.sessionId) : null;
+        const batchId = row.batchId != null ? Number(row.batchId) : null;
+        const termNum = Number(row.term);
         existingTermSet.add(
-          `${courseId}_${sessionIdValue}_${Number(row.term)}`,
+          `${courseId}_${sessionIdValue}_${termNum}_${batchId}`,
+        );
+        existingTermSet.add(`${courseId}_${sessionIdValue}_${termNum}_null`);
+        existingByCourseSessionTerm.set(
+          `${courseId}_${sessionIdValue}_${termNum}`,
+          row,
         );
       }
 
+      const resolvedTerms = await resolveTermItemsWithBatch(terms, transaction);
+
+      // Update batchId / remarks / includeElectives on existing term rows if needed
+      for (const item of resolvedTerms) {
+        const cId = item.courseId != null ? Number(item.courseId) : null;
+        const sId = item.sessionId != null ? Number(item.sessionId) : null;
+        const bId = item.batchId != null ? Number(item.batchId) : null;
+        const tNum = Number(item.term);
+        const existingRow = existingByCourseSessionTerm.get(
+          `${cId}_${sId}_${tNum}`,
+        );
+        if (existingRow) {
+          existingTermSet.add(`${cId}_${sId}_${tNum}_${bId}`);
+          const updates = {};
+          if (bId != null && Number(existingRow.batchId) !== bId) {
+            updates.batchId = bId;
+          }
+          if (
+            item.includeElectives !== undefined &&
+            existingRow.includeElectives !== item.includeElectives
+          ) {
+            updates.includeElectives = item.includeElectives;
+          }
+          if (
+            item.remarks !== undefined &&
+            existingRow.remarks !== item.remarks
+          ) {
+            updates.remarks = item.remarks;
+          }
+          if (Object.keys(updates).length > 0) {
+            await model.examinationSessionTermModel.update(updates, {
+              where: {
+                examinationSessionTermId: existingRow.examinationSessionTermId,
+              },
+              transaction,
+            });
+          }
+        }
+      }
+
       const termsToCreate = buildMissingTermRows(
-        terms,
+        resolvedTerms,
         sessionId,
         existingTermSet,
       );
@@ -686,7 +1062,7 @@ export async function updateExaminationSession(
     await initializeEligibilityRecords(
       sessionId,
       mainUpdateData.academicYearId,
-      transaction,
+      tx,
     );
 
     return getExaminationSessionById(sessionId, tx);
@@ -716,10 +1092,31 @@ export async function createExaminationSessionTerm(termData, options = {}) {
   return sequelize.transaction(async (transaction) => {
     const examinationSessionId = Number(termData.examinationSessionId);
     const termNumber = Number(termData.term);
-    const courseId =
+    let courseId =
       termData.courseId != null ? Number(termData.courseId) : null;
-    const sessionId =
+    let sessionId =
       termData.sessionId != null ? Number(termData.sessionId) : null;
+
+    if (termData.batchId != null) {
+      const batch = await model.batchModel.findByPk(termData.batchId, {
+        attributes: ["batchId", "sessionId"],
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "courseId"],
+          },
+        ],
+        transaction,
+      });
+      if (batch) {
+        sessionId = batch.sessionId;
+        if (batch.session) {
+          courseId = batch.session.courseId;
+        }
+      }
+    }
+
     const tx = { ...options, transaction };
 
     const existingTerms =
@@ -761,11 +1158,44 @@ export async function createExaminationSessionTerm(termData, options = {}) {
       {
         courseId,
         sessionId,
+        batchId: termData.batchId != null ? Number(termData.batchId) : null,
         term: termNumber,
         academicYearId: session.academicYearId,
       },
       tx,
     );
+
+    let batchId = termData.batchId != null ? Number(termData.batchId) : null;
+    if (!batchId && sessionId) {
+      const sessionBatches = await model.batchModel.findAll({
+        where: { sessionId },
+        attributes: ["batchId", "batch"],
+        order: [["batch", "DESC"]],
+        transaction,
+      });
+      if (sessionBatches.length > 0) {
+        let termsPerYear = 2;
+        if (courseId) {
+          const c = await model.courseModel.findByPk(courseId, {
+            attributes: ["termType"],
+            transaction,
+          });
+          if (c) {
+            const tt = String(c.termType || "").toLowerCase();
+            if (tt.startsWith("year")) termsPerYear = 1;
+            else if (tt.startsWith("tri")) termsPerYear = 3;
+            else if (tt.startsWith("quar")) termsPerYear = 4;
+            else termsPerYear = 2;
+          }
+        }
+        const yearNum = Math.max(1, Math.ceil(termNumber / termsPerYear));
+        const idx = yearNum - 1;
+        batchId =
+          idx >= 0 && idx < sessionBatches.length
+            ? sessionBatches[idx].batchId
+            : sessionBatches[sessionBatches.length - 1].batchId;
+      }
+    }
 
     const record =
       await examinationSessionRepository.createExaminationSessionTerm(
@@ -774,6 +1204,7 @@ export async function createExaminationSessionTerm(termData, options = {}) {
           term: termNumber,
           courseId,
           sessionId,
+          batchId,
           includeElectives: termData.includeElectives,
           remarks: termData.remarks,
         },
@@ -791,15 +1222,53 @@ export async function createExaminationSessionTerm(termData, options = {}) {
 }
 
 export async function deleteExaminationSessionTerm(
-  examinationSessionTermId,
+  param,
   options = {},
 ) {
   return sequelize.transaction(async (transaction) => {
-    const existing =
-      await examinationSessionRepository.findExaminationSessionTermById(
-        examinationSessionTermId,
+    let existing = null;
+    if (typeof param === "object" && param !== null) {
+      if (param.examinationSessionTermId) {
+        existing = await examinationSessionRepository.findExaminationSessionTermById(
+          param.examinationSessionTermId,
+          { ...options, transaction },
+        );
+      } else if (param.examinationSessionId && param.term) {
+        let courseId = param.courseId ? Number(param.courseId) : null;
+        let sessionId = param.sessionId ? Number(param.sessionId) : null;
+        if (param.batchId) {
+          const batch = await model.batchModel.findByPk(param.batchId, {
+            attributes: ["batchId", "sessionId"],
+            include: [{ model: model.sessionModel, as: "session", attributes: ["sessionId", "courseId"] }],
+            transaction,
+          });
+          if (batch) {
+            sessionId = batch.sessionId;
+            if (batch.session) courseId = batch.session.courseId;
+          }
+        }
+        const terms = await examinationSessionRepository.findExaminationSessionTerms(
+          Number(param.examinationSessionId),
+          { ...options, transaction },
+        );
+        existing = terms.find((t) => {
+          const tTerm = Number(t.term);
+          const tCourseId = t.courseId ? Number(t.courseId) : null;
+          const tSessionId = t.sessionId ? Number(t.sessionId) : null;
+          return (
+            tTerm === Number(param.term) &&
+            (!courseId || tCourseId === courseId) &&
+            (!sessionId || tSessionId === sessionId)
+          );
+        });
+      }
+    } else {
+      existing = await examinationSessionRepository.findExaminationSessionTermById(
+        param,
         { ...options, transaction },
       );
+    }
+
     if (!existing) {
       return null;
     }
@@ -811,7 +1280,7 @@ export async function deleteExaminationSessionTerm(
     );
 
     await examinationSessionRepository.deleteExaminationSessionTerm(
-      examinationSessionTermId,
+      existing.examinationSessionTermId,
       { ...options, transaction },
     );
     return { message: "Examination session term mapping deleted successfully" };
@@ -842,26 +1311,40 @@ export async function getClassSectionTermsBySetupType(
   ]);
 
   const courseIdList = [];
-  for (const plan of plans) courseIdList.push(plan.courseId);
-  for (const mapping of mappings) courseIdList.push(mapping.courseId);
+  for (const plan of plans) {
+    if (plan.courseId) courseIdList.push(plan.courseId);
+  }
+  for (const m of mappings) {
+    const plain = m.get ? m.get({ plain: true }) : m;
+    const courseId =
+      plain.courseId ||
+      plain.assessmentPlan?.courseId ||
+      plain.batch?.session?.courseId ||
+      plain.curriculumSubjectTermMapping?.curriculum?.courseId;
+    if (courseId) courseIdList.push(courseId);
+  }
   const courseIds = uniqueValues(courseIdList);
   if (!courseIds.length) return [];
 
   // examSetupTypeId → plans/mappings → all course terms, grouped by courseId + sessionId.
+  const activeYearOptions = {
+    ...options,
+    academicYearId: options.academicYearId || undefined,
+  };
   const [
     { academicYearId, rows: batchTermRows },
     { rows: subjectRows },
   ] = await Promise.all([
-    findActiveYearBatchTermsByCourseIds(courseIds, options),
-    findCurriculumSubjectsForActiveYear({ courseIds }, options),
+    findActiveYearBatchTermsByCourseIds(courseIds, activeYearOptions),
+    findCurriculumSubjectsForActiveYear(
+      { courseIds, academicYearId: options.academicYearId },
+      activeYearOptions,
+    ),
   ]);
 
   const groupKeys = new Map();
-  // groupKey → curriculumBatchTermMappingId → Set(subjectId)
-  const mappedByGroupCbtm = new Map();
-  // groupKey → `${batch}_${term}` → Set(subjectId) — same cohort when CBTM ids differ
+  // groupKey → `${batch}_${term}` → Set(subjectId) — same cohort
   const mappedByGroupBatchTerm = new Map();
-  const mappedCbtmIds = [];
 
   function groupKeyOf(courseId, sessionId) {
     return `${Number(courseId)}_${sessionId != null ? Number(sessionId) : 0}`;
@@ -889,16 +1372,36 @@ export async function getClassSectionTermsBySetupType(
     nested.get(nestedKey).add(Number(subjectId));
   }
 
-  for (const mapping of mappings) {
-    const key = ensureGroup(
-      mapping.courseId,
-      mapping.sessionId,
-      mapping.academicYearId,
-    );
-    if (mapping.curriculumBatchTermMappingId == null) continue;
-    const cbtmId = Number(mapping.curriculumBatchTermMappingId);
-    mappedCbtmIds.push(cbtmId);
-    addToNestedSet(mappedByGroupCbtm, key, cbtmId, mapping.subjectId);
+  for (const m of mappings) {
+    const plain = m.get ? m.get({ plain: true }) : m;
+    const courseId =
+      plain.courseId ||
+      plain.assessmentPlan?.courseId ||
+      plain.batch?.session?.courseId ||
+      plain.curriculumSubjectTermMapping?.curriculum?.courseId;
+    const sessionId =
+      plain.sessionId ||
+      plain.batch?.sessionId ||
+      plain.batch?.session?.sessionId ||
+      null;
+
+    if (!courseId) continue;
+    const key = ensureGroup(courseId, sessionId, plain.academicYearId);
+
+    const batchYear = plain.batch?.batch != null ? Number(plain.batch.batch) : null;
+    const term =
+      plain.curriculumSubjectTermMapping?.term != null
+        ? Number(plain.curriculumSubjectTermMapping.term)
+        : null;
+
+    if (batchYear != null && term != null) {
+      addToNestedSet(
+        mappedByGroupBatchTerm,
+        key,
+        `${batchYear}_${term}`,
+        plain.subjectId,
+      );
+    }
   }
 
   for (const courseId of courseIds) {
@@ -914,35 +1417,21 @@ export async function getClassSectionTermsBySetupType(
     }
   }
 
-  const enrichmentRows = mappedCbtmIds.length
-    ? await curriculumBatchTermRepository.findEnrichmentByIds(
-        mappedCbtmIds,
-        options,
-      )
-    : [];
-  const enrichmentById = new Map();
-  for (const row of enrichmentRows) {
-    enrichmentById.set(row.curriculumBatchTermMappingId, row);
-  }
+  // groupKey → curriculumBatchTermMappingId → term bucket
+  const termsByGroup = new Map();
 
-  for (const mapping of mappings) {
-    if (mapping.curriculumBatchTermMappingId == null) continue;
-    const ctx = enrichmentById.get(Number(mapping.curriculumBatchTermMappingId));
-    if (!ctx) continue;
-    const key = groupKeyOf(mapping.courseId, mapping.sessionId);
-    addToNestedSet(
-      mappedByGroupBatchTerm,
-      key,
-      `${ctx.batchYear}_${ctx.term}`,
-      mapping.subjectId,
-    );
-  }
-
-  // courseId → curriculumBatchTermMappingId → term bucket
-  const termsByCourse = new Map();
-
-  function ensureTermBucket(courseId, term, batch, yearNumber, curriculumBatchTermMappingId) {
+  function ensureTermBucket(
+    courseId,
+    sessionId,
+    term,
+    batch,
+    yearNumber,
+    curriculumBatchTermMappingId,
+    batchId,
+  ) {
     const cid = Number(courseId);
+    const sid = sessionId != null ? Number(sessionId) : null;
+    const gKey = groupKeyOf(cid, sid);
     const cbtmId = Number(curriculumBatchTermMappingId);
     const t = toIntegerNumber(term);
     const b = toIntegerNumber(batch);
@@ -950,16 +1439,19 @@ export async function getClassSectionTermsBySetupType(
       return null;
     }
 
-    if (!termsByCourse.has(cid)) termsByCourse.set(cid, new Map());
-    const termMap = termsByCourse.get(cid);
+    if (!termsByGroup.has(gKey)) termsByGroup.set(gKey, new Map());
+    const termMap = termsByGroup.get(gKey);
     if (!termMap.has(cbtmId)) {
       termMap.set(cbtmId, {
         term: t,
         batch: b,
+        batchId: batchId != null ? Number(batchId) : null,
         yearNumber: yearNumber != null ? Number(yearNumber) : null,
         curriculumBatchTermMappingId: cbtmId,
         subjectIds: new Set(),
       });
+    } else if (batchId != null && termMap.get(cbtmId).batchId == null) {
+      termMap.get(cbtmId).batchId = Number(batchId);
     }
     return termMap.get(cbtmId);
   }
@@ -967,33 +1459,60 @@ export async function getClassSectionTermsBySetupType(
   for (const row of batchTermRows) {
     ensureTermBucket(
       row.courseId,
+      row.sessionId,
       row.term,
       row.batch,
       row.yearNumber,
       row.curriculumBatchTermMappingId,
+      row.batchId,
     );
   }
 
   for (const row of subjectRows) {
     const bucket = ensureTermBucket(
       row.courseId,
+      row.sessionId,
       row.term,
       row.batch,
       row.yearNumber,
       row.curriculumBatchTermMappingId,
+      row.batchId,
     );
     if (!bucket) continue;
     bucket.subjectIds.add(Number(row.subjectId));
   }
 
   // Only link mapped subject IDs to active-year term buckets.
-  for (const mapping of mappings) {
-    if (mapping.curriculumBatchTermMappingId == null) continue;
-    const cbtmId = Number(mapping.curriculumBatchTermMappingId);
-    const courseId = Number(mapping.courseId);
-    const existing = termsByCourse.get(courseId)?.get(cbtmId);
-    if (existing) {
-      existing.subjectIds.add(Number(mapping.subjectId));
+  for (const m of mappings) {
+    const plain = m.get ? m.get({ plain: true }) : m;
+    const courseId =
+      plain.courseId ||
+      plain.assessmentPlan?.courseId ||
+      plain.batch?.session?.courseId ||
+      plain.curriculumSubjectTermMapping?.curriculum?.courseId;
+    const sessionId =
+      plain.sessionId ||
+      plain.batch?.sessionId ||
+      plain.batch?.session?.sessionId ||
+      null;
+    const batchYear = plain.batch?.batch != null ? Number(plain.batch.batch) : null;
+    const term =
+      plain.curriculumSubjectTermMapping?.term != null
+        ? Number(plain.curriculumSubjectTermMapping.term)
+        : null;
+
+    if (!courseId || batchYear == null || term == null) continue;
+    const gKey = groupKeyOf(courseId, sessionId);
+    const termMap = termsByGroup.get(gKey);
+    if (termMap) {
+      for (const bucket of termMap.values()) {
+        if (bucket.batch === batchYear && bucket.term === term) {
+          bucket.subjectIds.add(Number(plain.subjectId));
+          if (!bucket.batchId && plain.batchId) {
+            bucket.batchId = Number(plain.batchId);
+          }
+        }
+      }
     }
   }
 
@@ -1005,7 +1524,7 @@ export async function getClassSectionTermsBySetupType(
     if (group.sessionId != null) sessionIdsOut.push(group.sessionId);
   }
 
-  const [courses, sessions, courseSessionMappings] = await Promise.all([
+  const [courses, sessions, courseSessionMappings, batchRecords] = await Promise.all([
     examinationSessionRepository.findCoursesByIds(
       uniqueValues(courseIdsOut),
       options,
@@ -1019,6 +1538,13 @@ export async function getClassSectionTermsBySetupType(
       uniqueValues(sessionIdsOut),
       options,
     ),
+    uniqueValues(sessionIdsOut).length > 0
+      ? model.batchModel.findAll({
+          where: { sessionId: { [Op.in]: uniqueValues(sessionIdsOut) } },
+          attributes: ["batchId", "sessionId", "batch"],
+          transaction: options.transaction,
+        })
+      : Promise.resolve([]),
   ]);
 
   const courseMap = new Map();
@@ -1033,32 +1559,31 @@ export async function getClassSectionTermsBySetupType(
       plain.sessionCourseMappingId,
     );
   }
+  const sessionBatchMap = new Map();
+  for (const b of batchRecords) {
+    sessionBatchMap.set(`${b.sessionId}_${b.batch}`, b.batchId);
+  }
 
   const result = [];
   for (const group of groups) {
     const course = courseMap.get(group.courseId);
     if (!course) continue;
 
-    const termMap = termsByCourse.get(group.courseId);
+    const groupKey = groupKeyOf(group.courseId, group.sessionId);
+    const termMap = termsByGroup.get(groupKey);
     const terms = termMap ? [...termMap.values()] : [];
+    if (!terms.length) continue;
+
     terms.sort((a, b) => {
       const byBatch = decimalCompare(a.batch, b.batch);
       return byBatch !== 0 ? byBatch : decimalCompare(a.term, b.term);
     });
 
-    const groupKey = groupKeyOf(group.courseId, group.sessionId);
-    const mappedForGroup = mappedByGroupCbtm.get(groupKey);
     const mappedBatchTermForGroup = mappedByGroupBatchTerm.get(groupKey);
 
     const termDetails = [];
     for (const bucket of terms) {
       const mappedSubjects = new Set();
-      const byCbtm = mappedForGroup
-        ? mappedForGroup.get(bucket.curriculumBatchTermMappingId)
-        : null;
-      if (byCbtm) {
-        for (const subjectId of byCbtm) mappedSubjects.add(subjectId);
-      }
       const byBatchTerm = mappedBatchTermForGroup
         ? mappedBatchTermForGroup.get(`${bucket.batch}_${bucket.term}`)
         : null;
@@ -1074,48 +1599,86 @@ export async function getClassSectionTermsBySetupType(
         );
       }
 
+      const resolvedBatchId =
+        bucket.batchId ||
+        (group.sessionId
+          ? sessionBatchMap.get(`${group.sessionId}_${bucket.batch}`) || null
+          : null);
+
       const cohortContext = {
         courseId: group.courseId,
         term: bucket.term,
         yearNumber: bucket.yearNumber,
         batch: bucket.batch,
+        batchId: resolvedBatchId,
       };
-      const classSectionTermIds = await resolveClassSectionTermIdsFromBatchTerm(
+      const classSections = await resolveClassSectionsFromBatchTerm(
         cohortContext,
         {
           sessionId: group.sessionId,
-          academicYearId: group.academicYearId,
+          batchId: resolvedBatchId,
+          academicYearId: group.academicYearId || options.academicYearId,
         },
         options,
       );
+      const classSectionTermIds = classSections.map(
+        (cs) => cs.classSectionTermId,
+      );
 
-      let studentCount = 0;
-      if (group.sessionId != null && group.academicYearId != null) {
-        studentCount = await countStudentsForExamGroup(
-          group.sessionId,
-          group.courseId,
-          bucket.term,
-          group.academicYearId,
-          {
-            batchYear: bucket.batch,
-            yearNumber: bucket.yearNumber,
-            curriculumBatchTermMappingId: bucket.curriculumBatchTermMappingId,
-            transaction: options.transaction,
-          },
-        );
-      }
+      const studentCount = await countStudentsForExamGroup(
+        group.sessionId,
+        group.courseId,
+        bucket.term,
+        group.academicYearId,
+        {
+          batchId: resolvedBatchId,
+          batchYear: bucket.batch,
+          yearNumber: bucket.yearNumber,
+          transaction: options.transaction,
+        },
+      );
 
       termDetails.push({
         term: bucket.term,
         batch: bucket.batch,
+        batchId: resolvedBatchId,
         yearNumber: bucket.yearNumber,
         curriculumBatchTermMappingId: bucket.curriculumBatchTermMappingId,
         classSectionTermIds,
+        classSections,
         mappedSubjectCount,
         totalSubjects: toIntegerNumber(bucket.subjectIds.size),
         studentCount,
       });
     }
+
+    const yearsMap = new Map();
+    for (const td of termDetails) {
+      const yr = td.yearNumber || 1;
+      if (!yearsMap.has(yr)) {
+        yearsMap.set(yr, {
+          yearNumber: yr,
+          batch: td.batch,
+          batchId: td.batchId,
+          terms: [],
+          classSections: [],
+        });
+      }
+      const yObj = yearsMap.get(yr);
+      yObj.terms.push(td);
+      for (const cs of td.classSections || []) {
+        if (
+          !yObj.classSections.some(
+            (x) => x.classSectionTermId === cs.classSectionTermId,
+          )
+        ) {
+          yObj.classSections.push(cs);
+        }
+      }
+    }
+
+    const firstTermBatchId =
+      termDetails.length > 0 ? termDetails[0].batchId : null;
 
     result.push({
       course,
@@ -1125,8 +1688,10 @@ export async function getClassSectionTermsBySetupType(
         group.sessionId != null
           ? csmMap.get(`${group.courseId}_${group.sessionId}`) || null
           : null,
+      batchId: firstTermBatchId,
       academicYearId: group.academicYearId,
       terms: termDetails,
+      years: [...yearsMap.values()],
     });
   }
 
@@ -1137,13 +1702,18 @@ export async function getExaminationStructure(
   {
     examinationSessionId,
     examSetupTypeId,
-    academicYearId,
+    assessmentTypeId,
     courseId,
     sessionId,
+    batchId,
   } = {},
   options = {},
 ) {
-  let setupTypeId = Number(examSetupTypeId);
+  let setupTypeId = examSetupTypeId
+    ? Number(examSetupTypeId)
+    : assessmentTypeId
+      ? Number(assessmentTypeId)
+      : null;
   let sessionRecord = null;
 
   if (examinationSessionId) {
@@ -1153,22 +1723,34 @@ export async function getExaminationStructure(
         options,
       );
     if (!sessionRecord) return [];
-    setupTypeId = Number(sessionRecord.assessmentTypeId);
+    if (!setupTypeId && sessionRecord.assessmentTypeId) {
+      setupTypeId = Number(sessionRecord.assessmentTypeId);
+    }
   }
-
-  if (!setupTypeId) return [];
 
   const plainSession = toPlain(sessionRecord);
 
-  // When examinationSessionId is given, return only what is stored in
-  // examination_session_term — no curriculum / subject enrichment needed.
+  // When examinationSessionId is given, return structure from examination_session_term
   if (examinationSessionId && plainSession) {
     const sessionTerms = plainSession.examinationSessionTerms || [];
     if (sessionTerms.length === 0) return [];
 
+    let filteredTerms = sessionTerms;
+    if (courseId) {
+      filteredTerms = filteredTerms.filter(
+        (st) => Number(st.courseId) === Number(courseId),
+      );
+    }
+    if (sessionId) {
+      filteredTerms = filteredTerms.filter(
+        (st) => Number(st.sessionId) === Number(sessionId),
+      );
+    }
+    if (filteredTerms.length === 0) return [];
+
     // Group by (courseId, sessionId)
     const groupMap = new Map();
-    for (const st of sessionTerms) {
+    for (const st of filteredTerms) {
       const cId = Number(st.courseId);
       const sId = st.sessionId != null ? Number(st.sessionId) : null;
       const gKey = `${cId}_${sId ?? 0}`;
@@ -1176,46 +1758,110 @@ export async function getExaminationStructure(
         groupMap.set(gKey, {
           courseId: cId,
           sessionId: sId,
-          academicYearId: Number(st.academicYearId) || null,
           terms: [],
         });
       }
       groupMap.get(gKey).terms.push({
         examinationSessionTermId: Number(st.examinationSessionTermId),
         term: Number(st.term),
+        termTitle: `Term ${st.term}`,
         includeElectives: st.includeElectives,
         remarks: st.remarks ?? null,
       });
     }
 
-    const allCourseIds = uniqueValues([...groupMap.values()].map((g) => g.courseId));
+    const allCourseIds = uniqueValues(
+      [...groupMap.values()].map((g) => g.courseId),
+    );
     const allSessionIds = uniqueValues(
       [...groupMap.values()].map((g) => g.sessionId).filter((id) => id != null),
     );
 
-    const [courses, sessions, csmRows] = await Promise.all([
+    const [courses, sessions, batchTermMappings, allBatches] = await Promise.all([
       examinationSessionRepository.findCoursesByIds(allCourseIds, options),
       examinationSessionRepository.findSessionsByIds(allSessionIds, options),
-      examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
-        allCourseIds,
-        allSessionIds,
-        options,
-      ),
+      model.curriculumBatchTermMappingModel.findAll({
+        include: [
+          {
+            model: model.curriculumBatchMappingModel,
+            as: "batchMapping",
+            attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
+            required: true,
+            include: [
+              {
+                model: model.curriculumModel,
+                as: "curriculum",
+                attributes: ["curriculumId", "courseId"],
+                where: {
+                  ...buildScope(model.curriculumModel),
+                  courseId: { [Op.in]: allCourseIds },
+                },
+                required: true,
+              },
+              {
+                model: model.batchModel,
+                as: "batch",
+                attributes: ["batchId", "sessionId", "batch"],
+                required: true,
+              },
+            ],
+          },
+        ],
+        transaction: options.transaction,
+      }),
+      allSessionIds.length > 0
+        ? model.batchModel.findAll({
+            where: { sessionId: { [Op.in]: allSessionIds } },
+            attributes: ["batchId", "sessionId", "batch"],
+            order: [["batch", "DESC"]],
+            transaction: options.transaction,
+          })
+        : Promise.resolve([]),
     ]);
+
+    const batchMapByCourseSessionTerm = new Map();
+    for (const btm of batchTermMappings) {
+      const plain = btm.get ? btm.get({ plain: true }) : btm;
+      const bm = plain.batchMapping;
+      if (!bm) continue;
+      const cId = Number(bm.curriculum?.courseId);
+      const sId = bm.batch?.sessionId != null ? Number(bm.batch.sessionId) : null;
+      const t = Number(plain.term);
+      const bId = Number(bm.batchId);
+      if (cId && t && bId) {
+        if (sId != null) {
+          batchMapByCourseSessionTerm.set(`${cId}_${sId}_${t}`, bId);
+        }
+        batchMapByCourseSessionTerm.set(`${cId}_${t}`, bId);
+      }
+    }
+
+    const sessionBatchesMap = new Map();
+    for (const b of allBatches) {
+      if (!sessionBatchesMap.has(b.sessionId)) {
+        sessionBatchesMap.set(b.sessionId, b.batchId);
+      }
+    }
 
     const courseMap = new Map(courses.map((c) => [c.courseId, c]));
     const sessionMap = new Map(sessions.map((s) => [s.sessionId, s]));
-    const csmMap = new Map(
-      csmRows.map((r) => {
-        const p = r.get ? r.get({ plain: true }) : r;
-        return [`${p.courseId}_${p.sessionId}`, p.sessionCourseMappingId];
-      }),
-    );
 
     return [...groupMap.values()].map((group) => {
       const course = courseMap.get(group.courseId);
-      const session = group.sessionId ? sessionMap.get(group.sessionId) || null : null;
+      const session = group.sessionId
+        ? sessionMap.get(group.sessionId) || null
+        : null;
       group.terms.sort((a, b) => a.term - b.term);
+
+      for (const t of group.terms) {
+        const resolvedBatchId =
+          batchMapByCourseSessionTerm.get(`${group.courseId}_${group.sessionId}_${t.term}`) ||
+          batchMapByCourseSessionTerm.get(`${group.courseId}_${t.term}`) ||
+          (group.sessionId != null ? sessionBatchesMap.get(group.sessionId) : null) ||
+          null;
+        t.batchId = resolvedBatchId;
+        t.termTitle = `${course?.termType === "Year" ? "Year" : "Semester"} ${t.term}`;
+      }
 
       return {
         examinationSessionId: Number(examinationSessionId),
@@ -1226,204 +1872,269 @@ export async function getExaminationStructure(
         totalTerms: course?.totalTerms || null,
         sessionId: group.sessionId,
         sessionName: session?.sessionName || null,
-        courseSessionMappingId:
-          group.sessionId != null
-            ? csmMap.get(`${group.courseId}_${group.sessionId}`) || null
-            : null,
-        academicYearId: group.academicYearId,
+        batchId: group.terms.length > 0 ? group.terms[0].batchId : null,
         terms: group.terms,
       };
     });
   }
 
   // ----------------------------------------------------------------
-  // Legacy path: no examinationSessionId — filter by examSetupTypeId
+  // Filter-based exploration path (with setupTypeId, courseId, sessionId, batchId)
   // ----------------------------------------------------------------
-  const planIds = await getAssessmentPlanIds(setupTypeId, options);
-  if (!planIds.length) return [];
+  let subjectMappings = [];
+  if (setupTypeId) {
+    const planIds = await getAssessmentPlanIds(setupTypeId, options);
+    if (!planIds.length) return [];
 
-  const mappingWhere = { assessmentPlanId: { [Op.in]: planIds } };
-  if (courseId) mappingWhere.courseId = Number(courseId);
-  if (sessionId) mappingWhere.sessionId = Number(sessionId);
+    const mappingWhere = { assessmentPlanId: { [Op.in]: planIds } };
+    if (batchId) mappingWhere.batchId = Number(batchId);
+    if (courseId) mappingWhere.courseId = Number(courseId);
+    if (sessionId) mappingWhere.sessionId = Number(sessionId);
 
-  const subjectMappings =
-    await examinationSessionRepository.findAssessmentPlanSubjectMappings(
-      mappingWhere,
-      options,
-    );
-
-  const subjectIds = uniqueValues(
-    subjectMappings.map((mapping) => mapping.subjectId),
-  );
-  if (!subjectIds.length) return [];
-
-  let activeBatchYear;
-  let resolvedAcademicYearId;
-  if (academicYearId) {
-    const academicYear =
-      await acedmicYearRepository.getSingleacedmicYearDetails(
-        Number(academicYearId),
+    subjectMappings =
+      await examinationSessionRepository.findAssessmentPlanSubjectMappings(
+        mappingWhere,
         options,
       );
-    if (!academicYear?.startingDate) return [];
-    resolvedAcademicYearId = toIntegerNumber(academicYear.academicYearId);
-    activeBatchYear = toIntegerNumber(
-      String(academicYear.startingDate).slice(0, 4),
-    );
-  } else {
-    const ctx = await resolveActiveAcademicYearContext(options);
-    resolvedAcademicYearId = ctx.academicYearId;
-    activeBatchYear = ctx.activeBatchYear;
   }
 
-  const curriculumFilters = {
-    subjectIds,
-    activeBatchYear,
-    academicYearId: resolvedAcademicYearId,
-  };
-  if (courseId) curriculumFilters.courseId = Number(courseId);
+  if (subjectMappings.length > 0) {
+    // Group by (courseId, sessionId)
+    const courseSessionGroups = new Map();
 
-  const { rows: curriculumRows } = await findCurriculumSubjectsForActiveYear(
-    curriculumFilters,
-    options,
-  );
-  if (!curriculumRows.length) return [];
+    for (const mapping of subjectMappings) {
+      const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
+      const cId =
+        plain.batch?.session?.courseId ||
+        plain.curriculumSubjectTermMapping?.curriculum?.courseId ||
+        plain.assessmentPlan?.courseId ||
+        (courseId ? Number(courseId) : null);
+      const sId =
+        plain.batch?.sessionId ||
+        plain.batch?.session?.sessionId ||
+        (sessionId ? Number(sessionId) : null);
 
-  const mappingKeySet = new Set();
-  for (const mapping of subjectMappings) {
-    if (mapping.curriculumBatchTermMappingId == null) continue;
-    mappingKeySet.add(
-      `${Number(mapping.curriculumBatchTermMappingId)}_${Number(mapping.subjectId)}`,
-    );
-  }
+      if (!cId) continue;
+      if (courseId && Number(cId) !== Number(courseId)) continue;
+      if (sessionId && Number(sId) !== Number(sessionId)) continue;
 
-  const mappings =
-    await examinationSessionRepository.findAssessmentPlanSubjectMappingsWithSession(
-      {
-        subjectId: { [Op.in]: subjectIds },
-      },
-      options,
-    );
+      const groupKey = `${cId}_${sId ?? 0}`;
+      if (!courseSessionGroups.has(groupKey)) {
+        courseSessionGroups.set(groupKey, {
+          courseId: Number(cId),
+          sessionId: sId != null ? Number(sId) : null,
+          termsMap: new Map(),
+          seenSubjects: new Set(),
+        });
+      }
 
-  const courseIdsFromCurriculum = uniqueValues(
-    curriculumRows.map((row) => row.courseId),
-  );
-  const courses = await examinationSessionRepository.findCoursesByIds(
-    courseIdsFromCurriculum,
-    options,
-  );
-  const courseMap = new Map(courses.map((course) => [course.courseId, course]));
-  const subjectSessionMap = new Map(
-    mappings.map((mapping) => [
-      mapping.subjectId,
-      {
-        sessionId: mapping.sessionId,
-        sessionName: mapping["session.sessionName"] || null,
-      },
-    ]),
-  );
+      const group = courseSessionGroups.get(groupKey);
+      const cstm = plain.curriculumSubjectTermMapping;
+      const term = cstm?.term != null ? Number(cstm.term) : null;
+      const subject = cstm?.subject;
+      const subId = cstm?.subjectId || subject?.subjectId || plain.subjectId;
 
-  const courseSessionGroups = new Map();
-  const seenSubjectInGroup = new Map();
-
-  for (const row of curriculumRows) {
-    if (row.curriculumBatchTermMappingId == null) continue;
-    if (
-      !mappingKeySet.has(
-        `${Number(row.curriculumBatchTermMappingId)}_${Number(row.subjectId)}`,
-      )
-    ) {
-      continue;
+      if (term != null && subId != null) {
+        const dedupeKey = `${term}_${subId}`;
+        if (!group.seenSubjects.has(dedupeKey)) {
+          group.seenSubjects.add(dedupeKey);
+          if (!group.termsMap.has(term)) {
+            group.termsMap.set(term, []);
+          }
+          group.termsMap.get(term).push({
+            subjectId: Number(subId),
+            subjectName: subject?.subjectName || null,
+            subjectCode: subject?.subjectCode || null,
+            subjectType: subject?.subjectType || null,
+            term,
+            courseId: Number(cId),
+            sessionId: sId != null ? Number(sId) : null,
+            curriculumSubjectTermMappingId: cstm?.curriculumSubjectTermMappingId
+              ? Number(cstm.curriculumSubjectTermMappingId)
+              : null,
+          });
+        }
+      }
     }
 
-    const sessionInfo = subjectSessionMap.get(row.subjectId) || {};
-    const key = `${row.courseId}_${sessionInfo.sessionId || 0}`;
-    if (!courseSessionGroups.has(key)) {
-      const course = courseMap.get(row.courseId) || {};
-      courseSessionGroups.set(key, {
-        courseId: row.courseId,
-        courseName: course.courseName,
-        courseCode: course.courseCode,
-        termType: course.termType,
-        sessionId: sessionInfo.sessionId,
-        sessionName: sessionInfo.sessionName,
-        academicYearId: resolvedAcademicYearId,
-        termsMap: new Map(),
+    if (courseSessionGroups.size === 0) return [];
+
+    const allCourseIds = uniqueValues(
+      [...courseSessionGroups.values()].map((g) => g.courseId),
+    );
+    const allSessionIds = uniqueValues(
+      [...courseSessionGroups.values()]
+        .map((g) => g.sessionId)
+        .filter((id) => id != null),
+    );
+
+    const [courses, sessions] = await Promise.all([
+      examinationSessionRepository.findCoursesByIds(allCourseIds, options),
+      examinationSessionRepository.findSessionsByIds(allSessionIds, options),
+    ]);
+
+    const courseMap = new Map(courses.map((c) => [c.courseId, c]));
+    const sessionMap = new Map(sessions.map((s) => [s.sessionId, s]));
+
+    return [...courseSessionGroups.values()]
+      .map((group) => {
+        const course = courseMap.get(group.courseId);
+        const session = group.sessionId
+          ? sessionMap.get(group.sessionId) || null
+          : null;
+        let totalSubjects = 0;
+
+        const terms = [...group.termsMap.keys()]
+          .sort((a, b) => a - b)
+          .map((term) => {
+            const termSubjects = group.termsMap.get(term) || [];
+            totalSubjects += termSubjects.length;
+            return {
+              term,
+              termTitle: `${course?.termType === "Year" ? "Year" : "Semester"} ${term}`,
+              subjectCount: termSubjects.length,
+              subjects: termSubjects,
+            };
+          });
+
+        return {
+          examinationSessionId: null,
+          courseId: group.courseId,
+          courseName: course?.courseName || null,
+          courseCode: course?.courseCode || null,
+          termType: course?.termType || null,
+          totalTerms: course?.totalTerms || null,
+          sessionId: group.sessionId,
+          sessionName: session?.sessionName || null,
+          totalSubjects,
+          terms,
+        };
+      })
+      .filter((group) => group.terms.length > 0);
+  }
+
+  // Pure course/session/curriculum exploration (fallback when no assessment setup type specified)
+  const sessionWhere = {};
+  if (sessionId) sessionWhere.sessionId = Number(sessionId);
+  if (courseId) sessionWhere.courseId = Number(courseId);
+
+  const sessions = await scoped(model.sessionModel).findAll({
+    where: sessionWhere,
+    attributes: ["sessionId", "sessionName", "courseId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  if (!sessions.length) return [];
+
+  const courseIds = uniqueValues(
+    sessions.map((s) => s.courseId).filter(Boolean),
+  );
+  if (!courseIds.length) return [];
+
+  const [courses, cstmList] = await Promise.all([
+    examinationSessionRepository.findCoursesByIds(courseIds, options),
+    scoped(model.curriculumSubjectTermMappingModel).findAll({
+      attributes: [
+        "curriculumSubjectTermMappingId",
+        "curriculumId",
+        "subjectId",
+        "term",
+      ],
+      include: [
+        {
+          model: model.curriculumModel,
+          as: "curriculum",
+          attributes: ["curriculumId", "name", "courseId"],
+          where: { courseId: { [Op.in]: courseIds } },
+          required: true,
+        },
+        {
+          model: model.subjectModel,
+          as: "subject",
+          attributes: [
+            "subjectId",
+            "subjectName",
+            "subjectCode",
+            "subjectType",
+          ],
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    }),
+  ]);
+
+  const courseMap = new Map(courses.map((c) => [c.courseId, c]));
+  const cstmByCourse = new Map();
+  for (const cstm of cstmList) {
+    const plain = cstm.get ? cstm.get({ plain: true }) : cstm;
+    const cid = plain.curriculum?.courseId;
+    if (!cid) continue;
+    if (!cstmByCourse.has(cid)) cstmByCourse.set(cid, []);
+    cstmByCourse.get(cid).push(plain);
+  }
+
+  const result = [];
+  for (const session of sessions) {
+    const course = courseMap.get(session.courseId);
+    if (!course) continue;
+
+    const courseCstmList = cstmByCourse.get(session.courseId) || [];
+    const termsMap = new Map();
+    const seenSubjects = new Set();
+    let totalSubjects = 0;
+
+    for (const cstm of courseCstmList) {
+      const term = Number(cstm.term);
+      const subId = cstm.subjectId;
+      const dedupeKey = `${term}_${subId}`;
+      if (!seenSubjects.has(dedupeKey)) {
+        seenSubjects.add(dedupeKey);
+        if (!termsMap.has(term)) termsMap.set(term, []);
+        termsMap.get(term).push({
+          subjectId: Number(subId),
+          subjectName: cstm.subject?.subjectName || null,
+          subjectCode: cstm.subject?.subjectCode || null,
+          subjectType: cstm.subject?.subjectType || null,
+          term,
+          courseId: session.courseId,
+          sessionId: session.sessionId,
+          curriculumSubjectTermMappingId: Number(
+            cstm.curriculumSubjectTermMappingId,
+          ),
+        });
+      }
+    }
+
+    const terms = [...termsMap.keys()]
+      .sort((a, b) => a - b)
+      .map((term) => {
+        const subjects = termsMap.get(term) || [];
+        totalSubjects += subjects.length;
+        return {
+          term,
+          termTitle: `${course.termType === "Year" ? "Year" : "Semester"} ${term}`,
+          subjectCount: subjects.length,
+          subjects,
+        };
       });
-      seenSubjectInGroup.set(key, new Set());
-    }
 
-    const group = courseSessionGroups.get(key);
-    const subjectTerm = Number(row.term);
-    const dedupeKey = `${row.curriculumBatchTermMappingId}_${row.subjectId}`;
-    const seen = seenSubjectInGroup.get(key);
-    if (seen.has(dedupeKey)) continue;
-    seen.add(dedupeKey);
-
-    if (!group.termsMap.has(subjectTerm)) {
-      group.termsMap.set(subjectTerm, []);
-    }
-    group.termsMap.get(subjectTerm).push({
-      subjectId: row.subjectId,
-      subjectName: row.subject.subjectName,
-      subjectCode: row.subject.subjectCode,
-      term: subjectTerm,
-      courseId: row.courseId,
-      sessionId: sessionInfo.sessionId,
+    result.push({
+      examinationSessionId: null,
+      courseId: session.courseId,
+      courseName: course.courseName || null,
+      courseCode: course.courseCode || null,
+      termType: course.termType || null,
+      totalTerms: course.totalTerms || null,
+      sessionId: session.sessionId,
+      sessionName: session.sessionName || null,
+      totalSubjects,
+      terms,
     });
   }
 
-  const courseSessionMappingsList =
-    await examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
-      uniqueValues([...courseSessionGroups.values()].map((g) => g.courseId)),
-      uniqueValues([...courseSessionGroups.values()].map((g) => g.sessionId)),
-      options,
-    );
-
-  const courseSessionMappingMap = new Map(
-    courseSessionMappingsList.map((m) => [
-      `${m.courseId}_${m.sessionId}`,
-      m.sessionCourseMappingId,
-    ]),
-  );
-
-  return [...courseSessionGroups.values()]
-    .map((group) => {
-      let totalSubjects = 0;
-      const terms = [...group.termsMap.keys()]
-        .sort((a, b) => a - b)
-        .reduce((acc, term) => {
-          const termSubjects = group.termsMap.get(term);
-          totalSubjects += termSubjects.length;
-          acc.push({
-            term,
-            termTitle: `${group.termType === "Year" ? "Year" : "Semester"} ${term}`,
-            subjectCount: termSubjects.length,
-            subjects: termSubjects,
-          });
-          return acc;
-        }, []);
-
-      const courseSessionMappingId =
-        courseSessionMappingMap.get(
-          `${group.courseId}_${group.sessionId}`,
-        ) || null;
-
-      return {
-        examinationSessionId: null,
-        courseId: group.courseId,
-        courseName: group.courseName,
-        courseCode: group.courseCode,
-        termType: group.termType,
-        sessionId: group.sessionId,
-        sessionName: group.sessionName,
-        courseSessionMappingId,
-        academicYearId: group.academicYearId,
-        totalSubjects,
-        terms,
-      };
-    })
-    .filter((group) => group.terms.length > 0);
+  return result;
 }
 
 export async function getMappedSubjectsBySessionAndTermNeed(params, options = {}) {
@@ -1455,30 +2166,13 @@ export async function getMappedSubjectsBySessionAndTerm(
   let filterSessionIds = [];
 
   if (selections && selections.length > 0) {
-    const mappingIds = [];
-    for (const sel of selections) {
-      mappingIds.push(sel.courseSessionMappingId);
-    }
-    const dbMappings =
-      await examinationSessionRepository.findSessionCourseMappingsByIds(
-        mappingIds,
-        options,
-      );
-    const dbMappingsMap = new Map();
-    for (const mapping of dbMappings) {
-      dbMappingsMap.set(mapping.sessionCourseMappingId, mapping);
-    }
-
-    for (const sel of selections) {
-      const mapping = dbMappingsMap.get(sel.courseSessionMappingId);
-      if (!mapping) continue;
-      filterCombinations.push({
-        courseId: mapping.courseId,
-        sessionId: mapping.sessionId,
-        terms: sel.terms || [],
-      });
-      filterCourseIds.push(mapping.courseId);
-      filterSessionIds.push(mapping.sessionId);
+    filterCombinations = await resolveSelectionCombinations(
+      selections,
+      options,
+    );
+    for (const comb of filterCombinations) {
+      if (comb.courseId != null) filterCourseIds.push(comb.courseId);
+      if (comb.sessionId != null) filterSessionIds.push(comb.sessionId);
     }
   }
 
@@ -1498,13 +2192,17 @@ export async function getMappedSubjectsBySessionAndTerm(
     teacherAssignmentStatus !== undefined ||
     isModerationActive !== undefined;
 
-  if (hasPublishedOnlyFilter && examinationSession.status !== EXAMINATION_SESSION_STATUS.PUBLISHED) {
+  if (
+    hasPublishedOnlyFilter &&
+    examinationSession.status !== EXAMINATION_SESSION_STATUS.PUBLISHED
+  ) {
     throw createBadRequestError(
       "Exam planning filters are available only for a published examination session.",
     );
   }
 
-  if (!examinationSession.assessmentTypeId && isExamScheduled !== true) return [];
+  if (!examinationSession.assessmentTypeId && isExamScheduled !== true)
+    return [];
 
   const sessionTermRows =
     await examinationSessionRepository.findExaminationSessionTerms(
@@ -1533,37 +2231,32 @@ export async function getMappedSubjectsBySessionAndTerm(
       const subject = plain.subjectSchedule;
       const courseId = subject ? Number(subject.courseId) : null;
       if (filterCourseIds.length > 0 && courseId != null) {
-        let courseOk = false;
-        for (const id of filterCourseIds) {
-          if (Number(id) === courseId) {
-            courseOk = true;
-            break;
-          }
-        }
-        if (!courseOk) continue;
+        if (!filterCourseIds.includes(courseId)) continue;
       }
       if (filterSessionIds.length > 0) {
-        let sessionOk = false;
-        for (const id of filterSessionIds) {
-          if (Number(id) === Number(plain.sessionId)) {
-            sessionOk = true;
-            break;
-          }
-        }
-        if (!sessionOk) continue;
+        if (!filterSessionIds.includes(Number(plain.sessionId))) continue;
       }
       if (filterCombinations.length > 0) {
         let allowed = false;
         for (const comb of filterCombinations) {
-          if (courseId != null && Number(comb.courseId) !== courseId) continue;
-          if (Number(comb.sessionId) !== Number(plain.sessionId)) continue;
-          for (const term of comb.terms) {
-            if (Number(term) === Number(plain.term)) {
-              allowed = true;
-              break;
-            }
+          if (
+            courseId != null &&
+            comb.courseId != null &&
+            Number(comb.courseId) !== courseId
+          ) {
+            continue;
           }
-          if (allowed) break;
+          if (
+            comb.sessionId != null &&
+            Number(comb.sessionId) !== Number(plain.sessionId)
+          ) {
+            continue;
+          }
+          if (comb.terms && comb.terms.length > 0) {
+            if (!comb.terms.includes(Number(plain.term))) continue;
+          }
+          allowed = true;
+          break;
         }
         if (!allowed) continue;
       }
@@ -1572,11 +2265,20 @@ export async function getMappedSubjectsBySessionAndTerm(
       seenSubject.add(plain.subjectId);
 
       subjectSessionMap.set(plain.subjectId, plain.sessionId);
-      activeAcademicYearId = plain.academicYearId;
+      const cstmId =
+        plain.curriculumSubjectTermMappingId ||
+        plain.curriculumBatchTermMappingId ||
+        null;
+      const batchId =
+        plain.batchId ||
+        plain.batch?.batchId ||
+        null;
+
       mappedSubjects.push({
         subjectId: plain.subjectId,
-        curriculumBatchTermMappingId:
-          plain.curriculumBatchTermMappingId || null,
+        batchId,
+        curriculumSubjectTermMappingId: cstmId,
+        curriculumBatchTermMappingId: cstmId,
         subjectName: subject ? subject.subjectName : null,
         subjectCode: subject ? subject.subjectCode : null,
         subjectType: null,
@@ -1616,57 +2318,49 @@ export async function getMappedSubjectsBySessionAndTerm(
   } else {
     if (!sessionTermRows.length) return [];
 
-    // examination_session_term defines course+session+term+academicYear.
-    // Subjects = current batch's curriculum subjects for that term
-    //   (curriculum_batch_term_mapping.year + .term)
-    //   ∩ assessment_plan_subject_mapping for the same course+session.
     const sessionTermCourseIds = [];
     const sessionTermNumbers = [];
     const sessionTermSessionIds = [];
+    const sessionTermBatchIds = [];
     const sessionTermMatchKeys = new Set();
     const sessionTermByCourseTerm = new Map();
-    let sessionAcademicYearId = null;
 
     for (const row of sessionTermRows) {
       const courseId = row.courseId != null ? Number(row.courseId) : null;
       const term = Number(row.term);
+      const sessionId = row.sessionId != null ? Number(row.sessionId) : null;
+      const batchId = row.batchId != null ? Number(row.batchId) : null;
       if (courseId == null || !decimalGreaterThan(term, 0)) continue;
 
-      if (filterCourseIds.length > 0) {
-        let courseOk = false;
-        for (const id of filterCourseIds) {
-          if (Number(id) === courseId) {
-            courseOk = true;
-            break;
-          }
-        }
-        if (!courseOk) continue;
-      }
-      if (filterSessionIds.length > 0 && row.sessionId != null) {
-        let sessionOk = false;
-        for (const id of filterSessionIds) {
-          if (Number(id) === Number(row.sessionId)) {
-            sessionOk = true;
-            break;
-          }
-        }
-        if (!sessionOk) continue;
+      if (filterCourseIds.length > 0 && !filterCourseIds.includes(courseId))
+        continue;
+      if (
+        filterSessionIds.length > 0 &&
+        sessionId != null &&
+        !filterSessionIds.includes(sessionId)
+      ) {
+        continue;
       }
 
       sessionTermCourseIds.push(courseId);
       sessionTermNumbers.push(term);
-      if (row.sessionId != null) {
-        sessionTermSessionIds.push(Number(row.sessionId));
+      if (sessionId != null) {
+        sessionTermSessionIds.push(sessionId);
       }
-      sessionTermMatchKeys.add(`${courseId}_${term}`);
+      if (batchId != null) {
+        sessionTermBatchIds.push(batchId);
+      }
+      if (batchId != null) {
+        sessionTermMatchKeys.add(`${courseId}_${sessionId || 0}_${term}_${batchId}`);
+        sessionTermMatchKeys.add(`${courseId}_${term}_${batchId}`);
+      } else {
+        sessionTermMatchKeys.add(`${courseId}_${sessionId || 0}_${term}`);
+        sessionTermMatchKeys.add(`${courseId}_${term}`);
+      }
       sessionTermByCourseTerm.set(`${courseId}_${term}`, {
-        sessionId: row.sessionId != null ? Number(row.sessionId) : null,
-        academicYearId:
-          row.academicYearId != null ? Number(row.academicYearId) : null,
+        sessionId: sessionId || null,
+        batchId: batchId || null,
       });
-      if (sessionAcademicYearId == null && row.academicYearId != null) {
-        sessionAcademicYearId = Number(row.academicYearId);
-      }
     }
 
     if (!sessionTermCourseIds.length || !sessionTermNumbers.length) return [];
@@ -1679,8 +2373,13 @@ export async function getMappedSubjectsBySessionAndTerm(
 
     const mappingWhere = {
       assessmentPlanId: { [Op.in]: assessmentPlanIds },
-      courseId: { [Op.in]: uniqueValues(sessionTermCourseIds) },
     };
+    if (sessionTermBatchIds.length > 0) {
+      mappingWhere.batchId = { [Op.in]: uniqueValues(sessionTermBatchIds) };
+    }
+    if (sessionTermCourseIds.length > 0) {
+      mappingWhere.courseId = { [Op.in]: uniqueValues(sessionTermCourseIds) };
+    }
     if (sessionTermSessionIds.length > 0) {
       mappingWhere.sessionId = { [Op.in]: uniqueValues(sessionTermSessionIds) };
     }
@@ -1698,94 +2397,100 @@ export async function getMappedSubjectsBySessionAndTerm(
       );
     if (!subjectMappings.length) return [];
 
-    const mappingKeySet = new Set();
-    const planSubjectIds = [];
-    for (const mapping of subjectMappings) {
-      if (mapping.curriculumBatchTermMappingId == null) continue;
-      mappingKeySet.add(
-        `${Number(mapping.curriculumBatchTermMappingId)}_${Number(mapping.subjectId)}`,
-      );
-      planSubjectIds.push(mapping.subjectId);
-      if (mapping.sessionId != null) {
-        subjectSessionMap.set(Number(mapping.subjectId), Number(mapping.sessionId));
-      }
-    }
-
-    const curriculumFilters = {
-      courseIds: uniqueValues(sessionTermCourseIds),
-      terms: uniqueValues(sessionTermNumbers),
-      subjectIds: uniqueValues(planSubjectIds),
-    };
-    if (sessionAcademicYearId != null) {
-      curriculumFilters.academicYearId = sessionAcademicYearId;
-    }
-
-    const curriculumResult = await findCurriculumSubjectsForActiveYear(
-      curriculumFilters,
-      options,
-    );
-    activeAcademicYearId = curriculumResult.academicYearId;
-    const curriculumRows = curriculumResult.rows;
-    if (!curriculumRows.length) return [];
-
     const seenMapped = new Set();
-    for (const row of curriculumRows) {
-      if (!sessionTermMatchKeys.has(`${row.courseId}_${row.term}`)) continue;
-      if (row.curriculumBatchTermMappingId == null) continue;
-      if (
-        !mappingKeySet.has(
-          `${Number(row.curriculumBatchTermMappingId)}_${Number(row.subjectId)}`,
-        )
-      ) {
-        continue;
-      }
+    for (const mapping of subjectMappings) {
+      const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
+      const cstm = plain.curriculumSubjectTermMapping;
+      const subject = cstm?.subject;
+      const courseId =
+        plain.batch?.session?.courseId ||
+        cstm?.curriculum?.courseId ||
+        plain.assessmentPlan?.courseId;
+      const sessionId =
+        plain.batch?.sessionId || plain.batch?.session?.sessionId;
+      const term = cstm?.term != null ? Number(cstm.term) : null;
+      const batchId =
+        plain.batchId != null
+          ? Number(plain.batchId)
+          : plain.batch?.batchId != null
+          ? Number(plain.batch.batchId)
+          : null;
+      const batchYear =
+        plain.batch?.batch != null ? Number(plain.batch.batch) : null;
+      const subjectId =
+        cstm?.subjectId || subject?.subjectId || plain.subjectId;
+      const cstmId =
+        plain.curriculumSubjectTermMappingId != null
+          ? Number(plain.curriculumSubjectTermMappingId)
+          : cstm?.curriculumSubjectTermMappingId != null
+          ? Number(cstm.curriculumSubjectTermMappingId)
+          : null;
+
+      if (!courseId || !term || !subjectId) continue;
+      const matchesSessionTerm =
+        sessionTermMatchKeys.has(`${courseId}_${sessionId || 0}_${term}_${batchId || 0}`) ||
+        sessionTermMatchKeys.has(`${courseId}_${term}_${batchId || 0}`) ||
+        sessionTermMatchKeys.has(`${courseId}_${sessionId || 0}_${term}`) ||
+        sessionTermMatchKeys.has(`${courseId}_${term}`);
+      if (!matchesSessionTerm) continue;
 
       if (filterCombinations.length > 0) {
         let allowed = false;
         for (const comb of filterCombinations) {
-          if (Number(comb.courseId) !== row.courseId) continue;
-          for (const term of comb.terms) {
-            if (Number(term) !== row.term) continue;
-            allowed = true;
-            break;
+          if (comb.batchId != null && comb.batchId !== batchId) continue;
+          if (
+            comb.courseId != null &&
+            Number(comb.courseId) !== Number(courseId)
+          ) {
+            continue;
           }
-          if (allowed) break;
+          if (
+            comb.sessionId != null &&
+            sessionId != null &&
+            Number(comb.sessionId) !== Number(sessionId)
+          ) {
+            continue;
+          }
+          if (
+            comb.terms &&
+            comb.terms.length > 0 &&
+            !comb.terms.includes(term)
+          ) {
+            continue;
+          }
+          allowed = true;
+          break;
         }
         if (!allowed) continue;
       }
 
-      const dedupeKey = `${row.curriculumBatchTermMappingId}_${row.subjectId}`;
+      const dedupeKey = `${cstmId || term}_${subjectId}_${batchId || 0}_${sessionId || 0}`;
       if (seenMapped.has(dedupeKey)) continue;
       seenMapped.add(dedupeKey);
 
-      const termMeta = sessionTermByCourseTerm.get(
-        `${row.courseId}_${row.term}`,
-      );
-      const subjectSessionId =
-        subjectSessionMap.get(row.subjectId) ??
-        (termMeta ? termMeta.sessionId : null);
-      if (subjectSessionId != null) {
-        subjectSessionMap.set(row.subjectId, subjectSessionId);
+      if (sessionId != null) {
+        subjectSessionMap.set(Number(subjectId), Number(sessionId));
       }
 
       mappedSubjects.push({
-        subjectId: row.subjectId,
-        curriculumBatchTermMappingId: Number(row.curriculumBatchTermMappingId),
-        subjectName: row.subject.subjectName,
-        subjectCode: row.subject.subjectCode,
-        subjectType: row.subject.subjectType,
-        subjectCategory: row.subject.subjectCategory,
-        courseId: row.courseId,
-        term: row.term,
-        batch: row.batch,
-        yearNumber: row.yearNumber,
-        academicYearId:
-          (termMeta && termMeta.academicYearId) ||
-          activeAcademicYearId ||
-          row.academicYearId,
+        subjectId: Number(subjectId),
+        curriculumSubjectTermMappingId: cstmId,
+        curriculumBatchTermMappingId: cstmId,
+        batchId,
+        subjectName: subject?.subjectName || null,
+        subjectCode: subject?.subjectCode || null,
+        subjectType: subject?.subjectType || null,
+        subjectCategory: subject?.subjectCategory || null,
+        courseId: Number(courseId),
+        sessionId: sessionId != null ? Number(sessionId) : null,
+        term,
+        batch: batchYear,
+        yearNumber: null,
+        academicYearId: null,
         course: null,
       });
     }
+
     if (!mappedSubjects.length) return [];
 
     const courseIdsForTermType = uniqueValues(
@@ -1815,18 +2520,31 @@ export async function getMappedSubjectsBySessionAndTerm(
     if (sid != null) courseSessionMapSessionIds.push(sid);
   }
 
-  const [allSchedules, dbMappings] = await Promise.all([
-    examinationSessionRepository.findExamSchedulesBySubjects(
-      parsedExaminationSessionId,
-      subjectIds,
-      { ...options, date },
-    ),
-    examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
-      uniqueValues(courseSessionMapIds),
-      uniqueValues(courseSessionMapSessionIds),
-      options,
-    ),
-  ]);
+  const courseIdsForNames = uniqueValues(courseSessionMapIds);
+  const sessionIdsForNames = uniqueValues(courseSessionMapSessionIds);
+
+  const [allSchedules, dbMappings, coursesList, sessionsList] =
+    await Promise.all([
+      examinationSessionRepository.findExamSchedulesBySubjects(
+        parsedExaminationSessionId,
+        subjectIds,
+        { ...options, date },
+      ),
+      examinationSessionRepository.findSessionCourseMappingsByCoursesAndSessions(
+        courseIdsForNames,
+        sessionIdsForNames,
+        options,
+      ),
+      examinationSessionRepository.findCoursesByIds(courseIdsForNames, options),
+      examinationSessionRepository.findSessionsByIds(sessionIdsForNames, options),
+    ]);
+
+  const courseNamesMap = new Map(
+    coursesList.map((c) => [c.courseId, c.courseName]),
+  );
+  const sessionNamesMap = new Map(
+    sessionsList.map((s) => [s.sessionId, s.sessionName]),
+  );
 
   const courseSessionMappingMap = new Map();
   for (const m of dbMappings) {
@@ -1838,62 +2556,101 @@ export async function getMappedSubjectsBySessionAndTerm(
     });
   }
 
+  for (const cId of courseIdsForNames) {
+    for (const sId of sessionIdsForNames) {
+      const key = `${cId}_${sId}`;
+      if (!courseSessionMappingMap.has(key)) {
+        courseSessionMappingMap.set(key, {
+          sessionCourseMappingId: null,
+          courseName: courseNamesMap.get(cId) || null,
+          sessionName: sessionNamesMap.get(sId) || null,
+        });
+      }
+    }
+  }
+
   const scheduleBySubjectCbtm = new Map();
   const examScheduleIds = [];
   const studentGroups = [];
 
-  function subjectCbtmKey(subjectId, curriculumBatchTermMappingId) {
+  function extractMappingId(obj) {
+    if (!obj) return 0;
+    return (
+      obj.curriculumSubjectTermMappingId ||
+      obj.curriculumBatchTermMappingId ||
+      0
+    );
+  }
+
+  function subjectCbtmKey(subjectId, mappingId) {
     return `${Number(subjectId)}_${
-      curriculumBatchTermMappingId != null
-        ? Number(curriculumBatchTermMappingId)
+      mappingId != null
+        ? Number(mappingId)
         : 0
     }`;
   }
 
   for (const sched of allSchedules) {
     const plain = toPlain(sched);
+    const mId = extractMappingId(plain);
     const key = subjectCbtmKey(
       plain.subjectId,
-      plain.curriculumBatchTermMappingId,
+      mId,
     );
-    if (scheduleBySubjectCbtm.has(key)) continue;
-    scheduleBySubjectCbtm.set(key, plain);
+    if (!scheduleBySubjectCbtm.has(key)) {
+      scheduleBySubjectCbtm.set(key, plain);
+    }
+    if (!scheduleBySubjectCbtm.has(`${Number(plain.subjectId)}_0`)) {
+      scheduleBySubjectCbtm.set(`${Number(plain.subjectId)}_0`, plain);
+    }
     examScheduleIds.push(plain.examScheduleId);
   }
 
   for (const subject of mappedSubjects) {
+    const mId = extractMappingId(subject);
     const key = subjectCbtmKey(
       subject.subjectId,
-      subject.curriculumBatchTermMappingId,
+      mId,
     );
-    const plainSched = scheduleBySubjectCbtm.get(key);
+    const plainSched =
+      scheduleBySubjectCbtm.get(key) ||
+      scheduleBySubjectCbtm.get(`${Number(subject.subjectId)}_0`);
     if (plainSched) {
-      const group = buildStudentGroupFromSchedule(plainSched);
+      const group = buildStudentGroupFromSchedule(plainSched, subject);
       if (group) studentGroups.push(group);
       continue;
     }
 
-    const subjectSessionId = subjectSessionMap.get(subject.subjectId);
+    const subjectSessionId =
+      subject.sessionId ?? subjectSessionMap.get(subject.subjectId) ?? null;
     if (
-      subjectSessionId == null ||
-      subject.courseId == null ||
-      subject.term == null ||
-      subject.academicYearId == null
+      subject.term == null &&
+      subject.curriculumSubjectTermMappingId == null
+    ) {
+      continue;
+    }
+    if (
+      subject.batchId == null &&
+      (subjectSessionId == null || subject.courseId == null)
     ) {
       continue;
     }
 
     studentGroups.push({
-      sessionId: Number(subjectSessionId),
-      courseId: Number(subject.courseId),
-      academicYearId: Number(subject.academicYearId),
-      term: Number(subject.term),
+      sessionId: subjectSessionId != null ? Number(subjectSessionId) : null,
+      courseId: subject.courseId != null ? Number(subject.courseId) : null,
+      term: subject.term != null ? Number(subject.term) : null,
+      batchId: subject.batchId != null ? Number(subject.batchId) : null,
       batchYear: subject.batch != null ? Number(subject.batch) : null,
       yearNumber:
         subject.yearNumber != null ? Number(subject.yearNumber) : null,
       curriculumBatchTermMappingId:
         subject.curriculumBatchTermMappingId != null
           ? Number(subject.curriculumBatchTermMappingId)
+          : null,
+      curriculumSubjectTermMappingId:
+        subject.curriculumSubjectTermMappingId != null
+          ? Number(subject.curriculumSubjectTermMappingId)
           : null,
     });
   }
@@ -1904,11 +2661,17 @@ export async function getMappedSubjectsBySessionAndTerm(
       : new Map();
     const result = [];
     for (const subject of mappedSubjects) {
+      const mId = extractMappingId(subject);
       const key = subjectCbtmKey(
         subject.subjectId,
-        subject.curriculumBatchTermMappingId,
+        mId,
       );
-      if (scheduleBySubjectCbtm.has(key)) continue;
+      if (
+        scheduleBySubjectCbtm.has(key) ||
+        scheduleBySubjectCbtm.has(`${Number(subject.subjectId)}_0`)
+      ) {
+        continue;
+      }
 
       const subjectSessionId = subjectSessionMap.get(subject.subjectId) || null;
       const mappingInfo = subjectSessionId
@@ -1918,17 +2681,36 @@ export async function getMappedSubjectsBySessionAndTerm(
       const studentCount = lookupStudentCount(countMap, {
         sessionId: subjectSessionId,
         courseId: subject.courseId,
-        academicYearId: subject.academicYearId,
         term: subject.term,
+        batchId: subject.batchId,
         batchYear: subject.batch,
         yearNumber: subject.yearNumber,
         curriculumBatchTermMappingId: subject.curriculumBatchTermMappingId,
+        curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
       });
 
       result.push({
         subjectId: subject.subjectId,
+        batchId: subject.batchId || null,
+        curriculumSubjectTermMappingId:
+          subject.curriculumSubjectTermMappingId ||
+          subject.curriculumBatchTermMappingId ||
+          null,
         curriculumBatchTermMappingId:
-          subject.curriculumBatchTermMappingId || null,
+          subject.curriculumSubjectTermMappingId ||
+          subject.curriculumBatchTermMappingId ||
+          null,
+        curriculumSubjectTermMapping:
+          subject.curriculumSubjectTermMappingId ||
+          subject.curriculumBatchTermMappingId
+            ? {
+                curriculumSubjectTermMappingId:
+                  subject.curriculumSubjectTermMappingId ||
+                  subject.curriculumBatchTermMappingId,
+                term: subject.term,
+                subjectId: subject.subjectId,
+              }
+            : null,
         subjectName: subject.subjectName,
         subjectCode: subject.subjectCode,
         term: subject.term,
@@ -2008,43 +2790,52 @@ export async function getMappedSubjectsBySessionAndTerm(
     }
 
     for (const qp of questionPapers) {
-      const list = questionPapersByScheduleId.get(qp.examScheduleId) || [];
-      list.push(qp);
-      questionPapersByScheduleId.set(qp.examScheduleId, list);
+      const plainQp = toPlain(qp);
+      const schedId = Number(plainQp.examScheduleId || plainQp.exam_schedule_id);
+      if (!schedId) continue;
+      const list = questionPapersByScheduleId.get(schedId) || [];
+      list.push(plainQp);
+      questionPapersByScheduleId.set(schedId, list);
     }
 
     for (const ta of teacherAssignments) {
-      const list = teacherAssignmentByScheduleId.get(ta.examScheduleId) || [];
+      const plainTa = toPlain(ta);
+      const schedId = Number(plainTa.examScheduleId || plainTa.exam_schedule_id);
+      const list = teacherAssignmentByScheduleId.get(schedId) || [];
       list.push({
-        teacherExamAssignmentId: ta.teacherExamAssignmentId,
+        teacherExamAssignmentId: plainTa.teacherExamAssignmentId,
         userId:
-          ta.userId ||
-          (ta.teacherEmployee ? ta.teacherEmployee.userId : null),
-        assignedAt: ta.createdAt,
-        deadline: ta.deadline,
+          plainTa.userId ||
+          (plainTa.teacherEmployee ? plainTa.teacherEmployee.userId : null),
+        assignedAt: plainTa.createdAt,
+        deadline: plainTa.deadline,
         user:
-          ta.teacherEmployee && ta.teacherEmployee.user
+          plainTa.teacherEmployee && plainTa.teacherEmployee.user
             ? {
-                userId: ta.teacherEmployee.user.userId,
-                userName: ta.teacherEmployee.user.userName,
-                email: ta.teacherEmployee.user.email,
-                phone: ta.teacherEmployee.user.phone,
-                employeeCode: ta.teacherEmployee.employeeCode,
+                userId: plainTa.teacherEmployee.user.userId,
+                userName: plainTa.teacherEmployee.user.userName,
+                email: plainTa.teacherEmployee.user.email,
+                phone: plainTa.teacherEmployee.user.phone,
+                employeeCode: plainTa.teacherEmployee.employeeCode,
               }
             : null,
       });
-      teacherAssignmentByScheduleId.set(ta.examScheduleId, list);
+      teacherAssignmentByScheduleId.set(schedId, list);
     }
   }
 
   const finalResponse = [];
 
   for (const subject of mappedSubjects) {
+    const mId = extractMappingId(subject);
     const subjectKey = subjectCbtmKey(
       subject.subjectId,
-      subject.curriculumBatchTermMappingId,
+      mId,
     );
-    const hasSchedule = scheduleBySubjectCbtm.has(subjectKey);
+    const plainSched =
+      scheduleBySubjectCbtm.get(subjectKey) ||
+      scheduleBySubjectCbtm.get(`${Number(subject.subjectId)}_0`);
+    const hasSchedule = !!plainSched;
 
     if (isExamScheduled === true && !hasSchedule) continue;
     if (isExamScheduled === false && hasSchedule) continue;
@@ -2054,23 +2845,23 @@ export async function getMappedSubjectsBySessionAndTerm(
     const subjectGroup = {
       sessionId: subjectSessionId,
       courseId: subject.courseId,
-      academicYearId: subject.academicYearId,
       term: subject.term,
+      batchId: subject.batchId,
       batchYear: subject.batch,
       yearNumber: subject.yearNumber,
       curriculumBatchTermMappingId: subject.curriculumBatchTermMappingId,
+      curriculumSubjectTermMappingId: subject.curriculumSubjectTermMappingId,
     };
 
     if (hasSchedule) {
-      const plainSched = scheduleBySubjectCbtm.get(subjectKey);
       let teacherAssignment =
-        teacherAssignmentByScheduleId.get(plainSched.examScheduleId) || [];
+        teacherAssignmentByScheduleId.get(Number(plainSched.examScheduleId)) || [];
 
       const roomCapacity =
         roomCapacityByScheduleId.get(Number(plainSched.examScheduleId)) || 0;
       const studentCount = lookupStudentCount(
         studentCountMap,
-        buildStudentGroupFromSchedule(plainSched),
+        buildStudentGroupFromSchedule(plainSched, subject),
       );
       const roomFlags = deriveScheduleRoomFlags({
         roomCapacity,
@@ -2082,25 +2873,33 @@ export async function getMappedSubjectsBySessionAndTerm(
       let moderationActive = false;
       let isApproved = false;
       const questionPapers =
-        questionPapersByScheduleId.get(plainSched.examScheduleId) || [];
+        questionPapersByScheduleId.get(Number(plainSched.examScheduleId)) || [];
 
       if (!skipTeacherAndPaper && teacherAssignment.length > 0) {
         const enrichedTeachers = [];
         for (const ta of teacherAssignment) {
           let matchingQP = null;
+          const taUserId = Number(ta.userId || ta.user?.userId);
           for (const qp of questionPapers) {
-            if (qp.createdBy === ta.userId) {
+            const qpCreatedBy = Number(qp.createdBy || qp.created_by);
+            if (qpCreatedBy === taUserId) {
               matchingQP = qp;
               break;
             }
           }
           if (matchingQP) {
             moderationActive = true;
-            if (matchingQP.status === QUESTION_STATUS.APPROVED) {
+            if (
+              matchingQP.status === QUESTION_STATUS.APPROVED ||
+              matchingQP.status === "Approved" ||
+              matchingQP.finalApproval === QUESTION_STATUS.APPROVED ||
+              matchingQP.finalApproval === "Approved"
+            ) {
               isApproved = true;
             }
             const qpPayload = {
               id: matchingQP.id,
+              name: matchingQP.name,
               status: matchingQP.status,
               finalApproval: matchingQP.finalApproval,
               createdBy: matchingQP.createdBy,
@@ -2187,14 +2986,19 @@ export async function getMappedSubjectsBySessionAndTerm(
       deadline = nearestDeadline;
 
       // Paper workflow:
-      // - approved: finalApproval = Approved
-      // - moderationActive: paper exists but not finally approved (Pending / awaiting final)
+      // - approved: status = Approved or finalApproval = Approved
+      // - moderationActive: paper exists but not approved
       // - assigned: teachers assigned, no paper yet
       // - notAssigned: no teachers
       let hasFullyApprovedPaper = false;
       let hasModerationActivePaper = false;
       for (const qp of qpList) {
-        if (qp.finalApproval === QUESTION_STATUS.APPROVED) {
+        if (
+          qp.status === QUESTION_STATUS.APPROVED ||
+          qp.status === "Approved" ||
+          qp.finalApproval === QUESTION_STATUS.APPROVED ||
+          qp.finalApproval === "Approved"
+        ) {
           hasFullyApprovedPaper = true;
         } else {
           hasModerationActivePaper = true;
@@ -2236,13 +3040,32 @@ export async function getMappedSubjectsBySessionAndTerm(
       if (!matchesFilter) continue;
     }
 
+    const resolvedBatchId = hasSchedule
+      ? schedInfo?.batchId || subject.batchId || null
+      : subject.batchId || null;
+
+    const resolvedCstmId = hasSchedule
+      ? schedInfo?.curriculumSubjectTermMappingId ||
+        schedInfo?.curriculumBatchTermMappingId ||
+        subject.curriculumSubjectTermMappingId ||
+        subject.curriculumBatchTermMappingId ||
+        null
+      : subject.curriculumSubjectTermMappingId ||
+        subject.curriculumBatchTermMappingId ||
+        null;
+
     finalResponse.push({
       subjectId: subject.subjectId,
-      curriculumBatchTermMappingId: hasSchedule
-        ? schedInfo?.curriculumBatchTermMappingId ||
-          subject.curriculumBatchTermMappingId ||
-          null
-        : subject.curriculumBatchTermMappingId || null,
+      batchId: resolvedBatchId,
+      curriculumSubjectTermMappingId: resolvedCstmId,
+      curriculumBatchTermMappingId: resolvedCstmId,
+      curriculumSubjectTermMapping: resolvedCstmId
+        ? {
+            curriculumSubjectTermMappingId: resolvedCstmId,
+            term: subject.term,
+            subjectId: subject.subjectId,
+          }
+        : null,
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
       term: subject.term,
@@ -2265,8 +3088,17 @@ export async function getMappedSubjectsBySessionAndTerm(
       deadline: deadline ? deadline.toISOString() : null,
       examDetails: hasSchedule
         ? {
+            batchId: resolvedBatchId,
+            curriculumSubjectTermMappingId: resolvedCstmId,
             curriculumBatchTermMappingId:
-              schedInfo.curriculumBatchTermMappingId || null,
+              schedInfo.curriculumBatchTermMappingId || resolvedCstmId || null,
+            curriculumSubjectTermMapping: resolvedCstmId
+              ? {
+                  curriculumSubjectTermMappingId: resolvedCstmId,
+                  term: subject.term,
+                  subjectId: subject.subjectId,
+                }
+              : null,
             examDate: schedInfo.examDate,
             examTime: schedInfo.examTime,
             duration: schedInfo.duration,
@@ -2305,24 +3137,11 @@ export async function getQuestionPaperSummary(
     throw error;
   }
 
-  let totalCourses = 0;
-  if (examinationSession.assessmentTypeId) {
-    const assessmentPlanIds = await getAssessmentPlanIds(
-      Number(examinationSession.assessmentTypeId),
-      options,
-    );
-    if (assessmentPlanIds.length > 0) {
-      const subjectMappings =
-        await examinationSessionRepository.findAssessmentPlanSubjectMappings(
-          { assessmentPlanId: { [Op.in]: assessmentPlanIds } },
-          options,
-        );
-      const uniqueSubjectIds = [
-        ...new Set(subjectMappings.map((m) => m.subjectId)),
-      ];
-      totalCourses = uniqueSubjectIds.length;
-    }
-  }
+  const mappedSubjects = await getMappedSubjectsBySessionAndTerm(
+    { examinationSessionId: parsedSessionId },
+    { ...options, skipTeacherAndPaperEnrichment: true },
+  );
+  const totalCourses = mappedSubjects.length;
 
   const schedules = await scoped(model.examScheduleModel).findAll({
     where: { examinationSessionId: parsedSessionId },
@@ -2396,16 +3215,31 @@ export async function getQuestionPaperSummary(
     }
 
     const isFinalApproved = papers.some(
-      (p) => p.finalApproval === QUESTION_STATUS.APPROVED,
-    );
-    const isRejected = papers.some(
       (p) =>
-        p.finalApproval === QUESTION_STATUS.REJECTED ||
-        p.status === QUESTION_STATUS.REJECTED,
+        p.status === QUESTION_STATUS.APPROVED ||
+        p.status === "Approved" ||
+        p.finalApproval === QUESTION_STATUS.APPROVED ||
+        p.finalApproval === "Approved",
     );
-    const isWithModerator = papers.some(
-      (p) => p.finalApproval !== QUESTION_STATUS.APPROVED,
-    );
+    const isRejected =
+      !isFinalApproved &&
+      papers.some(
+        (p) =>
+          p.finalApproval === QUESTION_STATUS.REJECTED ||
+          p.finalApproval === "Rejected" ||
+          p.status === QUESTION_STATUS.REJECTED ||
+          p.status === "Rejected",
+      );
+    const isWithModerator =
+      !isFinalApproved &&
+      !isRejected &&
+      papers.some(
+        (p) =>
+          p.status !== QUESTION_STATUS.APPROVED &&
+          p.status !== "Approved" &&
+          p.finalApproval !== QUESTION_STATUS.APPROVED &&
+          p.finalApproval !== "Approved",
+      );
 
     if (isFinalApproved) {
       approved++;
@@ -2529,9 +3363,21 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     approvedQuestionPapers = qpCounts.approved;
   }
 
-  const [hallTicketsCount, answerSheetScan] = await Promise.all([
-    examinationSessionRepository.countHallTicketsBySession(
+  const scheduleSessionIds = [];
+  const seenSessionIds = new Set();
+  for (const schedule of schedules) {
+    const sessionId = Number(schedule.sessionId || schedule.batch?.sessionId);
+    if (!sessionId || seenSessionIds.has(sessionId)) {
+      continue;
+    }
+    seenSessionIds.add(sessionId);
+    scheduleSessionIds.push(sessionId);
+  }
+
+  const [hallTicketStats, answerSheetScan] = await Promise.all([
+    examinationSessionRepository.countStudentsAndHallTicketsForScheduleSessionIds(
       parsedSessionId,
+      scheduleSessionIds,
       options,
     ),
     examinationSessionRepository.countAnswerSheetScanStatsBySession(
@@ -2585,8 +3431,9 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
       approved: approvedQuestionPapers,
     },
     hallTickets: {
-      total: hallTicketsCount,
+      total: hallTicketStats.students,
       totalExamSchedules: totalExamSchedule,
+      totalHallTicketGenerated: hallTicketStats.hallTicketsGenerated,
     },
     bundles: {
       total: totalBundles,

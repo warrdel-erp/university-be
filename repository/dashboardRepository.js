@@ -621,25 +621,49 @@ function prepareDepartmentDistribution(departmentRecords) {
 
 // Student count per course for the distribution chart.
 export async function getStudentAttendanceOverviewStats() {
-  const [courses, studentCountRows] = await Promise.all([
+  const [courses, batches, studentCountsByBatch] = await Promise.all([
     scoped(model.courseModel).findAll({
       attributes: ['courseId', 'courseName'],
       order: [['courseName', 'ASC']],
       raw: true,
     }),
+    scoped(model.batchModel).findAll({
+      attributes: ['batchId', 'sessionId'],
+      include: [
+        {
+          model: model.sessionModel,
+          as: 'session',
+          attributes: ['courseId'],
+          required: true,
+        },
+      ],
+      raw: true,
+    }),
     scoped(model.studentModel).findAll({
       attributes: [
-        'courseId',
-        [fn('COUNT', col('students.student_id')), 'studentCount'],
+        'batchId',
+        [fn('COUNT', fn('DISTINCT', col('students.student_id'))), 'studentCount'],
       ],
-      group: [col('students.course_id')],
+      group: ['batchId'],
       raw: true,
     }),
   ]);
 
+  const batchToCourse = new Map();
+  for (const b of batches) {
+    const courseId = b['session.courseId'];
+    if (courseId) batchToCourse.set(Number(b.batchId), Number(courseId));
+  }
+
   const studentCountByCourseId = new Map();
-  for (const row of studentCountRows) {
-    studentCountByCourseId.set(row.courseId, Number(row.studentCount));
+  for (const row of studentCountsByBatch) {
+    const courseId = batchToCourse.get(Number(row.batchId));
+    if (courseId) {
+      studentCountByCourseId.set(
+        courseId,
+        (studentCountByCourseId.get(courseId) || 0) + Number(row.studentCount),
+      );
+    }
   }
 
   const courseRecords = [];

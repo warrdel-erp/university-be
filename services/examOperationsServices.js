@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import * as examOperationsRepository from "../repository/examOperationsRepository.js";
 import * as examinationSessionRepository from "../repository/examinationSessionRepository.js";
 import { formatDateKey } from "../utility/dateFormat.js";
+import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 
 function operationKey(classRoomSectionId, examDate, examinationSessionSlotId) {
   return `${Number(classRoomSectionId)}_${formatDateKey(examDate)}_${Number(examinationSessionSlotId)}`;
@@ -98,30 +99,7 @@ async function resolveScheduleFilters(query) {
     return { scheduleWhere, subjectWhere };
   }
 
-  const mappingIds = [];
-  for (const sel of query.selections) {
-    mappingIds.push(sel.courseSessionMappingId);
-  }
-
-  const dbMappings =
-    await examinationSessionRepository.findSessionCourseMappingsByIds(
-      mappingIds,
-    );
-  const dbMappingsMap = new Map();
-  for (const mapping of dbMappings) {
-    dbMappingsMap.set(Number(mapping.sessionCourseMappingId), mapping);
-  }
-
-  const filterCombinations = [];
-  for (const sel of query.selections) {
-    const mapping = dbMappingsMap.get(Number(sel.courseSessionMappingId));
-    if (!mapping) continue;
-    filterCombinations.push({
-      courseId: Number(mapping.courseId),
-      sessionId: Number(mapping.sessionId),
-      terms: sel.terms,
-    });
-  }
+  const filterCombinations = await resolveSelectionCombinations(query.selections);
 
   if (!filterCombinations.length) {
     return { scheduleWhere, subjectWhere };
@@ -129,11 +107,18 @@ async function resolveScheduleFilters(query) {
 
   const scheduleOr = [];
   for (const comb of filterCombinations) {
-    scheduleOr.push({
-      sessionId: comb.sessionId,
-      term: { [Op.in]: comb.terms },
-      "$subjectSchedule.course_id$": comb.courseId,
-    });
+    const clause = {};
+    if (comb.batchId != null) clause.batchId = comb.batchId;
+    if (comb.sessionId != null && comb.batchId == null)
+      clause["$batch.session_id$"] = comb.sessionId;
+    if (comb.courseId != null) clause["$subjectSchedule.course_id$"] = comb.courseId;
+    if (comb.terms && comb.terms.length > 0) {
+      clause[Op.or] = [
+        { term: { [Op.in]: comb.terms } },
+        { "$curriculumSubjectTermMapping.term$": { [Op.in]: comb.terms } },
+      ];
+    }
+    scheduleOr.push(clause);
   }
   scheduleWhere[Op.or] = scheduleOr;
 
@@ -314,15 +299,32 @@ export async function listRooms(query) {
       });
     }
 
+    const resolvedTerm =
+      schedule.curriculumSubjectTermMapping?.term != null
+        ? Number(schedule.curriculumSubjectTermMapping.term)
+        : schedule.term != null
+          ? Number(schedule.term)
+          : null;
+    const resolvedSessionId =
+      schedule.batch?.sessionId != null
+        ? Number(schedule.batch.sessionId)
+        : schedule.sessionId != null
+          ? Number(schedule.sessionId)
+          : null;
+
     ops.get(opKey).exams.push({
       examScheduleRoomCapacityId,
       examScheduleId: Number(schedule.examScheduleId),
+      batchId: schedule.batchId ? Number(schedule.batchId) : null,
+      curriculumSubjectTermMappingId: schedule.curriculumSubjectTermMappingId
+        ? Number(schedule.curriculumSubjectTermMappingId)
+        : null,
       subjectId: Number(subject.subjectId),
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
       courseId: Number(subject.courseId),
-      sessionId: Number(schedule.sessionId),
-      term: schedule.term == null ? null : Number(schedule.term),
+      sessionId: resolvedSessionId,
+      term: resolvedTerm,
       capacity: Number(plain.capacity),
       studentCount: seatCountMap.get(examScheduleRoomCapacityId) || 0,
     });

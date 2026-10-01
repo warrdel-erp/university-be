@@ -42,6 +42,20 @@ export async function findClassSectionTermById(classSectionTermId, options = {})
         model: model.classSectionModel,
         as: 'classSection',
         required: false,
+        include: [
+          {
+            model: model.batchModel,
+            as: 'batch',
+            required: false,
+            include: [
+              {
+                model: model.sessionModel,
+                as: 'session',
+                required: false,
+              },
+            ],
+          },
+        ],
       },
     ],
     transaction: options.transaction,
@@ -51,13 +65,21 @@ export async function findClassSectionTermById(classSectionTermId, options = {})
 export async function findClassSectionInTenantScope(classSectionId, options = {}) {
   return scoped(model.classSectionModel).findOne({
     where: { classSectionsId: Number(classSectionId) },
-    attributes: ['classSectionsId', 'section', 'year', 'courseId', 'sessionId'],
+    attributes: [
+      'classSectionsId',
+      'section',
+      'expectedCapacity',
+      'year',
+      'batchId',
+      'courseId',
+      'sessionId',
+    ],
     transaction: options.transaction,
   });
 }
 
 export async function findClassSectionByCourseSessionYearSection(
-  { courseId, sessionId, year, section, excludeClassSectionsId },
+  { courseId, sessionId, year, section, batchId, excludeClassSectionsId },
   options = {},
 ) {
   const sectionName = String(section).trim();
@@ -71,6 +93,11 @@ export async function findClassSectionByCourseSessionYearSection(
     year: Number(year),
     section: sectionName,
   };
+  
+  if (batchId !== undefined) {
+    where.batchId = Number(batchId);
+  }
+
   if (excludeClassSectionsId != null) {
     where.classSectionsId = { [Op.ne]: Number(excludeClassSectionsId) };
   }
@@ -83,21 +110,27 @@ export async function findClassSectionByCourseSessionYearSection(
 }
 
 export async function updateClassSectionName(classSectionId, section, options = {}) {
+  return updateClassSectionFields(classSectionId, { section }, options);
+}
+
+export async function updateClassSectionFields(classSectionId, fields, options = {}) {
   const sectionRow = await findClassSectionInTenantScope(classSectionId, options);
   if (!sectionRow) {
     return null;
   }
 
-  const sectionName = String(section).trim();
-  const updated = await scoped(model.classSectionModel).update(
-    { section: sectionName },
-    {
-      where: { classSectionsId: Number(classSectionId) },
-      transaction: options.transaction,
-    },
-  );
+  const payload = {};
+  if (fields.section !== undefined) {
+    payload.section = String(fields.section).trim();
+  }
+  if (fields.expectedCapacity !== undefined) {
+    payload.expectedCapacity = Number(fields.expectedCapacity);
+  }
 
-  return updated;
+  return scoped(model.classSectionModel).update(payload, {
+    where: { classSectionsId: Number(classSectionId) },
+    transaction: options.transaction,
+  });
 }
 
 export async function findClassSectionTermsByClassSectionId(classSectionId, options = {}) {
@@ -336,4 +369,32 @@ export async function deleteClassSectionById(classSectionId, options = {}) {
     where: { classSectionsId: Number(classSectionId) },
     transaction: options.transaction,
   });
+}
+
+/**
+ * Distinct program term numbers that already have class_section_term rows for a batch.
+ */
+export async function findConfiguredTermNumbersByBatchId(batchId, options = {}) {
+  const rows = await scoped(model.classSectionModel).findAll({
+    where: { batchId: Number(batchId) },
+    attributes: ['classSectionsId', 'year'],
+    include: [
+      {
+        model: model.classSectionTermModel,
+        as: 'classSectionTerms',
+        attributes: ['classSectionTermId', 'term', 'classSectionsId'],
+        required: false,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  const configuredTerms = new Set();
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    for (const termRow of plain.classSectionTerms || []) {
+      configuredTerms.add(Number(termRow.term));
+    }
+  }
+  return configuredTerms;
 }

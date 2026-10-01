@@ -112,9 +112,11 @@ export const unmapSubject = async (req, res) => {
 export const mapBatch = async (req, res) => {
   try {
     const { curriculumId } = req.params;
-    const batch = req.body.batch ?? req.body.batchId;
+    // Accept batchId (new) or legacy batch/batchId
+    const batchId =
+      req.body.batchId ?? req.body.batchId ?? req.body.batch;
     const userId = req.user?.userId || req.user?.dataValues?.userId;
-    const result = await curriculumService.mapBatch(curriculumId, batch, userId);
+    const result = await curriculumService.mapBatch(curriculumId, batchId, userId);
     return SuccessResponse(res, 201, 'Batch mapped successfully', result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');

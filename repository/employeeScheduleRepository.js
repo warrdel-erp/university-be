@@ -172,10 +172,9 @@ function buildTeacherWhereClause(dateWiseIds, cellIds) {
   return orConditions.length === 1 ? orConditions[0] : { [Op.or]: orConditions };
 }
 
-function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
+function dateWiseScheduleIncludes({ sessionId } = {}) {
   const routineWhere = {
     is_publish: true,
-    ...(academicYearId != null && { academicYearId: Number(academicYearId) }),
     ...buildScope(model.timeTableRoutineModel),
   };
 
@@ -417,7 +416,6 @@ export async function getTodayClassScheduleForEmployee(
 
 export async function getPastClassSchedulesForEmployee(
   userId,
-  academicYearId,
   currentDate,
   sessionId,
   pagination = {},
@@ -439,7 +437,7 @@ export async function getPastClassSchedulesForEmployee(
       "subjectId",
       "electiveSubjectId",
     ],
-    include: dateWiseScheduleIncludes({ sessionId, academicYearId }),
+    include: dateWiseScheduleIncludes({ sessionId }),
     order: [["date", "DESC"]],
     subQuery: false,
   };
@@ -459,7 +457,6 @@ export async function getPastClassSchedulesForEmployee(
 
 export async function getUpcomingClassSchedulesForEmployee(
   userId,
-  academicYearId,
   currentDate,
   pagination = {},
 ) {
@@ -480,7 +477,7 @@ export async function getUpcomingClassSchedulesForEmployee(
       "subjectId",
       "electiveSubjectId",
     ],
-    include: dateWiseScheduleIncludes({ academicYearId }),
+    include: dateWiseScheduleIncludes(),
     order: [["date", "ASC"]],
     subQuery: false,
   };
@@ -498,10 +495,7 @@ export async function getUpcomingClassSchedulesForEmployee(
   return { rows: result, total };
 }
 
-export async function getUniqueClassSectionSubjectsForEmployee(
-  userId,
-  academicYearId,
-) {
+export async function getUniqueClassSectionSubjectsForEmployee(userId) {
   const employee = await model.employeeModel.findOne({
     where: { userId: Number(userId) },
     attributes: [
@@ -554,7 +548,6 @@ export async function getUniqueClassSectionSubjectsForEmployee(
         required: true,
         where: {
           instituteId: Number(empPlain.instituteId),
-          academicYearId: Number(academicYearId),
           ...buildScope(model.timeTableRoutineModel),
         },
         attributes: [
@@ -625,7 +618,6 @@ function nonBreakPeriodInclude() {
 
 export async function countEmployeeDateWiseSchedules(
   userId,
-  academicYearId,
   currentDate,
 ) {
   const pastCount = await model.timeTableCellDateWiseModel.count({
@@ -651,7 +643,6 @@ export async function countEmployeeDateWiseSchedules(
             attributes: [],
             where: {
               is_publish: true,
-              academicYearId: Number(academicYearId),
               ...buildScope(model.timeTableRoutineModel),
             },
           },
@@ -684,7 +675,6 @@ export async function countEmployeeDateWiseSchedules(
             attributes: [],
             where: {
               is_publish: true,
-              academicYearId: Number(academicYearId),
               ...buildScope(model.timeTableRoutineModel),
             },
           },
@@ -1018,8 +1008,21 @@ export async function getEmployeeSectionDateWiseRows(
   classSectionTermId,
   subjectId,
   userId,
+  options = {},
 ) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  const todayStr = `${year}-${month}-${day}`;
+
+  const dateWhere = {};
+  if (options.includeFuture !== true) {
+    dateWhere.date = { [Op.lte]: todayStr };
+  }
+
   return model.timeTableCellDateWiseModel.findAll({
+    where: dateWhere,
     attributes: ["timeTableCellDateWiseId", "timeTableCellId", "date"],
     include: [
       {

@@ -28,9 +28,10 @@ const courseProgramQuerySchema = z.object({
 });
 
 const classSectionsQuerySchema = z.object({
-  courseId: positiveIntegerId,
+  courseId: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
   year: optionalPositiveIntegerId,
 });
 
@@ -46,6 +47,12 @@ const subjectsQuerySchema = z.object({
   courseId: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
+  classSectionsId: optionalPositiveIntegerId,
+  classSectionId: optionalPositiveIntegerId,
+  classSectionTermId: optionalPositiveIntegerId,
+  curriculumId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
   userId: optionalPositiveIntegerId,
   unmapped: z.coerce.boolean().optional(),
 });
@@ -54,16 +61,17 @@ const getMySubjectsQuerySchema = z.object({
   courseId: optionalPositiveIntegerId,
   term: optionalPositiveIntegerId,
   sessionId: optionalPositiveIntegerId,
+  batchId: optionalPositiveIntegerId,
+  classSectionsId: optionalPositiveIntegerId,
+  classSectionId: optionalPositiveIntegerId,
+  classSectionTermId: optionalPositiveIntegerId,
+  curriculumId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
 });
 
 const teachersQuerySchema = z.object({
   campusId: optionalPositiveIntegerId,
   subjectId: optionalPositiveIntegerId,
-});
-
-const feePlansQuerySchema = z.object({
-  courseId: optionalPositiveIntegerId,
-  sessionId: optionalPositiveIntegerId,
 });
 
 const topicsQuerySchema = z.object({
@@ -206,13 +214,6 @@ router.get(
   "/structures",
   userAuth,
   optionsController.getTimeTableStructureOptions,
-);
-
-router.get(
-  "/feePlans",
-  userAuth,
-  validate({ query: feePlansQuerySchema }),
-  optionsController.getFeePlanOptions,
 );
 
 router.get(

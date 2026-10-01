@@ -154,3 +154,21 @@ export async function bulkCreateRecords(records, options = {}) {
     transaction: options.transaction,
   });
 }
+
+export async function deleteEligibilityRecordsBySessionAndStudents(
+  examinationSessionId,
+  studentIds = null,
+  options = {},
+) {
+  const whereClause = {
+    examinationSessionId: Number(examinationSessionId),
+  };
+  if (studentIds && studentIds.length > 0) {
+    whereClause.studentId = { [Op.in]: studentIds.map(Number) };
+  }
+  return scoped(model.examinationSessionEligibilityModel).destroy({
+    where: whereClause,
+    transaction: options.transaction,
+  });
+}
+

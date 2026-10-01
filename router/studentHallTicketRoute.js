@@ -8,6 +8,8 @@ import {
   HALL_TICKET_REVIEW_FILTERS,
 } from "../constant.js";
 
+import { selectionsSchema } from "../utility/examZodSchemas.js";
+
 const router = Router();
 
 const idParamsSchema = z.object({
@@ -32,22 +34,7 @@ const reviewFilterEnum = z.enum(HALL_TICKET_REVIEW_FILTERS);
 
 const reviewFilterStudentsSchema = z.object({
     examinationSessionId: z.coerce.number({ required_error: "examinationSessionId is required" }),
-    selections: z.preprocess(
-        (val) => {
-            if (!val || val === "") return undefined;
-            try {
-                return typeof val === "string" ? JSON.parse(val) : val;
-            } catch {
-                return undefined;
-            }
-        },
-        z.array(
-            z.object({
-                courseSessionMappingId: z.number().int().positive(),
-                terms: z.array(z.number().int().positive()),
-            })
-        ).optional()
-    ),
+    selections: selectionsSchema,
     // Accepts comma-separated string: "PHOTOGRAPH_PENDING,ATTENDANCE_PENDING" or repeated keys
     filters: z.preprocess(
         (val) => {
@@ -96,22 +83,7 @@ const reviewDetailsQuerySchema = z.object({
 });
 
 const sessionStudentsQuerySchema = z.object({
-    selections: z.preprocess(
-        (val) => {
-            if (!val || val === "") return undefined;
-            try {
-                return typeof val === "string" ? JSON.parse(val) : val;
-            } catch {
-                return undefined;
-            }
-        },
-        z.array(
-            z.object({
-                courseSessionMappingId: z.number().int().positive(),
-                terms: z.array(z.number().int().positive()),
-            })
-        ).optional()
-    ),
+    selections: selectionsSchema,
     // Accepts single or comma-separated: "Ready,Review" or repeated ?status=Ready&status=Review
     status: z.preprocess(
         (val) => {

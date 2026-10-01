@@ -159,15 +159,9 @@ export const getTeacherTimeTable = async (req, res) => {
 export const getTeacherSubject = async (req, res) => {
   try {
     const { userId, sessionId, term } = req.query;
-    const academicYearId = getAcademicYearId();
-
     const result = await employee.getTeacherSubject(userId, {
       sessionId,
       term,
-      academicYearId:
-        academicYearId != null && academicYearId !== ""
-          ? Number(academicYearId)
-          : undefined,
     });
 
     res.status(200).send(result);
@@ -194,14 +188,8 @@ export async function getSubjectEvalution(req, res) {
 export const getTodayClassSchedule = async (req, res) => {
   try {
     const { userId, date, sessionId, groupPeriods } = req.query;
-    const academicYearId = getAcademicYearId();
-
     if (!userId) {
       return res.status(400).send("userId is required");
-    }
-
-    if (!academicYearId) {
-      return res.status(400).send("academicYearId not found in user session");
     }
 
     const formattedDate = formatQueryDate(date);
@@ -300,18 +288,8 @@ export const getPastClassSchedules = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const academicYearId = getAcademicYearId();
-
     if (!userId) {
       return SuccessResponse(res, 400, "userId is required");
-    }
-
-    if (!academicYearId) {
-      return SuccessResponse(
-        res,
-        400,
-        "academicYearId not found in user session",
-      );
     }
 
     const formattedDate = formatQueryDate(date);
@@ -323,10 +301,7 @@ export const getPastClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
-    const { teacher, schedules, total } = await employee.getPastClassSchedules(
-      userId,
-      academicYearId,
-      formattedDate,
+    const { teacher, schedules, total } = await employee.getPastClassSchedules(userId, formattedDate,
       groupingType,
       sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
       hasPagination ? { page, limit } : {},
@@ -356,14 +331,8 @@ export const getUpcomingClassSchedules = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const academicYearId = getAcademicYearId();
-
     if (!userId) {
       return res.status(400).send("userId is required");
-    }
-
-    if (!academicYearId) {
-      return res.status(400).send("academicYearId not found in user session");
     }
 
     const currentDate = date ? new Date(date) : new Date();
@@ -376,10 +345,7 @@ export const getUpcomingClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
-    const { schedules, total } = await employee.getUpcomingClassSchedules(
-      userId,
-      academicYearId,
-      formattedDate,
+    const { schedules, total } = await employee.getUpcomingClassSchedules(userId, formattedDate,
       groupingType,
       hasPagination ? { page, limit } : {},
     );
@@ -404,19 +370,11 @@ export const getUpcomingClassSchedules = async (req, res) => {
 export const getSectionCounts = async (req, res) => {
   try {
     const { userId, date } = req.query;
-    const academicYearId = getAcademicYearId();
-
     if (!userId) {
       return ErrorResponse(res, 400, "userId is required");
     }
 
-    if (!academicYearId) {
-      return ErrorResponse(
-        res,
-        400,
-        "academicYearId not found in user session",
-      );
-    }
+    
 
     const currentDate = date ? new Date(date) : new Date();
     const formattedDate = formatQueryDate(date);
@@ -426,7 +384,7 @@ export const getSectionCounts = async (req, res) => {
       upcomingCount,
       uniqueCombinationsCount,
       uniqueSubjectsCount,
-    } = await employee.getSectionCounts(userId, academicYearId, formattedDate);
+    } = await employee.getSectionCounts(userId, formattedDate);
 
     return SuccessResponse(res, 200, "Section counts fetched successfully", {
       pastClassesCount: pastCount,
@@ -447,16 +405,7 @@ export const getUniqueClassSectionSubjects = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const academicYearId = getAcademicYearId();
-
-    if (!academicYearId) {
-      return res.status(400).send("academicYearId not found in user session");
-    }
-
-    const result = await employee.getUniqueClassSectionSubjects(
-      userId,
-      academicYearId,
-    );
+    const result = await employee.getUniqueClassSectionSubjects(userId, );
 
     const total = result.combinations.length;
     const paginatedData = hasPagination
@@ -513,16 +462,7 @@ export const getMyUniqueClassSectionSubjects = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const academicYearId = getAcademicYearId();
-
-    if (!academicYearId) {
-      return res.status(400).send("academicYearId not found in user session");
-    }
-
-    const result = await employee.getUniqueClassSectionSubjects(
-      userId,
-      academicYearId,
-    );
+    const result = await employee.getUniqueClassSectionSubjects(userId, );
 
     const total = result.combinations.length;
     const paginatedData = hasPagination
@@ -554,12 +494,6 @@ export const getMyTodayClassSchedule = async (req, res) => {
     }
     const { userId } = validation;
     const { date, sessionId, groupPeriods } = req.query;
-    const academicYearId = getAcademicYearId();
-
-    if (!academicYearId) {
-      return res.status(400).send("academicYearId not found in user session");
-    }
-
     const formattedDate = formatQueryDate(date);
 
     let groupingType = false;
@@ -606,14 +540,6 @@ export const getMyPastClassSchedules = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const academicYearId = getAcademicYearId();
-
-    if (!academicYearId) {
-      return res.status(400).json({
-        success: false,
-        message: "academicYearId not found in user session",
-      });
-    }
 
     const formattedDate = formatQueryDate(date);
 
@@ -624,10 +550,7 @@ export const getMyPastClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
-    const { teacher, schedules, total } = await employee.getPastClassSchedules(
-      userId,
-      academicYearId,
-      formattedDate,
+    const { teacher, schedules, total } = await employee.getPastClassSchedules(userId, formattedDate,
       groupingType,
       sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
       hasPagination ? { page, limit } : {},
@@ -662,12 +585,6 @@ export const getMyUpcomingClassSchedules = async (req, res) => {
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
     const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
-    const academicYearId = getAcademicYearId();
-
-    if (!academicYearId) {
-      return res.status(400).send("academicYearId not found in user session");
-    }
-
     const currentDate = date ? new Date(date) : new Date();
     const formattedDate = formatQueryDate(date);
 
@@ -678,10 +595,7 @@ export const getMyUpcomingClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
-    const { schedules, total } = await employee.getUpcomingClassSchedules(
-      userId,
-      academicYearId,
-      formattedDate,
+    const { schedules, total } = await employee.getUpcomingClassSchedules(userId, formattedDate,
       groupingType,
       hasPagination ? { page, limit } : {},
     );
@@ -711,15 +625,7 @@ export const getMySectionCounts = async (req, res) => {
     }
     const { userId } = validation;
     const { date } = req.query;
-    const academicYearId = getAcademicYearId();
-
-    if (!academicYearId) {
-      return ErrorResponse(
-        res,
-        400,
-        "academicYearId not found in user session",
-      );
-    }
+    
 
     const currentDate = date ? new Date(date) : new Date();
     const formattedDate = formatQueryDate(date);
@@ -729,7 +635,7 @@ export const getMySectionCounts = async (req, res) => {
       upcomingCount,
       uniqueCombinationsCount,
       uniqueSubjectsCount,
-    } = await employee.getSectionCounts(userId, academicYearId, formattedDate);
+    } = await employee.getSectionCounts(userId, formattedDate);
 
     return SuccessResponse(res, 200, "Section counts fetched successfully", {
       pastClassesCount: pastCount,

@@ -1,42 +1,49 @@
 import { Router } from 'express'
 const router = Router();
-import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession, couseSessionMapping, updateCouseSessionMapping, deleteCouseSessionMapping } from "../controllers/sessionController.js";
+import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession } from "../controllers/sessionController.js";
+import * as batchController from "../controllers/batchController.js";
+import { getBatchAcademicProgression } from "../controllers/classSectionController.js";
 import userAuth from "../middleware/authUser.js"
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
 
+
+const createBatchSchema = z.object({
+    sessionId: z.coerce.number().int().positive(),
+    batch: z.coerce.number().int().min(1900).max(2100),
+    intakeCapacity: z.coerce.number().int().positive().optional().nullable(),
+});
+
+const updateBatchSchema = z.object({
+    intakeCapacity: z.coerce.number().int().positive().optional().nullable(),
+}).refine((d) => d.intakeCapacity !== undefined, {
+    message: 'intakeCapacity is required',
+});
+
+const batchIdParamSchema = z.object({
+    id: z.coerce.number().int().positive(),
+});
+
+const batchIdOnlyParamSchema = z.object({
+    batchId: z.coerce.number().int().positive(),
+});
+
+const batchStudentsQuerySchema = z.object({
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(100).optional().default(10),
+    search: z.string().trim().optional(),
+});
 const sessionSchema = z.object({
     sessionName: z.string({ required_error: "Session name is required" }).min(1, "Session name cannot be empty"),
-    startingDate: z.string({ required_error: "Starting date is required" }),
-    endingDate: z.string({ required_error: "Ending date is required" }),
-    classTillDate: z.string({ required_error: "Class till date is required" }),
+
+    courseId: z.coerce.number({ required_error: "Course ID is required" }).int().positive(),
 });
 
-const updateSessionSchema = sessionSchema.partial().extend({
+const updateSessionSchema = sessionSchema.omit({ courseId: true }).partial().extend({
     sessionId: z.coerce.number().int().positive(),
-});
-
-const deleteCourseSessionMappingSchema = z.object({
-    sessionCourseMappingId: z.coerce.number({
-        required_error: "sessionCourseMappingId is required",
-        invalid_type_error: "sessionCourseMappingId must be a number",
-    }),
-});
-
-const courseSessionMappingSchema = z.object({
-    sessionId: z.coerce.number().int().positive(),
-    courseId: z.union([
-        z.array(z.coerce.number().int().positive()).min(1),
-        z.coerce.number().int().positive(),
-    ]),
-});
-
-const updateCourseSessionMappingSchema = z.object({
-    sessionCourseMappingId: z.coerce.number().int().positive(),
-    sessionId: z.coerce.number().int().positive().optional(),
-    courseId: z.coerce.number().int().positive().optional(),
+    courseId: z.any().optional().refine(val => val === undefined, { message: "Program of a session cannot be edited" }),
 });
 
 router.post('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_ADD.value), validate({ body: sessionSchema }), addSession);
@@ -49,22 +56,30 @@ router.patch('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_EDIT.value), v
 
 router.delete('/', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value), deleteSession);
 
-router.post(
-    '/courseSessionMapping',
-    userAuth,
-    checkAccess(PERMISSIONS.SESSION_SETUP_ADD.value, 'sessionCourseMapping'),
-    validate({ body: courseSessionMappingSchema }),
-    couseSessionMapping
+// ── Batch CRUD ────────────────────────────────────────────────────────────────
+// GET  /session/batches             — list sessions + batches with currentYear/currentTerms from active AY
+// POST /session/batches             — create a new batch (starts as draft)
+// GET  /session/batches/:id         — single batch detail
+// GET  /session/batches/:id/details — full batch setup (course/session/curriculum/regulations/APSMs)
+// GET  /session/batches/:id/academicProgression — term progression (Historical/Current/Future)
+// GET  /session/batches/:batchId/students — students in batch (paginated)
+// PATCH /session/batches/:id        — update (draft only: intakeCapacity)
+// PATCH /session/batches/:id/publish — publish a batch (draft → published)
+// DELETE /session/batches/:id       — delete a batch (draft only)
+
+router.get('/batches', userAuth, batchController.getAllBatches);
+router.post('/batches', userAuth, validate({ body: createBatchSchema }), batchController.createBatch);
+router.get('/batches/:id/details', userAuth, validate({ params: batchIdParamSchema }), batchController.getBatchFullDetails);
+router.get('/batches/:id/academicProgression', userAuth, validate({ params: batchIdParamSchema }), getBatchAcademicProgression);
+router.get(
+  '/batches/:batchId/students',
+  userAuth,
+  validate({ params: batchIdOnlyParamSchema, query: batchStudentsQuerySchema }),
+  batchController.getBatchStudents,
 );
+router.get('/batches/:id', userAuth, validate({ params: batchIdParamSchema }), batchController.getBatch);
+router.patch('/batches/:id/publish', userAuth, validate({ params: batchIdParamSchema }), batchController.publishBatch);
+router.patch('/batches/:id', userAuth, validate({ params: batchIdParamSchema, body: updateBatchSchema }), batchController.updateBatch);
+router.delete('/batches/:id', userAuth, validate({ params: batchIdParamSchema }), batchController.deleteBatch);
 
-router.patch(
-    '/courseSessionMapping/update',
-    userAuth,
-    checkAccess(PERMISSIONS.SESSION_SETUP_EDIT.value, 'sessionCourseMapping'),
-    validate({ body: updateCourseSessionMappingSchema }),
-    updateCouseSessionMapping
-);
-
-router.delete('/courseSessionMapping', userAuth, checkAccess(PERMISSIONS.SESSION_SETUP_DELETE.value, 'sessionCourseMapping'), validate({ query: deleteCourseSessionMappingSchema }), deleteCouseSessionMapping);
-
-export default router; 
+export default router;

@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { getClassSectionsByFilter } from '../controllers/mainController.js';
-import { deleteClassSectionTerm, renameClassSection } from '../controllers/classSectionController.js';
+import {
+  deleteClassSectionTerm,
+  getBatchAcademicProgression,
+  getClassSectionBatches,
+  renameClassSection,
+} from '../controllers/classSectionController.js';
+import { getBatchFullDetails } from '../controllers/batchController.js';
 import userAuth from '../middleware/authUser.js';
 import { checkAccess } from '../middleware/checkAccess.js';
 import { PERMISSIONS } from '../const/permissions.js';
@@ -21,12 +27,53 @@ const deleteClassSectionTermQuerySchema = z.object({
     .positive('Class section id must be greater than 0.'),
 });
 
-const renameClassSectionSchema = z.object({
-  classSectionId: positiveIntegerId,
-  section: z.string().trim().min(1, 'section is required'),
+const renameClassSectionSchema = z
+  .object({
+    classSectionId: positiveIntegerId,
+    section: z.string().trim().min(1, 'section cannot be empty').optional(),
+    expectedCapacity: z.coerce
+      .number()
+      .int('expectedCapacity must be an integer')
+      .positive('expectedCapacity must be greater than 0')
+      .optional(),
+  })
+  .refine(
+    (body) => body.section !== undefined || body.expectedCapacity !== undefined,
+    { message: 'At least one of section or expectedCapacity is required' },
+  );
+
+const academicProgressionQuerySchema = z.object({
+  batchId: positiveIntegerId,
+});
+
+const classSectionBatchesQuerySchema = z.object({
+  courseId: positiveIntegerId.optional(),
+  sessionId: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
 });
 
 router.get('/', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), getClassSectionsByFilter);
+router.get(
+  '/batches',
+  userAuth,
+  checkAccess(PERMISSIONS.CLASS_SETUP.value, null),
+  validate({ query: classSectionBatchesQuerySchema }),
+  getClassSectionBatches,
+);
+router.get(
+  '/batchDetails',
+  userAuth,
+  checkAccess(PERMISSIONS.CLASS_SETUP.value, null),
+  validate({ query: academicProgressionQuerySchema }),
+  getBatchFullDetails,
+);
+router.get(
+  '/academicProgression',
+  userAuth,
+  validate({ query: academicProgressionQuerySchema }),
+  getBatchAcademicProgression,
+);
+
 router.patch('/section', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), validate({ body: renameClassSectionSchema }), renameClassSection);
 router.delete('/term', userAuth, checkAccess(PERMISSIONS.CLASS_SETUP.value, null), validate({ query: deleteClassSectionTermQuerySchema }), deleteClassSectionTerm);
 

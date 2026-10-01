@@ -1,48 +1,106 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { scoped, buildScope } from "../utility/scoped.js";
 
-function examEnrollmentInclude(sessionId, courseId, term, academicYearId) {
+async function resolveClassSectionTermIdsForCohort(group, options = {}) {
+  if (!group) return { term: null, classSectionTermIds: [] };
+
+  let term =
+    group.term != null && !isNaN(Number(group.term))
+      ? Number(group.term)
+      : null;
+
+  const cstmId =
+    group.curriculumSubjectTermMappingId != null &&
+    !isNaN(Number(group.curriculumSubjectTermMappingId))
+      ? Number(group.curriculumSubjectTermMappingId)
+      : group.curriculumBatchTermMappingId != null &&
+          !isNaN(Number(group.curriculumBatchTermMappingId))
+        ? Number(group.curriculumBatchTermMappingId)
+        : null;
+
+  if (term == null && cstmId != null) {
+    const cstm = await model.curriculumSubjectTermMappingModel.findByPk(cstmId, {
+      attributes: ["curriculumSubjectTermMappingId", "term"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    if (cstm?.term != null && !isNaN(Number(cstm.term))) {
+      term = Number(cstm.term);
+    }
+  }
+
+  if (term == null) {
+    return { term: null, classSectionTermIds: [] };
+  }
+
   const sectionWhere = {
-    sessionId: Number(sessionId),
-    courseId: Number(courseId),
-    academicYearId: Number(academicYearId),
+    ...buildScope(model.classSectionModel),
   };
 
-  return {
-    model: model.classSectionTermModel,
-    as: "studentClassSectionTerm",
-    attributes: [],
-    required: true,
-    where: { term: Number(term) },
-    include: [
-      {
-        model: model.classSectionModel,
-        as: "classSection",
-        attributes: [],
-        required: true,
-        where: sectionWhere,
-      },
-    ],
-  };
+  if (group.batchId != null && !isNaN(Number(group.batchId))) {
+    sectionWhere.batchId = Number(group.batchId);
+  } else {
+    if (group.sessionId != null && !isNaN(Number(group.sessionId))) {
+      sectionWhere.sessionId = Number(group.sessionId);
+    }
+    if (group.courseId != null && !isNaN(Number(group.courseId))) {
+      sectionWhere.courseId = Number(group.courseId);
+    }
+  }
+
+  const classSections = await model.classSectionModel.findAll({
+    where: sectionWhere,
+    attributes: ["classSectionsId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const classSectionIds = classSections
+    .map((cs) => Number(cs.classSectionsId))
+    .filter(Boolean);
+
+  if (!classSectionIds.length) {
+    return { term, classSectionTermIds: [] };
+  }
+
+  const classSectionTerms = await model.classSectionTermModel.findAll({
+    where: {
+      classSectionsId: { [Op.in]: classSectionIds },
+      term: Number(term),
+    },
+    attributes: ["classSectionTermId"],
+    raw: true,
+    transaction: options.transaction,
+  });
+
+  const classSectionTermIds = classSectionTerms
+    .map((cst) => Number(cst.classSectionTermId))
+    .filter(Boolean);
+
+  return { term, classSectionTermIds };
 }
 
 export async function countTermCohortStudents(group, options = {}) {
+  if (!group) return 0;
+
+  const { classSectionTermIds } = await resolveClassSectionTermIdsForCohort(
+    group,
+    options,
+  );
+  if (!classSectionTermIds.length) {
+    return 0;
+  }
+
   const where = {
-    sessionId: Number(group.sessionId),
-    courseId: Number(group.courseId),
+    classSectionTermId: { [Op.in]: classSectionTermIds },
   };
+  if (group.batchId != null && !isNaN(Number(group.batchId))) {
+    where.batchId = Number(group.batchId);
+  }
 
   return scoped(model.studentModel).count({
     where,
-    include: [
-      examEnrollmentInclude(
-        group.sessionId,
-        group.courseId,
-        group.term,
-        group.academicYearId,
-      ),
-    ],
     distinct: true,
     col: "student_id",
     transaction: options.transaction,
@@ -50,10 +108,22 @@ export async function countTermCohortStudents(group, options = {}) {
 }
 
 export async function findTermCohortStudents(group, options = {}) {
+  const { classSectionTermIds } = await resolveClassSectionTermIdsForCohort(
+    group,
+    options,
+  );
+  if (!classSectionTermIds.length) {
+    return options.page != null && options.limit != null
+      ? { rows: [], totalCount: 0 }
+      : [];
+  }
+
   const where = {
-    sessionId: Number(group.sessionId),
-    courseId: Number(group.courseId),
+    classSectionTermId: { [Op.in]: classSectionTermIds },
   };
+  if (group.batchId != null && !isNaN(Number(group.batchId))) {
+    where.batchId = Number(group.batchId);
+  }
   if (options.search) {
     const like = `%${options.search}%`;
     where[Op.or] = [
@@ -76,16 +146,10 @@ export async function findTermCohortStudents(group, options = {}) {
       "enrollNumber",
       "fatherName",
       "classSectionTermId",
-      "batchYear",
+      "batchId",
     ],
     where,
     include: [
-      examEnrollmentInclude(
-        group.sessionId,
-        group.courseId,
-        group.term,
-        group.academicYearId,
-      ),
       {
         model: model.courseModel,
         as: "course",
@@ -142,9 +206,16 @@ export async function expandClassSectionTermIdsByTerms(
   academicYearId,
   options = {},
 ) {
-  const termNumbers = [...new Set(terms.map(Number))];
-  if (!termNumbers.length || !academicYearId) {
+  const termNumbers = [...new Set(terms.map(Number).filter(Boolean))];
+  if (!termNumbers.length) {
     return { classSectionTermIds: [], seedGroups: [], expandedGroups: [] };
+  }
+
+  const sectionWhere = {
+    ...buildScope(model.classSectionModel),
+  };
+  if (options.batchIds && options.batchIds.length > 0) {
+    sectionWhere.batchId = { [Op.in]: options.batchIds.map(Number) };
   }
 
   const expanded = await model.classSectionTermModel.findAll({
@@ -155,8 +226,8 @@ export async function expandClassSectionTermIdsByTerms(
         model: model.classSectionModel,
         as: "classSection",
         required: true,
-        attributes: ["courseId", "sessionId", "academicYearId"],
-        where: { academicYearId: Number(academicYearId) },
+        attributes: ["courseId", "sessionId", "batchId", "academicYearId"],
+        where: sectionWhere,
       },
     ],
     transaction: options.transaction,
@@ -169,9 +240,22 @@ export async function expandClassSectionTermIdsByTerms(
     expandedGroups.push({
       classSectionTermId: Number(row.classSectionTermId),
       term: Number(row.term),
-      courseId: Number(row.classSection.courseId),
-      sessionId: Number(row.classSection.sessionId),
-      academicYearId: Number(row.classSection.academicYearId),
+      courseId:
+        row.classSection.courseId != null
+          ? Number(row.classSection.courseId)
+          : null,
+      sessionId:
+        row.classSection.sessionId != null
+          ? Number(row.classSection.sessionId)
+          : null,
+      batchId:
+        row.classSection.batchId != null
+          ? Number(row.classSection.batchId)
+          : null,
+      academicYearId:
+        row.classSection.academicYearId != null
+          ? Number(row.classSection.academicYearId)
+          : null,
     });
   }
 

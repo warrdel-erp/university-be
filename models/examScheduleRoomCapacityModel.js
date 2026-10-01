@@ -111,21 +111,6 @@ const examScheduleRoomCapacityModel = sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
-        universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'university_id'
-        },
-        instituteId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'institute_id'
-        },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'acedmic_year_id'
         }
     },
     {
@@ -134,6 +119,6 @@ const examScheduleRoomCapacityModel = sequelize.define(
     }
 );
 
-examScheduleRoomCapacityModel.scopeConfig = { university: true, institute: true, academicYear: true };
+examScheduleRoomCapacityModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default examScheduleRoomCapacityModel;

@@ -24,7 +24,7 @@ function buildLectureWindowIncludes(filters = {}) {
     {
       model: model.sessionModel,
       as: "lectureWindowSession",
-      attributes: ["sessionId", "sessionName", "startingDate", "endingDate"],
+      attributes: ["sessionId", "sessionName"],
     },
     {
       model: model.lessonModel,

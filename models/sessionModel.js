@@ -26,22 +26,22 @@ const sessionModel = sequelize.define(
         },
         academicYearId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'acedmic_year_id',
             references: {
                 model: acedmicYear,
                 key: 'acedmic_year_id'
             }
         },
-        // courseId: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'course_id',
-        //     references: {
-        //         model: courseModel,
-        //         key: 'course_id'
-        //     }
-        // },
+        courseId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'course_id',
+            references: {
+                model: courseModel,
+                key: 'course_id'
+            }
+        },
         instituteId: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -55,21 +55,6 @@ const sessionModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
             field: 'session_name'
-        },
-        startingDate: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'starting_date'
-        },
-        endingDate: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'ending_date'
-        },
-        classTillDate: {
-            type: DataTypes.STRING,
-            allowNull: false,
-            field: 'class_til_date'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -114,6 +99,6 @@ const sessionModel = sequelize.define(
     }
 );
 
-sessionModel.scopeConfig = { university: true, institute: true, academicYear: true };
+sessionModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default sessionModel;

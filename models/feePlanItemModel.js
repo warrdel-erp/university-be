@@ -1,22 +1,22 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import universityModel from "./universityModel.js";
-import feePlanProfileModel from "./feePlanProfileModel.js";
 import instituteModel from "./instituteModel.js";
+import batchModel from "./batchModel.js";
 
 const feePlanItemModel = sequelize.define(
   "fee_plan_item",
   {
-            universityId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'university_id',
-            references: {
-                model: universityModel,
-                key: 'university_id'
-            }
-        },
-        feePlanItemId: {
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'university_id',
+      references: {
+        model: universityModel,
+        key: 'university_id',
+      },
+    },
+    feePlanItemId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -32,14 +32,48 @@ const feePlanItemModel = sequelize.define(
       allowNull: true,
       field: "due_date",
     },
-    feePlanProfileId: {
+    batchId: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      field: "fee_plan_profile_id",
+      field: "batch_id",
       references: {
-        model: feePlanProfileModel,
-        key: "fee_plan_profile_id",
+        model: batchModel,
+        key: "batch_id",
       },
+    },
+    year: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "year",
+      comment: "Programme year level (1, 2, 3...)",
+    },
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: "name",
+      comment: "Planned fee receipt label (e.g. Admission / Semester I Fee)",
+    },
+    academicPeriod: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      field: "academic_period",
+      comment: "Academic period tag (e.g. Semester I)",
+    },
+    publishStatus: {
+      type: DataTypes.ENUM("draft", "published"),
+      allowNull: false,
+      defaultValue: "draft",
+      field: "publish_status",
+    },
+    publishedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: "published_at",
+    },
+    publishedBy: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "published_by",
     },
     instituteId: {
       type: DataTypes.INTEGER,
@@ -49,6 +83,18 @@ const feePlanItemModel = sequelize.define(
         model: instituteModel,
         key: "institute_id",
       },
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "created_at",
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP"),
+      field: "updated_at",
     },
   },
   {

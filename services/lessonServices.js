@@ -491,8 +491,6 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
       ? {
           sessionId: session.sessionId,
           sessionName: session.sessionName,
-          startingDate: session.startingDate,
-          endingDate: session.endingDate,
           academicYearId: session.academicYearId,
         }
       : null,

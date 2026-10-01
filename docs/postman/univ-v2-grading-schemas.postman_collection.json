@@ -1,16 +1,31 @@
 {
   "info": {
-    "_postman_id": "grading-schemas-api-collection-v2",
-    "name": "Grading Schemas Module",
-    "description": "Complete Postman collection for Grading Schemas and Grade Scales APIs",
+    "_postman_id": "univ-v2-academic-regulation-and-grading-schemas-collection",
+    "name": "Grading Schemas & Academic Regulation Module",
+    "description": "Complete Postman collection for Academic Regulation (batchId refactor, Many-to-Many mappings), Batch Regulation verification, Term Marks Evaluation, and Linked Grading Schemas.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
-      "name": "5. Exam Setup Types (/examStructure/examType)",
+      "name": "1. Academic Regulation (/academicRegulation)",
       "item": [
         {
-          "name": "5.1 Create Exam Setup Type",
+          "name": "1.1 Create Academic Regulation (with batchMappings array)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.academicRegulationId) {",
+                  "    pm.collectionVariables.set('academicRegulationId', res.data.academicRegulationId);",
+                  "    console.log('Saved academicRegulationId:', res.data.academicRegulationId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -25,17 +40,54 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examName\": \"Mid Term Assessment\",\n  \"examCode\": \"MID_2026\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Mid term examination at institute level\"\n}"
+              "raw": "{\n  \"regulationCode\": \"REG-2026-CS-01\",\n  \"regulationName\": \"Computer Science Academic Regulation 2026\",\n  \"description\": \"Regulation for CS batch with continuous assessment and credit policy\",\n  \"academicYearRange\": \"2026-2030\",\n  \"applicableBatch\": \"2026\",\n  \"effectiveFrom\": \"2026-08-01\",\n  \"effectiveUntil\": \"2030-07-31\",\n  \"gradingSchemeId\": 1,\n  \"evaluationPattern\": \"INTERNAL_EXTERNAL\",\n  \"internalWeightage\": 40.00,\n  \"externalWeightage\": 60.00,\n  \"maximumInternalMarks\": 40,\n  \"maximumExternalMarks\": 60,\n  \"isInternalAssessmentMandatory\": true,\n  \"isExternalAssessmentMandatory\": true,\n  \"minimumAttendance\": 75.00,\n  \"minimumOverallMarks\": 40,\n  \"minimumOverallPercentage\": 40.00,\n  \"minimumInternalMarks\": 16,\n  \"minimumExternalMarks\": 24,\n  \"mandatoryComponents\": [\"THEORY\", \"PRACTICAL\"],\n  \"calculateSGPA\": true,\n  \"calculateCGPA\": true,\n  \"calculatePercentage\": false,\n  \"generateClass\": true,\n  \"generateRank\": false,\n  \"totalCredits\": 160,\n  \"coreCredits\": 120,\n  \"electiveCredits\": 20,\n  \"openElectiveCredits\": 10,\n  \"internshipCredits\": 4,\n  \"projectCredits\": 6,\n  \"isAtktEnabled\": true,\n  \"maximumAtktSubjects\": 3,\n  \"isCarryForwardEnabled\": true,\n  \"maximumCarryForwardSubjects\": 3,\n  \"promotionMethod\": \"SEMESTER_WISE\",\n  \"isImprovementAllowed\": true,\n  \"maximumImprovementAttempts\": 2,\n  \"improvementMarksConsidered\": \"HIGHEST\",\n  \"isBacklogAllowed\": true,\n  \"maximumBacklogAttempts\": 3,\n  \"isSupplementaryAllowed\": true,\n  \"backlogValidityYears\": 5,\n  \"totalCreditsRequired\": 160,\n  \"minimumCgpa\": 5.00,\n  \"status\": \"DRAFT\",\n  \"isActive\": true,\n  \"batchMappings\": [\n    {{batchId}}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType",
+              "raw": "{{baseurl}}/academicRegulation",
               "host": ["{{baseurl}}"],
-              "path": ["examStructure", "examType"]
-            }
+              "path": ["academicRegulation"]
+            },
+            "description": "Creates a new Academic Regulation draft with associated batch mappings (no direct batchId or academicYearId on regulation table)."
           }
         },
         {
-          "name": "5.2 Get List Exam Setup Types",
+          "name": "1.2 Create Academic Regulation (with single batchId fallback)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"regulationCode\": \"REG-2026-IT-02\",\n  \"regulationName\": \"Information Technology Regulation 2026\",\n  \"description\": \"Regulation created with single batchId fallback in body\",\n  \"academicYearRange\": \"2026-2030\",\n  \"applicableBatch\": \"2026\",\n  \"batchId\": {{batchId}},\n  \"status\": \"DRAFT\",\n  \"isActive\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation",
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation"]
+            },
+            "description": "Tests backward-compatibility where caller passes a single batchId in the body; the service automatically routes it into the mapping table."
+          }
+        },
+        {
+          "name": "1.3 Get List of Academic Regulations (Pagination & Search)",
           "request": {
             "method": "GET",
             "header": [
@@ -45,17 +97,19 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType?search=Mid&status=true&page=1&limit=10",
+              "raw": "{{baseurl}}/academicRegulation?search=2026&status=DRAFT&page=1&limit=10",
               "host": ["{{baseurl}}"],
-              "path": ["examStructure", "examType"],
+              "path": ["academicRegulation"],
               "query": [
                 {
                   "key": "search",
-                  "value": "Mid"
+                  "value": "2026",
+                  "description": "Search by regulationName or regulationCode"
                 },
                 {
                   "key": "status",
-                  "value": "true"
+                  "value": "DRAFT",
+                  "description": "DRAFT | PUBLISHED | ARCHIVED"
                 },
                 {
                   "key": "page",
@@ -66,11 +120,12 @@
                   "value": "10"
                 }
               ]
-            }
+            },
+            "description": "Lists regulations with pagination. Verifies nested courseMappings include the joined batch object."
           }
         },
         {
-          "name": "5.3 Get All Exam Setup Types (with Pagination & Search)",
+          "name": "1.4 Filter Academic Regulations by batchId",
           "request": {
             "method": "GET",
             "header": [
@@ -80,28 +135,40 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType/all?search=Mid&page=1&limit=10",
+              "raw": "{{baseurl}}/academicRegulation?batchId={{batchId}}",
               "host": ["{{baseurl}}"],
-              "path": ["examStructure", "examType", "all"],
+              "path": ["academicRegulation"],
               "query": [
                 {
-                  "key": "search",
-                  "value": "Mid"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
+                  "key": "batchId",
+                  "value": "{{batchId}}",
+                  "description": "Filter regulations mapped to this batchId"
                 }
               ]
-            }
+            },
+            "description": "Filters regulations connected to the specified batchId via academic_regulation_course_mapping."
           }
         },
         {
-          "name": "5.4 Update Exam Setup Type",
+          "name": "1.5 Get Academic Regulation by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation", "{{academicRegulationId}}"]
+            },
+            "description": "Retrieves regulation details along with its nested courseMappings (batches) and classifications."
+          }
+        },
+        {
+          "name": "1.6 Update Academic Regulation (Reconcile batchMappings)",
           "request": {
             "method": "PATCH",
             "header": [
@@ -116,17 +183,23 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"examSetupTypeId\": 1,\n  \"examName\": \"Updated Mid Term Assessment\",\n  \"examCode\": \"MID_2026_UPDATED\",\n  \"examCategory\": \"EXAMINATION\",\n  \"examSubcategory\": \"Mid Term\",\n  \"examDescription\": \"Updated description\"\n}"
+              "raw": "{\n  \"regulationName\": \"Computer Science Academic Regulation 2026 (Updated)\",\n  \"description\": \"Updated description and reconciled batch mappings\",\n  \"batchMappings\": [\n    {{batchId}}\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType",
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
               "host": ["{{baseurl}}"],
-              "path": ["examStructure", "examType"]
-            }
+              "path": ["academicRegulation", "{{academicRegulationId}}"]
+            },
+            "description": "Updates regulation fields and reconciles mapped batches. Increments version by +0.1."
           }
         },
         {
-          "name": "5.5 Delete Exam Setup Type",
+          "name": "1.7 Toggle Active / Delete Academic Regulation",
           "request": {
             "method": "DELETE",
             "header": [
@@ -136,36 +209,66 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examStructure/examType/{{examSetupTypeId}}",
+              "raw": "{{baseurl}}/academicRegulation/{{academicRegulationId}}",
               "host": ["{{baseurl}}"],
-              "path": ["examStructure", "examType", "{{examSetupTypeId}}"]
-            }
+              "path": ["academicRegulation", "{{academicRegulationId}}"]
+            },
+            "description": "Soft toggles isActive state of the academic regulation."
           }
         }
       ]
     },
     {
-      "name": "10. Student Hall Ticket (/studentHallTicket)",
+      "name": "2. Batch Regulation Course Mapping (/academicRegulation/courseRegulationMapping)",
       "item": [
         {
-          "name": "10.1 Cancel/Block Hall Ticket",
+          "name": "2.1 Create Batch Regulation Mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.academicRegulationCourseMappingId) {",
+                  "    pm.collectionVariables.set('academicRegulationCourseMappingId', res.data.academicRegulationCourseMappingId);",
+                  "    console.log('Saved academicRegulationCourseMappingId:', res.data.academicRegulationCourseMappingId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
-            "method": "PATCH",
+            "method": "POST",
             "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
               {
                 "key": "Authorization",
                 "value": "Bearer {{token}}"
               }
             ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicRegulationId\": {{academicRegulationId}},\n  \"batchId\": {{batchId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/block/{{hallTicketId}}",
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping",
               "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "block", "{{hallTicketId}}"]
-            }
+              "path": ["academicRegulation", "courseRegulationMapping"]
+            },
+            "description": "Maps a batchId to an academicRegulationId. Allows multiple regulations per batch and multiple batches per regulation (N:M). Prevents duplicate identical pairs."
           }
         },
         {
-          "name": "10.2 Verify/Fetch Hall Ticket through QR",
+          "name": "2.2 Get Mappings by Academic Regulation ID",
           "request": {
             "method": "GET",
             "header": [
@@ -175,47 +278,45 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/byQr?qr={{qrCode}}",
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping/{{academicRegulationId}}",
               "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "byQr"],
+              "path": [
+                "academicRegulation",
+                "courseRegulationMapping",
+                "{{academicRegulationId}}"
+              ]
+            },
+            "description": "Fetches all batch mappings assigned to a specific regulation."
+          }
+        },
+        {
+          "name": "2.3 Get Mappings by batchId Query",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping?batchId={{batchId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["academicRegulation", "courseRegulationMapping"],
               "query": [
                 {
-                  "key": "qr",
-                  "value": "{{qrCode}}"
+                  "key": "batchId",
+                  "value": "{{batchId}}"
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "10.3 Publish Hall Tickets",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [202, 229]\n}"
             },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/publish",
-              "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "publish"]
-            }
+            "description": "Fetches all regulations assigned to a specific batchId."
           }
         },
         {
-          "name": "10.4 Get Complete Hall Ticket Details",
+          "name": "2.4 Delete Batch Regulation Mapping",
           "request": {
-            "method": "GET",
+            "method": "DELETE",
             "header": [
               {
                 "key": "Authorization",
@@ -223,61 +324,24 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/{{hallTicketId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "{{hallTicketId}}"]
-            }
-          }
-        },
-        {
-          "name": "10.5 Generate Hall Tickets",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [\n    {{studentId}}\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/generate",
-              "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "generate"]
-            }
-          }
-        },
-        {
-          "name": "10.6 Get Student Detailed Eligibility",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/eligibility/{{examinationSessionId}}/{{studentId}}",
+              "raw": "{{baseurl}}/academicRegulation/courseRegulationMapping/{{academicRegulationCourseMappingId}}",
               "host": ["{{baseurl}}"],
               "path": [
-                "studentHallTicket",
-                "eligibility",
-                "{{examinationSessionId}}",
-                "{{studentId}}"
+                "academicRegulation",
+                "courseRegulationMapping",
+                "{{academicRegulationCourseMappingId}}"
               ]
-            }
+            },
+            "description": "Deletes a batch-to-regulation mapping row by academicRegulationCourseMappingId."
           }
-        },
+        }
+      ]
+    },
+    {
+      "name": "3. Consumer Verification (Batches & Student Marks)",
+      "item": [
         {
-          "name": "10.7 Get Session Students",
+          "name": "3.1 Get Batch Full Details (Verify regulationBatchMappings)",
           "request": {
             "method": "GET",
             "header": [
@@ -287,275 +351,51 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/studentHallTicket/sessionStudents/{{examinationSessionId}}?courseId={{courseId}}&sessionId={{sessionId}}&term={{term}}&status={{status}}&page=1&limit=10",
+              "raw": "{{baseurl}}/session/batches/{{batchId}}/details",
+              "host": ["{{baseurl}}"],
+              "path": ["session", "batches", "{{batchId}}", "details"]
+            },
+            "description": "Fetches batch full details. Verifies that regulationBatchMappings includes the linked regulation without using obsolete session-course joins."
+          }
+        },
+        {
+          "name": "3.2 Get Term Student Marks (Verify Regulation Rules Evaluation)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/students/marks?sessionId={{sessionId}}",
               "host": ["{{baseurl}}"],
               "path": [
-                "studentHallTicket",
-                "sessionStudents",
-                "{{examinationSessionId}}"
+                "previousAcademic",
+                "terms",
+                "{{curriculumBatchTermMappingId}}",
+                "students",
+                "marks"
               ],
               "query": [
                 {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
                   "key": "sessionId",
-                  "value": "{{sessionId}}"
-                },
-                {
-                  "key": "term",
-                  "value": "{{term}}"
-                },
-                {
-                  "key": "status",
-                  "value": "{{status}}"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
+                  "value": "{{sessionId}}",
+                  "description": "Academic Session ID"
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "10.8 Get Hall Ticket Eligibility Overview",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/eligibilityOverview/{{examinationSessionId}}",
-              "host": ["{{baseurl}}"],
-              "path": [
-                "studentHallTicket",
-                "eligibilityOverview",
-                "{{examinationSessionId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "10.9 Get Hall Ticket Review Details",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/reviewDetails/{{studentId}}?examinationSessionId={{examinationSessionId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "reviewDetails", "{{studentId}}"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "10.10 Mark Student(s) as Eligible (COE override)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [\n    {{studentId}}\n  ]\n}"
             },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/markAsEligible",
-              "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "markAsEligible"]
-            }
-          }
-        },
-        {
-          "name": "10.11 Get Hall Ticket Summary",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/summary/{{examinationSessionId}}",
-              "host": ["{{baseurl}}"],
-              "path": [
-                "studentHallTicket",
-                "summary",
-                "{{examinationSessionId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "10.12 Filter Students by Review Reasons",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"courseId\": {{courseId}},\n  \"sessionId\": {{sessionId}},\n  \"term\": {{term}},\n  \"filters\": [\"PHOTOGRAPH_PENDING\", \"ATTENDANCE_PENDING\"],\n  \"page\": 1,\n  \"limit\": 10\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/reviewFilterStudents",
-              "host": ["{{baseurl}}"],
-              "path": ["studentHallTicket", "reviewFilterStudents"]
-            }
+            "description": "Evaluates student term marks and passing status against the academic regulation linked to the batch via batchId."
           }
         }
       ]
     },
     {
-      "name": "11. Question Paper (/questionPaper)",
+      "name": "4. Linked Grading Schemas Helper (/gradingSchemas)",
       "item": [
         {
-          "name": "11.1 Approve or Reject Question Paper",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"questionPaperId\": 21,\n  \"status\": \"Approved\",\n  \"remarks\": \"Good blueprint mapping\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/questionPaper/approve",
-              "host": ["{{baseurl}}"],
-              "path": ["questionPaper", "approve"]
-            }
-          }
-        },
-        {
-          "name": "11.2 Final Approve Exam Schedule Paper",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": 18\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/questionPaper/finalApproved",
-              "host": ["{{baseurl}}"],
-              "path": ["questionPaper", "finalApproved"]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "12. Exam Invigilator Assignment (/examInvigilatorAssignment)",
-      "item": [
-        {
-          "name": "12.1 Create Invigilator Assignment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionSlotId\": 1,\n  \"examDate\": \"2026-12-01\",\n  \"classRoomSectionId\": 8,\n  \"userId\": 56,\n  \"role\": \"INVIGILATOR\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment"]
-            }
-          }
-        },
-        {
-          "name": "12.2 Update Invigilator Assignment",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"userId\": 56,\n  \"role\": \"INVIGILATOR\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment"],
-              "query": [
-                {
-                  "key": "examInvigilatorAssignmentId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.3 Get Room List Room-Wise",
+          "name": "4.1 Get All Grading Schemas",
           "request": {
             "method": "GET",
             "header": [
@@ -565,18 +405,10 @@
               }
             ],
             "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/rooms?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
+              "raw": "{{baseurl}}/gradingSchemas?page=1&limit=10",
               "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment", "rooms"],
+              "path": ["gradingSchemas"],
               "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-12-01"
-                },
                 {
                   "key": "page",
                   "value": "1"
@@ -586,641 +418,26 @@
                   "value": "10"
                 }
               ]
-            }
-          }
-        },
-        {
-          "name": "12.4 Get Invigilator Summary Stats",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/summary?examinationSessionId=1&courseId=34&sessionId=6&term=4&examDate=2026-12-01",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment", "summary"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                },
-                {
-                  "key": "courseId",
-                  "value": "34"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "6"
-                },
-                {
-                  "key": "term",
-                  "value": "4"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-12-01"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.5 Get Assignment By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment"],
-              "query": [
-                {
-                  "key": "examInvigilatorAssignmentId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.6 Get Assignments list (filtered)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment?classRoomSectionId=8",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment"],
-              "query": [
-                {
-                  "key": "classRoomSectionId",
-                  "value": "8"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.7 Delete Assignment",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment?examInvigilatorAssignmentId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment"],
-              "query": [
-                {
-                  "key": "examInvigilatorAssignmentId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.8 Get Assignments By userId",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/byUserId?userId=56&examinationSessionId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment", "byUserId"],
-              "query": [
-                {
-                  "key": "userId",
-                  "value": "56"
-                },
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.9 Get Details By Room",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/byroom?classRoomSectionId=8&examinationSessionId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment", "byroom"],
-              "query": [
-                {
-                  "key": "classRoomSectionId",
-                  "value": "8"
-                },
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.10 Get Faculty Availability",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/availability?examScheduleId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment", "availability"],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "12.11 Get My Invigilator Assignments",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examInvigilatorAssignment/my?examinationSessionId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examInvigilatorAssignment", "my"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "13. Exam Attendance (/examAttendance)",
-      "item": [
-        {
-          "name": "13.1 Get Exam Attendance Room-Centric (Paginated)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examAttendance?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
-              "host": ["{{baseurl}}"],
-              "path": ["examAttendance"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-12-01"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "13.2 Get Attendance Sheet for one Room",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examAttendance/room?classRoomSectionId=8&examDate=2026-12-01&examinationSessionSlotId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examAttendance", "room"],
-              "query": [
-                {
-                  "key": "classRoomSectionId",
-                  "value": "8"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-12-01"
-                },
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "13.3 Get Exam Attendance Details By Room",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examAttendance/byroom?classRoomSectionId=8&examinationSessionId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examAttendance", "byroom"],
-              "query": [
-                {
-                  "key": "classRoomSectionId",
-                  "value": "8"
-                },
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "13.4 Mark Exam Attendance",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": 1,\n  \"examScheduleRoomCapacityId\": 2,\n  \"students\": [\n    {\n      \"studentId\": 1863,\n      \"attendanceStatus\": \"PRESENT\"\n    }\n  ]\n}"
             },
-            "url": {
-              "raw": "{{baseurl}}/examAttendance",
-              "host": ["{{baseurl}}"],
-              "path": ["examAttendance"]
-            }
+            "description": "Lists grading schemes that can be linked to Academic Regulations via gradingSchemeId."
           }
         },
         {
-          "name": "13.5 Update Room Attendance Status",
+          "name": "4.2 Get Grading Schema by ID",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
               {
                 "key": "Authorization",
                 "value": "Bearer {{token}}"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": 1,\n  \"examScheduleRoomCapacityId\": 2,\n  \"status\": \"SUBMITTED\"\n}"
+            "url": {
+              "raw": "{{baseurl}}/gradingSchemas/{{gradingSchemeId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["gradingSchemas", "{{gradingSchemeId}}"]
             },
-            "url": {
-              "raw": "{{baseurl}}/examAttendance/status",
-              "host": ["{{baseurl}}"],
-              "path": ["examAttendance", "status"]
-            }
-          }
-        },
-        {
-          "name": "13.6 Get Exam Operations Summary",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examAttendance/summary?examinationSessionId=9&courseId=34&sessionId=6&term=1&examDate=2026-08-18&examinationSessionSlotId=4",
-              "host": ["{{baseurl}}"],
-              "path": ["examAttendance", "summary"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "9"
-                },
-                {
-                  "key": "courseId",
-                  "value": "34"
-                },
-                {
-                  "key": "sessionId",
-                  "value": "6"
-                },
-                {
-                  "key": "term",
-                  "value": "1"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-08-18"
-                },
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "4"
-                }
-              ]
-            }
-          }
-        }
-      ]
-    },
-    {
-      "name": "14. Exam Room Material Bundle (/examRoomMaterialBundle)",
-      "item": [
-        {
-          "name": "14.1 Get Bundle List (Paginated)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
-              "host": ["{{baseurl}}"],
-              "path": ["examRoomMaterialBundle"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-12-01"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "14.2 Get Bundle Room Details",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle/room?classRoomSectionId=8&examDate=2026-12-01&examinationSessionSlotId=2",
-              "host": ["{{baseurl}}"],
-              "path": ["examRoomMaterialBundle"],
-              "query": [
-                {
-                  "key": "classRoomSectionId",
-                  "value": "8"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-12-01"
-                },
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "2"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "14.3 Create Bundle",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examDate\": \"2026-12-01\",\n  \"examinationSessionSlotId\": 2,\n  \"classRoomSectionId\": 8,\n  \"items\": [\n    {\n      \"itemType\": \"ANSWER_SHEET\",\n      \"plannedQuantity\": 30,\n      \"remarks\": \"Standard 32-page sheets\"\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle",
-              "host": ["{{baseurl}}"],
-              "path": ["examRoomMaterialBundle"]
-            }
-          }
-        },
-        {
-          "name": "14.4 Update Bundle Items",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"ISSUED\",\n  \"remarks\": \"Handed over to invigilator\",\n  \"issuedTo\": 56,\n  \"items\": [\n    {\n      \"itemType\": \"ANSWER_SHEET\",\n      \"plannedQuantity\": 30,\n      \"issuedQuantity\": 30,\n      \"usedQuantity\": 25,\n      \"unusedQuantity\": 5,\n      \"returnedQuantity\": 5,\n      \"damagedQuantity\": 0\n    }\n  ]\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle/items/{{examRoomMaterialBundleId}}",
-              "host": ["{{baseurl}}"],
-              "path": [
-                "examRoomMaterialBundle",
-                "items",
-                "{{examRoomMaterialBundleId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "14.5 Get Bundle Summary",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle/summary?examinationSessionId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examRoomMaterialBundle", "summary"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "14.6 Update Bundle Status (RECEIVED/VERIFIED)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"RECEIVED\"\n}"
-            },
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle/status/{{examRoomMaterialBundleId}}",
-              "host": ["{{baseurl}}"],
-              "path": [
-                "examRoomMaterialBundle",
-                "status",
-                "{{examRoomMaterialBundleId}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "14.7 Get Ready Bundle List",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle/readybundles?examinationSessionId=1&examDate=2026-12-01&page=1&limit=10",
-              "host": ["{{baseurl}}"],
-              "path": ["examRoomMaterialBundle", "readybundles"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                },
-                {
-                  "key": "examDate",
-                  "value": "2026-12-01"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "14.8 Get Received Rooms",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examRoomMaterialBundle/receivedRooms?examinationSessionId=1",
-              "host": ["{{baseurl}}"],
-              "path": ["examRoomMaterialBundle", "receivedRooms"],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "1"
-                }
-              ]
-            }
+            "description": "Fetches details and grade scales for a specific grading scheme."
           }
         }
       ]
@@ -1234,76 +451,36 @@
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInBhc3N3b3JkIjoiJDJhJDEwJEVzMmlldHdab0FBNHhTRnBKbGYzRmUuQmR1eDIuanVtR3BUMmZaUEtYaHEubTVxR2dhaEJPIiwiZHVtbXlQYXNzd29yZCI6bnVsbCwic3RhdHVzIjoiYWN0aXZlIiwicGhvbmUiOiI5OTI5NTU1NjQ0IiwiZW1haWwiOiJhYWRpMjh4NkBnbWFpbC5jb20iLCJpc1RlYWNoZXIiOmZhbHNlLCJjcmVhdGVkQXQiOiIyMDI1LTA4LTEzVDE2OjQ4OjQyLjAwMFoiLCJ1cGRhdGVkQXQiOiIyMDI2LTA4LTA3VDEwOjI3OjQ3LjAwMFoiLCJkZWxldGVkQXQiOm51bGwsImRlZmF1bHRfcm9sZV9pZCI6MTUsImluc3RpdHV0ZU5hbWUiOiJBYXlvamFuIFNjaG9vbCBvZiBBcmNoaXRlY3R1cmUiLCJpYXQiOjE3ODY2MDE5NTQsImV4cCI6MTc4OTE5Mzk1NH0.0StGGK5rYHLN9tWTowpH2NtJnW_lauoqO6GtWNAhi7A",
-      "type": "string"
-    },
-    {
-      "key": "gradingSchemaId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "gradingSchemaGradeId",
-      "value": "101",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0yMlQxMDo0NDoxNS4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkwMDc3ODIwLCJleHAiOjE3OTI2Njk4MjB9.qe-ENzjK2YVd7Rp4Mg1RSuo7ylbykmzDiAknyzySPwA",
       "type": "string"
     },
     {
       "key": "academicRegulationId",
+      "value": "7",
+      "type": "string"
+    },
+    {
+      "key": "batchId",
+      "value": "5",
+      "type": "string"
+    },
+    {
+      "key": "academicRegulationCourseMappingId",
       "value": "1",
       "type": "string"
     },
     {
-      "key": "examSetupTypeId",
+      "key": "curriculumBatchTermMappingId",
       "value": "1",
       "type": "string"
     },
     {
-      "key": "assessmentPlanId",
+      "key": "sessionId",
       "value": "1",
       "type": "string"
     },
     {
-      "key": "assessmentPlanComponentId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "examinationSessionId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "examinationSessionTermId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "examinationSessionSlotId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "teacherExamAssignmentId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "hallTicketId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "studentId",
-      "value": "1",
-      "type": "string"
-    },
-    {
-      "key": "qrCode",
-      "value": "sample-uuid-qr-code",
-      "type": "string"
-    },
-    {
-      "key": "examRoomMaterialBundleId",
+      "key": "gradingSchemeId",
       "value": "1",
       "type": "string"
     }

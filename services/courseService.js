@@ -1,4 +1,6 @@
 import * as courseRepository from "../repository/courseRepository.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import { resolveTotalTerms, termsForYear } from "../utility/courseTerms.js";
 
 export const listCourses = async (options = {}) => {
   return courseRepository.getAllCourses(options);
@@ -16,85 +18,219 @@ export const getCourseWithSessions = async (courseId) => {
   return courseRepository.getCourseWithSessionsData(courseId);
 };
 
-export const getTermsWithClassSections = async (courseId, sessionId) => {
-  const [course, session, classSections] = await Promise.all([
-    courseRepository.getCourseByCourseId(courseId),
-    courseRepository.getSessionSummaryById(sessionId),
-    courseRepository.getClassSectionsByCourseAndSession(courseId, sessionId),
+function resolveStructureStatus(configuredTerms, totalTerms) {
+  if (configuredTerms <= 0) return "Not Started";
+  if (configuredTerms === totalTerms) return "Completed";
+  return "In Progress";
+}
+
+function countConfiguredTerms(subjectTermMappings) {
+  const terms = new Set();
+  for (const row of subjectTermMappings || []) {
+    terms.add(Number(row.term));
+  }
+  return terms.size;
+}
+
+export const getTermsWithClassSections = async (query) => {
+  const batchId = Number(query.batchId);
+  const yearFilter = query.year != null ? Number(query.year) : undefined;
+  const termFilter = query.term != null ? Number(query.term) : undefined;
+
+  const [batchRow, academicCtx] = await Promise.all([
+    courseRepository.findTermsWithClassSectionsByBatchId(batchId, {
+      year: yearFilter,
+      term: termFilter,
+    }),
+    resolveActiveAcademicYearContext(),
   ]);
 
-  if (!course) {
-    const error = new Error('Course not found');
-    error.statusCode = 404;
-    throw error;
-  }
-  if (!session) {
-    const error = new Error('Session not found');
+  if (!batchRow) {
+    const error = new Error(`Batch (ID: ${batchId}) not found`);
     error.statusCode = 404;
     throw error;
   }
 
-  const coursePlain = course.get({ plain: true });
+  const batch = batchRow.get({ plain: true });
+  const session = batch.session;
+  const course = session.course;
+  if (!session || !course) {
+    const error = new Error(
+      `Batch (ID: ${batchId}) is missing session or course`,
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const batchYear = Number(batch.batch);
+  const totalTerms = resolveTotalTerms(course);
+  const duration = Number(course.courseDuration) || 0;
+  const activeCalendarYear = Number(academicCtx.activeBatchYear);
+  const academicYear = academicCtx.academicYear?.get
+    ? academicCtx.academicYear.get({ plain: true })
+    : academicCtx.academicYear;
+  const currentYearNumber = activeCalendarYear - batchYear + 1;
+  const maxYear =
+    duration > 0
+      ? duration
+      : totalTerms > 0
+        ? Math.ceil(totalTerms / 2)
+        : 1;
+
   const classSectionsIds = [];
-  const classSectionsByYear = {};
-
-  for (const section of classSections) {
-    classSectionsIds.push(section.classSectionsId);
-
-    if (!classSectionsByYear[section.year]) {
-      classSectionsByYear[section.year] = [];
+  const sectionsByYear = new Map();
+  for (const section of batch.classSections || []) {
+    classSectionsIds.push(Number(section.classSectionsId));
+    const yearLevel = Number(section.year) || 1;
+    let list = sectionsByYear.get(yearLevel);
+    if (!list) {
+      list = [];
+      sectionsByYear.set(yearLevel, list);
     }
+    list.push(section);
+  }
 
-    classSectionsByYear[section.year].push({
-      classSectionsId: section.classSectionsId,
-      section: section.section,
+  const studentCountBySection =
+    await courseRepository.countStudentsByClassSectionIds(classSectionsIds);
+
+  const academicRegulations = [];
+  for (const mapping of batch.regulationBatchMappings || []) {
+    const regulation = mapping.academicRegulation;
+    if (!regulation) continue;
+    academicRegulations.push({
+      academicRegulationCourseMappingId:
+        mapping.academicRegulationCourseMappingId,
+      academicRegulationId: mapping.academicRegulationId,
+      batchId: mapping.batchId,
+      regulationCode: regulation.regulationCode,
+      regulationName: regulation.regulationName,
+      description: regulation.description,
+      academicYearRange: regulation.academicYearRange,
+      applicableBatch: regulation.applicableBatch,
+      effectiveFrom: regulation.effectiveFrom,
+      effectiveUntil: regulation.effectiveUntil,
+      gradingSchemeId: regulation.gradingSchemeId,
+      status: regulation.status,
+      isActive: regulation.isActive,
     });
   }
 
-  const studentCountBySection = await courseRepository.countStudentsByClassSectionIds(classSectionsIds);
+  const curriculumMapping = (batch.curriculumMappings || [])[0] || null;
+  const curriculum = curriculumMapping?.curriculum || null;
+  const configuredTerms = curriculum
+    ? countConfiguredTerms(curriculum.subjectTermMappings)
+    : 0;
+  const structureStatus = resolveStructureStatus(configuredTerms, totalTerms);
 
-  for (const yearKey of Object.keys(classSectionsByYear)) {
-    const sections = classSectionsByYear[yearKey];
-    for (let i = 0; i < sections.length; i++) {
-      const sectionId = sections[i].classSectionsId;
-      sections[i].studentCount = studentCountBySection.get(sectionId) ?? 0;
-    }
-  }
-
-  const duration = Number(coursePlain.courseDuration) || 0;
   const years = [];
+  for (let year = 1; year <= maxYear; year++) {
+    const shouldIncludeSections = yearFilter == null || year === yearFilter;
+    const sections = shouldIncludeSections ? (sectionsByYear.get(year) || []) : [];
+    const classSections = [];
+    for (const section of sections) {
+      const terms = [];
+      for (const termRow of section.classSectionTerms || []) {
+        terms.push({
+          classSectionTermId: termRow.classSectionTermId,
+          term: Number(termRow.term),
+        });
+      }
 
-  if (duration > 0) {
-    for (let year = 1; year <= duration; year++) {
-      years.push({
-        year,
-        classSections: classSectionsByYear[year] || [],
+      classSections.push({
+        classSectionsId: section.classSectionsId,
+        section: section.section,
+        year: Number(section.year),
+        expectedCapacity: section.expectedCapacity,
+        activeYear: section.activeYear,
+        batchId: section.batchId,
+        studentCount:
+          studentCountBySection.get(Number(section.classSectionsId)) || 0,
+        terms,
       });
     }
-  } else {
-    const yearKeys = Object.keys(classSectionsByYear);
-    yearKeys.sort((a, b) => Number(a) - Number(b));
 
-    for (const yearKey of yearKeys) {
-      years.push({
-        year: Number(yearKey),
-        classSections: classSectionsByYear[yearKey],
-      });
-    }
+    const hasSectionsConfigured = (sectionsByYear.get(year) || []).length > 0;
+
+    years.push({
+      year,
+      activeYear: batchYear + (year - 1),
+      isCurrentYear: year === currentYearNumber,
+      configured: hasSectionsConfigured,
+      expectedTerms: termsForYear(year, course),
+      classSections,
+    });
   }
 
   return {
     course: {
-      courseId: coursePlain.courseId,
-      courseName: coursePlain.courseName,
-      courseCode: coursePlain.courseCode,
-      termType: coursePlain.termType,
-      totalTerms: coursePlain.totalTerms,
-      duration: coursePlain.courseDuration,
+      courseId: course.courseId,
+      courseName: course.courseName,
+      courseCode: course.courseCode,
+      termType: course.termType,
+      capacity: course?.capacity != null && !isNaN(Number(course.capacity)) ? Number(course.capacity) : (course?.capacity ?? null),
+      totalTerms,
+      duration: course.courseDuration,
+      courseDuration: course.courseDuration,
     },
     session: {
       sessionId: session.sessionId,
       sessionName: session.sessionName,
+      academicYearId: session.academicYearId,
+      courseId: session.courseId,
+    },
+    academicActiveYear: {
+      academicYearId: academicCtx.academicYearId,
+      yearTitle: academicYear?.yearTitle || null,
+      startingDate: academicYear?.startingDate || null,
+      endingDate: academicYear?.endingDate || null,
+      activeCalendarYear,
+    },
+    currentYear: activeCalendarYear,
+    filters: {
+      batchId,
+      year: yearFilter || null,
+      term: termFilter || null,
+    },
+    academicRegulations,
+    batch: {
+      batchId: Number(batch.batchId),
+      batch: batchYear,
+      status: batch.status,
+      intakeCapacity: batch.intakeCapacity != null ? Number(batch.intakeCapacity) : null,
+      capacity: course?.capacity != null && !isNaN(Number(course.capacity)) ? Number(course.capacity) : (course?.capacity ?? null),
+      currentYear: currentYearNumber > 0 ? currentYearNumber : null,
+      curriculum: curriculum
+        ? {
+            curriculumId: Number(curriculum.curriculumId),
+            sku: curriculum.name,
+            name: curriculum.name,
+            publishStatus: curriculum.publishStatus,
+            isActive: curriculum.isActive,
+            curriculumBatchMappingId: Number(
+              curriculumMapping.curriculumBatchMappingId,
+            ),
+            configuredTerms,
+            totalTerms,
+            structure: `${configuredTerms} / ${totalTerms} terms`,
+            status: structureStatus,
+            configured: configuredTerms > 0,
+            isConfigured: true,
+          }
+        : {
+            curriculumId: null,
+            sku: null,
+            name: null,
+            publishStatus: null,
+            isActive: null,
+            curriculumBatchMappingId: null,
+            configuredTerms: 0,
+            totalTerms,
+            structure: `0 / ${totalTerms} terms`,
+            status: "Not Started",
+            configured: false,
+            isConfigured: false,
+          },
+      years,
     },
     years,
   };
@@ -104,16 +240,15 @@ export const getTermOptionsByCourse = async (courseId) => {
   const course = await courseRepository.getCourseByCourseId(courseId);
 
   if (!course) {
-    const error = new Error('Course not found');
+    const error = new Error("Course not found");
     error.statusCode = 404;
     throw error;
   }
 
-  const termType = course.termType || 'Term';
+  const termType = course.termType || "Term";
   const totalTerms = course.totalTerms || 0;
 
   const terms = [];
-
   for (let i = 1; i <= totalTerms; i++) {
     terms.push({
       termName: `${termType} ${i}`,
@@ -128,7 +263,7 @@ export const deleteCourse = async (courseId) => {
   const result = await courseRepository.deleteCourseById(courseId);
 
   if (!result) {
-    const error = new Error('Course not found');
+    const error = new Error("Course not found");
     error.statusCode = 404;
     throw error;
   }
@@ -136,10 +271,16 @@ export const deleteCourse = async (courseId) => {
   return result;
 };
 
-export const getSubjectsByTeacherUserId = async (userId, searchKey) => {
-  return courseRepository.getSubjectsByTeacherUserId(userId, searchKey);
+export const getSubjectsByTeacherUserId = async (userId, searchKey, options = {}) => {
+  return courseRepository.getSubjectsByTeacherUserId(userId, searchKey, options);
 };
 
-export const getSubjectByTeacherUserIdAndSubjectId = async (userId, subjectId) => {
-  return courseRepository.getSubjectByTeacherUserIdAndSubjectId(userId, subjectId);
+export const getSubjectByTeacherUserIdAndSubjectId = async (
+  userId,
+  subjectId,
+) => {
+  return courseRepository.getSubjectByTeacherUserIdAndSubjectId(
+    userId,
+    subjectId,
+  );
 };

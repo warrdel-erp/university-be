@@ -15,15 +15,25 @@ export const createExaminationSessionSlot = async (req, res) => {
   }
 };
 
+const parseSlotQueryParams = (query) => {
+  const { examinationSessionId, date, filterStatus, batchId, term } = query;
+  let { selections } = query;
+
+  if (batchId || term) {
+    selections = selections ? [...selections] : [];
+    selections.push({
+      batchId: batchId ? Number(batchId) : undefined,
+      terms: term ? [Number(term)] : undefined,
+    });
+  }
+
+  return { examinationSessionId, date, filterStatus, selections };
+};
+
 export const getExaminationSessionSlotsCount = async (req, res) => {
   try {
-    const { examinationSessionId, date, selections } = req.query;
-
-    const result = await examinationSessionSlotServices.getExaminationSessionSlotsCount({
-      examinationSessionId,
-      date,
-      selections,
-    });
+    const params = parseSlotQueryParams(req.query);
+    const result = await examinationSessionSlotServices.getExaminationSessionSlotsCount(params);
     return SuccessResponse(res, 200, "Examination session slots counts fetched successfully", result);
   } catch (error) {
     console.error("Error fetching examination session slots counts:", error);
@@ -34,14 +44,8 @@ export const getExaminationSessionSlotsCount = async (req, res) => {
 
 export const getExaminationSessionSlots = async (req, res) => {
   try {
-    const { examinationSessionId, date, selections, filterStatus } = req.query;
-
-    const result = await examinationSessionSlotServices.getExaminationSessionSlots({
-      examinationSessionId,
-      date,
-      selections,
-      filterStatus,
-    });
+    const params = parseSlotQueryParams(req.query);
+    const result = await examinationSessionSlotServices.getExaminationSessionSlots(params);
     return SuccessResponse(res, 200, "Examination session slots fetched successfully", result);
   } catch (error) {
     console.error("Error fetching examination session slots:", error);

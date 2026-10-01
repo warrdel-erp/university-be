@@ -43,9 +43,14 @@ const classSectionModel = sequelize.define(
                 key: 'session_id'
             }
         },
+        batchId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'batch_id'
+        },
         academicYearId: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'acedmic_year_id',
             references: {
                 model: acedmicYearModel,
@@ -65,10 +70,24 @@ const classSectionModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        expectedCapacity: {
+            type: DataTypes.INTEGER,
+            allowNull: false,
+            field: 'expected_capacity',
+            validate: {
+                min: 1,
+            },
+            comment: 'Expected student capacity for this section (must be > 0)',
+        },
         year: {
             type: DataTypes.INTEGER,
             allowNull: true,
             comment: 'Program year level (1, 2, 3...)',
+        },
+        activeYear: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'active_year'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -131,6 +150,6 @@ const classSectionModel = sequelize.define(
     }
 );
 
-classSectionModel.scopeConfig = { university: false, institute: true, academicYear: true };
+classSectionModel.scopeConfig = { university: false, institute: true, academicYear: false };
 
 export default classSectionModel;

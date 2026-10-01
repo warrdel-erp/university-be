@@ -79,10 +79,27 @@ export async function getAssignments(filters) {
   return results.map((row) => {
     const plain = row.toJSON ? row.toJSON() : row;
     const sched = plain.examSchedule || {};
+    const actualTerm =
+      sched.curriculumSubjectTermMapping?.term != null
+        ? Number(sched.curriculumSubjectTermMapping.term)
+        : (sched.term != null ? Number(sched.term) : null);
+
+    const subjectSchedule = sched.subjectSchedule
+      ? {
+          ...sched.subjectSchedule,
+          term: actualTerm != null ? actualTerm : sched.subjectSchedule.term,
+        }
+      : null;
+
     return {
       ...plain,
       duration: sched.duration != null ? Number(sched.duration) : null,
       maximumMarks: sched.maximumMarks != null ? Number(sched.maximumMarks) : null,
+      examSchedule: {
+        ...sched,
+        term: actualTerm,
+        subjectSchedule,
+      },
     };
   });
 }

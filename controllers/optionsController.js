@@ -1,7 +1,6 @@
 import * as optionsServices from '../services/optionsServices.js';
 import { SuccessResponse, ErrorResponse } from '../utility/response.js';
 import { validateEmployeeUser } from '../utility/employeeValidation.js';
-import { getAcademicYearId } from '../utility/requestContext.js';
 
 export const getAffiliatedUniversityOptions = async (req, res) => {
     try {
@@ -30,15 +29,22 @@ export async function getMyCourseOptions(req, res) {
         if (!validation.valid) {
             return ErrorResponse(res, validation.status, validation.message);
         }
+        const { courseLevelId } = req.query;
+
         if (!validation.employeeRecord) {
-            return SuccessResponse(res, 200, "Course options fetched successfully", []);
+            const result = await optionsServices.getCourseOptions(courseLevelId);
+            return SuccessResponse(res, 200, "Course options fetched successfully", result);
         }
 
-        const { courseLevelId } = req.query;
-        const result = await optionsServices.getMyCourseOptions(
+        let result = await optionsServices.getMyCourseOptions(
             courseLevelId,
             validation.userId,
         );
+
+        if (!result || result.length === 0) {
+            result = await optionsServices.getCourseOptions(courseLevelId);
+        }
+
         return SuccessResponse(res, 200, "Course options fetched successfully", result);
     } catch (error) {
         console.error("Error in getMyCourseOptions:", error);
@@ -71,8 +77,8 @@ export const getCourseProgramOptions = async (req, res) => {
 
 export const getClassSectionOptions = async (req, res) => {
     try {
-        const { courseId, term, sessionId, year } = req.query;
-        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId, year);
+        const { courseId, term, sessionId, batchId, year } = req.query;
+        const result = await optionsServices.getClassSectionOptions(courseId, term, sessionId, year, batchId);
         return SuccessResponse(res, 200, "Class section options fetched successfully", result);
     } catch (error) {
         console.error("Error in getClassSectionOptions:", error);
@@ -93,16 +99,33 @@ export const getSpecializationOptions = async (req, res) => {
 
 export async function getSubjectOptions(req, res) {
     try {
-        const { courseId, term, sessionId, userId, unmapped } = req.query;
-        const academicYearId = getAcademicYearId();
+        const {
+            courseId,
+            term,
+            sessionId,
+            batchId,
+            classSectionsId,
+            classSectionId,
+            classSectionTermId,
+            curriculumId,
+            year,
+            userId,
+            unmapped,
+        } = req.query;
         const isUnmapped = unmapped === true || unmapped === 'true';
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
-            academicYearId,
             sessionId,
             userId,
             isUnmapped,
+            {
+                batchId,
+                year,
+                classSectionsId: classSectionsId ?? classSectionId,
+                classSectionTermId,
+                curriculumId,
+            },
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
@@ -119,14 +142,30 @@ export async function getMySubjectOptions(req, res) {
             return ErrorResponse(res, validation.status, validation.message);
         }
         const { userId } = validation;
-        const { courseId, term, sessionId } = req.query;
-        const academicYearId = getAcademicYearId();
+        const {
+            courseId,
+            term,
+            sessionId,
+            batchId,
+            classSectionsId,
+            classSectionId,
+            classSectionTermId,
+            curriculumId,
+            year,
+        } = req.query;
         const result = await optionsServices.getSubjectOptions(
             courseId,
             term,
-            academicYearId,
             sessionId,
             userId,
+            false,
+            {
+                batchId,
+                year,
+                classSectionsId: classSectionsId ?? classSectionId,
+                classSectionTermId,
+                curriculumId,
+            },
         );
         return SuccessResponse(res, 200, "Subject options fetched successfully", result);
     } catch (error) {
@@ -157,29 +196,13 @@ export const getTimeTableStructureOptions = async (req, res) => {
     }
 };
 
-export const getFeePlanOptions = async (req, res) => {
-    try {
-        const result = await optionsServices.getFeePlanOptions(req.query);
-        return SuccessResponse(res, 200, "Fee plan options fetched successfully", result);
-    } catch (error) {
-        console.error("Error in getFeePlanOptions:", error);
-        return ErrorResponse(res, 500, "Internal Server Error", error.message);
-    }
-};
-
 export const getLectureWindowOptions = async (req, res) => {
     try {
         const { userId, employeeId, subjectId, date, sessionId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLectureWindowOptions(
             userId != null ? Number(userId) : undefined,
             employeeId != null ? Number(employeeId) : undefined,
             Number(subjectId),
-            Number(academicYearId),
             date,
             sessionId != null ? Number(sessionId) : undefined,
         );
@@ -197,16 +220,10 @@ export const getMyLectureWindowOptions = async (req, res) => {
     try {
         const userId = req.user.userId;
         const { subjectId, date, sessionId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLectureWindowOptions(
             Number(userId),
             undefined,
             Number(subjectId),
-            Number(academicYearId),
             date,
             sessionId != null ? Number(sessionId) : undefined,
         );
@@ -223,14 +240,8 @@ export const getMyLectureWindowOptions = async (req, res) => {
 export const getLessonOptions = async (req, res) => {
     try {
         const { lectureWindowId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLessonOptions(
             Number(lectureWindowId),
-            Number(academicYearId),
         );
         return SuccessResponse(res, 200, "Lesson options fetched successfully", result);
     } catch (error) {
@@ -248,14 +259,8 @@ export const getMyLessonOptions = async (req, res) => {
         }
 
         const { lectureWindowId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getLessonOptions(
             Number(lectureWindowId),
-            Number(academicYearId),
             validation.userId,
         );
         return SuccessResponse(res, 200, "Lesson options fetched successfully", result);
@@ -269,14 +274,8 @@ export const getMyLessonOptions = async (req, res) => {
 export const getTopicOptions = async (req, res) => {
     try {
         const { lessonId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getTopicOptions(
             Number(lessonId),
-            Number(academicYearId),
         );
         return SuccessResponse(res, 200, "Topic options fetched successfully", result);
     } catch (error) {
@@ -294,14 +293,8 @@ export const getMyTopicOptions = async (req, res) => {
         }
 
         const { lessonId } = req.query;
-        const academicYearId = getAcademicYearId();
-        if (!academicYearId) {
-            return ErrorResponse(res, 400, "academicYearId not found in user session");
-        }
-
         const result = await optionsServices.getTopicOptions(
             Number(lessonId),
-            Number(academicYearId),
             validation.userId,
         );
         return SuccessResponse(res, 200, "Topic options fetched successfully", result);

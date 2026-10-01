@@ -42,12 +42,15 @@ function mapStudentRow(raw, dbStatus) {
 
   return {
     studentId: student.studentId,
+    scholarNumber: student.scholarNumber || null,
     enrollmentNumber: student.enrollNumber,
     firstName: student.firstName || null,
     middleName: student.middleName || null,
     lastName: student.lastName || null,
     courseId: student.courseId,
     courseName: student.course ? student.course.courseName : null,
+    batchId: student.batchId || (student.batch ? student.batch.batchId : null) || null,
+    batch: student.batch ? student.batch.batch : null,
     sessionId: raw.mapperSessionId,
     sessionName: student.studentSession ? student.studentSession.sessionName : null,
     term: raw.classSectionTerm ? raw.classSectionTerm.term : null,
@@ -699,6 +702,9 @@ function schedulesToSubjectList(scheduleRows, mappedScheduleIds, roomSeatingMap)
           : null,
       subjectName: sub ? sub.subjectName : null,
       subjectCode: sub ? sub.subjectCode : null,
+      batchId: plain.batchId || (plain.batch ? plain.batch.batchId : null) || null,
+      batch: plain.batch ? plain.batch.batch : null,
+      curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId || null,
       term: resolveScheduleTerm(plain),
       examDate: plain.examDate || null,
       examTime: plain.examTime || null,
@@ -745,7 +751,12 @@ function flattenHallTicketDetail(ticket, scheduleRows, mappedScheduleIds, roomSe
     studentLastName: st ? st.lastName : null,
     scholarNumber: st ? st.scholarNumber : null,
     enrollNumber: st ? st.enrollNumber : null,
-    sessionName: es ? es.sessionName : null,
+    courseId: st ? st.courseId : null,
+    courseName: st && st.course ? st.course.courseName : null,
+    batchId: st ? (st.batchId || (st.batch ? st.batch.batchId : null) || null) : null,
+    batch: st && st.batch ? st.batch.batch : null,
+    sessionId: st ? st.sessionId : null,
+    sessionName: st && st.studentSession ? st.studentSession.sessionName : (es ? es.sessionName : null),
     academicYearTitle: academicYear ? academicYear.yearTitle : null,
     assessmentTypeId: es ? es.assessmentTypeId : null,
     examType: assessmentType ? assessmentType.examCategory : null,
@@ -765,6 +776,7 @@ async function fetchHallTicketWithSchedules(ticket, transaction) {
     : null;
   const courseId = student.courseId;
   const sessionId = student.sessionId;
+  const batchId = student.batchId || (student.batch ? student.batch.batchId : null) || null;
 
   if (term == null || courseId == null || sessionId == null) {
     return flattenHallTicketDetail(ticket, [], [], new Map());
@@ -773,7 +785,7 @@ async function fetchHallTicketWithSchedules(ticket, transaction) {
   const schedules =
     await studentHallTicketRepository.getSchedulesWithSubjectsForExaminationSession(
       ticket.examinationSessionId,
-      { courseId, sessionId, term },
+      { courseId, sessionId, term, batchId },
       transaction,
     );
 

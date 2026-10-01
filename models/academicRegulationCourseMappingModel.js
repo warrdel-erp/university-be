@@ -1,8 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import academicRegulationModel from "./academicRegulationModel.js";
-import courseModel from "./courseModel.js";
-import sessionModel from "./sessionModel.js";
+import batchModel from "./batchModel.js";
 import users from "./userModel.js";
 import instituteModel from "./instituteModel.js";
 import university from "./universityModel.js";
@@ -25,22 +24,13 @@ const academicRegulationCourseMappingModel = sequelize.define(
                 key: 'academic_regulation_id'
             }
         },
-        courseId: {
+        batchId: {
             type: DataTypes.INTEGER,
             allowNull: false,
-            field: 'course_id',
+            field: 'batch_id',
             references: {
-                model: courseModel,
-                key: 'course_id'
-            }
-        },
-        sessionId: {
-            type: DataTypes.INTEGER,
-            allowNull: false,
-            field: 'session_id',
-            references: {
-                model: sessionModel,
-                key: 'session_id'
+                model: batchModel,
+                key: 'batch_id'
             }
         },
         instituteId: {
@@ -100,7 +90,14 @@ const academicRegulationCourseMappingModel = sequelize.define(
     {
         tableName: 'academic_regulation_course_mapping',
         timestamps: true,
-        paranoid: true
+        paranoid: true,
+        indexes: [
+            {
+                unique: true,
+                fields: ['academic_regulation_id', 'batch_id'],
+                name: 'unique_regulation_batch'
+            }
+        ]
     }
 );
 

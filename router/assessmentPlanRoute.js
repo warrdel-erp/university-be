@@ -28,22 +28,19 @@ export const createSubjectMappingBody = z.object({
     .number()
     .int()
     .positive("assessmentPlanId is required"),
-  subjectId: z.coerce.number().int().positive("subjectId is required"),
-  curriculumBatchTermMappingId: z.coerce
+  batchId: z.coerce.number().int().positive("batchId is required"),
+  curriculumSubjectTermMappingId: z.coerce
     .number()
     .int()
-    .positive("curriculumBatchTermMappingId is required"),
-  courseId: z.coerce.number().int().positive("courseId is required"),
-  sessionId: z.coerce.number().int().positive("sessionId is required"),
+    .positive("curriculumSubjectTermMappingId is required"),
+  subjectId: z.coerce.number().int().positive().optional(),
 });
 
 export const listSubjectMappingQuery = z.object({
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
+  batchId: z.union([z.string(), z.number()]).optional(),
+  curriculumSubjectTermMappingId: z.union([z.string(), z.number()]).optional(),
   subjectId: z.union([z.string(), z.number()]).optional(),
-  curriculumBatchTermMappingId: z.union([z.string(), z.number()]).optional(),
-  courseId: z.union([z.string(), z.number()]).optional(),
-  sessionId: z.union([z.string(), z.number()]).optional(),
-  academicYearId: z.union([z.string(), z.number()]).optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
 });
@@ -58,21 +55,14 @@ export const batchCoursesSessionsQuerySchema = z.object({
 });
 
 export const overviewQuerySchema = z.object({
-  curriculumBatchMappingId: z.coerce
-    .number()
-    .int()
-    .positive("curriculumBatchMappingId is required"),
+  batchId: z.coerce.number().int().positive().optional(),
   term: z.coerce.number().int().positive().optional(),
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().optional().default(10),
   pageSize: z.union([z.string(), z.number()]).optional(),
-  courseId: z.union([z.string(), z.number()]).optional(),
-  sessionId: z.union([z.string(), z.number()]).optional(),
   subjectId: z.union([z.string(), z.number()]).optional(),
-  curriculumBatchTermMappingId: z.union([z.string(), z.number()]).optional(),
   assessmentPlanId: z.union([z.string(), z.number()]).optional(),
   academicRegulationId: z.union([z.string(), z.number()]).optional(),
-  
   assignmentStatus: z
     .enum(["assigned", "unassigned", "all"])
     .optional()
@@ -92,6 +82,7 @@ export const createAssessmentPlanBody = z.object({
   planName: z.string().min(1).max(100),
   planCode: z.string().min(1).max(50),
   description: z.string().max(500).optional().nullable(),
+  batchId: z.coerce.number().int().positive().optional().nullable(),
   courseId: z.coerce.number().int().positive().optional().nullable(),
   regulationId: z.coerce.number().int().positive().optional().nullable(),
   gradingId: z.coerce.number().int().positive().optional().nullable(),
@@ -111,9 +102,9 @@ export const listAssessmentPlanQuery = z.object({
     (val) => (val === "Draft" || val === "Published" ? val : undefined),
     z.enum(["Draft", "Published"]).optional(),
   ),
+  batchId: z.union([z.string(), z.number()]).optional(),
   courseId: z.union([z.string(), z.number()]).optional(),
   regulationId: z.union([z.string(), z.number()]).optional(),
-  academicYearId: z.union([z.string(), z.number()]).optional(),
   gradingId: z.union([z.string(), z.number()]).optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),

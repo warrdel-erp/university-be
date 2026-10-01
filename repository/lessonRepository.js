@@ -81,7 +81,7 @@ export async function getLessonDetails(academicYearId) {
         {
           model: model.sessionModel,
           as: "lessionSession",
-          attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
+          attributes: ["sessionName"],
         },
         {
           model: model.topicModel,
@@ -168,7 +168,7 @@ export async function getSingleLessonDetails(lessonId) {
         {
           model: model.sessionModel,
           as: "lessionSession",
-          attributes: ["sessionName", "startingDate", "endingDate", "classTillDate"],
+          attributes: ["sessionName"],
         },
         lectureWindowInclude,
         {
@@ -1306,8 +1306,6 @@ export async function findTeacherPublishedWeekDateWiseHierarchy({
           attributes: [
             'sessionId',
             'sessionName',
-            'startingDate',
-            'endingDate',
             'academicYearId',
           ],
         })

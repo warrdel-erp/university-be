@@ -41,8 +41,16 @@ export const dateStringSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
 
+export const selectionItemSchema = z.object({
+  batchId: z.coerce.number().int().positive().optional(),
+  courseId: z.coerce.number().int().positive().optional(),
+  sessionId: z.coerce.number().int().positive().optional(),
+  terms: z.array(z.coerce.number().int().positive()).optional(),
+  term: z.coerce.number().int().positive().optional(),
+});
+
 /**
- * JSON-encoded selections array: [{ courseSessionMappingId, terms }].
+ * JSON-encoded selections array: [{ batchId, courseId, sessionId, terms }].
  * Accepts a JSON string from query params and parses it.
  */
 export const selectionsSchema = z.preprocess(
@@ -54,12 +62,5 @@ export const selectionsSchema = z.preprocess(
       return undefined;
     }
   },
-  z
-    .array(
-      z.object({
-        courseSessionMappingId: z.number().int().positive(),
-        terms: z.array(z.number().int().positive()),
-      }),
-    )
-    .optional(),
+  z.array(selectionItemSchema).optional(),
 );

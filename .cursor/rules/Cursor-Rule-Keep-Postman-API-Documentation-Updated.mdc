@@ -1,6 +1,5 @@
 ---
-globs: docs/postman/univ-v2.postman_collection.json,docs/postman/univ-v2-department-positions.postman_collection.json
-globs: docs/postman/univ-v2.postman_collection.json, docs/postman/univ-v2-timetable.postman_collection.json
+globs: docs/postman/univ-v2.postman_collection.json,docs/postman/univ-v2-department-positions.postman_collection.json,docs/postman/univ-v2-timetable.postman_collection.json,docs/postman/univ-v2-fee-plan-item.postman_collection.json,docs/postman/FEE_PLAN_ITEM.md
 alwaysApply: false
 ---
 

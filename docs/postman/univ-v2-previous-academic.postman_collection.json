@@ -1,0 +1,250 @@
+{
+  "info": {
+    "_postman_id": "previous-academic-api-collection-v1",
+    "name": "Previous Academic Module",
+    "description": "Previous Academic APIs (router/previousAcademicRoute.js).\n\nMount: /previousAcademic\n\nAuth: Bearer {{token}}\n\nDocs: docs/postman/PREVIOUS_ACADEMIC.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseurl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "courseId", "value": "34" },
+    { "key": "sessionId", "value": "6" },
+    { "key": "curriculumBatchMappingId", "value": "2" },
+    { "key": "curriculumBatchTermMappingId", "value": "11" },
+    { "key": "studentId", "value": "2166" },
+    { "key": "page", "value": "1" },
+    { "key": "limit", "value": "10" }
+  ],
+  "item": [
+    {
+      "name": "1. Batches",
+      "item": [
+        {
+          "name": "1.1 List previous academic batches",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/batches?courseId={{courseId}}&sessionId={{sessionId}}&status=&search=",
+              "host": ["{{baseurl}}"],
+              "path": ["previousAcademic", "batches"],
+              "query": [
+                { "key": "courseId", "value": "{{courseId}}", "description": "Optional programme filter" },
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" },
+                { "key": "status", "value": "", "description": "Optional batch status filter", "disabled": true },
+                { "key": "search", "value": "", "description": "Optional free-text search", "disabled": true }
+              ]
+            },
+            "description": "GET /previousAcademic/batches\n\nReturns programmes and previous batches for the active academic year."
+          }
+        },
+        {
+          "name": "1.2 Get single batch details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/batches/{{curriculumBatchMappingId}}?sessionId={{sessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["previousAcademic", "batches", "{{curriculumBatchMappingId}}"],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" }
+              ]
+            },
+            "description": "GET /previousAcademic/batches/:curriculumBatchMappingId\n\nReturns term-wise setup and marks progress for one curriculum batch mapping."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Term subjects",
+      "item": [
+        {
+          "name": "2.1 Get term subjects",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/subjects?sessionId={{sessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["previousAcademic", "terms", "{{curriculumBatchTermMappingId}}", "subjects"],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" }
+              ]
+            },
+            "description": "GET /previousAcademic/terms/:curriculumBatchTermMappingId/subjects"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Term students",
+      "item": [
+        {
+          "name": "3.1 List term students",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/students?sessionId={{sessionId}}&status=Ready&page={{page}}&limit={{limit}}",
+              "host": ["{{baseurl}}"],
+              "path": ["previousAcademic", "terms", "{{curriculumBatchTermMappingId}}", "students"],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" },
+                { "key": "status", "value": "Ready", "description": "Ready | warning (Ready with warning accepted)" },
+                { "key": "page", "value": "{{page}}", "description": "Default 1" },
+                { "key": "limit", "value": "{{limit}}", "description": "Default 25, max 100" }
+              ]
+            },
+            "description": "GET /previousAcademic/terms/:curriculumBatchTermMappingId/students"
+          }
+        },
+        {
+          "name": "3.2 List term student marks",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/students/marks?sessionId={{sessionId}}&status=Complete&page={{page}}&limit={{limit}}",
+              "host": ["{{baseurl}}"],
+              "path": ["previousAcademic", "terms", "{{curriculumBatchTermMappingId}}", "students", "marks"],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" },
+                { "key": "status", "value": "Complete", "description": "Complete | Blocking" },
+                { "key": "page", "value": "{{page}}", "description": "Optional pagination" },
+                { "key": "limit", "value": "{{limit}}", "description": "Max 100" }
+              ]
+            },
+            "description": "GET /previousAcademic/terms/:curriculumBatchTermMappingId/students/marks\n\nReturns term student marks plus batchYear-matched regulation and grading basic details.\n\nResponse includes:\n- batch / batchYear\n- regulation: academicRegulationId, regulationCode, regulationName, applicableBatch, academicYearRange, status, version, gradingSchemeId\n- grading: gradingId, gradingName, gradingCode, gradingMethod\n\nRegulation is resolved by course + session + applicableBatch matching the term admission batch year."
+          }
+        },
+        {
+          "name": "3.3 Get single term student details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/students/{{studentId}}?sessionId={{sessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": [
+                "previousAcademic",
+                "terms",
+                "{{curriculumBatchTermMappingId}}",
+                "students",
+                "{{studentId}}"
+              ],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" }
+              ]
+            },
+            "description": "GET /previousAcademic/terms/:curriculumBatchTermMappingId/students/:studentId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Marks upload",
+      "item": [
+        {
+          "name": "4.1 Download marks template",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/students/template?sessionId={{sessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": [
+                "previousAcademic",
+                "terms",
+                "{{curriculumBatchTermMappingId}}",
+                "students",
+                "template"
+              ],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" }
+              ]
+            },
+            "description": "GET /previousAcademic/terms/:curriculumBatchTermMappingId/students/template"
+          }
+        },
+        {
+          "name": "4.2 Upload term marks",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "marks",
+                  "type": "file",
+                  "src": [],
+                  "description": "Excel/CSV marks file. Also accepts field names: file, students"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/students/upload?sessionId={{sessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": [
+                "previousAcademic",
+                "terms",
+                "{{curriculumBatchTermMappingId}}",
+                "students",
+                "upload"
+              ],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" }
+              ]
+            },
+            "description": "POST /previousAcademic/terms/:curriculumBatchTermMappingId/students/upload\n\nmultipart/form-data with marks|file|students"
+          }
+        },
+        {
+          "name": "4.3 Get term upload history",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/previousAcademic/terms/{{curriculumBatchTermMappingId}}/uploads?sessionId={{sessionId}}",
+              "host": ["{{baseurl}}"],
+              "path": ["previousAcademic", "terms", "{{curriculumBatchTermMappingId}}", "uploads"],
+              "query": [
+                { "key": "sessionId", "value": "{{sessionId}}", "description": "Optional session filter" }
+              ]
+            },
+            "description": "GET /previousAcademic/terms/:curriculumBatchTermMappingId/uploads"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -3,9 +3,9 @@ import { DataTypes } from "sequelize";
 import examinationSessionModel from "./examinationSessionModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 import courseModel from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
+import batchModel from "./batchModel.js";
 
 const examinationSessionTermModel = sequelize.define(
   "examination_session_term",
@@ -43,6 +43,15 @@ const examinationSessionTermModel = sequelize.define(
         key: "session_id",
       },
     },
+    batchId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "batch_id",
+      references: {
+        model: batchModel,
+        key: "batch_id",
+      },
+    },
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -59,15 +68,6 @@ const examinationSessionTermModel = sequelize.define(
       references: {
         model: instituteModel,
         key: "institute_id",
-      },
-    },
-    academicYearId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "acedmic_year_id",
-      references: {
-        model: acedmicYearModel,
-        key: "acedmic_year_id",
       },
     },
     /** Program term number (e.g. 1, 2, 4) — not a class_section_term FK. */
@@ -117,7 +117,6 @@ const examinationSessionTermModel = sequelize.define(
 examinationSessionTermModel.scopeConfig = {
   university: true,
   institute: true,
-  academicYear: true,
 };
 
 export default examinationSessionTermModel;

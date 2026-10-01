@@ -10,6 +10,13 @@ const router = Router();
 
 const getCourseSessionsSchema = z.object({});
 
+const optionalPositiveIntegerId = z
+  .union([
+    z.string().regex(/^\d+$/).transform(Number),
+    z.number().int().positive().optional(),
+  ])
+  .optional();
+
 const listCoursesSchema = z.object({
   instituteId: z
     .string()
@@ -26,14 +33,9 @@ const listCoursesSchema = z.object({
 const courseListWithSubjectsSchema = z.object({});
 
 const classSectionsGroupedSchema = z.object({
-  courseId: z
-    .string()
-    .regex(/^\d+$/, "Course Id must be a number")
-    .transform((val) => parseInt(val)),
-  sessionId: z
-    .string()
-    .regex(/^\d+$/, "Session Id must be a number")
-    .transform((val) => parseInt(val)),
+  batchId: z.coerce.number().int().positive("batchId is required"),
+  year: z.coerce.number().int().positive().optional(),
+  term: z.coerce.number().int().positive().optional(),
 });
 
 const courseIdParamSchema = z.object({
@@ -50,23 +52,67 @@ const getSingleCourseQuerySchema = z.object({
   ),
 });
 
+const getSubjectsByTeacherQuerySchema = z.object({
+  userId: z.coerce
+    .number()
+    .int()
+    .positive({ message: "userId must be a positive integer" })
+    .optional(),
+  search: z.string().optional(),
+  batchId: optionalPositiveIntegerId,
+  courseId: optionalPositiveIntegerId,
+  sessionId: optionalPositiveIntegerId,
+  year: optionalPositiveIntegerId,
+});
+
 // Routes
-router.get("/", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: listCoursesSchema }), courseController.listCourses);
+router.get(
+  "/",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ query: listCoursesSchema }),
+  courseController.listCourses,
+);
 
-router.get("/single", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: getSingleCourseQuerySchema }), courseController.getSingleCourse);
+router.get(
+  "/single",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ query: getSingleCourseQuerySchema }),
+  courseController.getSingleCourse,
+);
 
-router.get("/withSubjects", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: courseListWithSubjectsSchema }), courseController.getCourseWithSubjects);
+router.get(
+  "/withSubjects",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ query: courseListWithSubjectsSchema }),
+  courseController.getCourseWithSubjects,
+);
 
+router.get(
+  "/subjects",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value, null),
+  validate({ query: getSubjectsByTeacherQuerySchema }),
+  courseController.getTeacherMappedSubjects,
+);
 router.get("/my/single", userAuth, courseController.getMyMappedSubjectById);
 router.get("/my/subjects", userAuth, courseController.getMyMappedSubjects);
 router.get(
   "/my/:courseId/sessions",
   userAuth,
   validate({ params: courseIdParamSchema, query: getCourseSessionsSchema }),
-  courseController.getMyCourseSessions
+  courseController.getMyCourseSessions,
 );
 
-router.get("/:courseId/sessions", userAuth, checkAccess(PERMISSIONS.COURSES.value), validate({ query: getCourseSessionsSchema }), courseController.getCourseSessions);
+router.get(
+  "/:courseId/sessions",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value),
+  validate({ params: courseIdParamSchema, query: getCourseSessionsSchema }),
+  courseController.getCourseSessions,
+);
 
 router.get(
   "/termsWithClassSections",

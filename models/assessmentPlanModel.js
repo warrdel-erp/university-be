@@ -10,15 +10,6 @@ const assessmentPlanModel = sequelize.define(
             autoIncrement: true,
             field: 'assessment_plan_id'
         },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'acedmic_year_id',
-            references: {
-                model: 'acedmic_year',
-                key: 'acedmic_year_id'
-            }
-        },
         planName: {
             type: DataTypes.STRING(100),
             allowNull: false,
@@ -34,13 +25,13 @@ const assessmentPlanModel = sequelize.define(
             allowNull: true,
             field: 'description'
         },
-        courseId: {
+        batchId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'course_id',
+            field: 'batch_id',
             references: {
-                model: 'course',
-                key: 'course_id'
+                model: 'batch',
+                key: 'batch_id'
             }
         },
         regulationId: {
@@ -137,7 +128,6 @@ const assessmentPlanModel = sequelize.define(
 assessmentPlanModel.scopeConfig = {
   university: true,
   institute: true,
-  academicYear: true,
 };
 
 export default assessmentPlanModel;

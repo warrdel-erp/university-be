@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import userAuth from "../middleware/authUser.js";
 import { validate } from "../utility/validation.js";
+import { selectionsSchema } from "../utility/examZodSchemas.js";
 import {
   generateAnswerSheetQrBulk,
   getAnswerSheetQrById,
@@ -186,6 +187,10 @@ const myAssignedScriptsQuerySchema = paginationSchema.extend({
   ),
 });
 
+const myAnswerSheetSkuStatsQuerySchema = z.object({
+  examinationSessionId: positiveIntegerQueryId,
+});
+
 const positiveIntegerId = z.preprocess(
   (val) => (typeof val === "string" ? parseInt(val, 10) : val),
   z
@@ -205,24 +210,7 @@ const numberList = z.preprocess(
   z.array(z.coerce.number().int().positive()).optional(),
 );
 
-const mappedSelectionsSchema = z.preprocess(
-  (val) => {
-    if (!val || val === "") return undefined;
-    try {
-      return typeof val === "string" ? JSON.parse(val) : val;
-    } catch {
-      return undefined;
-    }
-  },
-  z
-    .array(
-      z.object({
-        courseSessionMappingId: z.coerce.number().int().positive(),
-        terms: z.array(z.coerce.number().int().positive()),
-      }),
-    )
-    .optional(),
-);
+const mappedSelectionsSchema = selectionsSchema;
 
 const listMappedAnswerSheetsSchema = z.object({
   examinationSessionId: positiveIntegerId,
@@ -334,12 +322,14 @@ router.get(
 router.get(
   "/my/skuStats",
   userAuth,
+  validate({ query: myAnswerSheetSkuStatsQuerySchema }),
   getMyAnswerSheetSkuStats,
 );
 
 router.get(
   "/my/summary",
   userAuth,
+  validate({ query: myAnswerSheetSkuStatsQuerySchema }),
   getMyEvaluationSummary,
 );
 

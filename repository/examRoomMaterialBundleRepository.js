@@ -127,7 +127,15 @@ export async function getBundleList(filters, pagination) {
                 attributes: [
                   "curriculumBatchMappingId",
                   "curriculumId",
-                  "batch",
+                  "batchId",
+                ],
+                include: [
+                  {
+                    model: model.batchModel,
+                    as: "batch",
+                    attributes: ["batchId", "batch", "sessionId"],
+                    required: false,
+                  },
                 ],
                 required: true,
               },
@@ -881,7 +889,8 @@ export async function findRoomCapacitiesForBundleRoom(
           "examDate",
           "examinationSessionSlotId",
           "examinationSessionId",
-          "sessionId",
+          "batchId",
+          "curriculumSubjectTermMappingId",
           "term",
         ],
         include: [
@@ -889,6 +898,18 @@ export async function findRoomCapacitiesForBundleRoom(
             model: model.subjectModel,
             as: "subjectSchedule",
             attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+          },
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId"],
+            required: false,
+          },
+          {
+            model: model.curriculumSubjectTermMappingModel,
+            as: "curriculumSubjectTermMapping",
+            attributes: ["curriculumSubjectTermMappingId", "term"],
+            required: false,
           },
           {
             model: model.examinationSessionSlotModel,

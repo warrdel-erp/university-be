@@ -79,25 +79,22 @@ export async function teacherSectionMapping(data) {
 export async function getTeacherSectionMapping({
     userId,
     sessionId,
-    academicYearId = getAcademicYearId(),
+    batchId,
     search,
     page = 1,
     limit = 20,
 } = {}) {
     try {
-        const universityId = getTenantStore().universityId;
-
         const classSectionWhere = {
-            ...(academicYearId != null && { academicYearId }),
-            ...(sessionId && { sessionId }),
+            ...(sessionId && { sessionId: Number(sessionId) }),
+            ...(batchId && { batchId: Number(batchId) }),
             ...buildScope(model.classSectionModel),
         };
         const employeeWhere = buildScope(model.employeeModel);
-        const courseWhere = buildScope(model.courseModel);
 
         const mappingWhere = {};
         if (userId) {
-            mappingWhere.userId = userId;
+            mappingWhere.userId = Number(userId);
         }
 
         const trimmedSearch = search?.trim();
@@ -107,20 +104,14 @@ export async function getTeacherSectionMapping({
                 { '$employeeData.employee_name$': { [Op.like]: term } },
                 { '$employeeData.employee_Code$': { [Op.like]: term } },
                 { '$employeeSection.section$': { [Op.like]: term } },
-                { '$employeeSection.employeeCourse.course_name$': { [Op.like]: term } },
-                { '$employeeSection.employeeCourse.course_code$': { [Op.like]: term } },
-                { '$employeeSection.classSession.session_name$': { [Op.like]: term } },
+                { '$employeeSection.batch.batch$': { [Op.like]: term } },
+                { '$employeeSection.batch.session.session_name$': { [Op.like]: term } },
+                { '$employeeSection.batch.session.course.course_name$': { [Op.like]: term } },
+                { '$employeeSection.batch.session.course.course_code$': { [Op.like]: term } },
             ];
         }
 
         const include = [
-            {
-                model: model.userModel,
-                as: 'userTeacherSectionMapping',
-                attributes: ['universityId', 'userId'],
-                where: { universityId, ...buildScope(model.userModel) },
-                required: true,
-            },
             {
                 model: model.employeeModel,
                 as: 'employeeData',
@@ -136,17 +127,33 @@ export async function getTeacherSectionMapping({
                 required: true,
                 include: [
                     {
-                        model: model.courseModel,
-                        as: 'employeeCourse',
-                        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-                        where: courseWhere,
-                        required: true,
-                    },
-                    {
-                        model: model.sessionModel,
-                        as: 'classSession',
-                        attributes: ['sessionId', 'sessionName', 'startingDate', 'endingDate', 'classTillDate'],
+                        model: model.batchModel,
+                        as: 'batch',
+                        attributes: ['batchId', 'sessionId', 'batch', 'status', 'intakeCapacity'],
                         required: false,
+                        include: [
+                            {
+                                model: model.sessionModel,
+                                as: 'session',
+                                attributes: ['sessionId', 'sessionName', 'courseId'],
+                                required: false,
+                                include: [
+                                    {
+                                        model: model.courseModel,
+                                        as: 'course',
+                                        attributes: [
+                                            'courseId',
+                                            'courseName',
+                                            'courseCode',
+                                            'courseDuration',
+                                            'totalTerms',
+                                            'termType',
+                                        ],
+                                        required: false,
+                                    },
+                                ],
+                            },
+                        ],
                     },
                     classSectionTermsInclude(),
                 ],
@@ -156,7 +163,7 @@ export async function getTeacherSectionMapping({
         const offset = (page - 1) * limit;
         const queryOptions = {
             attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
-            ...(Object.keys(mappingWhere).length && { where: mappingWhere }),
+            where: mappingWhere,
             include,
             offset,
             limit,
@@ -169,12 +176,12 @@ export async function getTeacherSectionMapping({
             const plain = row.get({ plain: true });
             if (plain.employeeSection) {
                 plain.employeeSection.termType =
-                    plain.employeeSection.employeeCourse?.termType ?? null;
+                    plain.employeeSection.batch?.session?.course?.termType ?? null;
             }
             return plain;
         });
         const totalCount = await scoped(model.teacherSectionMappingModel).count({
-            ...(queryOptions.where && { where: queryOptions.where }),
+            where: mappingWhere,
             include,
             distinct: true,
             col: 'teacher_section_mapping_id',

@@ -1,6 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import acedmicYearModel from "./acedmicYearModel.js";
 import university from './universityModel.js';
 import campus from './campusModel.js';
 import institute from './instituteModel.js';
@@ -12,20 +11,10 @@ import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import users from "./userModel.js";
 import sessionModel from "./sessionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
-import feePlanProfileModel from "./feePlanProfileModel.js";
 
 const studentModel = sequelize.define(
     'students',
     {
-                academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'acedmic_year_id',
-            references: {
-                model: acedmicYearModel,
-                key: 'acedmic_year_id'
-            }
-        },
         studentId: {
             type: DataTypes.INTEGER,
             primaryKey: true,
@@ -122,6 +111,15 @@ const studentModel = sequelize.define(
                 key: 'session_id'
             }
         },
+        batchId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'batch_id',
+            references: {
+                model: 'batch',
+                key: 'batch_id',
+            },
+        },
         classSectionTermId: {
             type: DataTypes.INTEGER,
             allowNull: true,
@@ -130,15 +128,6 @@ const studentModel = sequelize.define(
                 model: classSectionTermModel,
                 key: 'class_section_term_id'
             }
-        },
-        feePlanProfileId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'fee_plan_profile_id',
-            references: {
-                model: feePlanProfileModel,
-                key: 'fee_plan_profile_id',
-            },
         },
         scholarNumber: {
             type: DataTypes.STRING(150),
@@ -364,10 +353,24 @@ const studentModel = sequelize.define(
             allowNull: true,
             field: 'c_city',
         },
+        /**
+         * Legacy batch year integer (e.g. 2024).
+         * @deprecated — use batchId (FK to batch) instead.
+         * Kept nullable during transition.
+         */
         batchYear: {
             type: DataTypes.INTEGER,
-            allowNull: false,
+            allowNull: true,
             field: 'batch_year'
+        },
+        /**
+         * FK to batch — the canonical batch entity.
+         * Replaces the raw batchYear integer as the source of truth.
+         */
+        batchId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'batch_id'
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -390,15 +393,6 @@ const studentModel = sequelize.define(
                 key: 'user_id'
             }
         },
-        // updatedBy: {
-        //     type: DataTypes.INTEGER,
-        //     allowNull: false,
-        //     field: 'updated_by',
-        //     references: {
-        //         model: users,
-        //         key: 'user_id'
-        //     }
-        // },
         deletedAt: {
             type: DataTypes.DATE,
             allowNull: true,
@@ -430,6 +424,6 @@ studentModel.beforeValidate(async (student, options) => {
     }
 });
 
-studentModel.scopeConfig = { university: true, institute: true, academicYear: true };
+studentModel.scopeConfig = { university: true, institute: true, academicYear: false };
 
 export default studentModel;

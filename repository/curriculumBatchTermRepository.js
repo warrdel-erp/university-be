@@ -17,8 +17,16 @@ export function curriculumBatchTermScheduleInclude() {
       {
         model: model.curriculumBatchMappingModel,
         as: "batchMapping",
-        attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+        attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
         required: true,
+        include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId", "status"],
+            required: true,
+          },
+        ],
       },
     ],
   };
@@ -39,9 +47,15 @@ export async function findContextById(curriculumBatchTermMappingId, options = {}
         {
           model: model.curriculumBatchMappingModel,
           as: "batchMapping",
-          attributes: ["curriculumBatchMappingId", "curriculumId", "batch"],
+          attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
           required: true,
           include: [
+            {
+              model: model.batchModel,
+              as: "batch",
+              attributes: ["batchId", "batch", "sessionId", "status"],
+              required: true,
+            },
             {
               model: model.curriculumModel,
               as: "curriculum",
@@ -68,7 +82,9 @@ export async function findContextById(curriculumBatchTermMappingId, options = {}
     term: Number(plain.term),
     yearNumber: Number(plain.yearNumber),
     year: Number(plain.year),
-    batch: Number(batchMapping.batch),
+    batch: Number(batchMapping.batch.batch),
+    batchId: Number(batchMapping.batchId),
+    sessionId: Number(batchMapping.batch.sessionId),
     curriculumId: Number(curriculum.curriculumId),
     courseId: Number(curriculum.courseId),
     curriculumName: curriculum.name,
@@ -93,11 +109,14 @@ export async function findClassSectionTermIdsByBatchTerm(context, filters = {}, 
     year: Number(context.yearNumber),
     ...buildScope(model.classSectionModel),
   };
+  const batchId = filters.batchId ?? context.batchId;
+  if (batchId != null) {
+    sectionWhere.batchId = Number(batchId);
+  } else if (filters.academicYearId != null) {
+    sectionWhere.academicYearId = Number(filters.academicYearId);
+  }
   if (filters.sessionId != null) {
     sectionWhere.sessionId = Number(filters.sessionId);
-  }
-  if (filters.academicYearId != null) {
-    sectionWhere.academicYearId = Number(filters.academicYearId);
   }
 
   const rows = await model.classSectionTermModel.findAll({
@@ -122,6 +141,61 @@ export async function findClassSectionTermIdsByBatchTerm(context, filters = {}, 
   return classSectionTermIds;
 }
 
+export async function findClassSectionsByBatchTerm(context, filters = {}, options = {}) {
+  const sectionWhere = {
+    courseId: Number(context.courseId),
+    year: Number(context.yearNumber),
+    ...buildScope(model.classSectionModel),
+  };
+  const batchId = filters.batchId ?? context.batchId;
+  if (batchId != null) {
+    sectionWhere.batchId = Number(batchId);
+  } else if (filters.academicYearId != null) {
+    sectionWhere.academicYearId = Number(filters.academicYearId);
+  }
+  if (filters.sessionId != null) {
+    sectionWhere.sessionId = Number(filters.sessionId);
+  }
+
+  const rows = await model.classSectionTermModel.findAll({
+    attributes: ["classSectionTermId", "classSectionsId", "term"],
+    where: { term: Number(context.term) },
+    include: [
+      {
+        model: model.classSectionModel,
+        as: "classSection",
+        attributes: [
+          "classSectionsId",
+          "section",
+          "batchId",
+          "year",
+          "sessionId",
+          "courseId",
+          "academicYearId",
+        ],
+        required: true,
+        where: sectionWhere,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  return rows.map((row) => {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const cs = plain.classSection || {};
+    return {
+      classSectionTermId: Number(plain.classSectionTermId),
+      classSectionsId: Number(plain.classSectionsId),
+      section: cs.section || null,
+      batchId: cs.batchId != null ? Number(cs.batchId) : (batchId != null ? Number(batchId) : null),
+      year: cs.year != null ? Number(cs.year) : Number(context.yearNumber),
+      term: Number(plain.term),
+      sessionId: cs.sessionId != null ? Number(cs.sessionId) : null,
+      courseId: cs.courseId != null ? Number(cs.courseId) : Number(context.courseId),
+    };
+  });
+}
+
 export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options = {}) {
   const ids = [...new Set(curriculumBatchTermMappingIds.map(Number))];
   if (!ids.length) return [];
@@ -135,8 +209,16 @@ export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options
       {
         model: model.curriculumBatchMappingModel,
         as: "batchMapping",
-        attributes: ["batch"],
+        attributes: ["curriculumBatchMappingId", "batchId"],
         required: true,
+        include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch"],
+            required: true,
+          },
+        ],
       },
     ],
     transaction: options.transaction,
@@ -149,7 +231,7 @@ export async function findEnrichmentByIds(curriculumBatchTermMappingIds, options
       curriculumBatchTermMappingId: Number(plain.curriculumBatchTermMappingId),
       term: Number(plain.term),
       yearNumber: Number(plain.yearNumber),
-      batchYear: Number(plain.batchMapping.batch),
+      batchYear: Number(plain.batchMapping.batch.batch),
     });
   }
   return result;

@@ -95,8 +95,11 @@ export const createExaminationSessionTerm = async (req, res) => {
 
 export const deleteExaminationSessionTerm = async (req, res) => {
   try {
-    const examinationSessionTermId = req.query.examinationSessionTermId || req.params.examinationSessionTermId;
-    const result = await examinationSessionServices.deleteExaminationSessionTerm(examinationSessionTermId);
+    const { examinationSessionTermId, examinationSessionId, batchId, term, courseId, sessionId } = req.query;
+    const target = examinationSessionTermId
+      ? Number(examinationSessionTermId)
+      : { examinationSessionId, batchId, term, courseId, sessionId };
+    const result = await examinationSessionServices.deleteExaminationSessionTerm(target);
     if (!result) {
       return ErrorResponse(res, 404, "Examination session term mapping not found");
     }
@@ -110,10 +113,17 @@ export const deleteExaminationSessionTerm = async (req, res) => {
 
 export const getClassSectionTermsBySetupType = async (req, res) => {
   try {
-    const { examSetupTypeId, examinationSessionId } = req.query;
+    const { examSetupTypeId, examinationSessionId, academicYearId } = req.query;
+    const resolvedAcademicYearId =
+      academicYearId ||
+      req.headers?.["academic-year-id"] ||
+      req.academicYearId;
     const result = await examinationSessionServices.getClassSectionTermsBySetupType(
       examSetupTypeId,
-      { examinationSessionId }
+      {
+        examinationSessionId,
+        academicYearId: resolvedAcademicYearId ? Number(resolvedAcademicYearId) : undefined,
+      }
     );
     return SuccessResponse(res, 200, "Mapped class section terms fetched successfully", result);
   } catch (error) {

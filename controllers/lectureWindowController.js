@@ -6,7 +6,7 @@ import { getAcademicYearId } from "../utility/requestContext.js";
 function requireActiveAcademicYearId(res) {
     const academicYearId = getAcademicYearId();
     if (!academicYearId) {
-        ErrorResponse(res, 400, "academicYearId not found in user session");
+        ErrorResponse(res, 400, "Active academicYearId is required");
         return null;
     }
     return Number(academicYearId);

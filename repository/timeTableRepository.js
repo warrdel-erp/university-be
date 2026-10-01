@@ -332,9 +332,6 @@ const structureListInclude = [
                 attributes: [
                     "sessionId",
                     "sessionName",
-                    "startingDate",
-                    "endingDate",
-                    "classTillDate",
                     "academicYearId",
                     "instituteId",
                 ],
@@ -370,9 +367,6 @@ export async function getTimeTableStructures(filters = {}) {
                 attributes: [
                     "sessionId",
                     "sessionName",
-                    "startingDate",
-                    "endingDate",
-                    "classTillDate",
                     "academicYearId",
                     "instituteId",
                 ],

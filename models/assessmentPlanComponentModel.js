@@ -19,15 +19,6 @@ const assessmentPlanComponentModel = sequelize.define(
                 key: 'exam_setup_type_id'
             }
         },
-        academicYearId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'acedmic_year_id',
-            references: {
-                model: 'acedmic_year',
-                key: 'acedmic_year_id'
-            }
-        },
         assessmentPlanId: {
             type: DataTypes.INTEGER,
             allowNull: false,

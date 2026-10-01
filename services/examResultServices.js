@@ -7,6 +7,7 @@ import {
   lookupStudentCount,
 } from "../utility/studentCount.js";
 import { getStudentCountMapByGroups } from "./studentCountServices.js";
+import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 import {
   decimalAdd,
   decimalDivide,
@@ -73,8 +74,10 @@ function schedulesForStudent(schedules, courseId, sessionId, term) {
   const applicable = [];
   for (const schedule of schedules) {
     const plain = schedule.get ? schedule.get({ plain: true }) : schedule;
-    if (Number(plain.subjectSchedule.courseId) !== Number(courseId)) continue;
-    if (Number(plain.sessionId) !== Number(sessionId)) continue;
+    const rawCourseId = plain.subjectSchedule?.courseId || plain.courseId;
+    const rawSessionId = plain.batch?.sessionId || plain.sessionId;
+    if (rawCourseId != null && Number(rawCourseId) !== Number(courseId)) continue;
+    if (rawSessionId != null && Number(rawSessionId) !== Number(sessionId)) continue;
     if (plain.term != null && Number(plain.term) !== Number(term)) continue;
     applicable.push(plain);
   }
@@ -119,44 +122,31 @@ async function resolveContext(query) {
   const examinationSession = {
     examinationSessionId: examSession.examinationSessionId,
     sessionName: examSession.sessionName,
-    academicYearId: examSession.academicYearId,
     assessmentTypeId: examSession.assessmentTypeId,
     status: examSession.status,
   };
 
   let terms = [];
-  for (const row of examSession.examinationSessionTerms) {
+  for (const row of examSession.examinationSessionTerms || []) {
     terms.push(Number(row.term));
   }
 
   let classSectionOr = null;
   if (query.selections?.length) {
-    const mappingIds = [];
-    for (const selection of query.selections) {
-      mappingIds.push(Number(selection.courseSessionMappingId));
-    }
-
-    const mappings =
-      await examResultRepository.findSessionCourseMappingsByIds(mappingIds);
-    const mappingById = new Map();
-    for (const mapping of mappings) {
-      mappingById.set(Number(mapping.sessionCourseMappingId), mapping);
-    }
-
+    const filterCombinations = await resolveSelectionCombinations(query.selections);
     classSectionOr = [];
     terms = [];
     const termSeen = new Set();
 
-    for (const selection of query.selections) {
-      const mapping = mappingById.get(Number(selection.courseSessionMappingId));
-      if (!mapping) continue;
+    for (const comb of filterCombinations) {
+      if (comb.courseId != null && comb.sessionId != null) {
+        classSectionOr.push({
+          courseId: Number(comb.courseId),
+          sessionId: Number(comb.sessionId),
+        });
+      }
 
-      classSectionOr.push({
-        courseId: Number(mapping.courseId),
-        sessionId: Number(mapping.sessionId),
-      });
-
-      for (const term of selection.terms) {
+      for (const term of comb.terms || []) {
         const termNumber = Number(term);
         if (termSeen.has(termNumber)) continue;
         termSeen.add(termNumber);
@@ -169,7 +159,7 @@ async function resolveContext(query) {
     }
   }
 
-  if (examinationSession.academicYearId == null || !terms.length) {
+  if (!terms.length) {
     return { examinationSession, empty: true };
   }
 
@@ -192,7 +182,7 @@ export async function listStudents(query) {
   const studentQuery = {
     search: query.search,
     terms: context.terms,
-    academicYearId: context.examinationSession.academicYearId,
+    examinationSessionId: context.examinationSession.examinationSessionId,
     classSectionOr: context.classSectionOr,
   };
 
@@ -414,12 +404,18 @@ export async function getSku(query) {
   }
 
   const terms = [];
-  for (const row of examSession.examinationSessionTerms) {
-    terms.push(Number(row.term));
+  const courseSessionCombos = [];
+  for (const row of examSession.examinationSessionTerms || []) {
+    if (row.term != null) terms.push(Number(row.term));
+    if (row.courseId != null && row.sessionId != null) {
+      courseSessionCombos.push({
+        courseId: Number(row.courseId),
+        sessionId: Number(row.sessionId),
+      });
+    }
   }
 
-  const academicYearId = examSession.academicYearId;
-  if (academicYearId == null || !terms.length) {
+  if (!terms.length) {
     return emptySku(examinationSessionId);
   }
 
@@ -451,10 +447,7 @@ export async function getSku(query) {
       group.sessionId,
       group.courseId,
       group.term,
-      group.academicYearId,
-      group.batchYear,
-      group.yearNumber,
-      group.curriculumBatchTermMappingId,
+      group.batchId,
     ].join("_");
     if (seenGroupKeys.has(key)) continue;
     seenGroupKeys.add(key);
@@ -479,18 +472,21 @@ export async function getSku(query) {
   const schedules = [];
   for (const row of scheduleRows) {
     const plain = row.get ? row.get({ plain: true }) : row;
+    const rawSessionId = plain.batch?.sessionId || plain.sessionId;
+    const rawCourseId = plain.subjectSchedule?.courseId || plain.courseId;
     schedules.push({
       examScheduleId: Number(plain.examScheduleId),
-      courseId: Number(plain.subjectSchedule.courseId),
-      sessionId: Number(plain.sessionId),
+      courseId: rawCourseId != null ? Number(rawCourseId) : null,
+      sessionId: rawSessionId != null ? Number(rawSessionId) : null,
       term: plain.term == null ? null : Number(plain.term),
     });
   }
 
   const [studentRows, submitPairs] = await Promise.all([
     examResultRepository.findApplicableStudentContexts({
-      academicYearId,
       terms,
+      courseSessionCombos,
+      examinationSessionId,
     }),
     examResultRepository.findSubmittedAnswerSheetPairsByExaminationSessionId(
       examinationSessionId,
@@ -516,8 +512,8 @@ export async function getSku(query) {
 
     const applicable = [];
     for (const schedule of schedules) {
-      if (schedule.courseId !== courseId) continue;
-      if (schedule.sessionId !== sessionId) continue;
+      if (schedule.courseId != null && schedule.courseId !== courseId) continue;
+      if (schedule.sessionId != null && schedule.sessionId !== sessionId) continue;
       if (schedule.term != null && schedule.term !== term) continue;
       applicable.push(schedule);
     }
@@ -761,7 +757,7 @@ export async function getStudentResultDetails(query) {
   const studentRow = await examResultRepository.findOneStudent({
     studentId,
     terms: [Number(plainResult.term)],
-    academicYearId: examSession.academicYearId,
+    examinationSessionId,
     classSectionOr: [
       {
         courseId: Number(plainResult.courseId),

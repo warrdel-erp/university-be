@@ -97,22 +97,12 @@ export const getCourseSessions = async (req, res) => {
 
 export const getMyCourseSessions = async (req, res) => {
   try {
-    const userId = req.user.userId;
     const courseId = Number(req.params.courseId);
 
-    const courses = await optionsServices.getMyCourseOptions(undefined, userId);
-    let isMapped = false;
-    for (const course of courses) {
-      if (Number(course.get('value')) === courseId) {
-        isMapped = true;
-        break;
-      }
-    }
-
-    if (!isMapped) {
-      return res.status(404).json({
+    if (!courseId) {
+      return res.status(400).json({
         status: 'error',
-        message: 'Course not found or not mapped to you',
+        message: 'courseId is required',
       });
     }
 
@@ -141,9 +131,13 @@ export const getMyCourseSessions = async (req, res) => {
 
 export const getTermsWithClassSections = async (req, res) => {
   try {
-    const { courseId, sessionId } = req.query;
+    const { batchId, year, term } = req.query;
 
-    const result = await courseService.getTermsWithClassSections(courseId, sessionId);
+    const result = await courseService.getTermsWithClassSections({
+      batchId,
+      year,
+      term,
+    });
 
     return res.status(200).json({
       status: 'success',
@@ -203,17 +197,57 @@ export const deleteCourse = async (req, res) => {
   }
 };
 
+export const getMappedSubjects = async (req, res) => {
+  try {
+    const targetUserId = req.query.userId ? Number(req.query.userId) : req.user?.userId;
+    if (!targetUserId) {
+      return ErrorResponse(res, 400, "userId is required");
+    }
+    const { search } = req.query;
+    const result = await courseService.getSubjectsByTeacherUserId(targetUserId, search);
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from timeTable", result);
+  } catch (error) {
+    console.error("Error in getMappedSubjects controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+};
+
 export const getMyMappedSubjects = async (req, res) => {
   try {
     const userId = req.user?.userId;
     if (!userId) {
       return ErrorResponse(res, 404, "User ID not found");
     }
-    const { search } = req.query;
-    const result = await courseService.getSubjectsByTeacherUserId(userId, search);
+    const { search, batchId, courseId, sessionId, year } = req.query;
+    const result = await courseService.getSubjectsByTeacherUserId(userId, search, {
+      batchId,
+      courseId,
+      sessionId,
+      year,
+    });
     return SuccessResponse(res, 200, "Teacher subjects fetched successfully from timeTable", result);
   } catch (error) {
     console.error("Error in getMyMappedSubjects controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+};
+
+export const getTeacherMappedSubjects = async (req, res) => {
+  try {
+    const userId = Number(req.query.userId || req.user?.userId);
+    if (!userId || !Number.isInteger(userId) || userId <= 0) {
+      return ErrorResponse(res, 400, "userId is required and must be a positive integer");
+    }
+    const { search, batchId, courseId, sessionId, year } = req.query;
+    const result = await courseService.getSubjectsByTeacherUserId(userId, search, {
+      batchId,
+      courseId,
+      sessionId,
+      year,
+    });
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from timeTable", result);
+  } catch (error) {
+    console.error("Error in getTeacherMappedSubjects controller:", error);
     return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 };

@@ -6,6 +6,12 @@ export async function addbuilding(buildingData, user, createdBy, updatedBy) {
     buildingData.campusId = campusId;
     buildingData.createdBy = createdBy;
     buildingData.updatedBy = updatedBy;
+    if (buildingData.openingTime === '' || buildingData.openingTime === undefined) {
+        buildingData.openingTime = null;
+    }
+    if (buildingData.closingTime === '' || buildingData.closingTime === undefined) {
+        buildingData.closingTime = null;
+    }
     return await buildingCreationService.addbuilding(buildingData);
 }
 
@@ -20,6 +26,12 @@ export async function getSinglebuildingDetails(buildingId) {
 export async function updatebuilding(buildingId, buildingData, updatedBy) {
     const { campusId: _campusId, buildingId: _buildingId, ...updateData } = buildingData;
     updateData.updatedBy = updatedBy;
+    if (updateData.openingTime === '') {
+        updateData.openingTime = null;
+    }
+    if (updateData.closingTime === '') {
+        updateData.closingTime = null;
+    }
     return await buildingCreationService.updatebuilding(buildingId, updateData);
 }
 
