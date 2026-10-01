@@ -100,3 +100,64 @@ export function termsForYear(year, course) {
   }
   return result;
 }
+
+export function buildCurrentTermsForYear(course, yearNumber) {
+  const currentTerms = [];
+  for (const term of termsForYear(yearNumber, course)) {
+    currentTerms.push({
+      term,
+      termName: buildTermName(course?.termType, term),
+    });
+  }
+  return currentTerms;
+}
+
+export function buildCurrentTermsLabel(currentTerms) {
+  if (!currentTerms || !currentTerms.length) {
+    return null;
+  }
+  if (currentTerms.length === 1) {
+    return currentTerms[0].termName;
+  }
+  return `${currentTerms[0].termName} - ${currentTerms[currentTerms.length - 1].termName}`;
+}
+
+export function buildCurrentPositionLabel(currentTerms, yearNumber) {
+  if (!currentTerms || !currentTerms.length) {
+    return `Year ${yearNumber}`;
+  }
+  if (currentTerms.length === 1) {
+    return `${currentTerms[0].termName} · Year ${yearNumber}`;
+  }
+  return `${currentTerms[0].termName} – ${currentTerms[currentTerms.length - 1].termName} · Year ${yearNumber}`;
+}
+
+export function resolveBatchCurrentPosition({ batchYear, course, activeCalendarYear }) {
+  const duration = Number(course?.courseDuration) || 0;
+  const year = Number(batchYear);
+  const activeYear = Number(activeCalendarYear);
+  if (!year || !activeYear) {
+    return {
+      currentYear: null,
+      currentYearLabel: null,
+      currentTerms: [],
+      currentTermsLabel: null,
+      currentPositionLabel: null,
+    };
+  }
+  const currentYear = activeYear - year + 1;
+  const inRange = currentYear >= 1 && currentYear <= duration;
+  const currentTerms = inRange ? buildCurrentTermsForYear(course, currentYear) : [];
+  const currentTermsLabel = inRange ? buildCurrentTermsLabel(currentTerms) : null;
+  const currentPositionLabel = inRange
+    ? buildCurrentPositionLabel(currentTerms, currentYear)
+    : null;
+
+  return {
+    currentYear: inRange ? currentYear : null,
+    currentYearLabel: inRange ? `Year ${currentYear}` : null,
+    currentTerms,
+    currentTermsLabel,
+    currentPositionLabel,
+  };
+}

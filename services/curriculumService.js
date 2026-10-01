@@ -3,7 +3,8 @@ import sequelize from '../database/sequelizeConfig.js';
 import * as curriculumRepository from '../repository/curriculumRepository.js';
 import * as models from '../models/index.js';
 import { scoped, buildScope } from '../utility/scoped.js';
-import { resolveTotalTerms } from '../utility/courseTerms.js';
+import { resolveBatchCurrentPosition, resolveTotalTerms } from '../utility/courseTerms.js';
+import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
 
 function httpError(message, statusCode) {
   const error = new Error(message);
@@ -52,15 +53,16 @@ export async function getAll(filters) {
  *     curriculumId?, curriculumName?, curriculumBatchMappingId?, isConfigured, students, ... }] }
  */
 export async function getProgrammeOverview() {
-  // Load all published batches with their sessions and any curriculum mappings
-  const batchRows = await models.batchModel.findAll({
-    where: { status: 'published' },
-    attributes: [
-      'batchId',
-      'sessionId',
-      'batch',
-      'intakeCapacity',
-    ],
+  // Load all published batches with their sessions and any curriculum mappings alongside active AY
+  const [batchRows, academicCtx] = await Promise.all([
+    models.batchModel.findAll({
+      where: { status: 'published' },
+      attributes: [
+        'batchId',
+        'sessionId',
+        'batch',
+        'intakeCapacity',
+      ],
     include: [
       {
         model: models.sessionModel,
@@ -81,6 +83,7 @@ export async function getProgrammeOverview() {
               'courseDuration',
               'totalTerms',
               'termType',
+              'capacity',
             ],
           },
         ],
@@ -105,7 +108,11 @@ export async function getProgrammeOverview() {
       [{ model: models.sessionModel, as: 'session' }, 'sessionId', 'ASC'],
       ['batch', 'ASC'],
     ],
-  });
+  }),
+  resolveActiveAcademicYearContext(),
+]);
+
+const activeCalendarYear = Number(academicCtx?.activeBatchYear);
 
   // Collect all curriculum IDs to bulk-fetch configuredTerms
   const curriculumIds = [];
@@ -170,6 +177,12 @@ export async function getProgrammeOverview() {
     const sessionInfo = sessionMap.get(sid);
     const courseCapacity = sessionInfo?.course?.capacity;
 
+    const position = resolveBatchCurrentPosition({
+      batchYear: plain.batch,
+      course,
+      activeCalendarYear,
+    });
+
     sessionInfo.batches.push({
       batchId: sbmId,
       batch: Number(plain.batch),
@@ -187,6 +200,11 @@ export async function getProgrammeOverview() {
       totalTerms,
       structure: `${configuredTerms} / ${totalTerms} terms`,
       status: structureStatus,
+      currentYear: position.currentYear,
+      currentYearLabel: position.currentYearLabel,
+      currentTerms: position.currentTerms,
+      currentTermsLabel: position.currentTermsLabel,
+      currentPositionLabel: position.currentPositionLabel,
     });
   }
 
