@@ -448,6 +448,7 @@ export async function assignMyObtainedMarksToAnswerSheet(req, res) {
     const result = await answerSheetQrServices.assignObtainedMarksToAnswerSheet(
       Number(id),
       obtained_marks,
+      validation.userId,
     );
 
     return SuccessResponse(
