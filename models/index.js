@@ -63,7 +63,6 @@ import timeTableCellDateWiseModel from "./timeTableCellDateWiseModel.js";
 import timeTableCellTeachersDateWiseModel from "./timeTableCellTeachersDateWiseModel.js";
 import attendanceModel from "./attendanceModel.js";
 import classRoomModel from "./classRoomModel.js";
-import feeGroupModel from "./feeGroupModel.js";
 import feeTypeCategoryModel from "./feeTypeCategoryModel.js";
 import feeTypeCatalogModel from "./feeTypeCatalogModel.js";
 import assetCategoryModel from "./assetCategoryModel.js";
@@ -76,9 +75,6 @@ import amcVendorModel from "./amcVendorModel.js";
 import amcVendorAddressModel from "./amcVendorAddressModel.js";
 import amcContractModel from "./amcContractModel.js";
 import amcServiceTicketModel from "./amcServiceTicketModel.js";
-import feeTypeModel from "./feeTypeModel.js";
-import feeInvoiceModel from "./feeInvoiceModel.js";
-import feeInvoiceDetailModel from "./feeInvoiceDetailModel.js";
 import userStudentEmployeeModel from "./userStudentEmployeeModel.js";
 import roleModel from "./roleModel.js";
 import rolePermissionMappingModel from "./rolePermissionMappingModel.js";
@@ -117,14 +113,8 @@ import batchModel from "./batchModel.js";
 import poModel from "./poModel.js";
 import coModel from "./coModel.js";
 import coWeightageModel from "./coWeightageModel.js";
-import feePlanModel from "./feePlanModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
 import feePlanPublishHistoryModel from "./feePlanPublishHistoryModel.js";
-import feePlanTypeModel from "./feePlanTypeModel.js";
-import feePlanSemesterModel from "./feePlanSemesterModel.js";
-import feeInvoiceDetailRecordModel from "./feeInvoiceDetailRecordModel.js";
-import feeNewInvoiceModel from "./feeNewInvoiceModel.js";
-import studentInvoiceMapperModel from "./studentInvoiceMapperModel.js";
 import lessonModel from "./lessonModel.js";
 import lectureWindowModel from "./lectureWindowModel.js";
 import topicModel from "./topicModel.js";
@@ -140,7 +130,6 @@ import leavePolicyModel from "./leavePolicyModel.js";
 import leaveBalanceModel from "./leaveBalanceModel.js";
 import leaveRequestModel from "./leaveRequestModel.js";
 import examScheduleModel from "./examScheduleModel.js";
-import feeTypeGroupModel from "./feeTypeGroupModel.js";
 import libraryFloorModel from "./libraryFloorModel.js";
 import libraryAisleModel from "./libraryAisleModel.js";
 import libraryRackModel from "./libraryRackModel.js";
@@ -1764,32 +1753,6 @@ employeeModel.hasMany(timeTableCellTeachersDateWiseModel, {
   as: "timeTableCellTeachersDateWise",
 });
 
-//fee (fee Group)
-feeGroupModel.belongsTo(userModel, {
-  foreignKey: "createdBy",
-  as: "userFeeGroup",
-});
-userModel.hasMany(feeGroupModel, {
-  foreignKey: "createdBy",
-  as: "userFeeGroup",
-});
-
-//fee (fee Type)
-feeTypeModel.belongsTo(userModel, {
-  foreignKey: "createdBy",
-  as: "userFeeType",
-});
-userModel.hasMany(feeTypeModel, { foreignKey: "createdBy", as: "userFeeType" });
-
-feeTypeModel.belongsTo(feeGroupModel, {
-  foreignKey: "fee_group_id",
-  as: "feeGroup",
-});
-feeGroupModel.hasMany(feeTypeModel, {
-  foreignKey: "fee_group_id",
-  as: "feeGroup",
-});
-
 feeTypeCategoryModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "instituteFeeTypeCategory",
@@ -2018,71 +1981,6 @@ assetInventoryItemModel.belongsTo(classRoomModel, {
 classRoomModel.hasMany(assetInventoryItemModel, {
   foreignKey: "classRoomSectionId",
   as: "assetInventoryItems",
-});
-
-//fee (fee Invoice)
-feeInvoiceModel.belongsTo(userModel, {
-  foreignKey: "createdBy",
-  as: "userFeeInvoice",
-});
-userModel.hasMany(feeInvoiceModel, {
-  foreignKey: "createdBy",
-  as: "userFeeInvoice",
-});
-
-feeInvoiceModel.belongsTo(feePlanModel, {
-  foreignKey: "fee_plan_id",
-  as: "feeInvoicePlan",
-});
-feePlanModel.hasMany(feeInvoiceModel, {
-  foreignKey: "fee_plan_id",
-  as: "feeInvoicePlan",
-});
-
-feeInvoiceModel.belongsTo(classStudentMapperModel, {
-  foreignKey: "class_student_mapper_id",
-  as: "feeStudentMapper",
-});
-classStudentMapperModel.hasMany(feeInvoiceModel, {
-  foreignKey: "class_student_mapper_id",
-  as: "feeStudentMapper",
-});
-
-feeInvoiceModel.belongsTo(studentModel, {
-  foreignKey: "student_id",
-  as: "feeInvoiceStudent",
-});
-studentModel.hasMany(feeInvoiceModel, {
-  foreignKey: "student_id",
-  as: "feeInvoiceStudent",
-});
-
-//fee (fee Invoice Details)
-feeInvoiceDetailModel.belongsTo(feePlanTypeModel, {
-  foreignKey: "fee_plan_type_id",
-  as: "feeInvoiceTypePlan",
-});
-feePlanTypeModel.hasMany(feeInvoiceDetailModel, {
-  foreignKey: "fee_plan_type_id",
-  as: "feeInvoiceTypePlan",
-});
-
-feeInvoiceDetailModel.belongsTo(feePlanSemesterModel, {
-  foreignKey: "fee_plan_semester_id",
-  as: "feeInvoiceTypeSemester",
-});
-feePlanSemesterModel.hasMany(feeInvoiceDetailModel, {
-  foreignKey: "fee_plan_semester_id",
-  as: "feeInvoiceTypeSemester",
-});
-
-feeInvoiceDetailModel.belongsTo(feeInvoiceModel, {
-  foreignKey: "fee_invoice_id",
-  as: "feeInvoiceDetails",
-});
-feeInvoiceModel.hasMany(feeInvoiceDetailModel, {
-  foreignKey: "fee_invoice_id",
-  as: "feeInvoiceDetails",
 });
 
 // user and userStudentEmployee
@@ -2752,127 +2650,11 @@ sessionModel.belongsTo(courseModel, {
   as: "course",
 });
 
-// feePlanTypeModel.belongsTo(feeTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
-// feeTypeModel.hasMany(feePlanTypeModel, { foreignKey: 'fee_type_id', as: 'feeType' });
-
-feeInvoiceDetailRecordModel.belongsTo(studentInvoiceMapperModel, {
-  foreignKey: "studentInvoiceMapperId",
-  as: "studentMakePayment",
-});
-studentInvoiceMapperModel.hasMany(feeInvoiceDetailRecordModel, {
-  foreignKey: "studentInvoiceMapperId",
-  as: "studentMakePayment",
-});
-
-feeInvoiceModel.hasMany(feeInvoiceDetailModel, {
-  foreignKey: "feeInvoiceId",
-  sourceKey: "feeInvoiceId",
-  as: "invoiceDetails",
-});
-feeInvoiceDetailModel.belongsTo(feeInvoiceModel, {
-  foreignKey: "feeInvoiceId",
-  targetKey: "feeInvoiceId",
-  as: "feeInvoices",
-});
-
 classScheduleModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
 classScheduleModel.belongsTo(employeeModel, {
   foreignKey: "userId",
   targetKey: "userId",
   as: "employeeDetails",
-});
-
-feePlanModel.hasMany(feeNewInvoiceModel, {
-  foreignKey: "fee_plan_id",
-  as: "invoices",
-});
-feeNewInvoiceModel.belongsTo(feePlanModel, {
-  foreignKey: "fee_plan_id",
-  as: "feePlan",
-});
-
-feeNewInvoiceModel.hasMany(feePlanSemesterModel, {
-  foreignKey: "fee_new_invoice_id",
-  as: "semesters",
-});
-feePlanSemesterModel.belongsTo(feeNewInvoiceModel, {
-  foreignKey: "fee_new_invoice_id",
-  as: "invoice",
-});
-
-feeNewInvoiceModel.hasMany(feePlanTypeModel, {
-  foreignKey: "fee_new_invoice_id",
-  as: "additionalFees",
-});
-feePlanTypeModel.belongsTo(feeNewInvoiceModel, {
-  foreignKey: "fee_new_invoice_id",
-  as: "additionalFeesinvoice",
-});
-
-studentInvoiceMapperModel.belongsTo(studentModel, {
-  foreignKey: "studentId",
-  as: "studentinvoice",
-});
-studentModel.hasMany(studentInvoiceMapperModel, {
-  foreignKey: "studentId",
-  as: "invoicestudent",
-});
-
-studentInvoiceMapperModel.hasMany(feeTypeGroupModel, {
-  foreignKey: "studentInvoiceMapperId",
-  as: "feeTypeGroup",
-});
-feeTypeGroupModel.belongsTo(studentInvoiceMapperModel, {
-  foreignKey: "studentInvoiceMapperId",
-  as: "invoiceMapper",
-});
-
-feeTypeModel.hasMany(feeTypeGroupModel, {
-  foreignKey: "feeTypeId",
-  as: "feeTypeGroups",
-});
-feeTypeGroupModel.belongsTo(feeTypeModel, {
-  foreignKey: "feeTypeId",
-  as: "feeTypes",
-});
-
-// studentInvoiceMapperModel.belongsTo(feeTypeModel, { foreignKey: 'feeTypeId', as: 'studentinvoiceFeeType'  });
-// feeTypeModel.hasMany(studentInvoiceMapperModel, { foreignKey: 'feeTypeId',  as: 'invoicestudentFeeType'  });
-
-studentInvoiceMapperModel.belongsTo(feeNewInvoiceModel, {
-  foreignKey: "feeNewInvoiceId",
-  as: "feeInvoicedata",
-});
-feeNewInvoiceModel.hasMany(studentInvoiceMapperModel, {
-  foreignKey: "feeNewInvoiceId",
-  as: "invoiceMappings",
-});
-
-feePlanModel.belongsTo(courseModel, {
-  foreignKey: "courseId",
-  as: "courseFee",
-});
-courseModel.hasMany(feePlanModel, {
-  foreignKey: "courseId",
-  as: "feePlanCourse",
-});
-
-feePlanModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "acedmicYearFee",
-});
-acedmicYearModel.hasMany(feePlanModel, {
-  foreignKey: "academicYearId",
-  as: "feePlanAcedmic",
-});
-
-feePlanModel.belongsTo(sessionModel, {
-  foreignKey: "sessionId",
-  as: "sessionFee",
-});
-sessionModel.hasMany(feePlanModel, {
-  foreignKey: "sessionId",
-  as: "feePlanSession",
 });
 
 feePlanItemModel.belongsTo(batchModel, {
@@ -4329,7 +4111,6 @@ export {
   timeTableCellTeachersDateWiseModel,
   attendanceModel,
   classRoomModel,
-  feeGroupModel,
   feeTypeCategoryModel,
   feeTypeCatalogModel,
   assetCategoryModel,
@@ -4342,9 +4123,6 @@ export {
   amcVendorAddressModel,
   amcContractModel,
   amcServiceTicketModel,
-  feeTypeModel,
-  feeInvoiceModel,
-  feeInvoiceDetailModel,
   userStudentEmployeeModel,
   roleModel,
   rolePermissionMappingModel,
@@ -4381,14 +4159,8 @@ export {
   poModel,
   coModel,
   coWeightageModel,
-  feePlanModel,
   feePlanItemModel,
   feePlanPublishHistoryModel,
-  feePlanTypeModel,
-  feePlanSemesterModel,
-  feeInvoiceDetailRecordModel,
-  feeNewInvoiceModel,
-  studentInvoiceMapperModel,
   studentFeeInvoiceItemsModel,
   lessonModel,
   lectureWindowModel,
@@ -4404,7 +4176,6 @@ export {
   leavePolicyModel,
   leaveRequestModel,
   examScheduleModel,
-  feeTypeGroupModel,
   libraryFloorModel,
   libraryAisleModel,
   libraryRackModel,

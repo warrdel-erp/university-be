@@ -1846,16 +1846,6 @@ export async function getPromotionClassSections({
     });
 }
 
-export async function addStudentInvoiceMapper(dataList, transaction) {
-    try {
-        const result = await model.studentInvoiceMapperModel.bulkCreate(dataList, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in add Student Invoice Mapper:", error);
-        throw error;
-    }
-};
-
 export async function updateStudentfeeStatus(studentId, data) {
     try {
         const existing = await assertScopedStudent(studentId);
