@@ -2,21 +2,11 @@ import * as model from '../models/index.js';
 import { buildScope, scoped } from '../utility/scoped.js';
 
 export async function checkIdsBelongToSameCourse(examSetupTypeTermId, subjectId, sessionId) {
-  const term = await scoped(model.examSetupTypeTermModel).findOne({
-    where: { examSetupTypeTermId },
-    attributes: ['courseId'],
-  });
-  if (!term) throw new Error('Invalid examSetupTypeTermId');
-
   const subject = await scoped(model.subjectModel).findOne({
     where: { subjectId },
     attributes: ['courseId'],
   });
   if (!subject) throw new Error('Invalid subjectId');
-
-  if (term.courseId !== subject.courseId) {
-    throw new Error('examSetupTypeTermId and subjectId belong to different courses');
-  }
 
   const session = await scoped(model.sessionModel).findOne({
     where: { sessionId },
@@ -29,7 +19,7 @@ export async function checkIdsBelongToSameCourse(examSetupTypeTermId, subjectId,
   const sessionMapping = await scoped(model.sessionCouseMappingModel).findOne({
     where: {
       sessionId,
-      courseId: term.courseId,
+      courseId: subject.courseId,
     },
   });
 
@@ -37,7 +27,7 @@ export async function checkIdsBelongToSameCourse(examSetupTypeTermId, subjectId,
     throw new Error('sessionId is not mapped to the course of the given term/subject');
   }
 
-  return term.courseId;
+  return subject.courseId;
 }
 
 export async function createOrUpdateWeightageBulk(dataList) {

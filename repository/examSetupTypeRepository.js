@@ -9,19 +9,6 @@ export async function getExamSetupTypes(filters) {
             attributes: {
                 exclude: ["createdAt", "updatedAt", "deletedAt", "updatedBy", "createdBy"],
             },
-            include: [
-                {
-                    model: model.examSetupTypeTermModel,
-                    as: "examSetupTypeTerms",
-                    where: {
-                        ...buildScope(model.examSetupTypeTermModel),
-                        ...(courseId && { courseId }),
-                        ...(term && { term }),
-                    },
-                    attributes: [],
-                    required: !!(courseId || term),
-                },
-            ],
         });
         return result;
     } catch (error) {

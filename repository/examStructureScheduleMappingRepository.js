@@ -34,13 +34,6 @@ export async function addExamStructureSchedule(examDetailSchedule, options = {})
     examDetailSchedule.startingDate = slot.startTime;
     // examDetailSchedule.durationMinutes = slot.durationMinutes;
 
-    await scoped(model.examStructureScheduleMappingModel).create(
-      examDetailSchedule,
-      {
-        transaction: options.transaction,
-      }
-    );
-
    await scoped(model.examScheduleModel).create(
   {
     subjectId: examDetailSchedule.subjectId,
@@ -107,11 +100,6 @@ export async function getExamStructureSchedule(examSetupTypeId) {
             ],
           },
         ],
-      },
-      {
-        model: model.examSetupTypeTermModel,
-        as: "examSetupTypeTerms",
-        attributes: { exclude: ["createdAt", "updatedAt"] },
       },
     ],
   });
@@ -329,30 +317,6 @@ export async function getDetailByExamType(examSetupTypeId) {
     return await scoped(model.examSetupTypeModel).findOne({
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
       where: { examSetupTypeId },
-      include: [
-        {
-          model: model.examStructureScheduleMappingModel,
-          as: "examStructure",
-          attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-          include: [
-            {
-              model: model.courseModel,
-              as: "courseExam",
-              attributes: ["courseName", "capacity"],
-            },
-            {
-              model: model.sessionModel,
-              as: "sessionExam",
-              attributes: ["sessionName"],
-            },
-            {
-              model: model.acedmicYearModel,
-              as: "acedmicExam",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-            },
-          ],
-        },
-      ],
     });
   } catch (error) {
     console.error("Error fetching exam structure details:", error.message);
@@ -432,12 +396,7 @@ export async function getExamScheduleById(examScheduleId) {
 }
 
 export async function getExamSetupTypeTermById(examSetupTypeTermId) {
-  try {
-    return await scoped(model.examSetupTypeTermModel).findByPk(examSetupTypeTermId);
-  } catch (error) {
-    console.error("Error fetching exam setup type term by id:", error.message);
-    throw error;
-  }
+  return null;
 }
 
 export async function findSubjectsWithSchedules(courseId, academicYearId, term, examSetupTypeTermId, sessionId) {

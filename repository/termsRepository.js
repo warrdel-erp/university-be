@@ -103,41 +103,10 @@ export async function getClassSectionsByCourseAndSession(courseId, sessionId) {
   }
 }
 
-export async function getExamSetupTypeTermsByCourseAndSession(courseId, sessionId, session) {
-  try {
-    return await model.examSetupTypeTermModel.findAll({
-      attributes: ['examSetupTypeTermId', 'examSetupTypeId', 'term'],
-      where: whereFromSession(session, model.examSetupTypeTermModel, { courseId }),
-      include: [
-        {
-          model: model.examSetupTypeModel,
-          as: 'examSetupType',
-          where: whereFromSession(session, model.examSetupTypeModel, {
-            courseId,
-            sessionId,
-          }),
-        },
-      ],
-    });
-  } catch (error) {
-    console.error('Error fetching exam setup type terms:', error);
-    throw error;
-  }
+export async function getExamSetupTypeTermsByCourseAndSession() {
+  return [];
 }
 
-export async function getExamSetupTypeTermsByCourseAndAcademicYear(courseId, academicYearId) {
-  try {
-    return await scoped(model.examSetupTypeTermModel).findAll({
-      where: { courseId, academicYearId },
-      include: [
-        {
-          model: model.examSetupTypeModel,
-          as: 'examSetupType',
-        },
-      ],
-    });
-  } catch (error) {
-    console.error('Error fetching exam setup type terms:', error);
-    throw error;
-  }
+export async function getExamSetupTypeTermsByCourseAndAcademicYear() {
+  return [];
 }

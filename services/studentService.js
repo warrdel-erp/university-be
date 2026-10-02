@@ -2921,10 +2921,11 @@ export async function getAllAnswerSheets(filters) {
     throw error;
   }
 
-  const examSetupTypeTerm = schedule.examSetupTypeTerm;
-  const sessionId = schedule.sessionId;
-  const courseId = examSetupTypeTerm?.courseId;
-  const term = schedule.term ?? examSetupTypeTerm?.term;
+  const sessionId =
+    schedule.batch?.sessionId ;
+  const courseId =
+    schedule.batch?.courseId ;
+  const term = schedule.term;
 
   if (sessionId == null || courseId == null || term == null) {
     return [];

@@ -2502,14 +2502,19 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId,
 export async function getScopedExamScheduleForEvaluation(examScheduleId) {
     return scoped(model.examScheduleModel).findOne({
         where: { examScheduleId },
-        attributes: ["examScheduleId", "term", "batchId", "curriculumSubjectTermMappingId"],
+        attributes: ["examScheduleId", "term", "batchId", "curriculumSubjectTermMappingId", "examinationSessionId"],
         include: [
             {
-                model: model.examSetupTypeTermModel,
-                as: "examSetupTypeTerm",
-                attributes: ["examSetupTypeTermId", "courseId", "examSetupTypeId", "instituteId", "universityId", "term"],
-                where: buildScope(model.examSetupTypeTermModel),
-                required: true,
+                model: model.batchModel,
+                as: "batch",
+                attributes: ["batchId", "sessionId", "courseId"],
+                required: false,
+            },
+            {
+                model: model.examinationSessionModel,
+                as: "examinationSession",
+                attributes: ["examinationSessionId", "sessionId", "courseId"],
+                required: false,
             },
         ],
     });

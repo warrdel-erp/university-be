@@ -1,6 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
-import examSetupTypeTerm from "./examSetupTypeTermModel.js";
 import subject from "./subjectModel.js";
 import session from "./sessionModel.js";
 import users from "./userModel.js";
@@ -18,10 +17,6 @@ const subjectWeightageModel = sequelize.define(
             type: DataTypes.INTEGER,
             allowNull: false,
             field: 'exam_setup_type_term_id',
-            references: {
-                model: examSetupTypeTerm,
-                key: 'exam_setup_type_term_id'
-            }
         },
         subjectId: {
             type: DataTypes.INTEGER,

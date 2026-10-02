@@ -87,7 +87,6 @@ import roomTypeModel from "./roomTypeModel.js";
 import dormitoryListModel from "./dormitoryListModel.js";
 import addDormitoryModel from "./addDormitoryModel.js";
 import feePlanSubItemsModel from "./feePlanSubItemsModel.js";
-import examSetupModel from "./examSetupModel.js";
 import examAttendanceModel from "./examAttendanceModel.js";
 import transportRouteModel from "./transportRouteModel.js";
 import vehicleModel from "./vehicleModel.js";
@@ -140,7 +139,6 @@ import teacherAttendeceModel from "./teacherAttendenceModel.js";
 import leavePolicyModel from "./leavePolicyModel.js";
 import leaveBalanceModel from "./leaveBalanceModel.js";
 import leaveRequestModel from "./leaveRequestModel.js";
-import examStructureScheduleMappingModel from "./examStructureScheduleMappingModel.js";
 import examScheduleModel from "./examScheduleModel.js";
 import feeTypeGroupModel from "./feeTypeGroupModel.js";
 import libraryFloorModel from "./libraryFloorModel.js";
@@ -170,7 +168,6 @@ import questionBankModel from "./questionBankModel.js";
 import teacherExamAssignmentModel from "./teacherExamAssignmentModel.js";
 import teacherSubstituteModel from "./teacherSubstituteModel.js";
 import questionPaperBlueprintModel from "./questionPaperBlueprintModel.js";
-import examSetupTypeTermModel from "./examSetupTypeTermModel.js";
 import subjectWeightageModel from "./subjectWeightageModel.js";
 import examScheduleRoomCapacityModel from "./examScheduleRoomCapacityModel.js";
 import studentExamSeatModel from "./studentExamSeatModel.js";
@@ -2241,15 +2238,6 @@ userModel.hasMany(questionBankModel, {
 
 // Associations
 
-examSetupModel.belongsTo(userModel, {
-  foreignKey: "createdBy",
-  as: "examSetUpUser",
-});
-userModel.hasMany(examSetupModel, {
-  foreignKey: "createdBy",
-  as: "examSetUpUser",
-});
-
 examAttendanceModel.belongsTo(examScheduleModel, {
   foreignKey: "examScheduleId",
   as: "examSchedule",
@@ -2313,21 +2301,6 @@ vehicleModel.belongsTo(userModel, {
   as: "vehicleUser",
 });
 userModel.hasMany(vehicleModel, { foreignKey: "createdBy", as: "vehicleUser" });
-
-examSetupModel.belongsTo(userModel, {
-  foreignKey: "teacherId",
-  as: "teacherUser",
-});
-examSetupModel.belongsTo(classRoomModel, { foreignKey: "roomId", as: "room" });
-examSetupModel.belongsTo(courseModel, { foreignKey: "courseId", as: "course" });
-examSetupModel.belongsTo(subjectModel, {
-  foreignKey: "subjectId",
-  as: "subject",
-});
-examSetupModel.belongsTo(examSetupTypeModel, {
-  foreignKey: "examTypeId",
-  as: "examSetupType",
-});
 
 examRoomMaterialBundleModel.belongsTo(classRoomModel, {
   foreignKey: "classRoomSectionId",
@@ -3238,27 +3211,6 @@ leavePolicyModel.hasMany(leaveBalanceModel, {
   as: "leaveBalance",
 });
 
-examSetupTypeModel.hasMany(examStructureScheduleMappingModel, {
-  foreignKey: "exam_setup_type_id",
-  as: "scheduleMappers",
-});
-examStructureScheduleMappingModel.belongsTo(examSetupTypeModel, {
-  foreignKey: "exam_setup_type_id",
-  as: "examSetupType",
-});
-
-sessionModel.hasMany(examStructureScheduleMappingModel, {
-  foreignKey: "session_id",
-  as: "sessionSchedule",
-});
-examStructureScheduleMappingModel.belongsTo(sessionModel, {
-  foreignKey: "session_id",
-  as: "sessionSchedule",
-});
-
-// examScheduleModel.belongsTo(examStructureScheduleMappingModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
-// examStructureScheduleMappingModel.hasMany(examScheduleModel, {foreignKey: "exam_structure_schedule_mapper_id",as: "mapperSchedule"});
-
 examScheduleModel.belongsTo(subjectModel, {
   foreignKey: "subjectId",
   as: "subjectSchedule",
@@ -3877,69 +3829,6 @@ userModel.hasMany(questionPaperBlueprintModel, {
   as: "updatedBlueprints",
 });
 
-examSetupTypeTermModel.belongsTo(examSetupTypeModel, {
-  foreignKey: "examSetupTypeId",
-  as: "examSetupType",
-});
-examSetupTypeModel.hasMany(examSetupTypeTermModel, {
-  foreignKey: "examSetupTypeId",
-  as: "examSetupTypeTerms",
-});
-
-examSetupTypeTermModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "acedmicYear",
-});
-acedmicYearModel.hasMany(examSetupTypeTermModel, {
-  foreignKey: "academicYearId",
-  as: "examSetupTypeTerms",
-});
-
-examSetupTypeTermModel.belongsTo(instituteModel, {
-  foreignKey: "instituteId",
-  as: "institute",
-});
-instituteModel.hasMany(examSetupTypeTermModel, {
-  foreignKey: "instituteId",
-  as: "examSetupTypeTerms",
-});
-
-examSetupTypeTermModel.belongsTo(universityModel, {
-  foreignKey: "universityId",
-  as: "university",
-});
-universityModel.hasMany(examSetupTypeTermModel, {
-  foreignKey: "universityId",
-  as: "examSetupTypeTerms",
-});
-
-examSetupTypeTermModel.belongsTo(courseModel, {
-  foreignKey: "courseId",
-  as: "course",
-});
-courseModel.hasMany(examSetupTypeTermModel, {
-  foreignKey: "courseId",
-  as: "examSetupTypeTerms",
-});
-
-examSetupTypeTermModel.belongsTo(userModel, {
-  foreignKey: "createdBy",
-  as: "creator",
-});
-examSetupTypeTermModel.belongsTo(userModel, {
-  foreignKey: "updatedBy",
-  as: "updater",
-});
-
-subjectWeightageModel.belongsTo(examSetupTypeTermModel, {
-  foreignKey: "examSetupTypeTermId",
-  as: "examSetupTypeTerm",
-});
-examSetupTypeTermModel.hasMany(subjectWeightageModel, {
-  foreignKey: "examSetupTypeTermId",
-  as: "subjectWeightages",
-});
-
 subjectWeightageModel.belongsTo(subjectModel, {
   foreignKey: "subject_id",
   as: "subject",
@@ -4465,7 +4354,6 @@ export {
   addDormitoryModel,
   feePlanSubItemsModel,
   examSetupTypeModel,
-  examSetupModel,
   examAttendanceModel,
   transportRouteModel,
   vehicleModel,
@@ -4515,7 +4403,6 @@ export {
   leaveBalanceModel,
   leavePolicyModel,
   leaveRequestModel,
-  examStructureScheduleMappingModel,
   examScheduleModel,
   feeTypeGroupModel,
   libraryFloorModel,
@@ -4544,7 +4431,6 @@ export {
   teacherExamAssignmentModel,
   teacherSubstituteModel,
   questionPaperBlueprintModel,
-  examSetupTypeTermModel,
   subjectWeightageModel,
   studentClassSectionsHistoryModel,
   examScheduleRoomCapacityModel,
