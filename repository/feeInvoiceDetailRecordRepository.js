@@ -67,7 +67,7 @@ export async function getAllFeeInvoiceDetailRecord() {
             {
               model: model.studentModel,
               as: "studentinvoice",
-              attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
+              attributes: ["firstName", "middleName", "lastName", "scholarNumber", "enrollNumber", "admissionNumber"],
               where: buildScope(model.studentModel),
               required: true,
             },
@@ -105,6 +105,7 @@ export async function getSingleFeeInvoiceDetails(feeInvoiceId) {
             "lastName",
             "scholarNumber",
             "enrollNumber",
+            "admissionNumber",
             "classSectionTermId",
             "sessionId",
           ],

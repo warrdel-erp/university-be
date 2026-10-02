@@ -179,6 +179,7 @@ const studentSharedOptionalFields = {
   classSectionTermId: optionalPositiveIntegerId,
   scholarNumber: optionalNonEmptyString,
   enrollNumber: optionalNonEmptyString,
+  admissionNumber: optionalNonEmptyString,
   middleName: optionalString,
   lastName: optionalString,
   motherName: optionalString,

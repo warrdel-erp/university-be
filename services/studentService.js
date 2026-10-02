@@ -394,6 +394,7 @@ export async function addStudent(
       studentId: plainStudent.studentId,
       scholarNumber: plainStudent.scholarNumber,
       enrollNumber: plainStudent.enrollNumber,
+      admissionNumber: plainStudent.admissionNumber,
       email: plainStudent.email,
       firstName: plainStudent.firstName,
       lastName: plainStudent.lastName,
@@ -1026,6 +1027,7 @@ const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
   "batchId",
   "scholarNumber",
   "enrollNumber",
+  "admissionNumber",
   "firstName",
   "middleName",
   "lastName",
@@ -1655,6 +1657,7 @@ function mapPromotionHistoryStudent(student) {
     name: buildStudentName(plain),
     scholarNumber: plain.scholarNumber,
     enrollNumber: plain.enrollNumber ?? null,
+    admissionNumber: plain.admissionNumber ?? null,
     admissionDate: plain.admisssionDate ?? null,
     course: plain.course
       ? {
@@ -3047,6 +3050,7 @@ export async function getStudentsByElectiveSubject({
           "studentId",
           "scholarNumber",
           "enrollNumber",
+          "admissionNumber",
           "firstName",
           "lastName",
           "classSectionTermId",

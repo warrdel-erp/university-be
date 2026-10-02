@@ -88,7 +88,7 @@ export async function getExamSchedules(filters = {}) {
                 {
                     model: model.examinationSessionModel,
                     as: "examinationSession",
-                    attributes: ["examinationSessionId", "assessmentTypeId"],
+                    attributes: ["examinationSessionId", "assessmentTypeId", "executionType", "executionProfile"],
                     include: [
                         {
                             model: model.examSetupTypeModel,
@@ -136,7 +136,7 @@ export async function getExamScheduleById(examScheduleId, options = {}) {
                                 {
                                     model: model.studentModel,
                                     as: "student",
-                                    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber"],
+                                    attributes: ["studentId", "firstName", "middleName", "lastName", "scholarNumber", "enrollNumber", "admissionNumber"],
                                 },
                             ],
                         },
