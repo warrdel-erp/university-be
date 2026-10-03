@@ -1247,7 +1247,15 @@ export async function getBillingRuns(filters = {}) {
     const endYear = batchYear + duration;
     const yearNum = plain.year != null ? Number(plain.year) : 1;
 
-    const billingRun = plain.name || plain.academicPeriod || `Year ${yearNum} Fee`;
+    // Only send feePlanItems for the current active year of this batch:
+    // e.g. 2025 batch in active calendar year 2026 -> activeYear = 2026 - 2025 + 1 = 2
+    const currentActiveYear = activeBatchYear - batchYear + 1;
+    const targetYear = filters.year != null ? Number(filters.year) : currentActiveYear;
+    if (yearNum !== targetYear) {
+      continue;
+    }
+
+    const billingRun = plain.name || `Year ${yearNum} Fee`;
     const context = `${course.courseName} ${batchYear}-${String(endYear).slice(-2)} · Year ${yearNum}`;
     const feePlanLabel = `Fee Plan ${activeAcademicYearText}`;
 
@@ -1268,7 +1276,6 @@ export async function getBillingRuns(filters = {}) {
       feePlanItemId: plain.feePlanItemId,
       billingRun,
       name: plain.name,
-      academicPeriod: plain.academicPeriod,
       domain: 'Academic',
       context,
       feePlanLabel,
@@ -1299,7 +1306,6 @@ export async function getBillingRuns(filters = {}) {
         admissionBatch: `${batchYear}-${String(endYear).slice(-2)}`,
         status: batch.status,
       },
-      feePlanSubItems: subLines,
     };
 
     // Partitioning:
@@ -1316,31 +1322,22 @@ export async function getBillingRuns(filters = {}) {
           ? 'Ready'
           : 'Draft';
 
-      const nextAction = raisedInvoiceCount >= students ? 'View' : 'Continue';
-
       activeBillingRuns.push({
         ...baseItemData,
         stage,
-        nextAction,
       });
     } else if (plain.createDate && plain.createDate > today) {
       upcomingRuns.push({
         ...baseItemData,
-        action: 'View',
+        stage: 'Upcoming',
       });
     } else {
       const isPast = plain.createDate && plain.createDate < today;
-      const whyNow = isPast ? 'Due for billing' : 'Ready to raise';
-      const whyNowDetail = isPast
-        ? `Planned for ${formattedPlannedDate}`
-        : 'Preparation complete';
-      const action = plain.publishStatus === 'published' ? 'Prepare Billing' : 'Review & Publish';
+      const stage = isPast ? 'Due for billing' : 'Ready to raise';
 
       actionRequired.push({
         ...baseItemData,
-        whyNow,
-        whyNowDetail,
-        action,
+        stage,
       });
     }
   }
