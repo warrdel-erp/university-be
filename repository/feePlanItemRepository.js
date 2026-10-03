@@ -78,7 +78,7 @@ function feePlanSubItemsInclude() {
       {
         model: model.feeTypeCatalogModel,
         as: 'feeTypeCatalog',
-        attributes: ['feeTypeCatalogId', 'name', 'ledgerType'],
+        attributes: ['feeTypeCatalogId', 'name', 'ledgerType', 'refundable'],
         required: false,
       },
     ],
@@ -209,7 +209,7 @@ export async function findFeeTypeCatalogsByIds(feeTypeCatalogIds, options = {}) 
     return [];
   }
   return scoped(model.feeTypeCatalogModel).findAll({
-    attributes: ['feeTypeCatalogId', 'name', 'ledgerType'],
+    attributes: ['feeTypeCatalogId', 'name', 'ledgerType', 'refundable'],
     where: { feeTypeCatalogId: { [Op.in]: feeTypeCatalogIds } },
     transaction: options.transaction,
   });

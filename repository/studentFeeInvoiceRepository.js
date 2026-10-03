@@ -16,7 +16,7 @@ function feeInvoiceItemsInclude() {
       {
         model: model.feeTypeCatalogModel,
         as: "feeTypeCatalog",
-        attributes: ["feeTypeCatalogId", "name", "ledgerType", "description", "amount"],
+        attributes: ["feeTypeCatalogId", "name", "ledgerType", "description", "amount", "refundable"],
       },
     ],
   };

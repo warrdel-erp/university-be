@@ -68,6 +68,7 @@ function invoiceItemsPlain(p) {
       name: catalog.name,
       description: catalog.description,
       ledgerType: catalog.ledgerType,
+      refundable: catalog.refundable ?? null,
       amount: toMoneyNumber(line.amount),
       waiver: line.waiver != null ? toMoneyNumber(line.waiver) : line.waiver,
       netAmount: netInvoiceItemAmount(line.amount, line.waiver),

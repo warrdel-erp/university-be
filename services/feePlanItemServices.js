@@ -107,6 +107,7 @@ function mapSubItem(sub) {
     feeTypeId: sub.feeTypeId,
     name: sub.feeTypeCatalog ? sub.feeTypeCatalog.name : null,
     ledgerType: sub.feeTypeCatalog ? sub.feeTypeCatalog.ledgerType : null,
+    refundable: sub.feeTypeCatalog ? sub.feeTypeCatalog.refundable : null,
     amount: toMoneyNumber(sub.amount),
     isMainSubItem: sub.isMainSubItem === true || sub.isMainSubItem === 1,
     createdAt: sub.createdAt,

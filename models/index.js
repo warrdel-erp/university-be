@@ -115,6 +115,10 @@ import coModel from "./coModel.js";
 import coWeightageModel from "./coWeightageModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
 import feePlanPublishHistoryModel from "./feePlanPublishHistoryModel.js";
+import feePolicyModel from "./feePolicyModel.js";
+import feePolicyComponentsModel from "./feePolicyComponentsModel.js";
+import feePolicyBatchesModel from "./feePolicyBatchesModel.js";
+import feePolicySlabsModel from "./feePolicySlabsModel.js";
 import lessonModel from "./lessonModel.js";
 import lectureWindowModel from "./lectureWindowModel.js";
 import topicModel from "./topicModel.js";
@@ -4231,6 +4235,11 @@ export {
   curriculumSubjectTermMappingModel,
   curriculumBatchMappingModel,
   curriculumBatchTermMappingModel,
+
+  feePolicyModel,
+  feePolicyComponentsModel,
+  feePolicyBatchesModel,
+  feePolicySlabsModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";
@@ -4252,6 +4261,25 @@ batchModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'batch_id', as: 'c
 // Student to Session Batch Mapping (batch_id FK)
 studentModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
 batchModel.hasMany(studentModel, { foreignKey: 'batch_id', as: 'students' });
+
+// Fee Policy Associations
+feePolicyModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
+instituteModel.hasMany(feePolicyModel, { foreignKey: 'institute_id', as: 'feePolicies' });
+
+feePolicyModel.hasMany(feePolicyComponentsModel, { foreignKey: 'fee_policy_id', as: 'policyComponents' });
+feePolicyComponentsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
+
+feePolicyComponentsModel.belongsTo(feeTypeCatalogModel, { foreignKey: 'fee_type_catalog_id', as: 'feeTypeCatalog' });
+feeTypeCatalogModel.hasMany(feePolicyComponentsModel, { foreignKey: 'fee_type_catalog_id', as: 'policyComponents' });
+
+feePolicyModel.hasMany(feePolicyBatchesModel, { foreignKey: 'fee_policy_id', as: 'policyBatches' });
+feePolicyBatchesModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
+
+feePolicyBatchesModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
+batchModel.hasMany(feePolicyBatchesModel, { foreignKey: 'batch_id', as: 'feePolicyBatches' });
+
+feePolicyModel.hasMany(feePolicySlabsModel, { foreignKey: 'fee_policy_id', as: 'policySlabs' });
+feePolicySlabsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 
