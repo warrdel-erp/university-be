@@ -624,14 +624,14 @@ export async function getBillingBatchesOverview(filters = {}) {
 
     const fullyRaisedItemsCount = currentYearFeeItems.filter((item) => {
       const raisedCount = raisedInvoiceCountMap.get(Number(item.feePlanItemId)) || 0;
-      return studentCount > 0 ? raisedCount >= studentCount : raisedCount > 0;
+      return raisedCount > 0;
     }).length;
 
     const pendingItemsCount = Math.max(0, totalPlannedInvoices - fullyRaisedItemsCount);
 
     const nextUnraisedFeeItem = currentYearFeeItems.find((item) => {
       const raisedCount = raisedInvoiceCountMap.get(Number(item.feePlanItemId)) || 0;
-      return studentCount > 0 ? raisedCount < studentCount : raisedCount === 0;
+      return raisedCount === 0;
     });
 
     let nextPlannedInvoice = null;
@@ -678,7 +678,7 @@ export async function getBillingBatchesOverview(filters = {}) {
     if (!matchStatusFilter(batchStatus, filters.status)) continue;
 
     summary.totalBatches += 1;
-    if (batchStatus === "Ready to Raise") summary.readyToRaise += 1;
+    if (batchStatus === "Ready to Raise" || batchStatus === "Due") summary.readyToRaise += 1;
     else if (batchStatus === "Upcoming") summary.upcoming += 1;
     else if (batchStatus === "Fully Billed") summary.fullyBilled += 1;
     else summary.notConfigured += 1;
