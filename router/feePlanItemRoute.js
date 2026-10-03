@@ -96,7 +96,7 @@ const createFeePlanItemBodySchema = z
     batchId: positiveIntegerId,
     year: positiveIntegerId,
     name: z.string().trim().min(1),
-    academicPeriod: z.string().trim().min(1),
+    academicPeriod: z.string().optional().trim().min(1),
     createDate: dateOnly,
     dueDate: dateOnly.optional().nullable(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1),
