@@ -27,6 +27,7 @@ const generateInvoiceBodySchema = z.object({
   studentId: positiveIntegerId.optional(),
   studentIds: z.array(positiveIntegerId).min(1).optional(),
   batchId: positiveIntegerId.optional(),
+  dueDate: dateOnlyString.optional().nullable(),
 });
 
 const adhocFeeTypeCatalogLineSchema = z
@@ -99,6 +100,13 @@ const billingBatchesQuerySchema = z.object({
 
 router.post(
   "/",
+  userAuth,
+  validate({ body: generateInvoiceBodySchema }),
+  generateStudentFeeInvoice
+);
+
+router.post(
+  "/generate",
   userAuth,
   validate({ body: generateInvoiceBodySchema }),
   generateStudentFeeInvoice

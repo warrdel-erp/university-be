@@ -190,7 +190,7 @@ function formatStudentFeeInvoiceListRow(row) {
   };
 }
 
-export async function generateStudentFeeInvoice({ studentId, studentIds, batchId, feePlanItemId }) {
+export async function generateStudentFeeInvoice({ studentId, studentIds, batchId, feePlanItemId, dueDate }) {
   return await sequelize.transaction(async (transaction) => {
     const feePlanItem = toPlain(
       await repo.findFeePlanItemById(feePlanItemId, { transaction })
@@ -205,6 +205,11 @@ export async function generateStudentFeeInvoice({ studentId, studentIds, batchId
     }
 
     const itemBatchId = Number(feePlanItem.batchId);
+
+    const resolvedDueDate = dueDate !== undefined ? (dueDate ?? null) : (feePlanItem.dueDate ?? null);
+    if (dueDate !== undefined && dueDate !== feePlanItem.dueDate) {
+      await repo.updateFeePlanItemById(feePlanItemId, { dueDate: resolvedDueDate }, { transaction });
+    }
 
     let targetStudents = [];
     const isSingleStudentMode = studentId != null && !studentIds?.length && !batchId;
@@ -285,7 +290,7 @@ export async function generateStudentFeeInvoice({ studentId, studentIds, batchId
           feePlanItemId: Number(feePlanItemId),
           total: invoiceTotal,
           createDate: feePlanItem.createDate,
-          dueDate: feePlanItem.dueDate ?? null,
+          dueDate: resolvedDueDate,
           status: "generated",
           paymentStatus: "unpaid",
           paidAmount: 0,
@@ -633,8 +638,9 @@ export async function getBillingBatchesOverview(filters = {}) {
     let batchStatus = "Not Configured";
 
     if (nextUnraisedFeeItem) {
+      const isPastDue = nextUnraisedFeeItem.createDate && nextUnraisedFeeItem.createDate < todayDateStr;
       const isReadyToRaise = !nextUnraisedFeeItem.createDate || nextUnraisedFeeItem.createDate <= todayDateStr;
-      batchStatus = isReadyToRaise ? "Ready to Raise" : "Upcoming";
+      batchStatus = isPastDue ? "Due" : isReadyToRaise ? "Ready to Raise" : "Upcoming";
       nextPlannedInvoice = {
         feePlanItemId: nextUnraisedFeeItem.feePlanItemId,
         invoiceName: nextUnraisedFeeItem.name || nextUnraisedFeeItem.academicPeriod || "Fee Receipt",

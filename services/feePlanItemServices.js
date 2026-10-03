@@ -117,7 +117,6 @@ function mapSubItem(sub) {
 
 function resolveBillingStatus({
   createDate,
-  dueDate,
   raisedCount,
   expectedStudents,
   publishStatus,
@@ -134,7 +133,7 @@ function resolveBillingStatus({
   if (createDate && createDate > today) {
     return 'Upcoming';
   }
-  if (dueDate && dueDate < today) {
+  if (createDate && createDate < today) {
     return 'Due';
   }
   return 'Ready to Raise';
@@ -573,7 +572,6 @@ export async function getBatchBillingDetails(batchId, year) {
     const raisedCount = raisedMap.get(Number(item.feePlanItemId)) || 0;
     const status = resolveBillingStatus({
       createDate: item.createDate,
-      dueDate: item.dueDate,
       raisedCount,
       expectedStudents,
       publishStatus: item.publishStatus,

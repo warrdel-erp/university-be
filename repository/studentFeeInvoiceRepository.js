@@ -296,3 +296,11 @@ export async function findStudentFeeInvoicesOverview({
     rows,
   };
 }
+
+export async function updateFeePlanItemById(feePlanItemId, data, options = {}) {
+  return scoped(model.feePlanItemModel).update(data, {
+    where: { feePlanItemId: Number(feePlanItemId) },
+    transaction: options.transaction,
+  });
+}
+
