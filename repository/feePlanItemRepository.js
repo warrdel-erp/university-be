@@ -374,3 +374,43 @@ export async function findRaisedInvoicesByFeePlanItemId(feePlanItemId, options =
     transaction: options.transaction,
   });
 }
+
+export async function findFeePlanItemsWithHierarchy(filters = {}, options = {}) {
+  const where = { ...buildScope(model.feePlanItemModel) };
+  if (filters.batchId != null) {
+    where.batchId = Number(filters.batchId);
+  }
+  if (filters.year != null) {
+    where.year = Number(filters.year);
+  }
+  if (filters.publishStatus) {
+    where.publishStatus = filters.publishStatus;
+  }
+
+  const batchWhere = {};
+  if (filters.batchStatus) {
+    batchWhere.status = filters.batchStatus;
+  }
+
+  return scoped(model.feePlanItemModel).findAll({
+    where,
+    attributes: FEE_PLAN_ITEM_ATTRS,
+    include: [
+      {
+        model: model.batchModel,
+        as: 'batch',
+        attributes: BATCH_ATTRS,
+        where: Object.keys(batchWhere).length ? batchWhere : undefined,
+        required: true,
+        include: [sessionCourseInclude(filters)],
+      },
+      feePlanSubItemsInclude(),
+    ],
+    order: [
+      ['createDate', 'ASC'],
+      ['feePlanItemId', 'ASC'],
+    ],
+    transaction: options.transaction,
+  });
+}
+

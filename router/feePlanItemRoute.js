@@ -15,6 +15,7 @@ import {
   getFeePlanPublishHistory,
   getFeePlanPublishHistoryById,
   getSingleFeePlanItemDetails,
+  getBillingRuns,
 } from "../controllers/feePlanItemController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -82,6 +83,14 @@ const feePlanBatchesQuerySchema = z.object({
   status: feePlanStatusEnum.optional(),
 });
 
+const billingRunsQuerySchema = z.object({
+  courseId: positiveIntegerId.optional(),
+  sessionId: positiveIntegerId.optional(),
+  batchId: positiveIntegerId.optional(),
+  year: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+});
+
 const batchOverviewQuerySchema = z.object({
   batchId: positiveIntegerId,
 });
@@ -96,7 +105,6 @@ const createFeePlanItemBodySchema = z
     batchId: positiveIntegerId,
     year: positiveIntegerId,
     name: z.string().trim().min(1),
-    academicPeriod: z.string().optional().trim().min(1),
     createDate: dateOnly,
     dueDate: dateOnly.optional().nullable(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1),
@@ -109,7 +117,6 @@ const updateFeePlanItemBodySchema = z
   .object({
     feePlanItemId: positiveIntegerId,
     name: z.string().trim().min(1).optional(),
-    academicPeriod: z.string().trim().min(1).optional(),
     createDate: dateOnly.optional(),
     dueDate: dateOnly.optional().nullable(),
     year: positiveIntegerId.optional(),
@@ -118,7 +125,6 @@ const updateFeePlanItemBodySchema = z
   .superRefine((body, ctx) => {
     const hasUpdate =
       body.name !== undefined ||
-      body.academicPeriod !== undefined ||
       body.createDate !== undefined ||
       body.dueDate !== undefined ||
       body.year !== undefined ||
@@ -173,6 +179,13 @@ const publishHistoryQuerySchema = z.object({
 const publishHistorySingleQuerySchema = z.object({
   feePlanPublishHistoryId: positiveIntegerId,
 });
+
+router.get(
+  "/billingRuns",
+  userAuth,
+  validate({ query: billingRunsQuerySchema }),
+  getBillingRuns,
+);
 
 router.get(
   "/batches",
