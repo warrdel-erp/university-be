@@ -46,6 +46,30 @@ function feePolicyIncludes() {
         "orderIndex",
       ],
     },
+    {
+      model: model.feePolicyStudentsModel,
+      as: "policyStudents",
+      required: false,
+      attributes: ["feePolicyStudentId", "feePolicyId", "studentId", "instituteId", "universityId"],
+      include: [
+        {
+          model: model.studentModel,
+          as: "student",
+          attributes: [
+            "studentId",
+            "userId",
+            "enrollNumber",
+            "admissionNumber",
+            "scholarNumber",
+            "firstName",
+            "middleName",
+            "lastName",
+            "batchId",
+          ],
+          required: false,
+        },
+      ],
+    },
   ];
 }
 
@@ -66,6 +90,14 @@ export async function bulkCreateFeePolicyBatches(rows, options = {}) {
 export async function bulkCreateFeePolicySlabs(rows, options = {}) {
   if (!rows || !rows.length) return [];
   return model.feePolicySlabsModel.bulkCreate(rows, { transaction: options.transaction });
+}
+
+export async function bulkCreateFeePolicyStudents(rows, options = {}) {
+  if (!rows || !rows.length) return [];
+  return model.feePolicyStudentsModel.bulkCreate(rows, {
+    ignoreDuplicates: true,
+    transaction: options.transaction,
+  });
 }
 
 export async function findFeePolicyById(feePolicyId, options = {}) {
@@ -185,3 +217,87 @@ export async function deleteFeePolicy(feePolicyId, options = {}) {
     transaction: options.transaction,
   });
 }
+
+export async function findFeePolicyStudents({ feePolicyId, studentId, instituteId, universityId } = {}, options = {}) {
+  const where = {};
+  if (feePolicyId) where.feePolicyId = Number(feePolicyId);
+  if (studentId) where.studentId = Number(studentId);
+  if (instituteId) where.instituteId = Number(instituteId);
+  if (universityId) where.universityId = Number(universityId);
+
+  return model.feePolicyStudentsModel.findAll({
+    where,
+    include: [
+      {
+        model: model.feePolicyModel,
+        as: "policy",
+        required: false,
+      },
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: [
+          "studentId",
+          "userId",
+          "enrollNumber",
+          "admissionNumber",
+          "scholarNumber",
+          "firstName",
+          "middleName",
+          "lastName",
+          "batchId",
+          "instituteId",
+          "universityId",
+        ],
+        required: false,
+      },
+    ],
+    order: [["feePolicyStudentId", "DESC"]],
+    transaction: options.transaction,
+  });
+}
+
+export async function deleteFeePolicyStudents({ feePolicyId, studentId } = {}, options = {}) {
+  const where = {};
+  if (feePolicyId) where.feePolicyId = Number(feePolicyId);
+  if (studentId) where.studentId = Number(studentId);
+  if (!Object.keys(where).length) return 0;
+
+  return model.feePolicyStudentsModel.destroy({
+    where,
+    transaction: options.transaction,
+  });
+}
+
+export async function findStudentsByIds(studentIds, options = {}) {
+  if (!studentIds || !studentIds.length) return [];
+  return model.studentModel.findAll({
+    where: {
+      studentId: { [Op.in]: studentIds.map(Number) },
+    },
+    attributes: [
+      "studentId",
+      "userId",
+      "instituteId",
+      "universityId",
+      "firstName",
+      "lastName",
+      "enrollNumber",
+      "scholarNumber",
+      "admissionNumber",
+      "batchId",
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findPoliciesByIds(feePolicyIds, options = {}) {
+  if (!feePolicyIds || !feePolicyIds.length) return [];
+  return model.feePolicyModel.findAll({
+    where: {
+      feePolicyId: { [Op.in]: feePolicyIds.map(Number) },
+    },
+    transaction: options.transaction,
+  });
+}
+

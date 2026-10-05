@@ -119,6 +119,7 @@ import feePolicyModel from "./feePolicyModel.js";
 import feePolicyComponentsModel from "./feePolicyComponentsModel.js";
 import feePolicyBatchesModel from "./feePolicyBatchesModel.js";
 import feePolicySlabsModel from "./feePolicySlabsModel.js";
+import feePolicyStudentsModel from "./feePolicyStudentsModel.js";
 import lessonModel from "./lessonModel.js";
 import lectureWindowModel from "./lectureWindowModel.js";
 import topicModel from "./topicModel.js";
@@ -4240,6 +4241,7 @@ export {
   feePolicyComponentsModel,
   feePolicyBatchesModel,
   feePolicySlabsModel,
+  feePolicyStudentsModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";
@@ -4280,6 +4282,12 @@ batchModel.hasMany(feePolicyBatchesModel, { foreignKey: 'batch_id', as: 'feePoli
 
 feePolicyModel.hasMany(feePolicySlabsModel, { foreignKey: 'fee_policy_id', as: 'policySlabs' });
 feePolicySlabsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
+
+feePolicyModel.hasMany(feePolicyStudentsModel, { foreignKey: 'fee_policy_id', as: 'policyStudents' });
+feePolicyStudentsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
+
+feePolicyStudentsModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'student' });
+studentModel.hasMany(feePolicyStudentsModel, { foreignKey: 'student_id', as: 'feePolicyStudents' });
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 

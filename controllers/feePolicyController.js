@@ -68,3 +68,22 @@ export async function deleteFeePolicy(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function mapStudentFeePolicy(req, res) {
+  try {
+    const data = await feePolicyService.mapStudentWithFeePolicies(req.body, req.user);
+    return SuccessResponse(res, 201, "Student(s) mapped with fee policy successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function removeStudentFeePolicyMapping(req, res) {
+  try {
+    const data = await feePolicyService.removeStudentFeePolicyMapping(req.query, req.user);
+    return SuccessResponse(res, 200, "Student fee policy mapping removed successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+

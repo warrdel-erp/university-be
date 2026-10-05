@@ -16,6 +16,7 @@ import {
   getFeePlanPublishHistoryById,
   getSingleFeePlanItemDetails,
   getBillingRuns,
+  getBillingRunDetails,
 } from "../controllers/feePlanItemController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -88,6 +89,13 @@ const billingRunsQuerySchema = z.object({
   sessionId: positiveIntegerId.optional(),
   batchId: positiveIntegerId.optional(),
   year: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+});
+
+const billingRunDetailsQuerySchema = z.object({
+  feePlanItemId: positiveIntegerId,
+  page: positiveIntegerId.optional().default(1),
+  limit: positiveIntegerId.optional().default(10),
   search: z.string().trim().optional(),
 });
 
@@ -185,6 +193,13 @@ router.get(
   userAuth,
   validate({ query: billingRunsQuerySchema }),
   getBillingRuns,
+);
+
+router.get(
+  "/billingRuns/details",
+  userAuth,
+  validate({ query: billingRunDetailsQuerySchema }),
+  getBillingRunDetails,
 );
 
 router.get(

@@ -1,14 +1,22 @@
-import sequelize from '../database/sequelizeConfig.js';
-import * as repo from '../repository/feePlanItemRepository.js';
-import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
-import { buildTermName, resolveTotalTerms, termsForYear } from '../utility/courseTerms.js';
+import sequelize from "../database/sequelizeConfig.js";
+import * as repo from "../repository/feePlanItemRepository.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import {
+  buildTermName,
+  resolveTotalTerms,
+  termsForYear,
+} from "../utility/courseTerms.js";
 import {
   decimalAdd,
+  decimalSubtract,
   decimalMultiply,
+  decimalDivide,
+  decimalSum,
+  toIntegerNumber,
   toMoneyNumber,
-} from '../utility/decimalMoney.js';
-import { FEE_PLAN_PUBLISH_STATUS } from '../constant.js';
-import { getTenantStore } from '../utility/requestContext.js';
+} from "../utility/decimalMoney.js";
+import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
+import { getTenantStore } from "../utility/requestContext.js";
 
 function httpError(message, statusCode) {
   const err = new Error(message);
@@ -17,37 +25,37 @@ function httpError(message, statusCode) {
 }
 
 function resolveStatus(items) {
-  if (!items.length) return 'Setup Required';
+  if (!items.length) return "Setup Required";
 
   let published = 0;
   let draft = 0;
   for (const item of items) {
     if (item.publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-      published += 1;
+      published = decimalAdd(published, 1);
     } else {
-      draft += 1;
+      draft = decimalAdd(draft, 1);
     }
   }
-  if (published && !draft) return 'Published';
-  if (published && draft) return 'In Review';
-  return 'Draft';
+  if (published && !draft) return "Published";
+  if (published && draft) return "In Review";
+  return "Draft";
 }
 
 function resolveYearConfigStatus(items) {
-  if (!items.length) return 'Not Started';
+  if (!items.length) return "Not Started";
 
   let published = 0;
   let draft = 0;
   for (const item of items) {
     if (item.publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-      published += 1;
+      published = decimalAdd(published, 1);
     } else {
-      draft += 1;
+      draft = decimalAdd(draft, 1);
     }
   }
-  if (published && !draft) return 'Approved';
-  if (published && draft) return 'In Review';
-  return 'Draft';
+  if (published && !draft) return "Approved";
+  if (published && draft) return "In Review";
+  return "Draft";
 }
 
 function sumSubItemsAmount(subItems) {
@@ -69,7 +77,7 @@ function sumItemsAmount(items) {
 function countComponents(items) {
   let count = 0;
   for (const item of items) {
-    count += (item.feePlanSubItems || []).length;
+    count = decimalAdd(count, (item.feePlanSubItems || []).length);
   }
   return count;
 }
@@ -122,27 +130,29 @@ function resolveBillingStatus({
   publishStatus,
 }) {
   const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   if (expectedStudents > 0 && raisedCount >= expectedStudents) {
-    return 'Done';
+    return "Done";
   }
   if (publishStatus !== FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-    return 'Draft';
+    return "Draft";
   }
   if (createDate && createDate > today) {
-    return 'Upcoming';
+    return "Upcoming";
   }
   if (createDate && createDate < today) {
-    return 'Due';
+    return "Due";
   }
-  return 'Ready to Raise';
+  return "Ready to Raise";
 }
 
 async function assertFeeTypeCatalogsExist(feeTypeCatalogIds, transaction) {
-  const rows = await repo.findFeeTypeCatalogsByIds(feeTypeCatalogIds, { transaction });
+  const rows = await repo.findFeeTypeCatalogsByIds(feeTypeCatalogIds, {
+    transaction,
+  });
   if (rows.length !== feeTypeCatalogIds.length) {
-    httpError('One or more feeTypeCatalogId values were not found', 400);
+    httpError("One or more feeTypeCatalogId values were not found", 400);
   }
 }
 
@@ -194,7 +204,9 @@ export async function getFeePlanBatches(filters = {}) {
   }
   const studentCountMap = await repo.countStudentsByBatchIds(batchIds);
 
-  const search = filters.search ? String(filters.search).trim().toLowerCase() : '';
+  const search = filters.search
+    ? String(filters.search).trim().toLowerCase()
+    : "";
   const statusFilter = filters.status;
   const summary = {
     totalBatches: 0,
@@ -211,12 +223,13 @@ export async function getFeePlanBatches(filters = {}) {
     const course = session.course;
     const batchYear = Number(plain.batch);
     const duration = Number(course.courseDuration) || 0;
-    const currentYear = activeCalendarYear - batchYear + 1;
-    const endYear = batchYear + duration;
+    const currentYear = decimalAdd(decimalSubtract(activeCalendarYear, batchYear), 1);
+    const endYear = decimalAdd(batchYear, duration);
     const items = plain.feePlanItems || [];
 
     if (search) {
-      const text = `${course.courseName} ${course.courseCode} ${session.sessionName} ${batchYear}`.toLowerCase();
+      const text =
+        `${course.courseName} ${course.courseCode} ${session.sessionName} ${batchYear}`.toLowerCase();
       if (!text.includes(search)) continue;
     }
 
@@ -232,11 +245,11 @@ export async function getFeePlanBatches(filters = {}) {
       currentPositionLabel = `Year ${currentYear}`;
     }
 
-    summary.totalBatches += 1;
-    if (status === 'Published') summary.published += 1;
-    else if (status === 'In Review') summary.inReview += 1;
-    else if (status === 'Draft') summary.draft += 1;
-    else summary.setupRequired += 1;
+    summary.totalBatches = decimalAdd(summary.totalBatches, 1);
+    if (status === "Published") summary.published = decimalAdd(summary.published, 1);
+    else if (status === "In Review") summary.inReview = decimalAdd(summary.inReview, 1);
+    else if (status === "Draft") summary.draft = decimalAdd(summary.draft, 1);
+    else summary.setupRequired = decimalAdd(summary.setupRequired, 1);
 
     const groupKey = `${course.courseId}_${session.sessionId}`;
     if (!groupMap.has(groupKey)) {
@@ -273,7 +286,7 @@ export async function getFeePlanBatches(filters = {}) {
 
   return {
     activeCalendarYear,
-    academicYear: `${activeCalendarYear}-${String(activeCalendarYear + 1).slice(-2)}`,
+    academicYear: `${activeCalendarYear}-${String(decimalAdd(activeCalendarYear, 1)).slice(-2)}`,
     academicYearId: academicCtx.academicYearId,
     yearTitle: academicYearPlain.yearTitle,
     summary,
@@ -297,15 +310,18 @@ export async function getBatchFeePlanOverview(batchId) {
   const batch = batchRow.get({ plain: true });
   const session = batch.session;
   if (!session || !session.course) {
-    httpError(`Batch (ID: ${resolvedBatchId}) is missing session or course`, 400);
+    httpError(
+      `Batch (ID: ${resolvedBatchId}) is missing session or course`,
+      400,
+    );
   }
   const course = session.course;
   const batchYear = Number(batch.batch);
   const duration = Number(course.courseDuration) || 0;
   const totalTerms = resolveTotalTerms(course);
   const activeCalendarYear = Number(academicCtx.activeBatchYear);
-  const currentYear = activeCalendarYear - batchYear + 1;
-  const endYear = batchYear + duration;
+  const currentYear = decimalAdd(decimalSubtract(activeCalendarYear, batchYear), 1);
+  const endYear = decimalAdd(batchYear, duration);
   const items = batch.feePlanItems || [];
   const itemsByYear = groupItemsByYear(items);
 
@@ -320,7 +336,7 @@ export async function getBatchFeePlanOverview(batchId) {
     const yearItems = itemsByYear.get(year) || [];
     const amount = sumItemsAmount(yearItems);
     const status = resolveYearConfigStatus(yearItems);
-    const academicCalendarYear = batchYear + (year - 1);
+    const academicCalendarYear = decimalAdd(batchYear, decimalSubtract(year, 1));
     const isCurrent = year === currentYear;
 
     let latestYearUpdate = null;
@@ -350,14 +366,14 @@ export async function getBatchFeePlanOverview(batchId) {
       }
     }
 
-    let yearRole = 'Planned';
+    let yearRole = "Planned";
     if (currentYear >= 1 && currentYear <= duration) {
-      if (year < currentYear) yearRole = 'Completed';
-      else if (year === currentYear) yearRole = 'Current';
+      if (year < currentYear) yearRole = "Completed";
+      else if (year === currentYear) yearRole = "Current";
     }
 
     if (yearItems.length) {
-      plannedYearsCount += 1;
+      plannedYearsCount = decimalAdd(plannedYearsCount, 1);
       plannedAmount = decimalAdd(plannedAmount, amount);
       if (isCurrent) {
         currentYearAmount = amount;
@@ -371,7 +387,7 @@ export async function getBatchFeePlanOverview(batchId) {
       yearLabel: `Year ${year}`,
       yearRole,
       isCurrent,
-      academicYear: `${academicCalendarYear}-${String(academicCalendarYear + 1).slice(-2)}`,
+      academicYear: `${academicCalendarYear}-${String(decimalAdd(academicCalendarYear, 1)).slice(-2)}`,
       academicCalendarYear,
       academicPosition: academicPositionLabel(course, year),
       terms: buildCurrentTerms(course, year),
@@ -410,7 +426,7 @@ export async function getBatchFeePlanOverview(batchId) {
         to: totalTerms > 0 ? buildTermName(course.termType, totalTerms) : null,
       },
     },
-    currentAcademicYear: `${activeCalendarYear}-${String(activeCalendarYear + 1).slice(-2)}`,
+    currentAcademicYear: `${activeCalendarYear}-${String(decimalAdd(activeCalendarYear, 1)).slice(-2)}`,
     currentYear: inRange ? currentYear : null,
     currentPositionLabel: inRange
       ? `${academicPositionLabel(course, currentYear)} · Year ${currentYear}`
@@ -452,7 +468,10 @@ export async function getBatchFeePlanYear(batchId, year) {
   const batch = batchRow.get({ plain: true });
   const session = batch.session;
   if (!session || !session.course) {
-    httpError(`Batch (ID: ${resolvedBatchId}) is missing session or course`, 400);
+    httpError(
+      `Batch (ID: ${resolvedBatchId}) is missing session or course`,
+      400,
+    );
   }
   const course = session.course;
   const duration = Number(course.courseDuration) || 0;
@@ -462,8 +481,8 @@ export async function getBatchFeePlanYear(batchId, year) {
 
   const batchYear = Number(batch.batch);
   const activeCalendarYear = Number(academicCtx.activeBatchYear);
-  const currentYear = activeCalendarYear - batchYear + 1;
-  const academicCalendarYear = batchYear + (yearNum - 1);
+  const currentYear = decimalAdd(decimalSubtract(activeCalendarYear, batchYear), 1);
+  const academicCalendarYear = decimalAdd(batchYear, decimalSubtract(yearNum, 1));
   const items = batch.feePlanItems || [];
 
   let latestYearUpdate = null;
@@ -510,7 +529,7 @@ export async function getBatchFeePlanYear(batchId, year) {
     year: yearNum,
     yearLabel: `Year ${yearNum}`,
     isCurrent: yearNum === currentYear,
-    academicYear: `${academicCalendarYear}-${String(academicCalendarYear + 1).slice(-2)}`,
+    academicYear: `${academicCalendarYear}-${String(decimalAdd(academicCalendarYear, 1)).slice(-2)}`,
     academicPosition: academicPositionLabel(course, yearNum),
     terms: buildCurrentTerms(course, yearNum),
     configurationStatus: resolveYearConfigStatus(items),
@@ -545,7 +564,10 @@ export async function getBatchBillingDetails(batchId, year) {
   const batch = batchRow.get({ plain: true });
   const session = batch.session;
   if (!session || !session.course) {
-    httpError(`Batch (ID: ${resolvedBatchId}) is missing session or course`, 400);
+    httpError(
+      `Batch (ID: ${resolvedBatchId}) is missing session or course`,
+      400,
+    );
   }
   const course = session.course;
   const duration = Number(course.courseDuration) || 0;
@@ -554,9 +576,9 @@ export async function getBatchBillingDetails(batchId, year) {
   }
 
   const batchYear = Number(batch.batch);
-  const endYear = batchYear + duration;
+  const endYear = decimalAdd(batchYear, duration);
   const activeCalendarYear = Number(academicCtx.activeBatchYear);
-  const currentYear = activeCalendarYear - batchYear + 1;
+  const currentYear = decimalAdd(decimalSubtract(activeCalendarYear, batchYear), 1);
   const expectedStudents = studentCountMap.get(resolvedBatchId) || 0;
   const items = batch.feePlanItems || [];
 
@@ -564,7 +586,8 @@ export async function getBatchBillingDetails(batchId, year) {
   for (const item of items) {
     feePlanItemIds.push(Number(item.feePlanItemId));
   }
-  const raisedMap = await repo.countRaisedInvoicesByFeePlanItemIds(feePlanItemIds);
+  const raisedMap =
+    await repo.countRaisedInvoicesByFeePlanItemIds(feePlanItemIds);
 
   const plannedFeeReceipts = [];
   for (const item of items) {
@@ -616,7 +639,7 @@ export async function getBatchBillingDetails(batchId, year) {
       courseName: course.courseName,
       courseCode: course.courseCode,
     },
-    academicYear: `${activeCalendarYear}-${String(activeCalendarYear + 1).slice(-2)}`,
+    academicYear: `${activeCalendarYear}-${String(decimalAdd(activeCalendarYear, 1)).slice(-2)}`,
     currentYear: inRange ? currentYear : null,
     currentPositionLabel: inRange
       ? `${academicPositionLabel(course, currentYear)} · Year ${currentYear}`
@@ -685,20 +708,26 @@ export async function updateFeePlanItem(body) {
   const feePlanItemId = Number(body.feePlanItemId);
 
   await sequelize.transaction(async (transaction) => {
-    const existing = await repo.findFeePlanItemById(feePlanItemId, { transaction });
+    const existing = await repo.findFeePlanItemById(feePlanItemId, {
+      transaction,
+    });
     if (!existing) {
       httpError(`Fee plan item (ID: ${feePlanItemId}) not found`, 404);
     }
-    if (existing.get({ plain: true }).publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
+    if (
+      existing.get({ plain: true }).publishStatus ===
+      FEE_PLAN_PUBLISH_STATUS.PUBLISHED
+    ) {
       httpError(
-        'Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).',
+        "Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).",
         400,
       );
     }
 
     const updates = {};
     if (body.name !== undefined) updates.name = body.name;
-    if (body.academicPeriod !== undefined) updates.academicPeriod = body.academicPeriod;
+    if (body.academicPeriod !== undefined)
+      updates.academicPeriod = body.academicPeriod;
     if (body.createDate !== undefined) updates.createDate = body.createDate;
     if (body.dueDate !== undefined) updates.dueDate = body.dueDate;
     if (body.year !== undefined) updates.year = body.year;
@@ -736,22 +765,33 @@ export async function deleteFeePlanItem(feePlanItemId) {
   const resolvedId = Number(feePlanItemId);
 
   await sequelize.transaction(async (transaction) => {
-    const existing = await repo.findFeePlanItemById(resolvedId, { transaction });
+    const existing = await repo.findFeePlanItemById(resolvedId, {
+      transaction,
+    });
     if (!existing) {
       httpError(`Fee plan item (ID: ${resolvedId}) not found`, 404);
     }
-    if (existing.get({ plain: true }).publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
+    if (
+      existing.get({ plain: true }).publishStatus ===
+      FEE_PLAN_PUBLISH_STATUS.PUBLISHED
+    ) {
       httpError(
-        'Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).',
+        "Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).",
         400,
       );
     }
 
-    const raised = await repo.countRaisedInvoicesForFeePlanItemIds([resolvedId], {
-      transaction,
-    });
+    const raised = await repo.countRaisedInvoicesForFeePlanItemIds(
+      [resolvedId],
+      {
+        transaction,
+      },
+    );
     if (raised > 0) {
-      httpError('Cannot delete fee plan item with generated student invoices', 400);
+      httpError(
+        "Cannot delete fee plan item with generated student invoices",
+        400,
+      );
     }
 
     await repo.deleteFeePlanSubItemsByItemId(resolvedId, { transaction });
@@ -769,9 +809,12 @@ export async function addFeePlanSubItem(body) {
     if (!item) {
       httpError(`Fee plan item (ID: ${feePlanItemId}) not found`, 404);
     }
-    if (item.get({ plain: true }).publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
+    if (
+      item.get({ plain: true }).publishStatus ===
+      FEE_PLAN_PUBLISH_STATUS.PUBLISHED
+    ) {
       httpError(
-        'Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).',
+        "Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).",
         400,
       );
     }
@@ -817,13 +860,18 @@ export async function deleteFeePlanSubItem(feePlanSubitemId) {
     }
 
     const plain = sub.get({ plain: true });
-    const item = await repo.findFeePlanItemById(plain.feePlanItemId, { transaction });
+    const item = await repo.findFeePlanItemById(plain.feePlanItemId, {
+      transaction,
+    });
     if (!item) {
       httpError(`Fee plan item (ID: ${plain.feePlanItemId}) not found`, 404);
     }
-    if (item.get({ plain: true }).publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
+    if (
+      item.get({ plain: true }).publishStatus ===
+      FEE_PLAN_PUBLISH_STATUS.PUBLISHED
+    ) {
       httpError(
-        'Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).',
+        "Published fee plan items cannot be edited. Unpublish the year first (blocked if invoices exist).",
         400,
       );
     }
@@ -857,12 +905,16 @@ export async function publishBatchFeePlanYear({ batchId, year }) {
       httpError(`year must be between 1 and ${duration}`, 400);
     }
 
-    const items = await repo.findFeePlanItemsByBatchAndYear(resolvedBatchId, yearNum, {
-      withSubItems: true,
-      transaction,
-    });
+    const items = await repo.findFeePlanItemsByBatchAndYear(
+      resolvedBatchId,
+      yearNum,
+      {
+        withSubItems: true,
+        transaction,
+      },
+    );
     if (!items.length) {
-      httpError('No fee plan items found for this batch year', 400);
+      httpError("No fee plan items found for this batch year", 400);
     }
 
     const feePlanItemIds = [];
@@ -879,12 +931,15 @@ export async function publishBatchFeePlanYear({ batchId, year }) {
 
     let alreadyPublished = 0;
     for (const row of items) {
-      if (row.get({ plain: true }).publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-        alreadyPublished += 1;
+      if (
+        row.get({ plain: true }).publishStatus ===
+        FEE_PLAN_PUBLISH_STATUS.PUBLISHED
+      ) {
+        alreadyPublished = decimalAdd(alreadyPublished, 1);
       }
     }
     if (alreadyPublished === items.length) {
-      httpError('Fee plan year is already published', 400);
+      httpError("Fee plan year is already published", 400);
     }
 
     await repo.updateFeePlanItemsPublishByIds(
@@ -901,7 +956,7 @@ export async function publishBatchFeePlanYear({ batchId, year }) {
       {
         batchId: resolvedBatchId,
         year: yearNum,
-        action: 'publish',
+        action: "publish",
         publishedAt,
         publishedBy,
       },
@@ -930,12 +985,16 @@ export async function unpublishBatchFeePlanYear({ batchId, year }) {
   const publishedAt = new Date();
 
   const historyId = await sequelize.transaction(async (transaction) => {
-    const items = await repo.findFeePlanItemsByBatchAndYear(resolvedBatchId, yearNum, {
-      withSubItems: true,
-      transaction,
-    });
+    const items = await repo.findFeePlanItemsByBatchAndYear(
+      resolvedBatchId,
+      yearNum,
+      {
+        withSubItems: true,
+        transaction,
+      },
+    );
     if (!items.length) {
-      httpError('No fee plan items found for this batch year', 400);
+      httpError("No fee plan items found for this batch year", 400);
     }
 
     const feePlanItemIds = [];
@@ -944,19 +1003,22 @@ export async function unpublishBatchFeePlanYear({ batchId, year }) {
       const plain = row.get({ plain: true });
       feePlanItemIds.push(Number(plain.feePlanItemId));
       if (plain.publishStatus === FEE_PLAN_PUBLISH_STATUS.PUBLISHED) {
-        publishedCount += 1;
+        publishedCount = decimalAdd(publishedCount, 1);
       }
     }
     if (!publishedCount) {
-      httpError('Fee plan year is not published', 400);
+      httpError("Fee plan year is not published", 400);
     }
 
-    const raised = await repo.countRaisedInvoicesForFeePlanItemIds(feePlanItemIds, {
-      transaction,
-    });
+    const raised = await repo.countRaisedInvoicesForFeePlanItemIds(
+      feePlanItemIds,
+      {
+        transaction,
+      },
+    );
     if (raised > 0) {
       httpError(
-        'Cannot unpublish: student invoices have already been generated for this year',
+        "Cannot unpublish: student invoices have already been generated for this year",
         400,
       );
     }
@@ -975,7 +1037,7 @@ export async function unpublishBatchFeePlanYear({ batchId, year }) {
       {
         batchId: resolvedBatchId,
         year: yearNum,
-        action: 'unpublish',
+        action: "unpublish",
         publishedAt,
         publishedBy,
       },
@@ -1039,21 +1101,27 @@ export async function getFeePlanPublishHistoryById(feePlanPublishHistoryId) {
 }
 
 export async function getSingleFeePlanItemDetails(feePlanItemId, options = {}) {
-  const row = await repo.findFeePlanItemById(feePlanItemId, { withSubItems: true });
+  const row = await repo.findFeePlanItemById(feePlanItemId, {
+    withSubItems: true,
+  });
   if (!row) {
     httpError(`Fee plan item (ID: ${feePlanItemId}) not found`, 404);
   }
   const plainItem = row.get({ plain: true });
 
-  const [batchRow, academicCtx, studentRows, raisedInvoices] = await Promise.all([
-    repo.findBatchBasics(plainItem.batchId),
-    resolveActiveAcademicYearContext(),
-    repo.findStudentsByBatchId(plainItem.batchId),
-    repo.findRaisedInvoicesByFeePlanItemId(feePlanItemId),
-  ]);
+  const [batchRow, academicCtx, studentRows, raisedInvoices] =
+    await Promise.all([
+      repo.findBatchBasics(plainItem.batchId),
+      resolveActiveAcademicYearContext(),
+      repo.findStudentsByBatchId(plainItem.batchId),
+      repo.findRaisedInvoicesByFeePlanItemId(feePlanItemId),
+    ]);
 
   if (!batchRow) {
-    httpError(`Batch (ID: ${plainItem.batchId}) not found for fee plan item`, 404);
+    httpError(
+      `Batch (ID: ${plainItem.batchId}) not found for fee plan item`,
+      404,
+    );
   }
 
   const plainBatch = batchRow.get({ plain: true });
@@ -1065,21 +1133,26 @@ export async function getSingleFeePlanItemDetails(feePlanItemId, options = {}) {
     ? academicCtx.academicYear.get({ plain: true })
     : academicCtx.academicYear || {};
 
-  const academicYearLabel = `${activeCalendarYear}-${String(activeCalendarYear + 1).slice(-2)}`;
+  const academicYearLabel = `${activeCalendarYear}-${String(decimalAdd(activeCalendarYear, 1)).slice(-2)}`;
   const academicYearTitle = plainAcademicYear.yearTitle || academicYearLabel;
 
   const batchYear = Number(plainBatch.batch);
   const courseDuration = Number(course.courseDuration) || 0;
   const totalTerms = resolveTotalTerms(course);
-  const batchEndYear = batchYear + courseDuration;
+  const batchEndYear = decimalAdd(batchYear, courseDuration);
   const admissionBatchLabel = `${batchYear}-${String(batchEndYear).slice(-2)}`;
   const batchAcademicYearsLabel = `${batchYear} - ${batchEndYear}`;
 
-  const currentStudyYear = activeCalendarYear - batchYear + 1;
-  const isYearWithinCourseDuration = currentStudyYear >= 1 && currentStudyYear <= courseDuration;
-  const currentTermsNumbers = isYearWithinCourseDuration ? termsForYear(currentStudyYear, course) : [];
+  const currentStudyYear = decimalAdd(decimalSubtract(activeCalendarYear, batchYear), 1);
+  const isYearWithinCourseDuration =
+    currentStudyYear >= 1 && currentStudyYear <= courseDuration;
+  const currentTermsNumbers = isYearWithinCourseDuration
+    ? termsForYear(currentStudyYear, course)
+    : [];
   const currentTerm = currentTermsNumbers[0] || null;
-  const currentTermName = currentTerm ? buildTermName(course.termType, currentTerm) : null;
+  const currentTermName = currentTerm
+    ? buildTermName(course.termType, currentTerm)
+    : null;
 
   const receiptAmount = sumSubItemsAmount(plainItem.feePlanSubItems);
   const studentCount = studentRows.length;
@@ -1113,7 +1186,7 @@ export async function getSingleFeePlanItemDetails(feePlanItemId, options = {}) {
     limit = Math.max(1, Number(options.limit) || 10);
     totalPages = Math.ceil(totalRecords / limit) || 1;
     const offset = (page - 1) * limit;
-    paginatedStudentRows = studentRows.slice(offset, offset + limit);
+    paginatedStudentRows = studentRows.slice(offset, decimalAdd(offset, limit));
   }
 
   const studentsList = paginatedStudentRows.map((st) => {
@@ -1137,9 +1210,13 @@ export async function getSingleFeePlanItemDetails(feePlanItemId, options = {}) {
       currentStudyYear: isYearWithinCourseDuration ? currentStudyYear : null,
       currentTerm,
       currentTermName,
-      invoiceAmount: raisedInvoice ? toMoneyNumber(raisedInvoice.total) : receiptAmount,
+      invoiceAmount: raisedInvoice
+        ? toMoneyNumber(raisedInvoice.total)
+        : receiptAmount,
       isInvoiceRaised: !!raisedInvoice,
-      studentFeeInvoiceId: raisedInvoice ? raisedInvoice.studentFeeInvoiceId : null,
+      studentFeeInvoiceId: raisedInvoice
+        ? raisedInvoice.studentFeeInvoiceId
+        : null,
       invoiceStatus: raisedInvoice ? "Raised" : "Pending",
     };
   });
@@ -1194,15 +1271,25 @@ export async function getSingleFeePlanItemDetails(feePlanItemId, options = {}) {
 }
 
 function formatRunDate(dateStr) {
-  if (!dateStr) return '';
-  const parts = String(dateStr).split('-');
+  if (!dateStr) return "";
+  const parts = String(dateStr).split("-");
   if (parts.length !== 3) return dateStr;
   const year = parts[0];
   const monthIdx = Number(parts[1]) - 1;
   const day = parts[2];
   const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   return `${day} ${monthNames[monthIdx] || parts[1]} ${year}`;
 }
@@ -1215,10 +1302,14 @@ export async function getBillingRuns(filters = {}) {
 
   const activeBatchYear = Number(academicCtx.activeBatchYear);
   const activeAcademicYear = academicCtx.academicYear;
-  const activeAcademicYearText = activeAcademicYear?.academicYear || `${activeBatchYear}-${String(activeBatchYear + 1).slice(-2)}`;
+  const activeAcademicYearText =
+    activeAcademicYear?.academicYear ||
+    `${activeBatchYear}-${String(activeBatchYear + 1).slice(-2)}`;
 
   const feePlanItemIds = items.map((it) => Number(it.feePlanItemId));
-  const batchIds = Array.from(new Set(items.map((it) => Number(it.batchId)).filter(Boolean)));
+  const batchIds = Array.from(
+    new Set(items.map((it) => Number(it.batchId)).filter(Boolean)),
+  );
 
   const [raisedMap, studentCountMap] = await Promise.all([
     repo.countRaisedInvoicesByFeePlanItemIds(feePlanItemIds),
@@ -1226,13 +1317,15 @@ export async function getBillingRuns(filters = {}) {
   ]);
 
   const d = new Date();
-  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   const actionRequired = [];
   const activeBillingRuns = [];
   const upcomingRuns = [];
 
-  const search = filters.search ? String(filters.search).trim().toLowerCase() : '';
+  const search = filters.search
+    ? String(filters.search).trim().toLowerCase()
+    : "";
 
   for (const rawItem of items) {
     const plain = rawItem.get ? rawItem.get({ plain: true }) : rawItem;
@@ -1244,13 +1337,14 @@ export async function getBillingRuns(filters = {}) {
 
     const batchYear = Number(batch.batch);
     const duration = Number(course.courseDuration) || 0;
-    const endYear = batchYear + duration;
+    const endYear = decimalAdd(batchYear, duration);
     const yearNum = plain.year != null ? Number(plain.year) : 1;
 
     // Only send feePlanItems for the current active year of this batch:
     // e.g. 2025 batch in active calendar year 2026 -> activeYear = 2026 - 2025 + 1 = 2
-    const currentActiveYear = activeBatchYear - batchYear + 1;
-    const targetYear = filters.year != null ? Number(filters.year) : currentActiveYear;
+    const currentActiveYear = decimalAdd(decimalSubtract(activeBatchYear, batchYear), 1);
+    const targetYear =
+      filters.year != null ? Number(filters.year) : currentActiveYear;
     if (yearNum !== targetYear) {
       continue;
     }
@@ -1260,7 +1354,8 @@ export async function getBillingRuns(filters = {}) {
     const feePlanLabel = `Fee Plan ${activeAcademicYearText}`;
 
     if (search) {
-      const matchText = `${billingRun} ${course.courseName} ${course.courseCode} ${session.sessionName} ${batchYear}`.toLowerCase();
+      const matchText =
+        `${billingRun} ${course.courseName} ${course.courseCode} ${session.sessionName} ${batchYear}`.toLowerCase();
       if (!matchText.includes(search)) continue;
     }
 
@@ -1276,7 +1371,7 @@ export async function getBillingRuns(filters = {}) {
       feePlanItemId: plain.feePlanItemId,
       billingRun,
       name: plain.name,
-      domain: 'Academic',
+      domain: "Academic",
       context,
       feePlanLabel,
       batchId: Number(batch.batchId),
@@ -1315,12 +1410,12 @@ export async function getBillingRuns(filters = {}) {
     if (raisedInvoiceCount > 0) {
       const stage =
         students > 0 && raisedInvoiceCount >= students
-          ? 'Completed'
+          ? "Completed"
           : raisedInvoiceCount > 0
-          ? 'Partially Completed'
-          : plain.publishStatus === 'published'
-          ? 'Ready'
-          : 'Draft';
+            ? "Partially Completed"
+            : plain.publishStatus === "published"
+              ? "Ready"
+              : "Draft";
 
       activeBillingRuns.push({
         ...baseItemData,
@@ -1329,11 +1424,11 @@ export async function getBillingRuns(filters = {}) {
     } else if (plain.createDate && plain.createDate > today) {
       upcomingRuns.push({
         ...baseItemData,
-        stage: 'Upcoming',
+        stage: "Upcoming",
       });
     } else {
       const isPast = plain.createDate && plain.createDate < today;
-      const stage = isPast ? 'Due for billing' : 'Ready to raise';
+      const stage = isPast ? "Due for billing" : "Ready to raise";
 
       actionRequired.push({
         ...baseItemData,
@@ -1347,7 +1442,11 @@ export async function getBillingRuns(filters = {}) {
       actionRequiredCount: actionRequired.length,
       activeBillingRunsCount: activeBillingRuns.length,
       upcomingRunsCount: upcomingRuns.length,
-      totalRuns: actionRequired.length + activeBillingRuns.length + upcomingRuns.length,
+      totalRuns: decimalSum([
+        actionRequired.length,
+        activeBillingRuns.length,
+        upcomingRuns.length,
+      ]),
     },
     actionRequired,
     activeBillingRuns,
@@ -1358,3 +1457,194 @@ export async function getBillingRuns(filters = {}) {
   };
 }
 
+export async function getBillingRunDetails(query = {}, authUser = {}) {
+  const { feePlanItemId, page = 1, limit = 10, search } = query;
+
+  if (!feePlanItemId) {
+    throw httpError("feePlanItemId is required", 400);
+  }
+
+  const rawItem = await repo.findFeePlanItemWithHierarchyById(feePlanItemId);
+  if (!rawItem) {
+    throw httpError(`Fee plan item with ID ${feePlanItemId} not found`, 404);
+  }
+
+  const plainItem = rawItem.get ? rawItem.get({ plain: true }) : rawItem;
+  const batch = plainItem.batch;
+  const session = batch?.session;
+  const course = session?.course;
+
+  const batchYear = Number(batch?.batch);
+  const courseDuration = Number(course?.courseDuration) || 0;
+  const endYear = decimalAdd(batchYear, courseDuration);
+  const yearNum = plainItem.year != null ? Number(plainItem.year) : 1;
+
+  const [studentCountMap, raisedMap, paginatedStudents] = await Promise.all([
+    repo.countStudentsByBatchIds([Number(batch.batchId)]),
+    repo.countRaisedInvoicesByFeePlanItemIds([Number(plainItem.feePlanItemId)]),
+    repo.findPaginatedStudentsByBatchId({
+      batchId: Number(batch.batchId),
+      page,
+      limit,
+      search,
+    }),
+  ]);
+
+  const studentCount = studentCountMap.get(Number(batch.batchId)) || 0;
+  const raisedInvoicesCount =
+    raisedMap.get(Number(plainItem.feePlanItemId)) || 0;
+  const pendingInvoicesCount = Math.max(0, decimalSubtract(studentCount, raisedInvoicesCount));
+
+  const amountPerStudent = sumSubItemsAmount(plainItem.feePlanSubItems);
+  const totalBillingAmount = decimalMultiply(amountPerStudent, studentCount);
+
+  const d = new Date();
+  const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+  let stage = "Ready to raise";
+  if (raisedInvoicesCount > 0) {
+    stage =
+      studentCount > 0 && raisedInvoicesCount >= studentCount
+        ? "Completed"
+        : "Partially Completed";
+  } else if (plainItem.createDate && plainItem.createDate > today) {
+    stage = "Upcoming";
+  } else if (plainItem.createDate && plainItem.createDate < today) {
+    stage = "Due for billing";
+  }
+
+  const subItems = (plainItem.feePlanSubItems || []).map(mapSubItem);
+
+  const studentIdsOnPage = paginatedStudents.rows.map((s) =>
+    Number(s.studentId),
+  );
+  const invoicesOnPage =
+    await repo.findGeneratedInvoicesByFeePlanItemIdAndStudentIds(
+      plainItem.feePlanItemId,
+      studentIdsOnPage,
+    );
+  const invoiceMap = new Map(
+    invoicesOnPage.map((inv) => [Number(inv.studentId), inv]),
+  );
+
+  const studentList = paginatedStudents.rows.map((row) => {
+    const s = row.get ? row.get({ plain: true }) : row;
+    const inv = invoiceMap.get(Number(s.studentId));
+
+    const mappedFeePolicies = (s.feePolicyStudents || [])
+      .map((fps) => {
+        const p = fps.policy;
+        if (!p) return null;
+        return {
+          feePolicyStudentId: fps.feePolicyStudentId,
+          feePolicyId: p.feePolicyId,
+          policyName: p.policyName,
+          description: p.description,
+          appliesTo: p.appliesTo,
+          effect: p.effect,
+          calculationType: p.calculationType,
+          percentageRate:
+            p.percentageRate != null ? Number(p.percentageRate) : null,
+          fixedAmount: p.fixedAmount != null ? Number(p.fixedAmount) : null,
+          gracePeriodDays:
+            p.gracePeriodDays != null ? Number(p.gracePeriodDays) : 0,
+          maxCapAmount: p.maxCapAmount != null ? Number(p.maxCapAmount) : null,
+          publishStatus: p.publishStatus,
+        };
+      })
+      .filter(Boolean);
+
+    const isFeePolicyMapped = mappedFeePolicies.length > 0;
+    const primaryPolicy = isFeePolicyMapped ? mappedFeePolicies[0] : null;
+
+    return {
+      studentId: s.studentId,
+      userId: s.userId,
+      firstName: s.firstName,
+      middleName: s.middleName,
+      lastName: s.lastName,
+      fullName: [s.firstName, s.middleName, s.lastName]
+        .filter(Boolean)
+        .join(" "),
+      scholarNumber: s.scholarNumber,
+      enrollNumber: s.enrollNumber,
+      admissionNumber: s.admissionNumber,
+      studentStatus: s.studentStatus,
+      batchId: s.batchId,
+      classSectionTermId: s.classSectionTermId,
+      isInvoiceRaised: Boolean(inv),
+      invoice: inv
+        ? {
+            studentFeeInvoiceId: inv.studentFeeInvoiceId,
+            total: inv.total != null ? Number(inv.total) : null,
+            paidAmount: inv.paidAmount != null ? Number(inv.paidAmount) : 0,
+            paymentStatus: inv.paymentStatus,
+            status: inv.status,
+            createDate: inv.createDate,
+            dueDate: inv.dueDate,
+          }
+        : null,
+      isFeePolicyMapped,
+      feePolicies: mappedFeePolicies,
+      feePolicy: primaryPolicy,
+    };
+  });
+
+  return {
+    feePlanItem: {
+      feePlanItemId: plainItem.feePlanItemId,
+      billingRun: plainItem.name || `Year ${yearNum} Fee`,
+      name: plainItem.name,
+      domain: "Academic",
+      year: yearNum,
+      academicPeriod: plainItem.academicPeriod,
+      createDate: plainItem.createDate,
+      plannedDate: plainItem.createDate,
+      dueDate: plainItem.dueDate,
+      publishStatus: plainItem.publishStatus,
+      stage,
+      amountPerStudent,
+      totalBillingAmount,
+      runTotal: totalBillingAmount,
+      raisedInvoicesCount,
+      pendingInvoicesCount,
+      createdAt: plainItem.createdAt,
+      updatedAt: plainItem.updatedAt,
+      feePlanSubItems: subItems,
+    },
+    batch: {
+      batchId: Number(batch?.batchId),
+      batchYear,
+      batch: batchYear,
+      admissionBatch: `${batchYear}-${String(endYear).slice(-2)}`,
+      academicYears: `${batchYear} - ${endYear}`,
+      status: batch?.status,
+    },
+    course: course
+      ? {
+          courseId: course.courseId,
+          courseName: course.courseName,
+          courseCode: course.courseCode,
+          courseDuration,
+          termType: course.termType,
+          totalTerms: course.totalTerms,
+        }
+      : null,
+    session: session
+      ? {
+          sessionId: session.sessionId,
+          sessionName: session.sessionName,
+        }
+      : null,
+    studentCount,
+    peginationData: {
+      totalRecords: paginatedStudents.totalRecords,
+      totalPages: paginatedStudents.totalPages,
+      currentPage: paginatedStudents.currentPage,
+      pageSize: paginatedStudents.pageSize,
+      hasNextPage: paginatedStudents.currentPage < paginatedStudents.totalPages,
+      hasPrevPage: paginatedStudents.currentPage > 1,
+    },
+    students: studentList,
+  };
+}
