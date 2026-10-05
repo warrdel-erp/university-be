@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "univ-v2-fee-policy-v1",
     "name": "Fee Policy API",
-    "description": "Fee Policy Lifecycle Management API (Create, List, Single, Update, Publish, Unpublish, Delete) with Program/Batch/Year scoping, Component applicability, and Calculation engines (percentage, fixed amount, per day, percentage of outstanding, slab based).",
+    "description": "Fee Policy Lifecycle Management API (Create, List, Single, Update, Publish, Unpublish, Delete) with Program/Batch/Year scoping, Component applicability, Calculation engines (percentage, fixed amount, per day, percentage of outstanding, slab based), Student-Policy Mappings, and Fee Plan Item Billing Runs.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -37,6 +37,14 @@
     {
       "key": "feePlanItemId",
       "value": "36"
+    },
+    {
+      "key": "courseId",
+      "value": "1"
+    },
+    {
+      "key": "sessionId",
+      "value": "1"
     }
   ],
   "item": [
@@ -415,7 +423,62 @@
       "response": []
     },
     {
-      "name": "12. Get Fee Plan Item Billing Run Details",
+      "name": "12. Get Fee Plan Item Billing Runs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/billingRuns?courseId={{courseId}}&sessionId={{sessionId}}&batchId={{batchId}}&year={{year}}&search=",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "billingRuns"
+          ],
+          "query": [
+            {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Filter by course ID (optional)"
+            },
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "Filter by session ID (optional)"
+            },
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Filter by batch ID (optional)"
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Filter by batch year level (optional)"
+            },
+            {
+              "key": "search",
+              "value": "",
+              "description": "Search keyword by plan name, course name/code, session, or batch (optional)"
+            }
+          ]
+        },
+        "description": "GET /feePlanItem/billingRuns?courseId=&sessionId=&batchId=&year=&search=\n\nRetrieves billing runs grouped by status stages along with high-level summary counts:\n- summary: actionRequiredCount, activeBillingRunsCount, upcomingRunsCount, totalRuns\n- actionRequired: items where createDate has arrived/passed and invoices are not yet generated (\"Due for billing\", \"Ready to raise\")\n- activeBillingRuns: items with invoices generated (\"Partially Completed\", \"Completed\")\n- upcomingRuns: upcoming items with future createDate (\"Upcoming\")\n\nQuery parameters:\n- courseId (optional)\n- sessionId (optional)\n- batchId (optional)\n- year (optional)\n- search (optional)"
+      },
+      "response": []
+    },
+    {
+      "name": "13. Get Fee Plan Item Billing Run Details",
       "request": {
         "method": "GET",
         "header": [
