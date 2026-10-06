@@ -22,8 +22,14 @@ function feePolicyIncludes() {
       model: model.feePolicyBatchesModel,
       as: "policyBatches",
       required: false,
-      attributes: ["feePolicyBatchId", "feePolicyId", "batchId", "year"],
+      attributes: ["feePolicyBatchId", "feePolicyId", "courseId", "batchId", "year", "term"],
       include: [
+        {
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName", "courseCode"],
+          required: false,
+        },
         {
           model: model.batchModel,
           as: "batch",
@@ -81,8 +87,10 @@ export async function findFeePolicies({
   publishStatus,
   effect,
   calculationType,
+  courseId,
   batchId,
   year,
+  term,
   search,
   page,
   limit,
@@ -103,19 +111,21 @@ export async function findFeePolicies({
 
   if (search && search.trim()) {
     where[Op.or] = [
-      { policyName: { [Op.like]: `%${search.trim()}%` } },
-      { description: { [Op.like]: `%${search.trim()}%` } },
+      { policyName: { [Op.like]: `%${search.trim}%` } },
+      { description: { [Op.like]: `%${search.trim}%` } },
     ];
   }
 
   const include = feePolicyIncludes();
 
-  if (batchId || year) {
+  if (batchId || year || courseId || term) {
     const batchInclude = include.find((inc) => inc.as === "policyBatches");
     if (batchInclude) {
       batchInclude.where = {};
+      if (courseId) batchInclude.where.courseId = Number(courseId);
       if (batchId) batchInclude.where.batchId = Number(batchId);
       if (year) batchInclude.where.year = Number(year);
+      if (term) batchInclude.where.term = Number(term);
       batchInclude.required = true;
     }
   }

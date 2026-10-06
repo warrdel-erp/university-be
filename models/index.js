@@ -4278,6 +4278,9 @@ feePolicyBatchesModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', a
 feePolicyBatchesModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
 batchModel.hasMany(feePolicyBatchesModel, { foreignKey: 'batch_id', as: 'feePolicyBatches' });
 
+feePolicyBatchesModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'course' });
+courseModel.hasMany(feePolicyBatchesModel, { foreignKey: 'course_id', as: 'feePolicyBatches' });
+
 feePolicyModel.hasMany(feePolicySlabsModel, { foreignKey: 'fee_policy_id', as: 'policySlabs' });
 feePolicySlabsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
 

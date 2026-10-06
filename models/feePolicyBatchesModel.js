@@ -4,6 +4,7 @@ import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
 import feePolicyModel from "./feePolicyModel.js";
 import batchModel from "./batchModel.js";
+import courseModel from "./courseModel.js";
 
 const feePolicyBatchesModel = sequelize.define(
   "fee_policy_batches",
@@ -41,9 +42,18 @@ const feePolicyBatchesModel = sequelize.define(
         key: "fee_policy_id",
       },
     },
+    courseId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "course_id",
+      references: {
+        model: courseModel,
+        key: "course_id",
+      },
+    },
     batchId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       field: "batch_id",
       references: {
         model: batchModel,
@@ -55,6 +65,12 @@ const feePolicyBatchesModel = sequelize.define(
       allowNull: true,
       field: "year",
       comment: "Programme year level (1, 2, 3...)",
+    },
+    term: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "term",
+      comment: "Programme term / semester (1, 2...)",
     },
   },
   {

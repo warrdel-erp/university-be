@@ -41,12 +41,24 @@ const slabSchema = z.object({
   orderIndex: z.coerce.number().int().optional(),
 });
 
-const batchItemSchema = z.object({
-  batchId: positiveIntegerId,
+const yearTermSchema = z.object({
   year: z.coerce.number().int().positive().nullable().optional(),
+  terms: z.array(z.coerce.number().int().positive()).optional(),
 });
 
-const batchInputSchema = z.union([positiveIntegerId, batchItemSchema]);
+const courseScopeItemSchema = z.object({
+  courseId: positiveIntegerId.optional(),
+  batchId: positiveIntegerId.nullable().optional(),
+  year: z.coerce.number().int().positive().nullable().optional(),
+  terms: z.array(z.coerce.number().int().positive()).optional(),
+  years: z.array(yearTermSchema).optional(),
+}).refine((data) => data.courseId != null || data.batchId != null, {
+  message: "Either courseId or batchId must be provided in scope mapping",
+});
+
+const batchItemSchema = courseScopeItemSchema;
+
+const batchInputSchema = z.union([positiveIntegerId, courseScopeItemSchema]);
 
 const createFeePolicySchema = z.object({
   policyName: z.string().trim().min(1, "policyName is required"),
@@ -61,6 +73,7 @@ const createFeePolicySchema = z.object({
   referenceDateEvent: z.string().optional().nullable(),
   publishStatus: z.enum(["draft", "published"]).optional().default("draft"),
   feeTypeCatalogIds: z.array(positiveIntegerId).optional(),
+  courses: z.array(courseScopeItemSchema).optional(),
   batchIds: z.array(positiveIntegerId).optional(),
   batches: z.array(batchInputSchema).optional(),
   slabs: z.array(slabSchema).optional(),
@@ -80,6 +93,7 @@ const updateFeePolicySchema = z.object({
   referenceDateEvent: z.string().optional().nullable(),
   isActive: z.boolean().optional(),
   feeTypeCatalogIds: z.array(positiveIntegerId).optional(),
+  courses: z.array(courseScopeItemSchema).optional(),
   batchIds: z.array(positiveIntegerId).optional(),
   batches: z.array(batchInputSchema).optional(),
   slabs: z.array(slabSchema).optional(),
@@ -93,8 +107,10 @@ const listFeePolicyQuerySchema = z.object({
   publishStatus: z.enum(["all", "draft", "published"]).optional(),
   effect: effectEnum.optional(),
   calculationType: calculationTypeEnum.optional(),
+  courseId: positiveIntegerId.optional(),
   batchId: positiveIntegerId.optional(),
   year: positiveIntegerId.optional(),
+  term: positiveIntegerId.optional(),
   search: z.string().optional(),
   page: positiveIntegerId.optional(),
   limit: positiveIntegerId.optional(),

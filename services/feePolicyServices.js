@@ -8,50 +8,118 @@ function httpError(message, statusCode = 400) {
   return err;
 }
 
-function normalizeBatches(batches, batchIds, feePolicyId, instituteId, universityId) {
-  const batchList = [];
-  if (Array.isArray(batches) && batches.length) {
-    for (const b of batches) {
-      if (typeof b === "number" || typeof b === "string") {
-        batchList.push({
-          feePolicyId: Number(feePolicyId),
-          batchId: Number(b),
-          year: null,
-          instituteId,
-          universityId,
-        });
-      } else if (b && typeof b === "object") {
-        batchList.push({
-          feePolicyId: Number(feePolicyId),
-          batchId: Number(b.batchId),
-          year: b.year != null ? Number(b.year) : null,
-          instituteId,
-          universityId,
-        });
+export function groupPolicyBatchesToCourses(policyBatches = []) {
+  const courseMap = new Map();
+
+  for (const pb of policyBatches) {
+    if (!pb) continue;
+    const courseId = pb.courseId || pb.course?.courseId;
+    if (!courseId) continue;
+
+    if (!courseMap.has(courseId)) {
+      courseMap.set(courseId, {
+        courseId,
+        courseName: pb.course?.courseName || null,
+        courseCode: pb.course?.courseCode || null,
+        yearsMap: new Map(),
+      });
+    }
+
+    const cEntry = courseMap.get(courseId);
+    if (pb.year != null) {
+      if (!cEntry.yearsMap.has(pb.year)) {
+        cEntry.yearsMap.set(pb.year, new Set());
+      }
+      if (pb.term != null) {
+        cEntry.yearsMap.get(pb.year).add(pb.term);
       }
     }
-  } else if (Array.isArray(batchIds) && batchIds.length) {
-    for (const id of batchIds) {
-      batchList.push({
-        feePolicyId: Number(feePolicyId),
-        batchId: Number(id),
+  }
+
+  const courses = [];
+  for (const c of courseMap.values()) {
+    const years = [];
+    for (const [year, termSet] of c.yearsMap.entries()) {
+      years.push({
+        year,
+        terms: Array.from(termSet).sort((a, b) => a - b),
+      });
+    }
+    years.sort((a, b) => a.year - b.year);
+    courses.push({
+      courseId: c.courseId,
+      courseName: c.courseName,
+      courseCode: c.courseCode,
+      years,
+    });
+  }
+  return courses;
+}
+
+export function formatPolicyResponse(policy) {
+  if (!policy) return policy;
+  const policyObj =
+    typeof policy.toJSON === "function" ? policy.toJSON() : { ...policy };
+  policyObj.courses = groupPolicyBatchesToCourses(
+    policyObj.policyBatches || [],
+  );
+  return policyObj;
+}
+
+function buildFeePolicyBatchRows(
+  courses = [],
+  feePolicyId,
+  instituteId,
+  universityId,
+) {
+  const rows = [];
+  for (const c of courses) {
+    if (!c) continue;
+    const courseId = c.courseId != null ? Number(c.courseId) : null;
+    const batchId = c.batchId != null ? Number(c.batchId) : null;
+    if (!courseId && !batchId) continue;
+
+    if (Array.isArray(c.years) && c.years.length) {
+      for (const y of c.years) {
+        if (!y) continue;
+        const yearVal = y.year != null ? Number(y.year) : null;
+        if (Array.isArray(y.terms) && y.terms.length) {
+          for (const term of y.terms) {
+            rows.push({
+              feePolicyId,
+              courseId,
+              batchId,
+              year: yearVal,
+              term: Number(term),
+              instituteId,
+              universityId,
+            });
+          }
+        } else {
+          rows.push({
+            feePolicyId,
+            courseId,
+            batchId,
+            year: yearVal,
+            term: null,
+            instituteId,
+            universityId,
+          });
+        }
+      }
+    } else {
+      rows.push({
+        feePolicyId,
+        courseId,
+        batchId,
         year: null,
+        term: null,
         instituteId,
         universityId,
       });
     }
   }
-
-  const seen = new Set();
-  const uniqueBatches = [];
-  for (const item of batchList) {
-    const key = `${item.batchId}_${item.year}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      uniqueBatches.push(item);
-    }
-  }
-  return uniqueBatches;
+  return rows;
 }
 
 export async function createFeePolicy(body, authUser = {}) {
@@ -69,6 +137,7 @@ export async function createFeePolicy(body, authUser = {}) {
       referenceDateEvent,
       publishStatus = "draft",
       feeTypeCatalogIds = [],
+      courses = [],
       batchIds = [],
       batches = [],
       slabs = [],
@@ -86,24 +155,42 @@ export async function createFeePolicy(body, authUser = {}) {
       throw httpError("calculationType is required", 400);
     }
 
-    if (calculationType === "percentage" || calculationType === "percentage_of_outstanding") {
+    if (
+      calculationType === "percentage" ||
+      calculationType === "percentage_of_outstanding"
+    ) {
       if (percentageRate == null) {
-        throw httpError("percentageRate is required for percentage calculation", 400);
+        throw httpError(
+          "percentageRate is required for percentage calculation",
+          400,
+        );
       }
     }
 
     if (calculationType === "fixed_amount" || calculationType === "per_day") {
       if (fixedAmount == null) {
-        throw httpError("fixedAmount is required for fixed_amount or per_day calculation", 400);
+        throw httpError(
+          "fixedAmount is required for fixed_amount or per_day calculation",
+          400,
+        );
       }
     }
 
-    if (appliesTo === "selected_components" && (!feeTypeCatalogIds || !feeTypeCatalogIds.length)) {
-      throw httpError("feeTypeCatalogIds must be provided when appliesTo is selected_components", 400);
+    if (
+      appliesTo === "selected_components" &&
+      (!feeTypeCatalogIds || !feeTypeCatalogIds.length)
+    ) {
+      throw httpError(
+        "feeTypeCatalogIds must be provided when appliesTo is selected_components",
+        400,
+      );
     }
 
     if (calculationType === "slab_based" && (!slabs || !slabs.length)) {
-      throw httpError("slabs must be provided when calculationType is slab_based", 400);
+      throw httpError(
+        "slabs must be provided when calculationType is slab_based",
+        400,
+      );
     }
 
     const isPublished = publishStatus === "published";
@@ -121,12 +208,14 @@ export async function createFeePolicy(body, authUser = {}) {
       referenceDateEvent: referenceDateEvent ?? null,
       publishStatus: isPublished ? "published" : "draft",
       publishedAt: isPublished ? new Date() : null,
-      publishedBy: isPublished ? authUser.userId ?? null : null,
+      publishedBy: isPublished ? (authUser.userId ?? null) : null,
       createdBy: authUser.userId ?? null,
       updatedBy: authUser.userId ?? null,
     };
 
-    const policy = await feePolicyRepo.createFeePolicy(policyPayload, { transaction });
+    const policy = await feePolicyRepo.createFeePolicy(policyPayload, {
+      transaction,
+    });
     const feePolicyId = policy.feePolicyId;
     const instituteId = policy.instituteId;
     const universityId = policy.universityId;
@@ -140,13 +229,23 @@ export async function createFeePolicy(body, authUser = {}) {
         instituteId,
         universityId,
       }));
-      await feePolicyRepo.bulkCreateFeePolicyComponents(componentRows, { transaction });
+      await feePolicyRepo.bulkCreateFeePolicyComponents(componentRows, {
+        transaction,
+      });
     }
 
-    // Batches
-    const batchRows = normalizeBatches(batches, batchIds, feePolicyId, instituteId, universityId);
+    // Courses / Batches Scopes
+    const courseList = courses && courses.length ? courses : batches;
+    const batchRows = buildFeePolicyBatchRows(
+      courseList,
+      feePolicyId,
+      instituteId,
+      universityId,
+    );
     if (batchRows.length) {
-      await feePolicyRepo.bulkCreateFeePolicyBatches(batchRows, { transaction });
+      await feePolicyRepo.bulkCreateFeePolicyBatches(batchRows, {
+        transaction,
+      });
     }
 
     // Slabs
@@ -157,19 +256,27 @@ export async function createFeePolicy(body, authUser = {}) {
         fromUnit: Number(slab.fromUnit) || 0,
         toUnit: slab.toUnit != null ? Number(slab.toUnit) : null,
         slabValue: Number(slab.slabValue) || 0,
-        orderIndex: slab.orderIndex != null ? Number(slab.orderIndex) : index + 1,
+        orderIndex:
+          slab.orderIndex != null ? Number(slab.orderIndex) : index + 1,
         instituteId,
         universityId,
       }));
       await feePolicyRepo.bulkCreateFeePolicySlabs(slabRows, { transaction });
     }
 
-    return feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    const created = await feePolicyRepo.findFeePolicyById(feePolicyId, {
+      transaction,
+    });
+    return formatPolicyResponse(created);
   });
 }
 
 export async function getFeePolicies(query = {}) {
-  return feePolicyRepo.findFeePolicies(query);
+  const result = await feePolicyRepo.findFeePolicies(query);
+  if (result?.rows) {
+    result.rows = result.rows.map(formatPolicyResponse);
+  }
+  return result;
 }
 
 export async function getSingleFeePolicy(feePolicyId) {
@@ -177,12 +284,14 @@ export async function getSingleFeePolicy(feePolicyId) {
   if (!policy) {
     throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
   }
-  return policy;
+  return formatPolicyResponse(policy);
 }
 
 export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
   return sequelize.transaction(async (transaction) => {
-    const existing = await feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    const existing = await feePolicyRepo.findFeePolicyById(feePolicyId, {
+      transaction,
+    });
     if (!existing) {
       throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
     }
@@ -200,6 +309,7 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
       referenceDateEvent,
       isActive,
       feeTypeCatalogIds,
+      courses,
       batchIds,
       batches,
       slabs,
@@ -213,24 +323,41 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
     if (description !== undefined) updateFields.description = description;
     if (appliesTo !== undefined) updateFields.appliesTo = appliesTo;
     if (effect !== undefined) updateFields.effect = effect;
-    if (calculationType !== undefined) updateFields.calculationType = calculationType;
-    if (percentageRate !== undefined) updateFields.percentageRate = percentageRate != null ? Number(percentageRate) : null;
-    if (fixedAmount !== undefined) updateFields.fixedAmount = fixedAmount != null ? Number(fixedAmount) : null;
-    if (gracePeriodDays !== undefined) updateFields.gracePeriodDays = Number(gracePeriodDays) || 0;
-    if (maxCapAmount !== undefined) updateFields.maxCapAmount = maxCapAmount != null ? Number(maxCapAmount) : null;
-    if (referenceDateEvent !== undefined) updateFields.referenceDateEvent = referenceDateEvent;
+    if (calculationType !== undefined)
+      updateFields.calculationType = calculationType;
+    if (percentageRate !== undefined)
+      updateFields.percentageRate =
+        percentageRate != null ? Number(percentageRate) : null;
+    if (fixedAmount !== undefined)
+      updateFields.fixedAmount =
+        fixedAmount != null ? Number(fixedAmount) : null;
+    if (gracePeriodDays !== undefined)
+      updateFields.gracePeriodDays = Number(gracePeriodDays) || 0;
+    if (maxCapAmount !== undefined)
+      updateFields.maxCapAmount =
+        maxCapAmount != null ? Number(maxCapAmount) : null;
+    if (referenceDateEvent !== undefined)
+      updateFields.referenceDateEvent = referenceDateEvent;
     if (isActive !== undefined) updateFields.isActive = Boolean(isActive);
 
-    await feePolicyRepo.updateFeePolicy(feePolicyId, updateFields, { transaction });
+    await feePolicyRepo.updateFeePolicy(feePolicyId, updateFields, {
+      transaction,
+    });
 
     const instituteId = existing.instituteId;
     const universityId = existing.universityId;
 
     // Update Components if passed
     if (feeTypeCatalogIds !== undefined) {
-      await feePolicyRepo.deleteFeePolicyComponents(feePolicyId, { transaction });
+      await feePolicyRepo.deleteFeePolicyComponents(feePolicyId, {
+        transaction,
+      });
       const currentAppliesTo = appliesTo ?? existing.appliesTo;
-      if (currentAppliesTo === "selected_components" && feeTypeCatalogIds && feeTypeCatalogIds.length) {
+      if (
+        currentAppliesTo === "selected_components" &&
+        feeTypeCatalogIds &&
+        feeTypeCatalogIds.length
+      ) {
         const uniqueCatalogIds = [...new Set(feeTypeCatalogIds.map(Number))];
         const componentRows = uniqueCatalogIds.map((feeTypeCatalogId) => ({
           feePolicyId: Number(feePolicyId),
@@ -238,16 +365,26 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
           instituteId,
           universityId,
         }));
-        await feePolicyRepo.bulkCreateFeePolicyComponents(componentRows, { transaction });
+        await feePolicyRepo.bulkCreateFeePolicyComponents(componentRows, {
+          transaction,
+        });
       }
     }
 
-    // Update Batches if passed
-    if (batches !== undefined || batchIds !== undefined) {
+    // Update Batches & Courses if passed
+    if (courses !== undefined || batches !== undefined) {
       await feePolicyRepo.deleteFeePolicyBatches(feePolicyId, { transaction });
-      const batchRows = normalizeBatches(batches, batchIds, feePolicyId, instituteId, universityId);
+      const courseList = (courses && courses.length ? courses : batches) || [];
+      const batchRows = buildFeePolicyBatchRows(
+        courseList,
+        feePolicyId,
+        instituteId,
+        universityId,
+      );
       if (batchRows.length) {
-        await feePolicyRepo.bulkCreateFeePolicyBatches(batchRows, { transaction });
+        await feePolicyRepo.bulkCreateFeePolicyBatches(batchRows, {
+          transaction,
+        });
       }
     }
 
@@ -262,7 +399,8 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
           fromUnit: Number(slab.fromUnit) || 0,
           toUnit: slab.toUnit != null ? Number(slab.toUnit) : null,
           slabValue: Number(slab.slabValue) || 0,
-          orderIndex: slab.orderIndex != null ? Number(slab.orderIndex) : index + 1,
+          orderIndex:
+            slab.orderIndex != null ? Number(slab.orderIndex) : index + 1,
           instituteId,
           universityId,
         }));
@@ -270,7 +408,10 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
       }
     }
 
-    return feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    const updated = await feePolicyRepo.findFeePolicyById(feePolicyId, {
+      transaction,
+    });
+    return formatPolicyResponse(updated);
   });
 }
 
@@ -291,7 +432,8 @@ export async function publishFeePolicy(feePolicyId, authUser = {}) {
     updatedBy: authUser.userId ?? null,
   });
 
-  return feePolicyRepo.findFeePolicyById(feePolicyId);
+  const updated = await feePolicyRepo.findFeePolicyById(feePolicyId);
+  return formatPolicyResponse(updated);
 }
 
 export async function unpublishFeePolicy(feePolicyId, authUser = {}) {
@@ -309,7 +451,8 @@ export async function unpublishFeePolicy(feePolicyId, authUser = {}) {
     updatedBy: authUser.userId ?? null,
   });
 
-  return feePolicyRepo.findFeePolicyById(feePolicyId);
+  const updated = await feePolicyRepo.findFeePolicyById(feePolicyId);
+  return formatPolicyResponse(updated);
 }
 
 export async function deleteFeePolicy(feePolicyId) {
