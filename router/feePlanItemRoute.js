@@ -108,7 +108,6 @@ const createFeePlanItemBodySchema = z
     year: positiveIntegerId,
     name: z.string().trim().min(1),
     createDate: dateOnly,
-    dueDate: dateOnly.optional().nullable(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1),
   })
   .superRefine((body, ctx) =>
@@ -120,7 +119,6 @@ const updateFeePlanItemBodySchema = z
     feePlanItemId: positiveIntegerId,
     name: z.string().trim().min(1).optional(),
     createDate: dateOnly.optional(),
-    dueDate: dateOnly.optional().nullable(),
     year: positiveIntegerId.optional(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1).optional(),
   })
@@ -128,7 +126,6 @@ const updateFeePlanItemBodySchema = z
     const hasUpdate =
       body.name !== undefined ||
       body.createDate !== undefined ||
-      body.dueDate !== undefined ||
       body.year !== undefined ||
       body.feePlanSubItems !== undefined;
 

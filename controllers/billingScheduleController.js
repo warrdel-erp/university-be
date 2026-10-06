@@ -181,3 +181,59 @@ export async function deleteBillingSchedulePaymentTerm(req, res) {
   }
 }
 
+export async function getBillingScheduleBatches(req, res) {
+  try {
+    const data = await service.getBillingScheduleBatches(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule batches fetched successfully",
+      data
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+
+export async function getBillingScheduleBatchOverview(req, res) {
+  try {
+    const data = await service.getBillingScheduleBatchOverview(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule batch overview fetched successfully",
+      data
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+
+export async function getBillingScheduleBatchReview(req, res) {
+  try {
+    const data = await service.getBillingScheduleBatchReview(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule batch review fetched successfully",
+      data
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+
+
+

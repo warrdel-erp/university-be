@@ -16,11 +16,9 @@ const COURSE_ATTRS = [
 const FEE_PLAN_ITEM_ATTRS = [
   'feePlanItemId',
   'createDate',
-  'dueDate',
   'batchId',
   'year',
   'name',
-  'academicPeriod',
   'publishStatus',
   'publishedAt',
   'publishedBy',

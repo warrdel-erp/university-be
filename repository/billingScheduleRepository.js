@@ -1,4 +1,5 @@
 import { Op } from "sequelize";
+import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
@@ -13,10 +14,8 @@ function getBillingScheduleIncludes() {
         "feePlanItemId",
         "name",
         "createDate",
-        "dueDate",
         "batchId",
         "year",
-        "academicPeriod",
         "publishStatus",
       ],
     },
@@ -177,3 +176,126 @@ export async function findFeePlanSubItemsByPlanItemId(feePlanItemId, options = {
     transaction: options.transaction,
   });
 }
+
+export async function findBillingScheduleBatchesOverview(filters = {}) {
+  const sessionWhere = { ...buildScope(model.sessionModel) };
+  if (filters.sessionId != null) sessionWhere.sessionId = Number(filters.sessionId);
+
+  const courseWhere = { ...buildScope(model.courseModel) };
+  if (filters.courseId != null) courseWhere.courseId = Number(filters.courseId);
+
+  const batchWhere = { status: filters.batchStatus || "published" };
+  if (filters.batchId != null) batchWhere.batchId = Number(filters.batchId);
+
+  return model.batchModel.findAll({
+    where: batchWhere,
+    attributes: [
+      "batchId",
+      "sessionId",
+      "batch",
+      "status",
+      [
+        sequelize.literal(
+          "(SELECT COUNT(DISTINCT s.student_id) FROM students s WHERE s.batch_id = `batch`.`batch_id` AND s.deleted_at IS NULL)"
+        ),
+        "studentCount",
+      ],
+    ],
+    include: [
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionId", "sessionName", "courseId"],
+        required: true,
+        where: sessionWhere,
+        include: [
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: [
+              "courseId",
+              "courseName",
+              "courseCode",
+              "courseDuration",
+              "totalTerms",
+              "termType",
+            ],
+            required: true,
+            where: courseWhere,
+          },
+        ],
+      },
+      {
+        model: model.feePlanItemModel,
+        as: "feePlanItems",
+        required: false,
+        where: buildScope(model.feePlanItemModel),
+        attributes: ["feePlanItemId", "name", "year", "batchId"],
+        include: [
+          {
+            model: model.billingScheduleItemsModel,
+            as: "billingScheduleItems",
+            required: false,
+            where: buildScope(model.billingScheduleItemsModel),
+            attributes: [
+              "billingScheduleItemId",
+              "feePlanItemId",
+              "amount",
+              "plannedDate",
+              "status",
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      [{ model: model.sessionModel, as: "session" }, { model: model.courseModel, as: "course" }, "courseName", "ASC"],
+      [{ model: model.sessionModel, as: "session" }, "sessionName", "ASC"],
+      ["batch", "ASC"],
+    ],
+  });
+}
+
+export async function findBatchReviewData(batchId, year) {
+  const [batch, feePlanItem] = await Promise.all([
+    model.batchModel.findByPk(Number(batchId), {
+      attributes: ["batchId", "batch"],
+      include: [
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "sessionName"],
+          include: [
+            {
+              model: model.courseModel,
+              as: "course",
+              attributes: ["courseId", "courseName", "courseCode"],
+            },
+          ],
+        },
+      ],
+    }),
+    model.feePlanItemModel.findOne({
+      where: { batchId: Number(batchId), year: Number(year) },
+      include: [
+        {
+          model: model.billingScheduleItemsModel,
+          as: "billingScheduleItems",
+          include: [
+            { model: model.billingScheduleSubItemsModel, as: "subItems" },
+            { model: model.billingSchedulePaymentTermsModel, as: "paymentTerms" },
+          ],
+        },
+        {
+          model: model.feePlanSubItemsModel,
+          as: "feePlanSubItems",
+          include: [{ model: model.feeTypeCatalogModel, as: "feeTypeCatalog" }],
+        },
+      ],
+    }),
+  ]);
+
+  return { batch, feePlanItem };
+}
+
+

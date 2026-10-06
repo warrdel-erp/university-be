@@ -61,11 +61,9 @@ export async function findFeePlanItemWithSubItems(feePlanItemId, options = {}) {
     attributes: [
       "feePlanItemId",
       "name",
-      "academicPeriod",
       "year",
       "batchId",
       "createDate",
-      "dueDate",
       "publishStatus",
       "publishedAt",
       "instituteId",

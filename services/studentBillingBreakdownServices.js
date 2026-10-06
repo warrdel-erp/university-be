@@ -295,7 +295,6 @@ export async function getStudentBillingBreakdown(
           billingScheduleItemId: effectiveBillingScheduleItemId,
           feePlanItemId: effectiveFeePlanItemId,
           plannedDate: schedule.plannedDate || feePlanItem?.createDate || null,
-          dueDate: schedule.dueDate || feePlanItem?.dueDate || null,
           status: schedule.status || "pending",
           amount: standardFee,
         }
@@ -304,7 +303,6 @@ export async function getStudentBillingBreakdown(
       ? {
           feePlanItemId: effectiveFeePlanItemId,
           name: feePlanItem.name || null,
-          academicPeriod: feePlanItem.academicPeriod || null,
           year: feePlanItem.year != null ? Number(feePlanItem.year) : null,
           publishStatus: feePlanItem.publishStatus || null,
         }
