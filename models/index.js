@@ -119,6 +119,8 @@ import feePolicyModel from "./feePolicyModel.js";
 import feePolicyComponentsModel from "./feePolicyComponentsModel.js";
 import feePolicyBatchesModel from "./feePolicyBatchesModel.js";
 import feePolicySlabsModel from "./feePolicySlabsModel.js";
+import billingScheduleItemsModel from "./billingScheduleItemsModel.js";
+import billingScheduleSubItemsModel from "./billingScheduleSubItemsModel.js";
 import lessonModel from "./lessonModel.js";
 import lectureWindowModel from "./lectureWindowModel.js";
 import topicModel from "./topicModel.js";
@@ -4240,6 +4242,9 @@ export {
   feePolicyComponentsModel,
   feePolicyBatchesModel,
   feePolicySlabsModel,
+
+  billingScheduleItemsModel,
+  billingScheduleSubItemsModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";
@@ -4283,6 +4288,16 @@ courseModel.hasMany(feePolicyBatchesModel, { foreignKey: 'course_id', as: 'feePo
 
 feePolicyModel.hasMany(feePolicySlabsModel, { foreignKey: 'fee_policy_id', as: 'policySlabs' });
 feePolicySlabsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
+
+// Billing Schedule Associations
+billingScheduleItemsModel.belongsTo(feePlanItemModel, { foreignKey: 'feePlanItemId', as: 'feePlanItem' });
+feePlanItemModel.hasMany(billingScheduleItemsModel, { foreignKey: 'feePlanItemId', as: 'billingScheduleItems' });
+
+billingScheduleItemsModel.hasMany(billingScheduleSubItemsModel, { foreignKey: 'billingScheduleItemId', as: 'subItems' });
+billingScheduleSubItemsModel.belongsTo(billingScheduleItemsModel, { foreignKey: 'billingScheduleItemId', as: 'billingScheduleItem' });
+
+billingScheduleSubItemsModel.belongsTo(feePlanSubItemsModel, { foreignKey: 'feePlanSubItemId', as: 'feePlanSubItem' });
+feePlanSubItemsModel.hasMany(billingScheduleSubItemsModel, { foreignKey: 'feePlanSubItemId', as: 'billingScheduleSubItems' });
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 

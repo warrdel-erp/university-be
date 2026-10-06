@@ -1,0 +1,367 @@
+{
+  "info": {
+    "_postman_id": "univ-v2-billing-schedule-v1",
+    "name": "Billing Schedule API",
+    "description": "Billing Schedule and Sub-Items Management API (Create with Sub-Items, List, Single, Update, Status Update, Add/Delete Sub-Item, Delete) with Fee Plan Item integration and Multi-tenant Scoping.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0zMFQxNjo0ODo0My4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkxMTg2MDY0LCJleHAiOjE3OTM3NzgwNjR9._HP3B7j7w5jIum0yaJd5LPDYPrKNXHaGFbwX6QTR_hU"
+    },
+    {
+      "key": "billingScheduleItemId",
+      "value": "1"
+    },
+    {
+      "key": "billingScheduleSubItemId",
+      "value": "1"
+    },
+    {
+      "key": "feePlanItemId",
+      "value": "1"
+    },
+    {
+      "key": "feePlanSubItemId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Create Billing Schedule (With Sub-Items Breakdown)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData && jsonData.data && jsonData.data.billingScheduleItemId) {",
+              "    pm.collectionVariables.set('billingScheduleItemId', jsonData.data.billingScheduleItemId);",
+              "    if (jsonData.data.subItems && jsonData.data.subItems.length > 0) {",
+              "        pm.collectionVariables.set('billingScheduleSubItemId', jsonData.data.subItems[0].billingScheduleSubItemId);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"amount\": 25000.00,\n  \"dueDate\": \"2026-12-15\",\n  \"plannedDate\": \"2026-11-20\",\n  \"status\": \"pending\",\n  \"subItems\": [\n    {\n      \"feePlanSubItemId\": {{feePlanSubItemId}},\n      \"amount\": 25000.00\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ]
+        },
+        "description": "Creates a parent billing schedule item and bulk-creates child sub-items in an atomic database transaction. Automatically injects generated parent ID into sub-items."
+      }
+    },
+    {
+      "name": "2. Create Billing Schedule (Simple - Without Sub-Items)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"amount\": 15000.00,\n  \"dueDate\": \"2026-12-31\",\n  \"plannedDate\": \"2026-12-01\",\n  \"status\": \"pending\"\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ]
+        },
+        "description": "Creates a single parent billing schedule item without sub-items breakdown."
+      }
+    },
+    {
+      "name": "3. Get All Billing Schedules (List & Filters)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule?feePlanItemId={{feePlanItemId}}&status=pending&page=1&limit=10",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}"
+            },
+            {
+              "key": "status",
+              "value": "pending"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Fetches a paginated list of billing schedule items with total count and nested sub-items."
+      }
+    },
+    {
+      "name": "4. Get Single Billing Schedule (Details with Sub-Items)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/single?billingScheduleItemId={{billingScheduleItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "single"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}"
+            }
+          ]
+        },
+        "description": "Retrieves full details of a single billing schedule item including linked feePlanItem and child subItems with catalog lines."
+      }
+    },
+    {
+      "name": "5. Update Billing Schedule (Amount, Dates, Sub-Items Sync)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"amount\": 30000.00,\n  \"dueDate\": \"2026-12-20\",\n  \"plannedDate\": \"2026-11-25\",\n  \"status\": \"scheduled\",\n  \"subItems\": [\n    {\n      \"feePlanSubItemId\": {{feePlanSubItemId}},\n      \"amount\": 30000.00\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ]
+        },
+        "description": "Updates parent fields and atomically synchronizes child sub-items."
+      }
+    },
+    {
+      "name": "6. Update Billing Schedule Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"status\": \"billed\"\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/status",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "status"
+          ]
+        },
+        "description": "Quickly transitions the status of a schedule item (pending -> scheduled -> billed -> cancelled)."
+      }
+    },
+    {
+      "name": "7. Add Individual Sub-Item to Schedule",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"feePlanSubItemId\": {{feePlanSubItemId}},\n  \"amount\": 5000.00\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/subItem",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "subItem"
+          ]
+        },
+        "description": "Appends a single sub-item to an existing schedule item and increments the parent schedule total amount."
+      }
+    },
+    {
+      "name": "8. Delete Individual Sub-Item",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/subItem?billingScheduleSubItemId={{billingScheduleSubItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "subItem"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleSubItemId",
+              "value": "{{billingScheduleSubItemId}}"
+            }
+          ]
+        },
+        "description": "Removes a specific sub-item and adjusts parent schedule total amount accordingly."
+      }
+    },
+    {
+      "name": "9. Delete Billing Schedule",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule?billingScheduleItemId={{billingScheduleItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}"
+            }
+          ]
+        },
+        "description": "Deletes the billing schedule item and cascades deletion to all linked child sub-items."
+      }
+    }
+  ]
+}
