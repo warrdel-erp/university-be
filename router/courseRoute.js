@@ -65,6 +65,10 @@ const getSubjectsByTeacherQuerySchema = z.object({
   year: optionalPositiveIntegerId,
 });
 
+const getCoursesWithDurationYearsSchema = z.object({
+  search: z.string().trim().optional(),
+});
+
 // Routes
 router.get(
   "/",
@@ -72,6 +76,14 @@ router.get(
   checkAccess(PERMISSIONS.COURSES.value),
   validate({ query: listCoursesSchema }),
   courseController.listCourses,
+);
+
+router.get(
+  "/years",
+  userAuth,
+  checkAccess(PERMISSIONS.COURSES.value, null),
+  validate({ query: getCoursesWithDurationYearsSchema }),
+  courseController.getCoursesWithDurationYears,
 );
 
 router.get(
