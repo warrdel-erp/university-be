@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/billingScheduleRepository.js";
+import * as repoPaymentTerms from "../repository/billingSchedulePaymentTermsRepository.js";
 import { decimalAdd, toMoneyNumber } from "../utility/decimalMoney.js";
 
 function httpError(message, statusCode = 400) {
@@ -93,6 +94,25 @@ export async function createBillingSchedule(payload, user = {}) {
         await repo.bulkCreateBillingScheduleSubItems(subItemsData, {
           transaction: t,
         });
+      }
+
+      const { paymentTerms, installment } = item;
+      if (Array.isArray(paymentTerms) && paymentTerms.length > 0) {
+        const termsData = paymentTerms.map((pt) => ({
+          billingScheduleItemId: createdItemId,
+          installment: Number(pt.installment || pt),
+        }));
+        await repoPaymentTerms.bulkCreatePaymentTerms(termsData, {
+          transaction: t,
+        });
+      } else if (installment != null) {
+        await repoPaymentTerms.createPaymentTerm(
+          {
+            billingScheduleItemId: createdItemId,
+            installment: Number(installment),
+          },
+          { transaction: t }
+        );
       }
     }
   });
@@ -357,3 +377,52 @@ export async function deleteBillingScheduleSubItem(billingScheduleSubItemId) {
 
   return { billingScheduleSubItemId };
 }
+
+/**
+ * Add a single payment term to an existing billing schedule item
+ */
+export async function addBillingSchedulePaymentTerm(payload) {
+  const { billingScheduleItemId, installment } = payload;
+  if (!billingScheduleItemId) {
+    throw httpError("billingScheduleItemId is required", 400);
+  }
+  if (installment == null || !Number.isInteger(Number(installment))) {
+    throw httpError("installment must be an integer", 400);
+  }
+
+  const scheduleItem = await repo.findBillingScheduleItemById(billingScheduleItemId);
+  if (!scheduleItem) {
+    throw httpError(
+      `Billing schedule item with ID ${billingScheduleItemId} not found`,
+      404
+    );
+  }
+
+  const newTerm = await repoPaymentTerms.createPaymentTerm({
+    billingScheduleItemId,
+    installment: Number(installment),
+  });
+
+  return repoPaymentTerms.findPaymentTermById(newTerm.billingSchedulePaymentTermsId);
+}
+
+/**
+ * Delete a payment term by ID
+ */
+export async function deleteBillingSchedulePaymentTerm(billingSchedulePaymentTermsId) {
+  if (!billingSchedulePaymentTermsId) {
+    throw httpError("billingSchedulePaymentTermsId is required", 400);
+  }
+
+  const term = await repoPaymentTerms.findPaymentTermById(billingSchedulePaymentTermsId);
+  if (!term) {
+    throw httpError(
+      `Billing schedule payment term with ID ${billingSchedulePaymentTermsId} not found`,
+      404
+    );
+  }
+
+  await repoPaymentTerms.deletePaymentTerm(billingSchedulePaymentTermsId);
+  return { billingSchedulePaymentTermsId };
+}
+

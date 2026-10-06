@@ -140,3 +140,44 @@ export async function deleteBillingScheduleSubItem(req, res) {
     );
   }
 }
+
+export async function addBillingSchedulePaymentTerm(req, res) {
+  try {
+    const data = await service.addBillingSchedulePaymentTerm(req.body);
+    return SuccessResponse(
+      res,
+      201,
+      "Billing schedule payment term added successfully",
+      data
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+
+export async function deleteBillingSchedulePaymentTerm(req, res) {
+  try {
+    const id =
+      req.query.billingSchedulePaymentTermsId ||
+      req.params.billingSchedulePaymentTermsId ||
+      req.body.billingSchedulePaymentTermsId;
+    await service.deleteBillingSchedulePaymentTerm(id);
+    return SuccessResponse(
+      res,
+      200,
+      `Billing schedule payment term deleted successfully (ID ${id})`,
+      null
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+

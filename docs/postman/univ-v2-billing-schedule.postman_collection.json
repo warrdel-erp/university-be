@@ -29,6 +29,10 @@
     {
       "key": "feePlanSubItemId",
       "value": "1"
+    },
+    {
+      "key": "billingSchedulePaymentTermsId",
+      "value": "1"
     }
   ],
   "item": [
@@ -362,6 +366,193 @@
           ]
         },
         "description": "Deletes the billing schedule item and cascades deletion to all linked child sub-items."
+      }
+    },
+    {
+      "name": "10. Create Billing Schedule Payment Term",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData.data && jsonData.data.billingSchedulePaymentTermsId) {",
+              "    pm.collectionVariables.set('billingSchedulePaymentTermsId', jsonData.data.billingSchedulePaymentTermsId);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"installment\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedulePaymentTerms",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedulePaymentTerms"
+          ]
+        },
+        "description": "Creates a new payment term (installment) for a billing schedule item."
+      }
+    },
+    {
+      "name": "11. Get Billing Schedule Payment Terms List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedulePaymentTerms?billingScheduleItemId={{billingScheduleItemId}}&page=1&limit=10",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedulePaymentTerms"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "Fetches a paginated list of payment terms optionally filtered by billingScheduleItemId."
+      }
+    },
+    {
+      "name": "12. Get Single Billing Schedule Payment Term",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedulePaymentTerms/single?billingSchedulePaymentTermsId={{billingSchedulePaymentTermsId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedulePaymentTerms",
+            "single"
+          ],
+          "query": [
+            {
+              "key": "billingSchedulePaymentTermsId",
+              "value": "{{billingSchedulePaymentTermsId}}"
+            }
+          ]
+        },
+        "description": "Fetches single billing schedule payment term details including parent schedule item."
+      }
+    },
+    {
+      "name": "13. Update Billing Schedule Payment Term",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingSchedulePaymentTermsId\": {{billingSchedulePaymentTermsId}},\n  \"installment\": 2\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedulePaymentTerms",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedulePaymentTerms"
+          ]
+        },
+        "description": "Updates payment term attributes such as installment number."
+      }
+    },
+    {
+      "name": "14. Delete Billing Schedule Payment Term",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedulePaymentTerms?billingSchedulePaymentTermsId={{billingSchedulePaymentTermsId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedulePaymentTerms"
+          ],
+          "query": [
+            {
+              "key": "billingSchedulePaymentTermsId",
+              "value": "{{billingSchedulePaymentTermsId}}"
+            }
+          ]
+        },
+        "description": "Deletes a specific billing schedule payment term by ID."
       }
     }
   ]

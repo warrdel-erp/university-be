@@ -121,6 +121,7 @@ import feePolicyBatchesModel from "./feePolicyBatchesModel.js";
 import feePolicySlabsModel from "./feePolicySlabsModel.js";
 import billingScheduleItemsModel from "./billingScheduleItemsModel.js";
 import billingScheduleSubItemsModel from "./billingScheduleSubItemsModel.js";
+import billingSchedulePaymentTermsModel from "./billingSchedulePaymentTermsModel.js";
 import lessonModel from "./lessonModel.js";
 import lectureWindowModel from "./lectureWindowModel.js";
 import topicModel from "./topicModel.js";
@@ -4245,6 +4246,7 @@ export {
 
   billingScheduleItemsModel,
   billingScheduleSubItemsModel,
+  billingSchedulePaymentTermsModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";
@@ -4298,6 +4300,9 @@ billingScheduleSubItemsModel.belongsTo(billingScheduleItemsModel, { foreignKey: 
 
 billingScheduleSubItemsModel.belongsTo(feePlanSubItemsModel, { foreignKey: 'feePlanSubItemId', as: 'feePlanSubItem' });
 feePlanSubItemsModel.hasMany(billingScheduleSubItemsModel, { foreignKey: 'feePlanSubItemId', as: 'billingScheduleSubItems' });
+
+billingScheduleItemsModel.hasMany(billingSchedulePaymentTermsModel, { foreignKey: 'billingScheduleItemId', as: 'paymentTerms' });
+billingSchedulePaymentTermsModel.belongsTo(billingScheduleItemsModel, { foreignKey: 'billingScheduleItemId', as: 'billingScheduleItem' });
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 

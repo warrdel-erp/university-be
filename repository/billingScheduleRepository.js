@@ -40,6 +40,18 @@ function getBillingScheduleIncludes() {
         },
       ],
     },
+    {
+      model: model.billingSchedulePaymentTermsModel,
+      as: "paymentTerms",
+      required: false,
+      attributes: [
+        "billingSchedulePaymentTermsId",
+        "billingScheduleItemId",
+        "installment",
+        "createdAt",
+        "updatedAt",
+      ],
+    },
   ];
 }
 

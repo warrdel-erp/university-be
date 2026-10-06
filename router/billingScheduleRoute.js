@@ -27,6 +27,15 @@ const subItemInputSchema = z.object({
   amount: moneyNumber,
 });
 
+const installmentSchema = z.coerce
+  .number({ invalid_type_error: "installment must be a number" })
+  .int({ message: "installment must be an integer" })
+  .positive({ message: "installment must be positive" });
+
+const paymentTermInputSchema = z.object({
+  installment: installmentSchema,
+});
+
 const singleScheduleInputSchema = z.object({
   feePlanItemId: positiveIntegerId,
   amount: moneyNumber.optional(),
@@ -34,6 +43,8 @@ const singleScheduleInputSchema = z.object({
   plannedDate: dateOnly.optional().nullable(),
   status: statusEnum.optional().default("pending"),
   subItems: z.array(subItemInputSchema).optional(),
+  installment: installmentSchema.optional(),
+  paymentTerms: z.array(paymentTermInputSchema).optional(),
 });
 
 const createBillingScheduleSchema = z.union([
@@ -80,6 +91,15 @@ const addSubItemSchema = z.object({
 
 const deleteSubItemQuerySchema = z.object({
   billingScheduleSubItemId: positiveIntegerId,
+});
+
+const addPaymentTermSchema = z.object({
+  billingScheduleItemId: positiveIntegerId,
+  installment: installmentSchema,
+});
+
+const deletePaymentTermQuerySchema = z.object({
+  billingSchedulePaymentTermsId: positiveIntegerId,
 });
 
 // Endpoints
@@ -145,6 +165,22 @@ router.delete(
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value),
   validate({ query: deleteSubItemQuerySchema }),
   controller.deleteBillingScheduleSubItem
+);
+
+router.post(
+  "/paymentTerm",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN_ADD.value),
+  validate({ body: addPaymentTermSchema }),
+  controller.addBillingSchedulePaymentTerm
+);
+
+router.delete(
+  "/paymentTerm",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value),
+  validate({ query: deletePaymentTermQuerySchema }),
+  controller.deleteBillingSchedulePaymentTerm
 );
 
 export default router;
