@@ -29,12 +29,15 @@ function formatStudentFullName(student) {
 /**
  * Service to calculate and return student fee breakdown and billing preview.
  */
-export async function getStudentBillingBreakdown({ studentId, feePlanItemId }, authUser = {}) {
+export async function getStudentBillingBreakdown(
+  { studentId, feePlanItemId, billingScheduleItemId },
+  authUser = {}
+) {
   if (!studentId) {
     throw httpError("studentId is required", 400);
   }
-  if (!feePlanItemId) {
-    throw httpError("feePlanItemId is required", 400);
+  if (!billingScheduleItemId && !feePlanItemId) {
+    throw httpError("Either billingScheduleItemId or feePlanItemId is required", 400);
   }
 
   // 1. Fetch student
@@ -44,16 +47,41 @@ export async function getStudentBillingBreakdown({ studentId, feePlanItemId }, a
   }
   const student = toPlain(studentRow);
 
-  // 2. Fetch fee plan item with sub-items
-  const feePlanItemRow = await repo.findFeePlanItemWithSubItems(feePlanItemId);
-  if (!feePlanItemRow) {
-    throw httpError(`Fee plan item with ID ${feePlanItemId} not found`, 404);
+  // 2. Fetch billing schedule item or fee plan item
+  let schedule = null;
+  let feePlanItem = null;
+  let effectiveBillingScheduleItemId = billingScheduleItemId ? Number(billingScheduleItemId) : null;
+  let effectiveFeePlanItemId = feePlanItemId ? Number(feePlanItemId) : null;
+
+  if (effectiveBillingScheduleItemId) {
+    const scheduleRow = await repo.findBillingScheduleItemWithDetails(effectiveBillingScheduleItemId);
+    if (!scheduleRow) {
+      throw httpError(`Billing schedule item with ID ${effectiveBillingScheduleItemId} not found`, 404);
+    }
+    schedule = toPlain(scheduleRow);
+    feePlanItem = schedule.feePlanItem || null;
+    effectiveFeePlanItemId = schedule.feePlanItemId || effectiveFeePlanItemId;
+  } else if (effectiveFeePlanItemId) {
+    const feePlanItemRow = await repo.findFeePlanItemWithSubItems(effectiveFeePlanItemId);
+    if (!feePlanItemRow) {
+      throw httpError(`Fee plan item with ID ${effectiveFeePlanItemId} not found`, 404);
+    }
+    feePlanItem = toPlain(feePlanItemRow);
+
+    const schedules = feePlanItem.billingScheduleItems || [];
+    if (schedules.length > 0) {
+      schedule = schedules[0];
+      effectiveBillingScheduleItemId = schedule.billingScheduleItemId;
+    }
   }
-  const feePlanItem = toPlain(feePlanItemRow);
+
+  if (!feePlanItem && !schedule) {
+    throw httpError("Unable to resolve billing details for the specified fee plan or schedule", 404);
+  }
 
   // 3. Resolve Batch & Course details
-  const targetBatchId = feePlanItem.batchId || student.batchId;
-  let batch = feePlanItem.batch;
+  const targetBatchId = feePlanItem?.batchId || student.batchId;
+  let batch = feePlanItem?.batch;
   if (!batch && targetBatchId) {
     const batchRow = await repo.findBatchById(targetBatchId);
     batch = toPlain(batchRow);
@@ -77,10 +105,12 @@ export async function getStudentBillingBreakdown({ studentId, feePlanItemId }, a
     .join(" · ");
 
   // 4. Check for existing invoice
-  const existingInvoiceRow = await repo.findExistingInvoiceForStudentAndPlan({
-    studentId,
-    feePlanItemId,
-  });
+  const existingInvoiceRow = effectiveFeePlanItemId
+    ? await repo.findExistingInvoiceForStudentAndPlan({
+        studentId,
+        feePlanItemId: effectiveFeePlanItemId,
+      })
+    : null;
   const existingInvoice = toPlain(existingInvoiceRow);
 
   // 5. Determine UI Status Badge
@@ -89,26 +119,52 @@ export async function getStudentBillingBreakdown({ studentId, feePlanItemId }, a
   if (existingInvoice) {
     status = existingInvoice.paymentStatus === "paid" ? "Paid" : "Billed";
     statusColor = existingInvoice.paymentStatus === "paid" ? "green" : "blue";
-  } else if (feePlanItem.publishStatus === "published") {
+  } else if (schedule?.status === "billed") {
+    status = "Billed";
+    statusColor = "blue";
+  } else if (feePlanItem?.publishStatus === "published") {
     status = "Ready";
     statusColor = "green";
   }
 
   // 6. Calculate Base Charges
-  const subItems = feePlanItem.feePlanSubItems || [];
-  const baseComponents = subItems.map((sub) => {
-    const catalog = sub.feeTypeCatalog || {};
-    return {
-      feePlanSubitemId: sub.feePlanSubitemId,
-      feeTypeCatalogId: catalog.feeTypeCatalogId || sub.feeTypeId,
-      name: catalog.name || "Fee Component",
-      amount: toMoneyNumber(sub.amount),
-      refundable: catalog.refundable === true || catalog.refundable === 1,
-      isMainSubItem: sub.isMainSubItem === true || sub.isMainSubItem === 1,
-    };
-  });
+  let baseComponents = [];
+  let standardFee = 0;
 
-  const standardFee = decimalSum(baseComponents.map((c) => c.amount));
+  if (schedule && Array.isArray(schedule.subItems) && schedule.subItems.length > 0) {
+    baseComponents = schedule.subItems.map((sub) => {
+      const planSub = sub.feePlanSubItem || {};
+      const catalog = planSub.feeTypeCatalog || {};
+      return {
+        billingScheduleSubItemId: sub.billingScheduleSubItemId,
+        feePlanSubitemId: sub.feePlanSubItemId,
+        feeTypeCatalogId: catalog.feeTypeCatalogId || planSub.feeTypeId,
+        name: catalog.name || "Fee Component",
+        amount: toMoneyNumber(sub.amount),
+        refundable: catalog.refundable === true || catalog.refundable === 1,
+        isMainSubItem: planSub.isMainSubItem === true || planSub.isMainSubItem === 1,
+      };
+    });
+    standardFee = toMoneyNumber(schedule.amount);
+    if (!standardFee && baseComponents.length > 0) {
+      standardFee = decimalSum(baseComponents.map((c) => c.amount));
+    }
+  } else {
+    const subItems = feePlanItem?.feePlanSubItems || [];
+    baseComponents = subItems.map((sub) => {
+      const catalog = sub.feeTypeCatalog || {};
+      return {
+        billingScheduleSubItemId: null,
+        feePlanSubitemId: sub.feePlanSubitemId,
+        feeTypeCatalogId: catalog.feeTypeCatalogId || sub.feeTypeId,
+        name: catalog.name || "Fee Component",
+        amount: toMoneyNumber(sub.amount),
+        refundable: catalog.refundable === true || catalog.refundable === 1,
+        isMainSubItem: sub.isMainSubItem === true || sub.isMainSubItem === 1,
+      };
+    });
+    standardFee = decimalSum(baseComponents.map((c) => c.amount));
+  }
 
   // Map components by catalog ID for policy lookup
   const componentByCatalogId = new Map();
@@ -234,8 +290,27 @@ export async function getStudentBillingBreakdown({ studentId, feePlanItemId }, a
       status,
       statusColor,
     },
+    billingSchedule: schedule
+      ? {
+          billingScheduleItemId: effectiveBillingScheduleItemId,
+          feePlanItemId: effectiveFeePlanItemId,
+          plannedDate: schedule.plannedDate || feePlanItem?.createDate || null,
+          dueDate: schedule.dueDate || feePlanItem?.dueDate || null,
+          status: schedule.status || "pending",
+          amount: standardFee,
+        }
+      : null,
+    feePlanItem: feePlanItem
+      ? {
+          feePlanItemId: effectiveFeePlanItemId,
+          name: feePlanItem.name || null,
+          academicPeriod: feePlanItem.academicPeriod || null,
+          year: feePlanItem.year != null ? Number(feePlanItem.year) : null,
+          publishStatus: feePlanItem.publishStatus || null,
+        }
+      : null,
     baseCharges: {
-      title: "Base Charges (from fee plan)",
+      title: schedule ? "Base Charges (from billing schedule)" : "Base Charges (from fee plan)",
       components: baseComponents,
       standardFee,
     },

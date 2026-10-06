@@ -85,6 +85,39 @@ function feePlanSubItemsInclude() {
   };
 }
 
+function billingScheduleItemsInclude() {
+  return {
+    model: model.billingScheduleItemsModel,
+    as: 'billingScheduleItems',
+    required: false,
+    where: buildScope(model.billingScheduleItemsModel),
+    include: [
+      {
+        model: model.billingScheduleSubItemsModel,
+        as: 'subItems',
+        required: false,
+        where: buildScope(model.billingScheduleSubItemsModel),
+        include: [
+          {
+            model: model.feePlanSubItemsModel,
+            as: 'feePlanSubItem',
+            required: false,
+            where: buildScope(model.feePlanSubItemsModel),
+            include: [
+              {
+                model: model.feeTypeCatalogModel,
+                as: 'feeTypeCatalog',
+                attributes: ['feeTypeCatalogId', 'name', 'ledgerType', 'refundable'],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function feePlanItemsInclude({ year, withSubItems = false } = {}) {
   const where = { ...buildScope(model.feePlanItemModel) };
   if (year != null) {
@@ -405,6 +438,7 @@ export async function findFeePlanItemsWithHierarchy(filters = {}, options = {}) 
         include: [sessionCourseInclude(filters)],
       },
       feePlanSubItemsInclude(),
+      billingScheduleItemsInclude(),
     ],
     order: [
       ['createDate', 'ASC'],

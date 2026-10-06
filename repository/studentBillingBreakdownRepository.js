@@ -100,6 +100,97 @@ export async function findFeePlanItemWithSubItems(feePlanItemId, options = {}) {
         attributes: ["batchId", "batch", "sessionId", "status"],
         required: false,
       },
+      {
+        model: model.billingScheduleItemsModel,
+        as: "billingScheduleItems",
+        required: false,
+        where: buildScope(model.billingScheduleItemsModel),
+        include: [
+          {
+            model: model.billingScheduleSubItemsModel,
+            as: "subItems",
+            required: false,
+            where: buildScope(model.billingScheduleSubItemsModel),
+            include: [
+              {
+                model: model.feePlanSubItemsModel,
+                as: "feePlanSubItem",
+                required: false,
+                where: buildScope(model.feePlanSubItemsModel),
+                include: [
+                  {
+                    model: model.feeTypeCatalogModel,
+                    as: "feeTypeCatalog",
+                    attributes: [
+                      "feeTypeCatalogId",
+                      "name",
+                      "description",
+                      "ledgerType",
+                      "refundable",
+                      "amount",
+                    ],
+                    required: false,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+/**
+ * Find billing schedule item with full hierarchy (sub-items, fee plan, batch)
+ */
+export async function findBillingScheduleItemWithDetails(billingScheduleItemId, options = {}) {
+  return scoped(model.billingScheduleItemsModel).findOne({
+    where: { billingScheduleItemId: Number(billingScheduleItemId) },
+    include: [
+      {
+        model: model.feePlanItemModel,
+        as: "feePlanItem",
+        required: false,
+        include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "batch", "sessionId", "status"],
+            required: false,
+          },
+        ],
+      },
+      {
+        model: model.billingScheduleSubItemsModel,
+        as: "subItems",
+        required: false,
+        where: buildScope(model.billingScheduleSubItemsModel),
+        include: [
+          {
+            model: model.feePlanSubItemsModel,
+            as: "feePlanSubItem",
+            required: false,
+            where: buildScope(model.feePlanSubItemsModel),
+            include: [
+              {
+                model: model.feeTypeCatalogModel,
+                as: "feeTypeCatalog",
+                attributes: [
+                  "feeTypeCatalogId",
+                  "name",
+                  "description",
+                  "ledgerType",
+                  "refundable",
+                  "amount",
+                ],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
     ],
     transaction: options.transaction,
   });

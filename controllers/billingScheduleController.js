@@ -4,7 +4,10 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 export async function createBillingSchedule(req, res) {
   try {
     const data = await service.createBillingSchedule(req.body, req.user);
-    return SuccessResponse(res, 201, "Billing schedule created successfully", data);
+    const message = Array.isArray(data)
+      ? "Billing schedules created successfully"
+      : "Billing schedule created successfully";
+    return SuccessResponse(res, 201, message, data);
   } catch (error) {
     return ErrorResponse(
       res,

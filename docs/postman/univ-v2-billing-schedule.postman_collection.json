@@ -33,17 +33,18 @@
   ],
   "item": [
     {
-      "name": "1. Create Billing Schedule (With Sub-Items Breakdown)",
+      "name": "1. Create Billing Schedules (Bulk Array - 2 Entries)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "var jsonData = pm.response.json();",
-              "if (jsonData && jsonData.data && jsonData.data.billingScheduleItemId) {",
-              "    pm.collectionVariables.set('billingScheduleItemId', jsonData.data.billingScheduleItemId);",
-              "    if (jsonData.data.subItems && jsonData.data.subItems.length > 0) {",
-              "        pm.collectionVariables.set('billingScheduleSubItemId', jsonData.data.subItems[0].billingScheduleSubItemId);",
+              "var firstItem = Array.isArray(jsonData.data) ? jsonData.data[0] : jsonData.data;",
+              "if (firstItem && firstItem.billingScheduleItemId) {",
+              "    pm.collectionVariables.set('billingScheduleItemId', firstItem.billingScheduleItemId);",
+              "    if (firstItem.subItems && firstItem.subItems.length > 0) {",
+              "        pm.collectionVariables.set('billingScheduleSubItemId', firstItem.subItems[0].billingScheduleSubItemId);",
               "    }",
               "}"
             ],
@@ -69,7 +70,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"amount\": 25000.00,\n  \"dueDate\": \"2026-12-15\",\n  \"plannedDate\": \"2026-11-20\",\n  \"status\": \"pending\",\n  \"subItems\": [\n    {\n      \"feePlanSubItemId\": {{feePlanSubItemId}},\n      \"amount\": 25000.00\n    }\n  ]\n}"
+          "raw": "[\n  {\n    \"feePlanItemId\": {{feePlanItemId}},\n    \"amount\": 25000.00,\n    \"dueDate\": \"2026-12-15\",\n    \"plannedDate\": \"2026-11-20\",\n    \"status\": \"pending\",\n    \"subItems\": [\n      {\n        \"feePlanSubItemId\": {{feePlanSubItemId}},\n        \"amount\": 25000.00\n      }\n    ]\n  },\n  {\n    \"feePlanItemId\": {{feePlanItemId}},\n    \"amount\": 25000.00,\n    \"dueDate\": \"2027-01-15\",\n    \"plannedDate\": \"2026-12-20\",\n    \"status\": \"pending\",\n    \"subItems\": [\n      {\n        \"feePlanSubItemId\": {{feePlanSubItemId}},\n        \"amount\": 25000.00\n      }\n    ]\n  }\n]"
         },
         "url": {
           "raw": "{{baseurl}}/billingSchedule",
@@ -80,7 +81,7 @@
             "billingSchedule"
           ]
         },
-        "description": "Creates a parent billing schedule item and bulk-creates child sub-items in an atomic database transaction. Automatically injects generated parent ID into sub-items."
+        "description": "Creates multiple billing schedule items (e.g. 2 installments) along with their respective sub-items in an atomic database transaction."
       }
     },
     {

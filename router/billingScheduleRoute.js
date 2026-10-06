@@ -27,7 +27,7 @@ const subItemInputSchema = z.object({
   amount: moneyNumber,
 });
 
-const createBillingScheduleSchema = z.object({
+const singleScheduleInputSchema = z.object({
   feePlanItemId: positiveIntegerId,
   amount: moneyNumber.optional(),
   dueDate: dateOnly.optional().nullable(),
@@ -35,6 +35,15 @@ const createBillingScheduleSchema = z.object({
   status: statusEnum.optional().default("pending"),
   subItems: z.array(subItemInputSchema).optional(),
 });
+
+const createBillingScheduleSchema = z.union([
+  z.array(singleScheduleInputSchema).min(1, "At least one billing schedule item is required"),
+  singleScheduleInputSchema,
+  z.object({
+    feePlanItemId: positiveIntegerId.optional(),
+    schedules: z.array(singleScheduleInputSchema).min(1, "At least one billing schedule item is required"),
+  }),
+]);
 
 const updateBillingScheduleSchema = z.object({
   billingScheduleItemId: positiveIntegerId,

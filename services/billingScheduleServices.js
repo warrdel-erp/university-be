@@ -9,67 +9,100 @@ function httpError(message, statusCode = 400) {
 }
 
 /**
- * Create a new billing schedule item with optional sub-items breakdown
+ * Create billing schedule item(s) with optional sub-items breakdown.
+ * Supports both a single object OR an array of objects for bulk creation.
  */
 export async function createBillingSchedule(payload, user = {}) {
-  const { feePlanItemId, amount, dueDate, plannedDate, status, subItems } = payload;
+  let scheduleItems = [];
+  let isSingle = false;
 
-  if (!feePlanItemId) {
-    throw httpError("feePlanItemId is required", 400);
+  if (Array.isArray(payload)) {
+    scheduleItems = payload;
+  } else if (Array.isArray(payload?.schedules)) {
+    scheduleItems = payload.schedules.map((item) => ({
+      ...item,
+      feePlanItemId: item.feePlanItemId || payload.feePlanItemId,
+    }));
+  } else if (payload && typeof payload === "object") {
+    scheduleItems = [payload];
+    isSingle = true;
   }
 
-  // 1. Validate that the fee plan item exists
-  const feePlanItem = await repo.findFeePlanItemById(feePlanItemId);
-  if (!feePlanItem) {
-    throw httpError(`Fee plan item with ID ${feePlanItemId} not found`, 404);
+  if (scheduleItems.length === 0) {
+    throw httpError("At least one billing schedule item is required", 400);
   }
 
-  // 2. Resolve amount (if not given, calculate sum of subItems)
-  let totalAmount = amount != null ? toMoneyNumber(amount) : 0;
-  if (Array.isArray(subItems) && subItems.length > 0 && amount == null) {
-    totalAmount = subItems.reduce(
-      (sum, item) => decimalAdd(sum, toMoneyNumber(item.amount || 0)),
-      0
-    );
+  // 1. Validate that all fee plan items exist
+  const planItemIds = [...new Set(scheduleItems.map((s) => s.feePlanItemId))];
+  const planItemMap = new Map();
+  for (const id of planItemIds) {
+    if (!id) {
+      throw httpError("feePlanItemId is required for each schedule item", 400);
+    }
+    const feePlanItem = await repo.findFeePlanItemById(id);
+    if (!feePlanItem) {
+      throw httpError(`Fee plan item with ID ${id} not found`, 404);
+    }
+    planItemMap.set(id, feePlanItem);
   }
 
-  const universityId = user?.universityId || feePlanItem.universityId || null;
-  const instituteId = user?.instituteId || feePlanItem.instituteId;
+  const createdIds = [];
 
-  // 3. Execute creation in a transaction
-  let createdItemId = null;
+  // 2. Execute all creation in a single transaction
   await sequelize.transaction(async (t) => {
-    const parentRecord = await repo.createBillingScheduleItem(
-      {
-        feePlanItemId,
-        amount: totalAmount,
-        dueDate: dueDate || null,
-        plannedDate: plannedDate || null,
-        status: status || "pending",
-        universityId,
-        instituteId,
-      },
-      { transaction: t }
-    );
+    for (const item of scheduleItems) {
+      const { feePlanItemId, amount, dueDate, plannedDate, status, subItems } = item;
 
-    createdItemId = parentRecord.billingScheduleItemId;
+      let totalAmount = amount != null ? toMoneyNumber(amount) : 0;
+      if (Array.isArray(subItems) && subItems.length > 0 && amount == null) {
+        totalAmount = subItems.reduce(
+          (sum, sub) => decimalAdd(sum, toMoneyNumber(sub.amount || 0)),
+          0
+        );
+      }
 
-    if (Array.isArray(subItems) && subItems.length > 0) {
-      const subItemsData = subItems.map((sub) => ({
-        billingScheduleItemId: createdItemId,
-        feePlanSubItemId: sub.feePlanSubItemId,
-        amount: toMoneyNumber(sub.amount || 0),
-        universityId,
-        instituteId,
-      }));
+      const feePlan = planItemMap.get(feePlanItemId);
+      const universityId = user?.universityId || feePlan?.universityId || null;
+      const instituteId = user?.instituteId || feePlan?.instituteId;
 
-      await repo.bulkCreateBillingScheduleSubItems(subItemsData, {
-        transaction: t,
-      });
+      const parentRecord = await repo.createBillingScheduleItem(
+        {
+          feePlanItemId,
+          amount: totalAmount,
+          dueDate: dueDate || null,
+          plannedDate: plannedDate || null,
+          status: status || "pending",
+          universityId,
+          instituteId,
+        },
+        { transaction: t }
+      );
+
+      const createdItemId = parentRecord.billingScheduleItemId;
+      createdIds.push(createdItemId);
+
+      if (Array.isArray(subItems) && subItems.length > 0) {
+        const subItemsData = subItems.map((sub) => ({
+          billingScheduleItemId: createdItemId,
+          feePlanSubItemId: sub.feePlanSubItemId,
+          amount: toMoneyNumber(sub.amount || 0),
+          universityId,
+          instituteId,
+        }));
+
+        await repo.bulkCreateBillingScheduleSubItems(subItemsData, {
+          transaction: t,
+        });
+      }
     }
   });
 
-  return repo.findBillingScheduleItemById(createdItemId);
+  // 3. Fetch created items with full details
+  const results = await Promise.all(
+    createdIds.map((id) => repo.findBillingScheduleItemById(id))
+  );
+
+  return isSingle ? results[0] : results;
 }
 
 /**
