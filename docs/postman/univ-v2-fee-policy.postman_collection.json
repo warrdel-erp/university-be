@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "univ-v2-fee-policy-v1",
     "name": "Fee Policy API",
-    "description": "Fee Policy Lifecycle Management API (Create, List, Single, Update, Publish, Unpublish, Delete) with Program/Batch/Year scoping, Component applicability, and Calculation engines (percentage, fixed amount, per day, percentage of outstanding, slab based).",
+    "description": "Fee Policy Lifecycle Management API (Create, List, Single, Update, Publish, Unpublish, Delete) with Course/Year/Term scoping, Component applicability, and Calculation engines (percentage, fixed amount, per day, percentage of outstanding, slab based).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,11 +12,15 @@
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjYwLCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0zMFQxMTowNToxNi4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkxMDE2ODQ4LCJleHAiOjE3OTExMDMyNDh9.zJLQn4vUH9iRCxYO1gNuUTCItOHCqcqVLVD4VO0RgaY"
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0zMFQxNjo0ODo0My4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkxMTg2MDY0LCJleHAiOjE3OTM3NzgwNjR9._HP3B7j7w5jIum0yaJd5LPDYPrKNXHaGFbwX6QTR_hU"
     },
     {
       "key": "feePolicyId",
       "value": "1"
+    },
+    {
+      "key": "courseId",
+      "value": "36"
     },
     {
       "key": "batchId",
@@ -24,6 +28,10 @@
     },
     {
       "key": "year",
+      "value": "1"
+    },
+    {
+      "key": "term",
       "value": "1"
     },
     {
@@ -52,14 +60,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"policyName\": \"Merit Scholarship 2026\",\n  \"description\": \"20% discount on tuition fee for eligible batches and years\",\n  \"appliesTo\": \"selected_components\",\n  \"effect\": \"reduce_fee\",\n  \"calculationType\": \"percentage\",\n  \"percentageRate\": 20,\n  \"fixedAmount\": null,\n  \"gracePeriodDays\": 0,\n  \"maxCapAmount\": 25000,\n  \"publishStatus\": \"draft\",\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"batches\": [\n    {\n      \"batchId\": 1,\n      \"year\": 1\n    },\n    {\n      \"batchId\": 1,\n      \"year\": 2\n    }\n  ]\n}"
+          "raw": "{\n  \"policyName\": \"Merit Scholarship 2026\",\n  \"description\": \"20% discount on tuition fee for eligible courses, years and terms\",\n  \"appliesTo\": \"selected_components\",\n  \"effect\": \"reduce_fee\",\n  \"calculationType\": \"percentage\",\n  \"percentageRate\": 20,\n  \"fixedAmount\": null,\n  \"gracePeriodDays\": 0,\n  \"maxCapAmount\": 25000,\n  \"publishStatus\": \"draft\",\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseurl}}/feePolicy",
           "host": ["{{baseurl}}"],
           "path": ["feePolicy"]
         },
-        "description": "POST /feePolicy\n\nCreates a new Fee Policy in draft (or published) state.\n\nKey features:\n- effect: reduce_fee | add_charge | refund\n- appliesTo: selected_components | all_components\n- batches: array of { batchId, year } for scoping by academic batch and year\n- calculationType: percentage | fixed_amount | per_day | percentage_of_outstanding | slab_based"
+        "description": "POST /feePolicy\n\nCreates a new Fee Policy in draft (or published) state.\n\nKey features:\n- effect: reduce_fee | add_charge | refund\n- appliesTo: selected_components | all_components\n- courses: array of { courseId, years: [{ year, terms: [1, 2] }] } for scoping by course, year and term\n- calculationType: percentage | fixed_amount | per_day | percentage_of_outstanding | slab_based"
       },
       "response": []
     },
@@ -83,7 +96,12 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"policyName\": \"Late Payment Surcharge\",\n  \"description\": \"50 per day after 5 days grace period for Year 1 students\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"add_charge\",\n  \"calculationType\": \"per_day\",\n  \"fixedAmount\": 50,\n  \"gracePeriodDays\": 5,\n  \"maxCapAmount\": 5000,\n  \"referenceDateEvent\": \"due_date\",\n  \"publishStatus\": \"draft\",\n  \"batches\": [\n    {\n      \"batchId\": 1,\n      \"year\": 1\n    }\n  ]\n}"
+          "raw": "{\n  \"policyName\": \"Late Payment Surcharge\",\n  \"description\": \"50 per day after 5 days grace period for Year 1 terms\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"add_charge\",\n  \"calculationType\": \"per_day\",\n  \"fixedAmount\": 50,\n  \"gracePeriodDays\": 5,\n  \"maxCapAmount\": 5000,\n  \"referenceDateEvent\": \"due_date\",\n  \"publishStatus\": \"draft\",\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseurl}}/feePolicy",
@@ -114,7 +132,12 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"policyName\": \"Admission Cancellation Refund Policy\",\n  \"description\": \"UGC slab-based refund percentage based on days before/after course commencement\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"refund\",\n  \"calculationType\": \"slab_based\",\n  \"publishStatus\": \"published\",\n  \"batches\": [\n    {\n      \"batchId\": 1,\n      \"year\": 1\n    }\n  ],\n  \"slabs\": [\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 15,\n      \"toUnit\": null,\n      \"slabValue\": 100,\n      \"orderIndex\": 1\n    },\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 0,\n      \"toUnit\": 15,\n      \"slabValue\": 90,\n      \"orderIndex\": 2\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 1,\n      \"toUnit\": 15,\n      \"slabValue\": 80,\n      \"orderIndex\": 3\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 16,\n      \"toUnit\": 30,\n      \"slabValue\": 50,\n      \"orderIndex\": 4\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 31,\n      \"toUnit\": null,\n      \"slabValue\": 0,\n      \"orderIndex\": 5\n    }\n  ]\n}"
+          "raw": "{\n  \"policyName\": \"Admission Cancellation Refund Policy\",\n  \"description\": \"UGC slab-based refund percentage based on days before/after course commencement\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"refund\",\n  \"calculationType\": \"slab_based\",\n  \"publishStatus\": \"published\",\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ],\n  \"slabs\": [\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 15,\n      \"toUnit\": null,\n      \"slabValue\": 100,\n      \"orderIndex\": 1\n    },\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 0,\n      \"toUnit\": 15,\n      \"slabValue\": 90,\n      \"orderIndex\": 2\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 1,\n      \"toUnit\": 15,\n      \"slabValue\": 80,\n      \"orderIndex\": 3\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 16,\n      \"toUnit\": 30,\n      \"slabValue\": 50,\n      \"orderIndex\": 4\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 31,\n      \"toUnit\": null,\n      \"slabValue\": 0,\n      \"orderIndex\": 5\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseurl}}/feePolicy",
@@ -140,7 +163,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseurl}}/feePolicy?publishStatus=all&effect=reduce_fee&batchId={{batchId}}&year={{year}}&search=&page=1&limit=10",
+          "raw": "{{baseurl}}/feePolicy?publishStatus=all&effect=reduce_fee&courseId={{courseId}}&year={{year}}&term={{term}}&search=&page=1&limit=10",
           "host": ["{{baseurl}}"],
           "path": ["feePolicy"],
           "query": [
@@ -161,14 +184,25 @@
               "disabled": true
             },
             {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Filter by associated courseId"
+            },
+            {
               "key": "batchId",
               "value": "{{batchId}}",
-              "description": "Filter by associated batchId"
+              "description": "Filter by associated batchId",
+              "disabled": true
             },
             {
               "key": "year",
               "value": "{{year}}",
-              "description": "Filter by batch year"
+              "description": "Filter by course/batch year"
+            },
+            {
+              "key": "term",
+              "value": "{{term}}",
+              "description": "Filter by term"
             },
             {
               "key": "search",
@@ -185,7 +219,7 @@
             }
           ]
         },
-        "description": "GET /feePolicy\n\nReturns paginated list of fee policies with attached components, batches (with year), and slabs."
+        "description": "GET /feePolicy\n\nReturns paginated list of fee policies with attached components, courses, batches, and slabs."
       },
       "response": []
     },
@@ -214,7 +248,7 @@
             }
           ]
         },
-        "description": "GET /feePolicy/single?feePolicyId=\n\nReturns detailed fee policy by ID, including policyComponents (with feeTypeCatalog details), policyBatches (with year and batch details), and policySlabs."
+        "description": "GET /feePolicy/single?feePolicyId=\n\nReturns detailed fee policy by ID, including policyComponents, policyBatches (with course, batch, year, term), grouped courses, and policySlabs."
       },
       "response": []
     },
@@ -238,14 +272,19 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"feePolicyId\": {{feePolicyId}},\n  \"policyName\": \"Updated Merit Scholarship 2026\",\n  \"description\": \"Updated scholarship discount to 25% for Year 1 & 2 batches\",\n  \"percentageRate\": 25,\n  \"maxCapAmount\": 30000,\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"batches\": [\n    {\n      \"batchId\": 1,\n      \"year\": 1\n    },\n    {\n      \"batchId\": 1,\n      \"year\": 2\n    }\n  ]\n}"
+          "raw": "{\n  \"feePolicyId\": {{feePolicyId}},\n  \"policyName\": \"Updated Merit Scholarship 2026\",\n  \"description\": \"Updated scholarship discount to 25% for Year 1 terms\",\n  \"percentageRate\": 25,\n  \"maxCapAmount\": 30000,\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseurl}}/feePolicy",
           "host": ["{{baseurl}}"],
           "path": ["feePolicy"]
         },
-        "description": "PATCH /feePolicy\n\nUpdates policy fields, component mappings, batch/year scopes, and/or slab rules."
+        "description": "PATCH /feePolicy\n\nUpdates policy fields, component mappings, course/year/term scopes, and/or slab rules."
       },
       "response": []
     },
@@ -269,7 +308,12 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}"
+          "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseurl}}/feePolicy/publish",
@@ -300,7 +344,12 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}"
+          "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{baseurl}}/feePolicy/unpublish",
