@@ -119,8 +119,6 @@ export async function createFeePolicy(body, authUser = {}) {
       gracePeriodDays: Number(gracePeriodDays) || 0,
       maxCapAmount: maxCapAmount != null ? Number(maxCapAmount) : null,
       referenceDateEvent: referenceDateEvent ?? null,
-      instituteId: authUser.instituteId ?? body.instituteId,
-      universityId: authUser.universityId ?? body.universityId ?? null,
       publishStatus: isPublished ? "published" : "draft",
       publishedAt: isPublished ? new Date() : null,
       publishedBy: isPublished ? authUser.userId ?? null : null,
@@ -164,19 +162,6 @@ export async function createFeePolicy(body, authUser = {}) {
         universityId,
       }));
       await feePolicyRepo.bulkCreateFeePolicySlabs(slabRows, { transaction });
-    }
-
-    // Students
-    if (Array.isArray(body.studentIds) && body.studentIds.length) {
-      const uniqueStudentIds = [...new Set(body.studentIds.map(Number))];
-      const students = await feePolicyRepo.findStudentsByIds(uniqueStudentIds, { transaction });
-      const studentRows = students.map((st) => ({
-        feePolicyId,
-        studentId: st.studentId,
-        instituteId: st.instituteId || instituteId,
-        universityId: st.universityId || universityId,
-      }));
-      await feePolicyRepo.bulkCreateFeePolicyStudents(studentRows, { transaction });
     }
 
     return feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
@@ -285,22 +270,6 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
       }
     }
 
-    // Students
-    if (body.studentIds !== undefined) {
-      await feePolicyRepo.deleteFeePolicyStudents({ feePolicyId }, { transaction });
-      if (Array.isArray(body.studentIds) && body.studentIds.length) {
-        const uniqueStudentIds = [...new Set(body.studentIds.map(Number))];
-        const students = await feePolicyRepo.findStudentsByIds(uniqueStudentIds, { transaction });
-        const studentRows = students.map((st) => ({
-          feePolicyId,
-          studentId: st.studentId,
-          instituteId: st.instituteId || instituteId,
-          universityId: st.universityId || universityId,
-        }));
-        await feePolicyRepo.bulkCreateFeePolicyStudents(studentRows, { transaction });
-      }
-    }
-
     return feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
   });
 }
@@ -352,122 +321,3 @@ export async function deleteFeePolicy(feePolicyId) {
   await feePolicyRepo.deleteFeePolicy(feePolicyId);
   return true;
 }
-
-export async function mapStudentWithFeePolicies(body, authUser = {}) {
-  const { studentId, studentIds, feePolicyId, feePolicyIds, mappings, replace = false } = body;
-
-  const pairs = [];
-  if (Array.isArray(mappings) && mappings.length) {
-    for (const m of mappings) {
-      if (m && m.studentId && m.feePolicyId) {
-        pairs.push({
-          studentId: Number(m.studentId),
-          feePolicyId: Number(m.feePolicyId),
-        });
-      }
-    }
-  }
-
-  const sIds = [];
-  if (studentId != null) sIds.push(Number(studentId));
-  if (Array.isArray(studentIds)) {
-    for (const s of studentIds) {
-      if (s != null) sIds.push(Number(s));
-    }
-  }
-
-  const pIds = [];
-  if (feePolicyId != null) pIds.push(Number(feePolicyId));
-  if (Array.isArray(feePolicyIds)) {
-    for (const p of feePolicyIds) {
-      if (p != null) pIds.push(Number(p));
-    }
-  }
-
-  if (sIds.length && pIds.length) {
-    for (const sid of sIds) {
-      for (const pid of pIds) {
-        pairs.push({ studentId: sid, feePolicyId: pid });
-      }
-    }
-  }
-
-  if (!pairs.length) {
-    throw httpError("At least one studentId and feePolicyId mapping must be provided", 400);
-  }
-
-  // Deduplicate input pairs
-  const uniquePairs = [];
-  const seenPairs = new Set();
-  for (const pair of pairs) {
-    const key = `${pair.studentId}_${pair.feePolicyId}`;
-    if (!seenPairs.has(key)) {
-      seenPairs.add(key);
-      uniquePairs.push(pair);
-    }
-  }
-
-  const distinctStudentIds = [...new Set(uniquePairs.map((p) => p.studentId))];
-  const distinctPolicyIds = [...new Set(uniquePairs.map((p) => p.feePolicyId))];
-
-  const [students, policies] = await Promise.all([
-    feePolicyRepo.findStudentsByIds(distinctStudentIds),
-    feePolicyRepo.findPoliciesByIds(distinctPolicyIds),
-  ]);
-
-  const studentMap = new Map(students.map((s) => [Number(s.studentId), s]));
-  const policyMap = new Map(policies.map((p) => [Number(p.feePolicyId), p]));
-
-  const missingStudent = distinctStudentIds.find((id) => !studentMap.has(id));
-  if (missingStudent) {
-    throw httpError(`Student with ID ${missingStudent} not found`, 404);
-  }
-
-  const missingPolicy = distinctPolicyIds.find((id) => !policyMap.has(id));
-  if (missingPolicy) {
-    throw httpError(`Fee policy with ID ${missingPolicy} not found`, 404);
-  }
-
-  return sequelize.transaction(async (transaction) => {
-    if (replace) {
-      for (const sid of distinctStudentIds) {
-        await feePolicyRepo.deleteFeePolicyStudents({ studentId: sid }, { transaction });
-      }
-    }
-
-    const rows = uniquePairs.map((pair) => {
-      const student = studentMap.get(pair.studentId);
-      const policy = policyMap.get(pair.feePolicyId);
-      return {
-        studentId: pair.studentId,
-        feePolicyId: pair.feePolicyId,
-        instituteId: student?.instituteId || policy?.instituteId || authUser?.instituteId,
-        universityId: student?.universityId || policy?.universityId || authUser?.universityId || null,
-      };
-    });
-
-    await feePolicyRepo.bulkCreateFeePolicyStudents(rows, { transaction });
-
-    return feePolicyRepo.findFeePolicyStudents(
-      distinctStudentIds.length === 1
-        ? { studentId: distinctStudentIds[0] }
-        : distinctPolicyIds.length === 1
-        ? { feePolicyId: distinctPolicyIds[0] }
-        : {},
-      { transaction }
-    );
-  });
-}
-
-export async function removeStudentFeePolicyMapping(query = {}, authUser = {}) {
-  const { studentId, feePolicyId } = query;
-  if (!studentId && !feePolicyId) {
-    throw httpError("Either studentId or feePolicyId must be provided to remove mapping", 400);
-  }
-  const deletedCount = await feePolicyRepo.deleteFeePolicyStudents({
-    studentId: studentId ? Number(studentId) : undefined,
-    feePolicyId: feePolicyId ? Number(feePolicyId) : undefined,
-  });
-  return { deletedCount };
-}
-

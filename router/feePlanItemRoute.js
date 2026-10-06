@@ -16,8 +16,9 @@ import {
   getFeePlanPublishHistoryById,
   getSingleFeePlanItemDetails,
   getBillingRuns,
-  getBillingRunDetails,
 } from "../controllers/feePlanItemController.js";
+import { getStudentBillingBreakdown } from "../controllers/studentBillingBreakdownController.js";
+import { studentBillingBreakdownQuerySchema } from "./studentBillingBreakdownRoute.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
@@ -89,13 +90,6 @@ const billingRunsQuerySchema = z.object({
   sessionId: positiveIntegerId.optional(),
   batchId: positiveIntegerId.optional(),
   year: positiveIntegerId.optional(),
-  search: z.string().trim().optional(),
-});
-
-const billingRunDetailsQuerySchema = z.object({
-  feePlanItemId: positiveIntegerId,
-  page: positiveIntegerId.optional().default(1),
-  limit: positiveIntegerId.optional().default(10),
   search: z.string().trim().optional(),
 });
 
@@ -198,8 +192,8 @@ router.get(
 router.get(
   "/billingRuns/details",
   userAuth,
-  validate({ query: billingRunDetailsQuerySchema }),
-  getBillingRunDetails,
+  validate({ query: studentBillingBreakdownQuerySchema }),
+  getStudentBillingBreakdown,
 );
 
 router.get(

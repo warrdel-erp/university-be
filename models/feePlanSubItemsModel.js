@@ -7,7 +7,7 @@ import instituteModel from "./instituteModel.js";
 
 const feePlanSubItemsModel = sequelize.define(
   "fee_plan_sub_items",
-  {
+  { 
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: true,

@@ -223,22 +223,3 @@ export const getBillingRuns = async (req, res) => {
   }
 };
 
-export const getBillingRunDetails = async (req, res) => {
-  try {
-    const data = await feePlanItemServices.getBillingRunDetails(req.query, req.user);
-    return SuccessResponse(
-      res,
-      200,
-      'Fee plan item billing details retrieved successfully',
-      data,
-    );
-  } catch (error) {
-    return ErrorResponse(
-      res,
-      error.statusCode || 500,
-      error.message || 'Internal Server Error',
-    );
-  }
-};
-
-

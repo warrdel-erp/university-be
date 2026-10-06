@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "univ-v2-fee-policy-v1",
     "name": "Fee Policy API",
-    "description": "Fee Policy Lifecycle Management API (Create, List, Single, Update, Publish, Unpublish, Delete) with Program/Batch/Year scoping, Component applicability, Calculation engines (percentage, fixed amount, per day, percentage of outstanding, slab based), Student-Policy Mappings, and Fee Plan Item Billing Runs.",
+    "description": "Fee Policy Lifecycle Management API (Create, List, Single, Update, Publish, Unpublish, Delete) with Program/Batch/Year scoping, Component applicability, and Calculation engines (percentage, fixed amount, per day, percentage of outstanding, slab based).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -28,22 +28,6 @@
     },
     {
       "key": "feeTypeCatalogId",
-      "value": "1"
-    },
-    {
-      "key": "studentId",
-      "value": "1660"
-    },
-    {
-      "key": "feePlanItemId",
-      "value": "36"
-    },
-    {
-      "key": "courseId",
-      "value": "1"
-    },
-    {
-      "key": "sessionId",
       "value": "1"
     }
   ],
@@ -353,178 +337,6 @@
           ]
         },
         "description": "DELETE /feePolicy?feePolicyId=\n\nDeletes a fee policy along with associated component links, batch mappings, and slabs (cascade)."
-      },
-      "response": []
-    },
-    {
-      "name": "10. Map Student(s) to Fee Policy(ies)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Accept",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"studentId\": {{studentId}},\n  \"feePolicyIds\": [\n    {{feePolicyId}}\n  ],\n  \"replace\": false\n}"
-        },
-        "url": {
-          "raw": "{{baseurl}}/feePolicy/student",
-          "host": ["{{baseurl}}"],
-          "path": ["feePolicy", "student"]
-        },
-        "description": "POST /feePolicy/student\n\nMaps student(s) with fee policy(ies). One student can be mapped to multiple fee policies.\n\nPayload options:\n1. One student to multiple policies:\n   { \"studentId\": 1660, \"feePolicyIds\": [1, 2] }\n2. One student to one policy:\n   { \"studentId\": 1660, \"feePolicyId\": 1 }\n3. Multiple students to one policy:\n   { \"feePolicyId\": 1, \"studentIds\": [1660, 1661] }\n4. List of mappings:\n   { \"mappings\": [{ \"studentId\": 1660, \"feePolicyId\": 1 }], \"replace\": false }"
-      },
-      "response": []
-    },
-    {
-      "name": "11. Unmap Student from Fee Policy",
-      "request": {
-        "method": "DELETE",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Accept",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{baseurl}}/feePolicy/student?studentId={{studentId}}&feePolicyId={{feePolicyId}}",
-          "host": ["{{baseurl}}"],
-          "path": ["feePolicy", "student"],
-          "query": [
-            {
-              "key": "studentId",
-              "value": "{{studentId}}",
-              "description": "Student ID to unmap"
-            },
-            {
-              "key": "feePolicyId",
-              "value": "{{feePolicyId}}",
-              "description": "Fee Policy ID to unmap"
-            }
-          ]
-        },
-        "description": "DELETE /feePolicy/student?studentId=&feePolicyId=\n\nRemoves mapping between student and fee policy.\n\nUsage:\n- Unmap specific policy from student: ?studentId=1660&feePolicyId=1\n- Unmap all policies for student: ?studentId=1660\n- Unmap all students for policy: ?feePolicyId=1"
-      },
-      "response": []
-    },
-    {
-      "name": "12. Get Fee Plan Item Billing Runs",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Accept",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{baseurl}}/feePlanItem/billingRuns?courseId={{courseId}}&sessionId={{sessionId}}&batchId={{batchId}}&year={{year}}&search=",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "feePlanItem",
-            "billingRuns"
-          ],
-          "query": [
-            {
-              "key": "courseId",
-              "value": "{{courseId}}",
-              "description": "Filter by course ID (optional)"
-            },
-            {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "Filter by session ID (optional)"
-            },
-            {
-              "key": "batchId",
-              "value": "{{batchId}}",
-              "description": "Filter by batch ID (optional)"
-            },
-            {
-              "key": "year",
-              "value": "{{year}}",
-              "description": "Filter by batch year level (optional)"
-            },
-            {
-              "key": "search",
-              "value": "",
-              "description": "Search keyword by plan name, course name/code, session, or batch (optional)"
-            }
-          ]
-        },
-        "description": "GET /feePlanItem/billingRuns?courseId=&sessionId=&batchId=&year=&search=\n\nRetrieves billing runs grouped by status stages along with high-level summary counts:\n- summary: actionRequiredCount, activeBillingRunsCount, upcomingRunsCount, totalRuns\n- actionRequired: items where createDate has arrived/passed and invoices are not yet generated (\"Due for billing\", \"Ready to raise\")\n- activeBillingRuns: items with invoices generated (\"Partially Completed\", \"Completed\")\n- upcomingRuns: upcoming items with future createDate (\"Upcoming\")\n\nQuery parameters:\n- courseId (optional)\n- sessionId (optional)\n- batchId (optional)\n- year (optional)\n- search (optional)"
-      },
-      "response": []
-    },
-    {
-      "name": "13. Get Fee Plan Item Billing Run Details",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Accept",
-            "value": "application/json"
-          }
-        ],
-        "url": {
-          "raw": "{{baseurl}}/feePlanItem/billingRuns/details?feePlanItemId={{feePlanItemId}}&page=1&limit=10&search=",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "feePlanItem",
-            "billingRuns",
-            "details"
-          ],
-          "query": [
-            {
-              "key": "feePlanItemId",
-              "value": "{{feePlanItemId}}",
-              "description": "Fee Plan Item ID (required)"
-            },
-            {
-              "key": "page",
-              "value": "1",
-              "description": "Page number (optional, default 1)"
-            },
-            {
-              "key": "limit",
-              "value": "10",
-              "description": "Page size limit (optional, default 10)"
-            },
-            {
-              "key": "search",
-              "value": "",
-              "description": "Search keyword by student name or scholar number (optional)"
-            }
-          ]
-        },
-        "description": "GET /feePlanItem/billingRuns/details?feePlanItemId=&page=1&limit=10&search=\n\nFetches all data related to a feePlanItemId including:\n- feePlanItem and feePlanSubItems\n- batch, course, and session data\n- studentCount (overall and batch)\n- peginationData (totalRecords, totalPages, currentPage, pageSize, hasNext, hasPrev)\n- students: paginated student list for the batch with:\n  * invoice status (isInvoiceRaised, invoice)\n  * mapped fee policy status (isFeePolicyMapped, feePolicies, feePolicy)"
       },
       "response": []
     }

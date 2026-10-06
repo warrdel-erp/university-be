@@ -62,6 +62,7 @@ import co from "./router/coRoute.js";
 import feePlanItem from "./router/feePlanItemRoute.js";
 import studentFeeInvoice from "./router/studentFeeInvoiceRoute.js";
 import studentFeePayment from "./router/studentFeePaymentRoute.js";
+import studentBillingBreakdown from "./router/studentBillingBreakdownRoute.js";
 import lesson from "./router/lessonRoute.js";
 import lecture from "./router/lectureRoute.js";
 import notice from "./router/noticeRoute.js";
@@ -223,6 +224,7 @@ app.use("/lecture", lecture);
 
 app.use("/studentFeeInvoice", studentFeeInvoice);
 app.use("/studentFeePayment", studentFeePayment);
+app.use("/studentBillingBreakdown", studentBillingBreakdown);
 app.use("/libraryIssueBook", libraryIssueBookTransaction);
 app.use("/holiday", holiday);
 app.use("/notice", notice);

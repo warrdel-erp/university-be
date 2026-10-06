@@ -9,8 +9,6 @@ import {
   publishFeePolicy,
   unpublishFeePolicy,
   deleteFeePolicy,
-  mapStudentFeePolicy,
-  removeStudentFeePolicyMapping,
 } from "../controllers/feePolicyController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -65,7 +63,6 @@ const createFeePolicySchema = z.object({
   feeTypeCatalogIds: z.array(positiveIntegerId).optional(),
   batchIds: z.array(positiveIntegerId).optional(),
   batches: z.array(batchInputSchema).optional(),
-  studentIds: z.array(positiveIntegerId).optional(),
   slabs: z.array(slabSchema).optional(),
 });
 
@@ -85,7 +82,6 @@ const updateFeePolicySchema = z.object({
   feeTypeCatalogIds: z.array(positiveIntegerId).optional(),
   batchIds: z.array(positiveIntegerId).optional(),
   batches: z.array(batchInputSchema).optional(),
-  studentIds: z.array(positiveIntegerId).optional(),
   slabs: z.array(slabSchema).optional(),
 });
 
@@ -163,60 +159,6 @@ router.delete(
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value, null),
   validate({ query: policyIdQuerySchema }),
   deleteFeePolicy
-);
-
-const mapStudentFeePolicySchema = z
-  .object({
-    studentId: positiveIntegerId.optional(),
-    studentIds: z.array(positiveIntegerId).optional(),
-    feePolicyId: positiveIntegerId.optional(),
-    feePolicyIds: z.array(positiveIntegerId).optional(),
-    mappings: z
-      .array(
-        z.object({
-          studentId: positiveIntegerId,
-          feePolicyId: positiveIntegerId,
-        })
-      )
-      .optional(),
-    replace: z.boolean().optional().default(false),
-  })
-  .refine(
-    (data) => {
-      const hasSinglePair =
-        (data.studentId || (data.studentIds && data.studentIds.length)) &&
-        (data.feePolicyId || (data.feePolicyIds && data.feePolicyIds.length));
-      const hasMappings = data.mappings && data.mappings.length > 0;
-      return hasSinglePair || hasMappings;
-    },
-    {
-      message: "At least one mapping between studentId and feePolicyId must be provided",
-    }
-  );
-
-const deleteStudentFeePolicyQuerySchema = z
-  .object({
-    studentId: positiveIntegerId.optional(),
-    feePolicyId: positiveIntegerId.optional(),
-  })
-  .refine((data) => data.studentId || data.feePolicyId, {
-    message: "Either studentId or feePolicyId is required",
-  });
-
-router.post(
-  "/student",
-  userAuth,
-  checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null),
-  validate({ body: mapStudentFeePolicySchema }),
-  mapStudentFeePolicy
-);
-
-router.delete(
-  "/student",
-  userAuth,
-  checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value, null),
-  validate({ query: deleteStudentFeePolicyQuerySchema }),
-  removeStudentFeePolicyMapping
 );
 
 export default router;
