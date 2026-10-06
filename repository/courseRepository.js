@@ -879,3 +879,24 @@ export async function getSubjectByTeacherUserIdAndSubjectId(userId, subjectId) {
     throw error;
   }
 }
+
+export async function getCoursesWithDurationYears({ search } = {}) {
+  try {
+    const where = { isActive: true };
+    if (search) {
+      where[Op.or] = [
+        { courseName: { [Op.like]: `%${search}%` } },
+        { courseCode: { [Op.like]: `%${search}%` } },
+      ];
+    }
+
+    return await scoped(model.courseModel).findAll({
+      where,
+      attributes: ['courseId', 'courseName', 'courseCode', 'courseDuration', 'totalTerms', 'termType'],
+      order: [['courseName', 'ASC']],
+    });
+  } catch (error) {
+    console.error('Error in Course Repository (getCoursesWithDurationYears):', error);
+    throw error;
+  }
+}

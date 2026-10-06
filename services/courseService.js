@@ -1,6 +1,31 @@
 import * as courseRepository from "../repository/courseRepository.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
-import { resolveTotalTerms, termsForYear } from "../utility/courseTerms.js";
+import { resolveTotalTerms, termsForYear, termsPerYear } from "../utility/courseTerms.js";
+
+export const getCoursesWithDurationYears = async (options = {}) => {
+  const courses = await courseRepository.getCoursesWithDurationYears(options);
+
+  return courses.map((item) => {
+    const plain = item.get ? item.get({ plain: true }) : item;
+    let duration = Number(plain.courseDuration) || 0;
+    if (!duration && plain.totalTerms) {
+      const perYear = termsPerYear(plain) || 2;
+      duration = Math.ceil(Number(plain.totalTerms) / perYear);
+    }
+
+    const years = [];
+    for (let i = 1; i <= duration; i++) {
+      years.push({ year: i });
+    }
+
+    return {
+      courseId: plain.courseId,
+      courseName: plain.courseName,
+      courseCode: plain.courseCode,
+      years,
+    };
+  });
+};
 
 export const listCourses = async (options = {}) => {
   return courseRepository.getAllCourses(options);
