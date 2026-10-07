@@ -1,13 +1,9 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/billingScheduleRepository.js";
 import * as repoPaymentTerms from "../repository/billingSchedulePaymentTermsRepository.js";
-<<<<<<< HEAD
-import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
-=======
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
 import { resolveBatchCurrentPosition, buildCurrentTermsForYear } from "../utility/courseTerms.js";
-import { decimalAdd, toMoneyNumber } from "../utility/decimalMoney.js";
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
+import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -166,9 +162,6 @@ export async function getBillingSchedules(queryParams = {}) {
  * Get single billing schedule item details
  */
 export async function getSingleBillingSchedule(billingScheduleItemId) {
-<<<<<<< HEAD
-  return getBillingScheduleView(billingScheduleItemId);
-=======
   if (!billingScheduleItemId) {
     throw httpError("billingScheduleItemId is required", 400);
   }
@@ -182,7 +175,6 @@ export async function getSingleBillingSchedule(billingScheduleItemId) {
   }
 
   return item;
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
 }
 
 /**
@@ -475,7 +467,6 @@ export async function deleteBillingSchedulePaymentTerm(
   return { billingSchedulePaymentTermsId };
 }
 
-<<<<<<< HEAD
 function formatCurrency(val) {
   const num = toMoneyNumber(val || 0);
   return new Intl.NumberFormat("en-IN", {
@@ -768,7 +759,9 @@ export async function getBillingScheduleReview(queryParams = {}, user = {}) {
       "Billing periods will become available for Billing Runs according to their Planned Billing Dates.",
       "Students can use the enabled Payment Terms for each billing period. If no student-specific Payment Arrangement has been confirmed, the Default Payment Term will apply.",
     ],
-=======
+  };
+}
+
 function buildYearWiseData(feePlanItems = [], course = {}, batchYear, currentYear) {
   const duration = Number(course?.courseDuration) || 0;
   const planByYear = new Map();
@@ -1013,12 +1006,10 @@ export async function getBillingScheduleBatchOverview(queryParams = {}) {
         }
       : null,
     years,
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
   };
 }
 
 /**
-<<<<<<< HEAD
  * Detailed view of a single billing schedule item.
  */
 export async function getBillingScheduleView(billingScheduleItemId) {
@@ -1121,7 +1112,7 @@ export async function getBillingScheduleView(billingScheduleItemId) {
   };
 }
 
-=======
+/**
  * Get detailed billing schedule review data for a batch and year.
  * Returns schedule-wise amounts, plannedDates, subItems, and fee plan details.
  * @param {Object} queryParams - { batchId, year }
@@ -1213,6 +1204,3 @@ export async function getBillingScheduleBatchReview(queryParams = {}) {
     schedules,
   };
 }
-
-
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a

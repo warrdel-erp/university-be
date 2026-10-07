@@ -221,53 +221,6 @@ export async function findFeePlanSubItemsByPlanItemId(feePlanItemId, options = {
   });
 }
 
-<<<<<<< HEAD
-export async function findBillingScheduleReviewData(
-  { feePlanItemId, billingScheduleItemId, batchId, year },
-  options = {}
-) {
-  let targetBatchId = batchId ? Number(batchId) : null;
-  let targetYear = year != null ? Number(year) : null;
-  let targetFeePlanItemId = feePlanItemId ? Number(feePlanItemId) : null;
-  let targetBillingScheduleItemId = billingScheduleItemId ? Number(billingScheduleItemId) : null;
-
-  // 1. If billingScheduleItemId provided, find its feePlanItemId
-  if (targetBillingScheduleItemId && !targetFeePlanItemId) {
-    const schedule = await scoped(model.billingScheduleItemsModel).findByPk(
-      targetBillingScheduleItemId,
-      {
-        attributes: ["billingScheduleItemId", "feePlanItemId"],
-        transaction: options.transaction,
-      }
-    );
-    if (schedule) {
-      targetFeePlanItemId = schedule.feePlanItemId;
-    }
-  }
-
-  // 2. If targetFeePlanItemId provided, resolve batchId and year
-  if (targetFeePlanItemId && (!targetBatchId || targetYear == null)) {
-    const singleFeePlanItem = await scoped(model.feePlanItemModel).findByPk(
-      targetFeePlanItemId,
-      {
-        attributes: ["feePlanItemId", "batchId", "year", "academicPeriod", "name"],
-        transaction: options.transaction,
-      }
-    );
-    if (singleFeePlanItem) {
-      targetBatchId = targetBatchId || singleFeePlanItem.batchId;
-      targetYear = targetYear != null ? targetYear : singleFeePlanItem.year;
-    }
-  }
-
-  // Common FeePlanItem Includes
-  const feePlanItemIncludes = [
-    {
-      model: model.batchModel,
-      as: "batch",
-      required: false,
-      attributes: ["batchId", "batch", "sessionId", "status"],
-=======
 export async function findBillingScheduleBatchesOverview(filters = {}) {
   const sessionWhere = { ...buildScope(model.sessionModel) };
   if (filters.sessionId != null) sessionWhere.sessionId = Number(filters.sessionId);
@@ -351,21 +304,122 @@ export async function findBatchReviewData(batchId, year) {
   const [batch, feePlanItem] = await Promise.all([
     model.batchModel.findByPk(Number(batchId), {
       attributes: ["batchId", "batch"],
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
       include: [
         {
           model: model.sessionModel,
           as: "session",
-<<<<<<< HEAD
-          required: false,
-=======
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
           attributes: ["sessionId", "sessionName"],
           include: [
             {
               model: model.courseModel,
               as: "course",
-<<<<<<< HEAD
+              attributes: ["courseId", "courseName", "courseCode"],
+            },
+          ],
+        },
+      ],
+    }),
+    scoped(model.feePlanItemModel).findOne({
+      where: { batchId: Number(batchId), year: Number(year) },
+      include: [
+        {
+          model: model.billingScheduleItemsModel,
+          as: "billingScheduleItems",
+          required: false,
+          where: buildScope(model.billingScheduleItemsModel),
+          include: [
+            {
+              model: model.billingScheduleSubItemsModel,
+              as: "subItems",
+              required: false,
+              where: buildScope(model.billingScheduleSubItemsModel),
+            },
+            {
+              model: model.billingSchedulePaymentTermsModel,
+              as: "paymentTerms",
+              required: false,
+              attributes: [
+                "billingSchedulePaymentTermsId",
+                "billingScheduleItemId",
+                "installment",
+                "createdAt",
+                "updatedAt",
+              ],
+            },
+          ],
+        },
+        {
+          model: model.feePlanSubItemsModel,
+          as: "feePlanSubItems",
+          required: false,
+          where: buildScope(model.feePlanSubItemsModel),
+          include: [{ model: model.feeTypeCatalogModel, as: "feeTypeCatalog" }],
+        },
+      ],
+      order: [
+        [{ model: model.billingScheduleItemsModel, as: "billingScheduleItems" }, "billingScheduleItemId", "ASC"],
+      ],
+    }),
+  ]);
+
+  return { batch, feePlanItem };
+}
+
+export async function findBillingScheduleReviewData(
+  { feePlanItemId, billingScheduleItemId, batchId, year },
+  options = {}
+) {
+  let targetBatchId = batchId ? Number(batchId) : null;
+  let targetYear = year != null ? Number(year) : null;
+  let targetFeePlanItemId = feePlanItemId ? Number(feePlanItemId) : null;
+  let targetBillingScheduleItemId = billingScheduleItemId ? Number(billingScheduleItemId) : null;
+
+  // 1. If billingScheduleItemId provided, find its feePlanItemId
+  if (targetBillingScheduleItemId && !targetFeePlanItemId) {
+    const schedule = await scoped(model.billingScheduleItemsModel).findByPk(
+      targetBillingScheduleItemId,
+      {
+        attributes: ["billingScheduleItemId", "feePlanItemId"],
+        transaction: options.transaction,
+      }
+    );
+    if (schedule) {
+      targetFeePlanItemId = schedule.feePlanItemId;
+    }
+  }
+
+  // 2. If targetFeePlanItemId provided, resolve batchId and year
+  if (targetFeePlanItemId && (!targetBatchId || targetYear == null)) {
+    const singleFeePlanItem = await scoped(model.feePlanItemModel).findByPk(
+      targetFeePlanItemId,
+      {
+        attributes: ["feePlanItemId", "batchId", "year", "academicPeriod", "name"],
+        transaction: options.transaction,
+      }
+    );
+    if (singleFeePlanItem) {
+      targetBatchId = targetBatchId || singleFeePlanItem.batchId;
+      targetYear = targetYear != null ? targetYear : singleFeePlanItem.year;
+    }
+  }
+
+  // Common FeePlanItem Includes
+  const feePlanItemIncludes = [
+    {
+      model: model.batchModel,
+      as: "batch",
+      required: false,
+      attributes: ["batchId", "batch", "sessionId", "status"],
+      include: [
+        {
+          model: model.sessionModel,
+          as: "session",
+          required: false,
+          attributes: ["sessionId", "sessionName"],
+          include: [
+            {
+              model: model.courseModel,
+              as: "course",
               required: false,
               attributes: [
                 "courseId",
@@ -374,14 +428,10 @@ export async function findBatchReviewData(batchId, year) {
                 "courseDuration",
                 "termType",
               ],
-=======
-              attributes: ["courseId", "courseName", "courseCode"],
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
             },
           ],
         },
       ],
-<<<<<<< HEAD
     },
     {
       model: model.feePlanSubItemsModel,
@@ -433,40 +483,11 @@ export async function findBatchReviewData(batchId, year) {
                     "refundable",
                   ],
                 },
-=======
-    }),
-    scoped(model.feePlanItemModel).findOne({
-      where: { batchId: Number(batchId), year: Number(year) },
-      include: [
-        {
-          model: model.billingScheduleItemsModel,
-          as: "billingScheduleItems",
-          required: false,
-          where: buildScope(model.billingScheduleItemsModel),
-          include: [
-            {
-              model: model.billingScheduleSubItemsModel,
-              as: "subItems",
-              required: false,
-              where: buildScope(model.billingScheduleSubItemsModel),
-            },
-            {
-              model: model.billingSchedulePaymentTermsModel,
-              as: "paymentTerms",
-              required: false,
-              attributes: [
-                "billingSchedulePaymentTermsId",
-                "billingScheduleItemId",
-                "installment",
-                "createdAt",
-                "updatedAt",
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
               ],
             },
           ],
         },
         {
-<<<<<<< HEAD
           model: model.billingSchedulePaymentTermsModel,
           as: "paymentTerms",
           required: false,
@@ -529,22 +550,3 @@ export async function findBatchReviewData(batchId, year) {
     targetBillingScheduleItemId: null,
   };
 }
-=======
-          model: model.feePlanSubItemsModel,
-          as: "feePlanSubItems",
-          required: false,
-          where: buildScope(model.feePlanSubItemsModel),
-          include: [{ model: model.feeTypeCatalogModel, as: "feeTypeCatalog" }],
-        },
-      ],
-      order: [
-        [{ model: model.billingScheduleItemsModel, as: "billingScheduleItems" }, "billingScheduleItemId", "ASC"],
-      ],
-    }),
-  ]);
-
-  return { batch, feePlanItem };
-}
-
-
->>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
