@@ -189,6 +189,11 @@ export async function findBillingScheduleItemWithDetails(billingScheduleItemId, 
           },
         ],
       },
+      {
+        model: model.billingSchedulePaymentTermsModel,
+        as: "paymentTerms",
+        required: false,
+      },
     ],
     transaction: options.transaction,
   });

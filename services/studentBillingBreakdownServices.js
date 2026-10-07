@@ -277,7 +277,37 @@ export async function getStudentBillingBreakdown(
     finalBillableAmount = 0;
   }
 
-  // 9. Format response exactly matching the UI layout
+  // 9. Payment Arrangement
+  let paymentArrangement = {
+    title: "Payment Arrangement",
+    terms: [],
+  };
+
+  if (schedule && Array.isArray(schedule.paymentTerms) && schedule.paymentTerms.length > 0) {
+    const sortedTerms = [...schedule.paymentTerms].sort((a, b) => a.installment - b.installment);
+    const n = sortedTerms.length;
+    const structurePercent = Math.floor(100 / n);
+    const structureArr = Array(n).fill(`${structurePercent}%`);
+    if (n * structurePercent < 100) {
+      structureArr[n - 1] = `${100 - (n - 1) * structurePercent}%`;
+    }
+    const structure = structureArr.join(" \u00b7 ");
+    const dueSchedule = sortedTerms.map((t, idx) => `+${15 + idx * 30} days`);
+
+    paymentArrangement.terms.push({
+      paymentTerm: `${n} Instalments`,
+      structure,
+      dueSchedule,
+    });
+  } else {
+    paymentArrangement.terms.push({
+      paymentTerm: `1 Instalment`,
+      structure: `100%`,
+      dueSchedule: [],
+    });
+  }
+
+  // 10. Format response exactly matching the UI layout
   return {
     student: {
       studentId: student.studentId,
@@ -318,6 +348,7 @@ export async function getStudentBillingBreakdown(
       totalDiscount,
       totalAddCharge,
     },
+    paymentArrangement,
     finalBillableAmount,
   };
 }
