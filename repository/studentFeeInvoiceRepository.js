@@ -278,13 +278,22 @@ export async function findBillingScheduleItemsByFeePlanItemId(feePlanItemId, opt
 }
 
 export async function updateBillingScheduleItemStatus(billingScheduleItemId, status, options = {}) {
-  return scoped(model.billingScheduleItemsModel).update(
+  const [affected] = await scoped(model.billingScheduleItemsModel).update(
     { status },
     {
       where: { billingScheduleItemId: Number(billingScheduleItemId) },
       transaction: options.transaction,
     }
   );
+  if (!affected) {
+    await model.billingScheduleItemsModel.update(
+      { status },
+      {
+        where: { billingScheduleItemId: Number(billingScheduleItemId) },
+        transaction: options.transaction,
+      }
+    );
+  }
 }
 
 export async function findStudentFeeInvoiceById(studentFeeInvoiceId, options = {}) {

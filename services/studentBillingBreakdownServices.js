@@ -568,6 +568,18 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
     totalPages,
   };
 
+  // If all students in this run have been billed, mark the schedule item as billed
+  if (effectiveBillingScheduleItemId && total > 0 && billedCount === total) {
+    if (schedule && schedule.status !== "billed") {
+      try {
+        await repo.updateBillingScheduleItemStatus(effectiveBillingScheduleItemId, "billed");
+      } catch (e) {
+        // ignore update errors and proceed
+      }
+      schedule.status = "billed";
+    }
+  }
+
   return {
     data: {
       billingSchedule: schedule
