@@ -160,18 +160,21 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
     studentId,
     batchId,
     billingScheduleItemId,
-    feePlanItemId,
-    year,
     search,
+    page: rawPage,
+    limit: rawLimit,
   } = queryParams;
 
-  let effectiveBillingScheduleItemId = billingScheduleItemId
+  const page = rawPage ? Math.max(1, Number(rawPage)) : 1;
+  const limit = rawLimit ? Math.max(1, Number(rawLimit)) : null;
+
+  const effectiveBillingScheduleItemId = billingScheduleItemId
     ? Number(billingScheduleItemId)
     : null;
-  let effectiveFeePlanItemId = feePlanItemId ? Number(feePlanItemId) : null;
+  let effectiveFeePlanItemId = queryParams.feePlanItemId ? Number(queryParams.feePlanItemId) : null;
 
   if (!effectiveBillingScheduleItemId && !effectiveFeePlanItemId && !batchId && !studentId) {
-    throw httpError("Either billingScheduleItemId or feePlanItemId is required", 400);
+    throw httpError("Either billingScheduleItemId or batchId is required", 400);
   }
 
   // 1. Fetch billing schedule item (primary) or fee plan item
@@ -207,8 +210,8 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
   // 2. Resolve target batch and year
   let targetBatchId = batchId ? Number(batchId) : feePlanItem?.batchId || null;
   const targetYear =
-    year != null
-      ? Number(year)
+    queryParams.year != null
+      ? Number(queryParams.year)
       : feePlanItem?.year != null
         ? Number(feePlanItem.year)
         : null;
@@ -475,59 +478,75 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
       null
     : null;
 
+  const total = studentsList.length;
+  const effectiveLimit = limit && limit > 0 ? limit : total;
+  const totalPages = effectiveLimit > 0 ? Math.ceil(total / effectiveLimit) : 1;
+  const offset = (page - 1) * effectiveLimit;
+  const paginatedStudents = limit ? studentsList.slice(offset, offset + limit) : studentsList;
+
+  const paginationData = {
+    total,
+    page,
+    limit: limit || total,
+    totalPages,
+  };
+
   return {
-    billingSchedule: schedule
-      ? {
-          billingScheduleItemId: effectiveBillingScheduleItemId,
-          feePlanItemId: effectiveFeePlanItemId,
-          plannedDate: schedule.plannedDate || null,
-          status: schedule.status || "pending",
-          amount: standardFee,
-        }
-      : null,
-    batch: {
-      batchId: targetBatchId,
-      batch: batch?.batch || null,
-      courseName,
-      admissionBatch,
-      context: batchContext,
-      year: targetYear,
+    data: {
+      billingSchedule: schedule
+        ? {
+            billingScheduleItemId: effectiveBillingScheduleItemId,
+            feePlanItemId: effectiveFeePlanItemId,
+            plannedDate: schedule.plannedDate || null,
+            status: schedule.status || "pending",
+            amount: standardFee,
+          }
+        : null,
+      batch: {
+        batchId: targetBatchId,
+        batch: batch?.batch || null,
+        courseName,
+        admissionBatch,
+        context: batchContext,
+        year: targetYear,
+      },
+      baseCharges: {
+        title: schedule
+          ? "Base Charges (from billing schedule)"
+          : "Base Charges (from fee plan)",
+        components: baseComponents,
+        standardFee,
+      },
+      summary: {
+        totalStudents: total,
+        standardFeePerStudent: standardFee,
+        totalRunAmount: decimalMultiply(standardFee, total),
+        totalDiscounts: totalRunDiscounts,
+        totalAddCharges: totalRunAddCharges,
+        totalNetBillableAmount: totalRunNetBillable,
+        billedStudentsCount: billedCount,
+        pendingStudentsCount: total - billedCount,
+      },
+      ...(targetStudent
+        ? {
+            student: {
+              studentId: targetStudent.studentId,
+              name: targetStudent.name,
+              scholarNumber: targetStudent.scholarNumber,
+              enrollNumber: targetStudent.enrollNumber,
+              courseName: targetStudent.courseName,
+              batch: targetStudent.batch,
+              context: targetStudent.context,
+              status: targetStudent.status,
+              statusColor: targetStudent.statusColor,
+              isInvoiceRaised: targetStudent.isInvoiceRaised,
+            },
+            appliedTreatments: targetStudent.appliedTreatments,
+            finalBillableAmount: targetStudent.finalBillableAmount,
+          }
+        : {}),
+      students: paginatedStudents,
     },
-    baseCharges: {
-      title: schedule
-        ? "Base Charges (from billing schedule)"
-        : "Base Charges (from fee plan)",
-      components: baseComponents,
-      standardFee,
-    },
-    summary: {
-      totalStudents: studentsList.length,
-      standardFeePerStudent: standardFee,
-      totalRunAmount: decimalMultiply(standardFee, studentsList.length),
-      totalDiscounts: totalRunDiscounts,
-      totalAddCharges: totalRunAddCharges,
-      totalNetBillableAmount: totalRunNetBillable,
-      billedStudentsCount: billedCount,
-      pendingStudentsCount: studentsList.length - billedCount,
-    },
-    ...(targetStudent
-      ? {
-          student: {
-            studentId: targetStudent.studentId,
-            name: targetStudent.name,
-            scholarNumber: targetStudent.scholarNumber,
-            enrollNumber: targetStudent.enrollNumber,
-            courseName: targetStudent.courseName,
-            batch: targetStudent.batch,
-            context: targetStudent.context,
-            status: targetStudent.status,
-            statusColor: targetStudent.statusColor,
-            isInvoiceRaised: targetStudent.isInvoiceRaised,
-          },
-          appliedTreatments: targetStudent.appliedTreatments,
-          finalBillableAmount: targetStudent.finalBillableAmount,
-        }
-      : {}),
-    students: studentsList,
+    paginationData,
   };
 }
