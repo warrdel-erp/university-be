@@ -275,22 +275,45 @@ export async function findBatchReviewData(batchId, year) {
         },
       ],
     }),
-    model.feePlanItemModel.findOne({
+    scoped(model.feePlanItemModel).findOne({
       where: { batchId: Number(batchId), year: Number(year) },
       include: [
         {
           model: model.billingScheduleItemsModel,
           as: "billingScheduleItems",
+          required: false,
+          where: buildScope(model.billingScheduleItemsModel),
           include: [
-            { model: model.billingScheduleSubItemsModel, as: "subItems" },
-            { model: model.billingSchedulePaymentTermsModel, as: "paymentTerms" },
+            {
+              model: model.billingScheduleSubItemsModel,
+              as: "subItems",
+              required: false,
+              where: buildScope(model.billingScheduleSubItemsModel),
+            },
+            {
+              model: model.billingSchedulePaymentTermsModel,
+              as: "paymentTerms",
+              required: false,
+              attributes: [
+                "billingSchedulePaymentTermsId",
+                "billingScheduleItemId",
+                "installment",
+                "createdAt",
+                "updatedAt",
+              ],
+            },
           ],
         },
         {
           model: model.feePlanSubItemsModel,
           as: "feePlanSubItems",
+          required: false,
+          where: buildScope(model.feePlanSubItemsModel),
           include: [{ model: model.feeTypeCatalogModel, as: "feeTypeCatalog" }],
         },
+      ],
+      order: [
+        [{ model: model.billingScheduleItemsModel, as: "billingScheduleItems" }, "billingScheduleItemId", "ASC"],
       ],
     }),
   ]);

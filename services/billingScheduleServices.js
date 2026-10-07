@@ -754,22 +754,28 @@ export async function getBillingScheduleBatchReview(queryParams = {}) {
     const scheduleAmount = Number(s.amount || 0);
     totalAmount += scheduleAmount;
 
+    const paymentTerms = (s.paymentTerms || [])
+      .map((pt) => ({
+        billingSchedulePaymentTermsId: pt.billingSchedulePaymentTermsId,
+        billingScheduleItemId: pt.billingScheduleItemId || s.billingScheduleItemId,
+        installment: Number(pt.installment),
+      }))
+      .sort((a, b) => a.installment - b.installment);
+
     return {
       billingScheduleItemId: s.billingScheduleItemId,
       feePlanItemId: s.feePlanItemId,
       amount: scheduleAmount,
       plannedDate: s.plannedDate || null,
       status: s.status,
+      installment: paymentTerms.length > 0 ? paymentTerms[0].installment : null,
       scheduleItems: (s.subItems || []).map((sub) => ({
         billingScheduleSubItemId: sub.billingScheduleSubItemId,
         feePlanSubItemId: sub.feePlanSubItemId,
         feeTypeName: feeSubMap.get(sub.feePlanSubItemId) || null,
         amount: Number(sub.amount || 0),
       })),
-      paymentTerms: (s.paymentTerms || []).map((pt) => ({
-        billingSchedulePaymentTermsId: pt.billingSchedulePaymentTermsId,
-        installment: pt.installment,
-      })),
+      paymentTerms,
     };
   });
 
