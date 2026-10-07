@@ -143,88 +143,10 @@ function calculateTreatmentsForStudent(
     }
   }
 
-  // 8. Calculate Final Billable Amount
-  let finalBillableAmount = decimalSubtract(standardFee, totalDiscount);
-  if (totalAddCharge > 0) {
-    finalBillableAmount = decimalAdd(finalBillableAmount, totalAddCharge);
-  }
-  if (finalBillableAmount < 0) {
-    finalBillableAmount = 0;
-  }
-
-  // 9. Payment Arrangement
-  let paymentArrangement = {
-    title: "Payment Arrangement",
-    terms: [],
-  };
-
-  if (schedule && Array.isArray(schedule.paymentTerms) && schedule.paymentTerms.length > 0) {
-    const sortedTerms = [...schedule.paymentTerms].sort((a, b) => a.installment - b.installment);
-    const n = sortedTerms.length;
-    const structurePercent = Math.floor(100 / n);
-    const structureArr = Array(n).fill(`${structurePercent}%`);
-    if (n * structurePercent < 100) {
-      structureArr[n - 1] = `${100 - (n - 1) * structurePercent}%`;
-    }
-    const structure = structureArr.join(" \u00b7 ");
-    const dueSchedule = sortedTerms.map((t, idx) => `+${15 + idx * 30} days`);
-
-    paymentArrangement.terms.push({
-      paymentTerm: `${n} Instalments`,
-      structure,
-      dueSchedule,
-    });
-  } else {
-    paymentArrangement.terms.push({
-      paymentTerm: `1 Instalment`,
-      structure: `100%`,
-      dueSchedule: [],
-    });
-  }
-
-  // 10. Format response exactly matching the UI layout
   return {
-    student: {
-      studentId: student.studentId,
-      name: studentName,
-      scholarNumber,
-      enrollNumber: student.enrollNumber || null,
-      courseName,
-      batch: admissionBatch,
-      context,
-      status,
-      statusColor,
-    },
-    billingSchedule: schedule
-      ? {
-        billingScheduleItemId: effectiveBillingScheduleItemId,
-        feePlanItemId: effectiveFeePlanItemId,
-        plannedDate: schedule.plannedDate || feePlanItem?.createDate || null,
-        status: schedule.status || "pending",
-        amount: standardFee,
-      }
-      : null,
-    feePlanItem: feePlanItem
-      ? {
-        feePlanItemId: effectiveFeePlanItemId,
-        name: feePlanItem.name || null,
-        year: feePlanItem.year != null ? Number(feePlanItem.year) : null,
-        publishStatus: feePlanItem.publishStatus || null,
-      }
-      : null,
-    baseCharges: {
-      title: schedule ? "Base Charges (from billing schedule)" : "Base Charges (from fee plan)",
-      components: baseComponents,
-      standardFee,
-    },
-    appliedTreatments: {
-      title: "Applied Treatments",
-      treatments,
-      totalDiscount,
-      totalAddCharge,
-    },
-    paymentArrangement,
-    finalBillableAmount,
+    treatments,
+    totalDiscount,
+    totalAddCharge,
   };
 }
 
@@ -556,6 +478,52 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
     null
     : null;
 
+  // 10. Aggregate treatments across all batch students
+  const treatmentAggMap = new Map();
+
+  for (const student of studentsList) {
+    const studentTreatments = student.appliedTreatments?.treatments || [];
+    for (const t of studentTreatments) {
+      const key = t.policyId != null ? `policy_${t.policyId}` : `name_${t.name}`;
+      if (!treatmentAggMap.has(key)) {
+        treatmentAggMap.set(key, {
+          feePolicyId: t.policyId || null,
+          name: t.name || "Treatment",
+          treatment: t.name || "Treatment",
+          effect: t.effect || "reduce_fee",
+          rule: t.rule || null,
+          studentIds: new Set(),
+          totalAdjustment: 0,
+          totalDiscount: 0,
+          totalAddCharge: 0,
+        });
+      }
+      const agg = treatmentAggMap.get(key);
+      agg.studentIds.add(student.studentId);
+      agg.totalAdjustment = decimalAdd(agg.totalAdjustment, t.amount);
+      if (t.effect === "reduce_fee") {
+        agg.totalDiscount = decimalAdd(agg.totalDiscount, Math.abs(t.amount));
+      } else if (t.effect === "add_charge") {
+        agg.totalAddCharge = decimalAdd(agg.totalAddCharge, Math.abs(t.amount));
+      }
+    }
+  }
+
+  const treatmentsSummary = Array.from(treatmentAggMap.values()).map((agg) => {
+    const count = agg.studentIds.size;
+    return {
+      feePolicyId: agg.feePolicyId,
+      treatment: agg.treatment,
+      name: agg.name,
+      appliedStudentCount: count,
+      totalAdjustment: agg.totalAdjustment,
+      totalDiscount: agg.totalDiscount,
+      totalAddCharge: agg.totalAddCharge,
+      effect: agg.effect,
+      rule: agg.rule,
+    };
+  });
+
   const total = studentsList.length;
   const effectiveLimit = limit && limit > 0 ? limit : total;
   const totalPages = effectiveLimit > 0 ? Math.ceil(total / effectiveLimit) : 1;
@@ -601,10 +569,12 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
         totalRunAmount: decimalMultiply(standardFee, total),
         totalDiscounts: totalRunDiscounts,
         totalAddCharges: totalRunAddCharges,
+        totalAdjustments: decimalSubtract(totalRunAddCharges, totalRunDiscounts),
         totalNetBillableAmount: totalRunNetBillable,
         billedStudentsCount: billedCount,
         pendingStudentsCount: total - billedCount,
       },
+      treatmentsSummary,
       ...(targetStudent
         ? {
           student: {
