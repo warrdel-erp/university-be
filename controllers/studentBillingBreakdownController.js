@@ -6,12 +6,15 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
  */
 export async function getStudentBillingBreakdown(req, res) {
   try {
-    const data = await service.getStudentBillingBreakdown(req.query, req.user);
+    const result = await service.getStudentBillingBreakdown(req.query, req.user);
+    const data = result.data !== undefined ? result.data : result;
+    const paginationData = result.paginationData;
     return SuccessResponse(
       res,
       200,
       "Student billing breakdown retrieved successfully",
-      data
+      data,
+      paginationData
     );
   } catch (error) {
     return ErrorResponse(

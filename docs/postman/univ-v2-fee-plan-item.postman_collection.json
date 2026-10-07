@@ -294,7 +294,7 @@
           }
         ],
         "url": {
-          "raw": "{{baseurl}}/feePlanItem/billingRuns/details?batchId={{batchId}}&year={{year}}&studentId={{studentId}}&feePlanItemId={{feePlanItemId}}&billingScheduleItemId={{billingScheduleItemId}}",
+          "raw": "{{baseurl}}/feePlanItem/billingRuns/details?batchId={{batchId}}&billingScheduleItemId={{billingScheduleItemId}}",
           "host": [
             "{{baseurl}}"
           ],
@@ -307,31 +307,21 @@
             {
               "key": "batchId",
               "value": "{{batchId}}",
-              "description": "Required Batch ID"
-            },
-            {
-              "key": "year",
-              "value": "{{year}}",
-              "description": "Required Year"
-            },
-            {
-              "key": "studentId",
-              "value": "{{studentId}}",
-              "description": "Required Student ID"
-            },
-            {
-              "key": "feePlanItemId",
-              "value": "{{feePlanItemId}}",
-              "description": "Optional Fee Plan Item ID"
+              "description": "Target Batch ID"
             },
             {
               "key": "billingScheduleItemId",
               "value": "{{billingScheduleItemId}}",
-              "description": "Optional Billing Schedule Item ID"
+              "description": "Billing Schedule Item ID"
+            },
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Optional Student ID to filter"
             }
           ]
         },
-        "description": "GET /feePlanItem/billingRuns/details\n\nReturns detailed financial breakdown for a specific student, including base fee components, applied fee policies/scholarships, and net payable amount."
+        "description": "GET /feePlanItem/billingRuns/details?batchId={{batchId}}&billingScheduleItemId={{billingScheduleItemId}}\n\nReturns billing run details and all students in the batch, including base fee components from billingScheduleItemsModel/billingScheduleSubItemsModel, applied fee policies/scholarships (from feePolicyBatchesModel & feePolicyStudentsModel), and net payable amounts."
       },
       "response": []
     },

@@ -32,12 +32,10 @@ const generateInvoiceBodySchema = z
     dueDate: dateOnlyString.optional().nullable(),
   })
   .refine(
-    (data) =>
-      data.billingScheduleItemId != null || data.feePlanItemId != null,
+    (data) => data.billingScheduleItemId != null || data.feePlanItemId != null,
     {
-      message:
-        "Either billingScheduleItemId or feePlanItemId is required",
-    }
+      message: "Either billingScheduleItemId or feePlanItemId is required",
+    },
   );
 
 const adhocFeeTypeCatalogLineSchema = z
@@ -112,51 +110,49 @@ router.post(
   "/",
   userAuth,
   validate({ body: generateInvoiceBodySchema }),
-  generateStudentFeeInvoice
-);
-
-router.post(
-  "/generate",
-  userAuth,
-  validate({ body: generateInvoiceBodySchema }),
-  generateStudentFeeInvoice
+  generateStudentFeeInvoice,
 );
 
 router.post(
   "/adhoc",
   userAuth,
   validate({ body: adhocInvoiceBodySchema }),
-  generateAdhocStudentFeeInvoice
+  generateAdhocStudentFeeInvoice,
 );
 
 router.get(
   "/batches",
   userAuth,
   validate({ query: billingBatchesQuerySchema }),
-  getBillingBatchesOverview
+  getBillingBatchesOverview,
 );
 
 router.get(
   "/billingOverview",
   userAuth,
   validate({ query: billingBatchesQuerySchema }),
-  getBillingBatchesOverview
+  getBillingBatchesOverview,
 );
 
 router.get(
   "/all",
   userAuth,
   validate({ query: listAllInvoicesQuerySchema }),
-  listAllStudentFeeInvoices
+  listAllStudentFeeInvoices,
 );
 
 router.get(
   "/single",
   userAuth,
   validate({ query: studentFeeInvoiceIdQuerySchema }),
-  getStudentFeeInvoiceById
+  getStudentFeeInvoiceById,
 );
 
-router.get("/", userAuth, validate({ query: studentIdQuerySchema }), listStudentFeeInvoicesByStudent);
+router.get(
+  "/",
+  userAuth,
+  validate({ query: studentIdQuerySchema }),
+  listStudentFeeInvoicesByStudent,
+);
 
 export default router;

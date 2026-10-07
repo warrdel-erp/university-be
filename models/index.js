@@ -119,6 +119,7 @@ import feePolicyModel from "./feePolicyModel.js";
 import feePolicyComponentsModel from "./feePolicyComponentsModel.js";
 import feePolicyBatchesModel from "./feePolicyBatchesModel.js";
 import feePolicySlabsModel from "./feePolicySlabsModel.js";
+import feePolicyStudentsModel from "./feePolicyStudentsModel.js";
 import billingScheduleItemsModel from "./billingScheduleItemsModel.js";
 import billingScheduleSubItemsModel from "./billingScheduleSubItemsModel.js";
 import billingSchedulePaymentTermsModel from "./billingSchedulePaymentTermsModel.js";
@@ -4252,6 +4253,7 @@ export {
   feePolicyComponentsModel,
   feePolicyBatchesModel,
   feePolicySlabsModel,
+  feePolicyStudentsModel,
 
   billingScheduleItemsModel,
   billingScheduleSubItemsModel,
@@ -4299,6 +4301,12 @@ courseModel.hasMany(feePolicyBatchesModel, { foreignKey: 'course_id', as: 'feePo
 
 feePolicyModel.hasMany(feePolicySlabsModel, { foreignKey: 'fee_policy_id', as: 'policySlabs' });
 feePolicySlabsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
+
+feePolicyModel.hasMany(feePolicyStudentsModel, { foreignKey: 'fee_policy_id', as: 'policyStudents' });
+feePolicyStudentsModel.belongsTo(feePolicyModel, { foreignKey: 'fee_policy_id', as: 'policy' });
+
+feePolicyStudentsModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'student' });
+studentModel.hasMany(feePolicyStudentsModel, { foreignKey: 'student_id', as: 'feePolicyStudents' });
 
 // Billing Schedule Associations
 billingScheduleItemsModel.belongsTo(feePlanItemModel, { foreignKey: 'feePlanItemId', as: 'feePlanItem' });

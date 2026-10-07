@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "univ-v2-fee-policy-v1",
-    "name": "Fee Policy & Billing Schedule API",
-    "description": "Fee Policy Lifecycle Management API and Billing Schedule API (Batches Overview, Batches Review, Billing Schedule Items, Sub-Items, and Payment Terms).",
+    "name": "Fee Policy API",
+    "description": "Fee Policy Lifecycle Management API (Create, List, Single View, Update, Publish, Unpublish, and Delete).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -39,881 +39,461 @@
       "value": "1"
     },
     {
-      "key": "billingScheduleItemId",
-      "value": "1"
-    },
-    {
-      "key": "billingScheduleSubItemId",
-      "value": "1"
-    },
-    {
-      "key": "feePlanItemId",
-      "value": "1"
-    },
-    {
-      "key": "feePlanSubItemId",
-      "value": "1"
-    },
-    {
-      "key": "billingSchedulePaymentTermsId",
+      "key": "studentId",
       "value": "1"
     }
   ],
   "item": [
     {
-      "name": "Fee Policy",
-      "item": [
-        {
-          "name": "1. Create Fee Policy (Reduce Fee / Scholarship)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"policyName\": \"Merit Scholarship 2026\",\n  \"description\": \"20% discount on tuition fee for eligible courses, years and terms\",\n  \"appliesTo\": \"selected_components\",\n  \"effect\": \"reduce_fee\",\n  \"calculationType\": \"percentage\",\n  \"percentageRate\": 20,\n  \"fixedAmount\": null,\n  \"gracePeriodDays\": 0,\n  \"maxCapAmount\": 25000,\n  \"publishStatus\": \"draft\",\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePolicy",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy"]
-            },
-            "description": "POST /feePolicy\n\nCreates a new Fee Policy in draft (or published) state.\n\nKey features:\n- effect: reduce_fee | add_charge | refund\n- appliesTo: selected_components | all_components\n- courses: array of { courseId, years: [{ year, terms: [1, 2] }] } for scoping by course, year and term\n- calculationType: percentage | fixed_amount | per_day | percentage_of_outstanding | slab_based"
+      "name": "1. Create Fee Policy (Reduce Fee / Scholarship)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyName\": \"Merit Scholarship 2026\",\n  \"description\": \"20% discount on tuition fee for eligible courses, years and terms\",\n  \"appliesTo\": \"selected_components\",\n  \"effect\": \"reduce_fee\",\n  \"calculationType\": \"percentage\",\n  \"percentageRate\": 20,\n  \"fixedAmount\": null,\n  \"gracePeriodDays\": 0,\n  \"maxCapAmount\": 25000,\n  \"publishStatus\": \"draft\",\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
-        {
-          "name": "2. Create Fee Policy (Add Charge / Late Fee)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"policyName\": \"Late Payment Surcharge\",\n  \"description\": \"50 per day after 5 days grace period for Year 1 terms\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"add_charge\",\n  \"calculationType\": \"per_day\",\n  \"fixedAmount\": 50,\n  \"gracePeriodDays\": 5,\n  \"maxCapAmount\": 5000,\n  \"referenceDateEvent\": \"planned_date\",\n  \"publishStatus\": \"draft\",\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePolicy",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy"]
-            },
-            "description": "POST /feePolicy\n\nCreates a late fee / overdue charge policy calculated per day with a grace period."
-          },
-          "response": []
+        "url": {
+          "raw": "{{baseurl}}/feePolicy",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy"]
         },
-        {
-          "name": "3. Create Fee Policy (Refund with Slabs)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"policyName\": \"Admission Cancellation Refund Policy\",\n  \"description\": \"UGC slab-based refund percentage based on days before/after course commencement\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"refund\",\n  \"calculationType\": \"slab_based\",\n  \"publishStatus\": \"published\",\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ],\n  \"slabs\": [\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 15,\n      \"toUnit\": null,\n      \"slabValue\": 100,\n      \"orderIndex\": 1\n    },\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 0,\n      \"toUnit\": 15,\n      \"slabValue\": 90,\n      \"orderIndex\": 2\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 1,\n      \"toUnit\": 15,\n      \"slabValue\": 80,\n      \"orderIndex\": 3\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 16,\n      \"toUnit\": 30,\n      \"slabValue\": 50,\n      \"orderIndex\": 4\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 31,\n      \"toUnit\": null,\n      \"slabValue\": 0,\n      \"orderIndex\": 5\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePolicy",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy"]
-            },
-            "description": "POST /feePolicy\n\nCreates a published refund policy with multi-tier slab calculations."
-          },
-          "response": []
-        },
-        {
-          "name": "4. List Fee Policies",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePolicy?publishStatus=all&effect=reduce_fee&courseId={{courseId}}&year={{year}}&term={{term}}&search=&page=1&limit=10",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy"],
-              "query": [
-                {
-                  "key": "publishStatus",
-                  "value": "all",
-                  "description": "all | draft | published"
-                },
-                {
-                  "key": "effect",
-                  "value": "reduce_fee",
-                  "description": "reduce_fee | add_charge | refund"
-                },
-                {
-                  "key": "calculationType",
-                  "value": "percentage",
-                  "description": "percentage | fixed_amount | per_day | percentage_of_outstanding | slab_based",
-                  "disabled": true
-                },
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}",
-                  "description": "Filter by associated courseId"
-                },
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}",
-                  "description": "Filter by associated batchId",
-                  "disabled": true
-                },
-                {
-                  "key": "year",
-                  "value": "{{year}}",
-                  "description": "Filter by course/batch year"
-                },
-                {
-                  "key": "term",
-                  "value": "{{term}}",
-                  "description": "Filter by term"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "Search by policyName or description"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            },
-            "description": "GET /feePolicy\n\nReturns paginated list of fee policies with attached components, courses, batches, and slabs."
-          },
-          "response": []
-        },
-        {
-          "name": "5. Get Single Fee Policy",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePolicy/single?feePolicyId={{feePolicyId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy", "single"],
-              "query": [
-                {
-                  "key": "feePolicyId",
-                  "value": "{{feePolicyId}}"
-                }
-              ]
-            },
-            "description": "GET /feePolicy/single?feePolicyId=\n\nReturns detailed fee policy by ID, including policyComponents, policyBatches (with course, batch, year, term), grouped courses, and policySlabs."
-          },
-          "response": []
-        },
-        {
-          "name": "6. Update Fee Policy",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feePolicyId\": {{feePolicyId}},\n  \"policyName\": \"Updated Merit Scholarship 2026\",\n  \"description\": \"Updated scholarship discount to 25% for Year 1 terms\",\n  \"percentageRate\": 25,\n  \"maxCapAmount\": 30000,\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePolicy",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy"]
-            },
-            "description": "PATCH /feePolicy\n\nUpdates policy fields, component mappings, course/year/term scopes, and/or slab rules."
-          },
-          "response": []
-        },
-        {
-          "name": "7. Publish Fee Policy",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePolicy/publish",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy", "publish"]
-            },
-            "description": "PATCH /feePolicy/publish\n\nTransitions policy status from 'draft' to 'published' and records publishedAt and publishedBy."
-          },
-          "response": []
-        },
-        {
-          "name": "8. Unpublish Fee Policy",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/feePolicy/unpublish",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy", "unpublish"]
-            },
-            "description": "PATCH /feePolicy/unpublish\n\nReverts policy status from 'published' back to 'draft'."
-          },
-          "response": []
-        },
-        {
-          "name": "9. Delete Fee Policy",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/feePolicy?feePolicyId={{feePolicyId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["feePolicy"],
-              "query": [
-                {
-                  "key": "feePolicyId",
-                  "value": "{{feePolicyId}}"
-                }
-              ]
-            },
-            "description": "DELETE /feePolicy?feePolicyId=\n\nDeletes a fee policy along with associated component links, batch mappings, and slabs (cascade)."
-          },
-          "response": []
-        }
-      ]
+        "description": "POST /feePolicy\n\nCreates a new Fee Policy in draft (or published) state.\n\nKey features:\n- effect: reduce_fee | add_charge | refund\n- appliesTo: selected_components | all_components\n- courses: array of { courseId, years: [{ year, terms: [1, 2] }] } for scoping by course, year and term\n- calculationType: percentage | fixed_amount | per_day | percentage_of_outstanding | slab_based"
+      },
+      "response": []
     },
     {
-      "name": "Billing Schedule",
-      "item": [
-        {
-          "name": "1. Get Batches (Grouped Course-wise)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/batches?batchId={{batchId}}&courseId={{courseId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "batches"],
-              "query": [
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}",
-                  "description": "Optional Batch ID filter"
-                },
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}",
-                  "description": "Optional Course ID filter"
-                }
-              ]
-            },
-            "description": "GET /billingSchedule/batches\n\nReturns all batches grouped course-wise with session and fee plan overview."
+      "name": "2. Create Fee Policy (Add Charge / Late Fee)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
-        },
-        {
-          "name": "2. Get Batches Overview (by Year)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/batches/overview?batchId={{batchId}}&year={{year}}",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "batches", "overview"],
-              "query": [
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}",
-                  "description": "Required Batch ID"
-                },
-                {
-                  "key": "year",
-                  "value": "{{year}}",
-                  "description": "Optional year filter (e.g. 1, 2, 3)"
-                }
-              ]
-            },
-            "description": "GET /billingSchedule/batches/overview?batchId=&year=\n\nReturns batch fee configuration overview with course details, batch year, planned dates, amounts, status, and sub-items breakdown."
+          {
+            "key": "Content-Type",
+            "value": "application/json"
           },
-          "response": []
-        },
-        {
-          "name": "3. Get Detailed Schedule Review (by Batch & Year)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/batches/review?batchId={{batchId}}&year={{year}}",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "batches", "review"],
-              "query": [
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}",
-                  "description": "Required Batch ID"
-                },
-                {
-                  "key": "year",
-                  "value": "{{year}}",
-                  "description": "Required Year (e.g. 1, 2, 3)"
-                }
-              ]
-            },
-            "description": "GET /billingSchedule/batches/review?batchId=&year=\n\nReturns detailed schedule review for a specific batch and year, including schedules, scheduleItems, payment terms, and feePlanItem basic details."
-          },
-          "response": []
-        },
-        {
-          "name": "4. Create Billing Schedules (Bulk Array)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "var jsonData = pm.response.json();",
-                  "var firstItem = Array.isArray(jsonData.data) ? jsonData.data[0] : jsonData.data;",
-                  "if (firstItem && firstItem.billingScheduleItemId) {",
-                  "    pm.collectionVariables.set('billingScheduleItemId', firstItem.billingScheduleItemId);",
-                  "    if (firstItem.subItems && firstItem.subItems.length > 0) {",
-                  "        pm.collectionVariables.set('billingScheduleSubItemId', firstItem.subItems[0].billingScheduleSubItemId);",
-                  "    }",
-                  "}"
-                ],
-                "type": "text/javascript"
-              }
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyName\": \"Late Payment Surcharge\",\n  \"description\": \"50 per day after 5 days grace period for Year 1 terms\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"add_charge\",\n  \"calculationType\": \"per_day\",\n  \"fixedAmount\": 50,\n  \"gracePeriodDays\": 5,\n  \"maxCapAmount\": 5000,\n  \"referenceDateEvent\": \"planned_date\",\n  \"publishStatus\": \"draft\",\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "[\n  {\n    \"feePlanItemId\": {{feePlanItemId}},\n    \"amount\": 25000.00,\n    \"plannedDate\": \"2026-11-20\",\n    \"status\": \"pending\",\n    \"subItems\": [\n      {\n        \"feePlanSubItemId\": {{feePlanSubItemId}},\n        \"amount\": 25000.00\n      }\n    ],\n    \"paymentTerms\": [\n      {\n        \"installment\": 1\n      }\n    ]\n  },\n  {\n    \"feePlanItemId\": {{feePlanItemId}},\n    \"amount\": 25000.00,\n    \"plannedDate\": \"2026-12-20\",\n    \"status\": \"pending\",\n    \"subItems\": [\n      {\n        \"feePlanSubItemId\": {{feePlanSubItemId}},\n        \"amount\": 25000.00\n      }\n    ],\n    \"paymentTerms\": [\n      {\n        \"installment\": 2\n      }\n    ]\n  }\n]",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule"]
-            },
-            "description": "POST /billingSchedule\n\nCreates multiple billing schedule items (e.g. 2 installments) along with sub-items and payment terms in an atomic transaction."
-          },
-          "response": []
+          }
         },
-        {
-          "name": "5. Create Billing Schedule (Simple - Without Sub-Items)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"amount\": 15000.00,\n  \"plannedDate\": \"2026-12-01\",\n  \"status\": \"pending\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule"]
-            },
-            "description": "POST /billingSchedule\n\nCreates a single parent billing schedule item without sub-items breakdown."
-          },
-          "response": []
+        "url": {
+          "raw": "{{baseurl}}/feePolicy",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy"]
         },
-        {
-          "name": "6. List Billing Schedules",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule?feePlanItemId={{feePlanItemId}}&status=pending&page=1&limit=10",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule"],
-              "query": [
-                {
-                  "key": "feePlanItemId",
-                  "value": "{{feePlanItemId}}"
-                },
-                {
-                  "key": "status",
-                  "value": "pending"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "10"
-                }
-              ]
-            },
-            "description": "GET /billingSchedule\n\nFetches a paginated list of billing schedule items with total count and nested sub-items."
+        "description": "POST /feePolicy\n\nCreates a late fee / overdue charge policy calculated per day with a grace period."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Fee Policy (Refund with Slabs)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyName\": \"Admission Cancellation Refund Policy\",\n  \"description\": \"UGC slab-based refund percentage based on days before/after course commencement\",\n  \"appliesTo\": \"all_components\",\n  \"effect\": \"refund\",\n  \"calculationType\": \"slab_based\",\n  \"publishStatus\": \"published\",\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ],\n  \"slabs\": [\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 15,\n      \"toUnit\": null,\n      \"slabValue\": 100,\n      \"orderIndex\": 1\n    },\n    {\n      \"relativePeriod\": \"before\",\n      \"fromUnit\": 0,\n      \"toUnit\": 15,\n      \"slabValue\": 90,\n      \"orderIndex\": 2\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 1,\n      \"toUnit\": 15,\n      \"slabValue\": 80,\n      \"orderIndex\": 3\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 16,\n      \"toUnit\": 30,\n      \"slabValue\": 50,\n      \"orderIndex\": 4\n    },\n    {\n      \"relativePeriod\": \"after\",\n      \"fromUnit\": 31,\n      \"toUnit\": null,\n      \"slabValue\": 0,\n      \"orderIndex\": 5\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
-        {
-          "name": "7. Get Single Billing Schedule",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/single?billingScheduleItemId={{billingScheduleItemId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "single"],
-              "query": [
-                {
-                  "key": "billingScheduleItemId",
-                  "value": "{{billingScheduleItemId}}"
-                }
-              ]
-            },
-            "description": "GET /billingSchedule/single?billingScheduleItemId=\n\nRetrieves full details of a single billing schedule item including linked feePlanItem and child subItems with catalog lines."
-          },
-          "response": []
+        "url": {
+          "raw": "{{baseurl}}/feePolicy",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy"]
         },
-        {
-          "name": "8. Update Billing Schedule",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"amount\": 30000.00,\n  \"plannedDate\": \"2026-11-25\",\n  \"status\": \"scheduled\",\n  \"subItems\": [\n    {\n      \"feePlanSubItemId\": {{feePlanSubItemId}},\n      \"amount\": 30000.00\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule"]
-            },
-            "description": "PATCH /billingSchedule\n\nUpdates parent billing schedule fields (amount, plannedDate, status) and synchronizes sub-items."
+        "description": "POST /feePolicy\n\nCreates a published refund policy with multi-tier slab calculations."
+      },
+      "response": []
+    },
+    {
+      "name": "4. List Fee Policies",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy?publishStatus=all&effect=reduce_fee&courseId={{courseId}}&year={{year}}&term={{term}}&search=&page=1&limit=10",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy"],
+          "query": [
+            {
+              "key": "publishStatus",
+              "value": "all",
+              "description": "all | draft | published"
+            },
+            {
+              "key": "effect",
+              "value": "reduce_fee",
+              "description": "reduce_fee | add_charge | refund"
+            },
+            {
+              "key": "calculationType",
+              "value": "percentage",
+              "description": "percentage | fixed_amount | per_day | percentage_of_outstanding | slab_based",
+              "disabled": true
+            },
+            {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Filter by associated courseId"
+            },
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Filter by associated batchId",
+              "disabled": true
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Filter by course/batch year"
+            },
+            {
+              "key": "term",
+              "value": "{{term}}",
+              "description": "Filter by term"
+            },
+            {
+              "key": "search",
+              "value": "",
+              "description": "Search by policyName or description"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
         },
-        {
-          "name": "9. Update Billing Schedule Status",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"status\": \"billed\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/status",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "status"]
-            },
-            "description": "PATCH /billingSchedule/status\n\nUpdates only the status enum (e.g. pending, scheduled, billed, cancelled)."
+        "description": "GET /feePolicy\n\nReturns paginated list of fee policies with attached components, courses, batches, and slabs."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get Single Fee Policy",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/single?feePolicyId={{feePolicyId}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "single"],
+          "query": [
+            {
+              "key": "feePolicyId",
+              "value": "{{feePolicyId}}"
+            }
+          ]
         },
-        {
-          "name": "10. Delete Billing Schedule",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule?billingScheduleItemId={{billingScheduleItemId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule"],
-              "query": [
-                {
-                  "key": "billingScheduleItemId",
-                  "value": "{{billingScheduleItemId}}"
-                }
-              ]
-            },
-            "description": "DELETE /billingSchedule?billingScheduleItemId=\n\nDeletes a billing schedule item and cascades child sub-items."
+        "description": "GET /feePolicy/single?feePolicyId=\n\nReturns detailed fee policy by ID, including policyComponents, policyBatches (with course, batch, year, term), grouped courses, and policySlabs."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Update Fee Policy",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePolicyId\": {{feePolicyId}},\n  \"policyName\": \"Updated Merit Scholarship 2026\",\n  \"description\": \"Updated scholarship discount to 25% for Year 1 terms\",\n  \"percentageRate\": 25,\n  \"maxCapAmount\": 30000,\n  \"feeTypeCatalogIds\": [\n    1,\n    2\n  ],\n  \"courses\": [\n    {\n      \"courseId\": 36,\n      \"years\": [\n        {\n          \"year\": 1,\n          \"terms\": [1, 2]\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
-        {
-          "name": "11. Add Billing Schedule Sub-Item",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"feePlanSubItemId\": {{feePlanSubItemId}},\n  \"amount\": 10000.00\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/subItem",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "subItem"]
-            },
-            "description": "POST /billingSchedule/subItem\n\nAdds a single child sub-item breakdown to an existing billing schedule item."
-          },
-          "response": []
+        "url": {
+          "raw": "{{baseurl}}/feePolicy",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy"]
         },
-        {
-          "name": "12. Delete Billing Schedule Sub-Item",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/subItem?billingScheduleSubItemId={{billingScheduleSubItemId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "subItem"],
-              "query": [
-                {
-                  "key": "billingScheduleSubItemId",
-                  "value": "{{billingScheduleSubItemId}}"
-                }
-              ]
-            },
-            "description": "DELETE /billingSchedule/subItem?billingScheduleSubItemId=\n\nDeletes an individual child sub-item."
+        "description": "PATCH /feePolicy\n\nUpdates policy fields, component mappings, course/year/term scopes, and/or slab rules."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Publish Fee Policy",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
-        {
-          "name": "13. Add Billing Schedule Payment Term",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"installment\": 1\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/paymentTerm",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "paymentTerm"]
-            },
-            "description": "POST /billingSchedule/paymentTerm\n\nCreates a new payment term (installment) for a billing schedule item."
-          },
-          "response": []
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/publish",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "publish"]
         },
-        {
-          "name": "14. Delete Billing Schedule Payment Term",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/billingSchedule/paymentTerm?billingSchedulePaymentTermsId={{billingSchedulePaymentTermsId}}",
-              "host": ["{{baseurl}}"],
-              "path": ["billingSchedule", "paymentTerm"],
-              "query": [
-                {
-                  "key": "billingSchedulePaymentTermsId",
-                  "value": "{{billingSchedulePaymentTermsId}}"
-                }
-              ]
-            },
-            "description": "DELETE /billingSchedule/paymentTerm?billingSchedulePaymentTermsId=\n\nDeletes a specific billing schedule payment term by ID."
+        "description": "PATCH /feePolicy/publish\n\nTransitions policy status from 'draft' to 'published' and records publishedAt and publishedBy."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Unpublish Fee Policy",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
-        }
-      ]
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePolicyId\": {{feePolicyId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/unpublish",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "unpublish"]
+        },
+        "description": "PATCH /feePolicy/unpublish\n\nReverts policy status from 'published' back to 'draft'."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Delete Fee Policy",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy?feePolicyId={{feePolicyId}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy"],
+          "query": [
+            {
+              "key": "feePolicyId",
+              "value": "{{feePolicyId}}"
+            }
+          ]
+        },
+        "description": "DELETE /feePolicy?feePolicyId=\n\nDeletes a fee policy along with associated component links, batch mappings, and slabs (cascade)."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Map Student(s) with Fee Policy",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"studentId\": {{studentId}},\n  \"feePolicyId\": {{feePolicyId}},\n  \"replace\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/student",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "student"]
+        },
+        "description": "POST /feePolicy/student\n\nMaps student(s) with fee policy(ies). Supports single studentId/feePolicyId, arrays studentIds/feePolicyIds, or explicit mappings: [{ studentId, feePolicyId }]."
+      },
+      "response": []
+    },
+    {
+      "name": "11. Get Student Fee Policy Mappings",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/student?studentId={{studentId}}&feePolicyId={{feePolicyId}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "student"],
+          "query": [
+            {
+              "key": "studentId",
+              "value": "{{studentId}}"
+            },
+            {
+              "key": "feePolicyId",
+              "value": "{{feePolicyId}}"
+            }
+          ]
+        },
+        "description": "GET /feePolicy/student?studentId=&feePolicyId=\n\nFetches fee policy students mappings filtered by studentId and/or feePolicyId."
+      },
+      "response": []
+    },
+    {
+      "name": "12. Remove Student Fee Policy Mapping",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/student?studentId={{studentId}}&feePolicyId={{feePolicyId}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "student"],
+          "query": [
+            {
+              "key": "studentId",
+              "value": "{{studentId}}"
+            },
+            {
+              "key": "feePolicyId",
+              "value": "{{feePolicyId}}"
+            }
+          ]
+        },
+        "description": "DELETE /feePolicy/student?studentId=&feePolicyId=\n\nRemoves mapping between student and fee policy."
+      },
+      "response": []
     }
   ]
 }
