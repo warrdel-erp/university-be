@@ -13,14 +13,17 @@ const positiveIntegerId = z.coerce
 
 export const studentBillingBreakdownQuerySchema = z
   .object({
-    studentId: positiveIntegerId,
+    batchId: positiveIntegerId.optional(),
     billingScheduleItemId: positiveIntegerId.optional(),
-    feePlanItemId: positiveIntegerId.optional(),
+    studentId: positiveIntegerId.optional(),
+    search: z.string().trim().optional(),
+    page: positiveIntegerId.optional(),
+    limit: positiveIntegerId.optional(),
   })
   .refine(
-    (data) => Boolean(data.billingScheduleItemId || data.feePlanItemId),
+    (data) => Boolean(data.billingScheduleItemId || data.batchId),
     {
-      message: "Either billingScheduleItemId or feePlanItemId is required",
+      message: "Either billingScheduleItemId or batchId is required",
       path: ["billingScheduleItemId"],
     }
   );
