@@ -132,6 +132,7 @@ function buildInvoiceCascade(invoice, split, payment) {
     paidAmount: invoice.paidAmount,
     studentId: invoice.studentId,
     feePlanItemId: invoice.feePlanItemId,
+    billingScheduleItemId: invoice.billingScheduleItemId || null,
     instituteId: invoice.instituteId,
     created_at: invoice.created_at,
     updated_at: invoice.updated_at,
@@ -175,6 +176,8 @@ function formatStudentFeeInvoiceListRow(row) {
 
   return {
     studentFeeInvoiceId: p.studentFeeInvoiceId,
+    billingScheduleItemId: p.billingScheduleItemId || null,
+    feePlanItemId: p.feePlanItemId || null,
     createDate: p.createDate,
     dueDate: p.dueDate ?? null,
     amount: split.isAdhocInvoice ? 0 : split.baseAmount,
@@ -190,11 +193,44 @@ function formatStudentFeeInvoiceListRow(row) {
   };
 }
 
-export async function generateStudentFeeInvoice({ studentId, studentIds, batchId, feePlanItemId, dueDate }) {
+export async function generateStudentFeeInvoice({
+  studentId,
+  studentIds,
+  batchId,
+  feePlanItemId,
+  billingScheduleItemId,
+  dueDate,
+}) {
   return await sequelize.transaction(async (transaction) => {
-    const feePlanItem = toPlain(
-      await repo.findFeePlanItemById(feePlanItemId, { transaction })
-    );
+    let effectiveScheduleItem = null;
+    let feePlanItem = null;
+
+    if (billingScheduleItemId != null) {
+      effectiveScheduleItem = toPlain(
+        await repo.findBillingScheduleItemWithDetails(billingScheduleItemId, { transaction })
+      );
+      if (!effectiveScheduleItem) {
+        throw httpError(`Billing schedule item with ID ${billingScheduleItemId} not found`, 404);
+      }
+      feePlanItem = effectiveScheduleItem.feePlanItem || toPlain(
+        await repo.findFeePlanItemById(effectiveScheduleItem.feePlanItemId, { transaction })
+      );
+    } else if (feePlanItemId != null) {
+      const linkedSchedules = (
+        await repo.findBillingScheduleItemsByFeePlanItemId(feePlanItemId, { transaction })
+      ).map(toPlain);
+
+      if (linkedSchedules.length > 0) {
+        effectiveScheduleItem = linkedSchedules.find((s) => s.status !== "billed") || linkedSchedules[0];
+      }
+
+      feePlanItem = toPlain(
+        await repo.findFeePlanItemById(feePlanItemId, { transaction })
+      );
+    } else {
+      throw httpError("Either billingScheduleItemId or feePlanItemId is required", 400);
+    }
+
     if (!feePlanItem) throw httpError("Fee plan item not found", 404);
 
     if (feePlanItem.batchId == null) {
@@ -205,8 +241,18 @@ export async function generateStudentFeeInvoice({ studentId, studentIds, batchId
     }
 
     const itemBatchId = Number(feePlanItem.batchId);
+    const resolvedDueDate = dueDate !== undefined
+      ? (dueDate ?? null)
+      : (effectiveScheduleItem?.dueDate ?? feePlanItem.dueDate ?? null);
+    const resolvedCreateDate = effectiveScheduleItem?.plannedDate || feePlanItem.createDate;
 
+<<<<<<< HEAD
+    if (dueDate !== undefined && dueDate !== feePlanItem.dueDate) {
+      await repo.updateFeePlanItemById(feePlanItem.feePlanItemId, { dueDate: resolvedDueDate }, { transaction });
+    }
+=======
     const resolvedDueDate = dueDate !== undefined ? (dueDate ?? null) : null;
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
 
     let targetStudents = [];
     const isSingleStudentMode = studentId != null && !studentIds?.length && !batchId;
@@ -244,14 +290,18 @@ export async function generateStudentFeeInvoice({ studentId, studentIds, batchId
     }
 
     const targetStudentIds = targetStudents.map((s) => Number(s.studentId));
+    const effectiveScheduleItemId = effectiveScheduleItem ? Number(effectiveScheduleItem.billingScheduleItemId) : null;
+
     const existingStudentIdsSet = await repo.findExistingInvoiceStudentIdsByItem(
-      feePlanItemId,
+      effectiveScheduleItemId
+        ? { billingScheduleItemId: effectiveScheduleItemId }
+        : { feePlanItemId: Number(feePlanItem.feePlanItemId) },
       targetStudentIds,
       { transaction }
     );
 
     if (isSingleStudentMode && existingStudentIdsSet.has(Number(studentId))) {
-      throw httpError("Invoice already exists for this student and fee plan item", 409);
+      throw httpError("Invoice already exists for this student and schedule/fee plan item", 409);
     }
 
     const eligibleStudents = targetStudents.filter(
@@ -260,33 +310,56 @@ export async function generateStudentFeeInvoice({ studentId, studentIds, batchId
 
     if (!eligibleStudents.length) {
       if (isSingleStudentMode) {
-        throw httpError("Invoice already exists for this student and fee plan item", 409);
+        throw httpError("Invoice already exists for this student and schedule/fee plan item", 409);
       }
       return {
-        feePlanItemId: Number(feePlanItemId),
+        billingScheduleItemId: effectiveScheduleItemId,
+        feePlanItemId: Number(feePlanItem.feePlanItemId),
         batchId: itemBatchId,
         totalStudentsCount: targetStudents.length,
         generatedInvoicesCount: 0,
         skippedInvoicesCount: targetStudents.length,
         createdInvoiceIds: [],
-        message: "All students already have invoices generated for this fee plan item",
+        message: "All students already have invoices generated for this billing schedule item",
       };
     }
 
-    const planFeesPlain = (
-      await repo.findFeePlanSubItemsByFeePlanItemId(feePlanItemId, { transaction })
-    ).map(toPlain);
+    // Determine line items: prioritize billing_schedule_sub_items, fallback to fee_plan_sub_items
+    let invoiceLines = [];
+    const scheduleSubItems = effectiveScheduleItem?.subItems || [];
 
-    const invoiceTotal = decimalSum(planFeesPlain.map((line) => toMoneyNumber(line.amount)));
+    if (scheduleSubItems.length > 0) {
+      invoiceLines = scheduleSubItems.map((sub) => {
+        const planSub = sub.feePlanSubItem || {};
+        return {
+          feeTypeId: planSub.feeTypeId,
+          amount: toMoneyNumber(sub.amount),
+          isMainItem: planSub.isMainSubItem ?? false,
+        };
+      });
+    } else {
+      const planFeesPlain = (
+        await repo.findFeePlanSubItemsByFeePlanItemId(feePlanItem.feePlanItemId, { transaction })
+      ).map(toPlain);
+
+      invoiceLines = planFeesPlain.map((line) => ({
+        feeTypeId: line.feeTypeId,
+        amount: toMoneyNumber(line.amount),
+        isMainItem: line.isMainSubItem,
+      }));
+    }
+
+    const invoiceTotal = decimalSum(invoiceLines.map((line) => toMoneyNumber(line.amount)));
 
     const createdInvoiceIds = [];
     for (const student of eligibleStudents) {
       const invoice = await repo.createStudentFeeInvoice(
         {
           studentId: student.studentId,
-          feePlanItemId: Number(feePlanItemId),
+          feePlanItemId: Number(feePlanItem.feePlanItemId),
+          billingScheduleItemId: effectiveScheduleItemId,
           total: invoiceTotal,
-          createDate: feePlanItem.createDate,
+          createDate: resolvedCreateDate,
           dueDate: resolvedDueDate,
           status: "generated",
           paymentStatus: "unpaid",
@@ -296,12 +369,12 @@ export async function generateStudentFeeInvoice({ studentId, studentIds, batchId
       );
 
       await repo.bulkCreateStudentFeeInvoiceItems(
-        planFeesPlain.map((line) => ({
+        invoiceLines.map((line) => ({
           studentFeeInvoiceId: invoice.studentFeeInvoiceId,
           feeTypeId: line.feeTypeId,
           amount: toMoneyNumber(line.amount),
           waiver: null,
-          isMainItem: line.isMainSubItem,
+          isMainItem: line.isMainItem,
         })),
         { transaction }
       );
@@ -309,12 +382,17 @@ export async function generateStudentFeeInvoice({ studentId, studentIds, batchId
       createdInvoiceIds.push(invoice.studentFeeInvoiceId);
     }
 
+    if (effectiveScheduleItemId && createdInvoiceIds.length > 0) {
+      await repo.updateBillingScheduleItemStatus(effectiveScheduleItemId, "billed", { transaction });
+    }
+
     if (isSingleStudentMode && createdInvoiceIds.length === 1) {
       return await repo.findStudentFeeInvoiceById(createdInvoiceIds[0], { transaction }).then(formatStudentFeeInvoiceResponse);
     }
 
     return {
-      feePlanItemId: Number(feePlanItemId),
+      billingScheduleItemId: effectiveScheduleItemId,
+      feePlanItemId: Number(feePlanItem.feePlanItemId),
       batchId: itemBatchId,
       totalStudentsCount: targetStudents.length,
       generatedInvoicesCount: createdInvoiceIds.length,

@@ -22,13 +22,23 @@ const dateOnlyString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "date must be YYYY-MM-DD" });
 
-const generateInvoiceBodySchema = z.object({
-  feePlanItemId: positiveIntegerId,
-  studentId: positiveIntegerId.optional(),
-  studentIds: z.array(positiveIntegerId).min(1).optional(),
-  batchId: positiveIntegerId.optional(),
-  dueDate: dateOnlyString.optional().nullable(),
-});
+const generateInvoiceBodySchema = z
+  .object({
+    billingScheduleItemId: positiveIntegerId.optional(),
+    feePlanItemId: positiveIntegerId.optional(),
+    studentId: positiveIntegerId.optional(),
+    studentIds: z.array(positiveIntegerId).min(1).optional(),
+    batchId: positiveIntegerId.optional(),
+    dueDate: dateOnlyString.optional().nullable(),
+  })
+  .refine(
+    (data) =>
+      data.billingScheduleItemId != null || data.feePlanItemId != null,
+    {
+      message:
+        "Either billingScheduleItemId or feePlanItemId is required",
+    }
+  );
 
 const adhocFeeTypeCatalogLineSchema = z
   .object({

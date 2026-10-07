@@ -1,9 +1,13 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/billingScheduleRepository.js";
 import * as repoPaymentTerms from "../repository/billingSchedulePaymentTermsRepository.js";
+<<<<<<< HEAD
+import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
+=======
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
 import { resolveBatchCurrentPosition, buildCurrentTermsForYear } from "../utility/courseTerms.js";
 import { decimalAdd, toMoneyNumber } from "../utility/decimalMoney.js";
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -162,6 +166,9 @@ export async function getBillingSchedules(queryParams = {}) {
  * Get single billing schedule item details
  */
 export async function getSingleBillingSchedule(billingScheduleItemId) {
+<<<<<<< HEAD
+  return getBillingScheduleView(billingScheduleItemId);
+=======
   if (!billingScheduleItemId) {
     throw httpError("billingScheduleItemId is required", 400);
   }
@@ -175,6 +182,7 @@ export async function getSingleBillingSchedule(billingScheduleItemId) {
   }
 
   return item;
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
 }
 
 /**
@@ -499,6 +507,300 @@ export async function deleteBillingSchedulePaymentTerm(
   return { billingSchedulePaymentTermsId };
 }
 
+<<<<<<< HEAD
+function formatCurrency(val) {
+  const num = toMoneyNumber(val || 0);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
+function formatDisplayDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return String(dateStr);
+  const day = String(d.getDate()).padStart(2, "0");
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  ];
+  return `${day} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+const STANDARD_PAYMENT_TERMS = [
+  {
+    installment: 1,
+    name: "Full Payment",
+    structureLabel: "100%",
+    dueScheduleLabel: "+15 days",
+    splits: [{ installmentNumber: 1, percentage: 100, dueDays: "+15 days" }],
+  },
+  {
+    installment: 2,
+    name: "2 Instalments",
+    structureLabel: "50% · 50%",
+    dueScheduleLabel: "+15 days · +45 days",
+    splits: [
+      { installmentNumber: 1, percentage: 50, dueDays: "+15 days" },
+      { installmentNumber: 2, percentage: 50, dueDays: "+45 days" },
+    ],
+  },
+  {
+    installment: 3,
+    name: "3 Instalments",
+    structureLabel: "34% · 33% · 33%",
+    dueScheduleLabel: "+15 days · +45 days · +75 days",
+    splits: [
+      { installmentNumber: 1, percentage: 34, dueDays: "+15 days" },
+      { installmentNumber: 2, percentage: 33, dueDays: "+45 days" },
+      { installmentNumber: 3, percentage: 33, dueDays: "+75 days" },
+    ],
+  },
+  {
+    installment: 4,
+    name: "4 Instalments",
+    structureLabel: "25% · 25% · 25% · 25%",
+    dueScheduleLabel: "+15 days · +45 days · +75 days · +105 days",
+    splits: [
+      { installmentNumber: 1, percentage: 25, dueDays: "+15 days" },
+      { installmentNumber: 2, percentage: 25, dueDays: "+45 days" },
+      { installmentNumber: 3, percentage: 25, dueDays: "+75 days" },
+      { installmentNumber: 4, percentage: 25, dueDays: "+105 days" },
+    ],
+  },
+];
+
+function buildPaymentTermsForSchedule(scheduleAmount, savedPaymentTerms = []) {
+  const savedInstallmentMap = new Map();
+  for (const pt of savedPaymentTerms || []) {
+    const plainPt = pt?.get ? pt.get({ plain: true }) : pt;
+    const inst = Number(plainPt.installment);
+    if (inst) {
+      savedInstallmentMap.set(inst, plainPt);
+    }
+  }
+
+  const hasAnySaved = savedInstallmentMap.size > 0;
+
+  return STANDARD_PAYMENT_TERMS.map((standard) => {
+    const isSaved = savedInstallmentMap.has(standard.installment);
+    const isEnabled = hasAnySaved ? isSaved : standard.installment === 1;
+    const isDefault = standard.installment === 1;
+    const savedRecord = savedInstallmentMap.get(standard.installment) || null;
+
+    const splitInstallments = standard.splits.map((split) => {
+      const splitAmount = toMoneyNumber(
+        (scheduleAmount * split.percentage) / 100
+      );
+      return {
+        installmentNumber: split.installmentNumber,
+        percentage: `${split.percentage}%`,
+        amount: splitAmount,
+        amountFormatted: formatCurrency(splitAmount),
+        dueSchedule: split.dueDays,
+      };
+    });
+
+    return {
+      billingSchedulePaymentTermsId: savedRecord?.billingSchedulePaymentTermsId || null,
+      paymentTerm: standard.name,
+      installment: standard.installment,
+      paymentStructure: standard.structureLabel,
+      dueSchedule: standard.dueScheduleLabel,
+      isDefault,
+      isEnabled,
+      installments: splitInstallments,
+    };
+  });
+}
+
+/**
+ * Review billing schedule screen data (as per Review Billing Schedule UI).
+ */
+export async function getBillingScheduleReview(queryParams = {}, user = {}) {
+  const { feePlanItemId, billingScheduleItemId, batchId, year } = queryParams;
+
+  if (!feePlanItemId && !billingScheduleItemId && !batchId) {
+    throw httpError(
+      "At least one of feePlanItemId, billingScheduleItemId, or batchId is required",
+      400
+    );
+  }
+
+  const data = await repo.findBillingScheduleReviewData({
+    feePlanItemId,
+    billingScheduleItemId,
+    batchId,
+    year,
+  });
+
+  const { feePlanItems } = data;
+  if (!feePlanItems || feePlanItems.length === 0) {
+    throw httpError("No fee plan or billing schedule found for the specified criteria", 404);
+  }
+
+  const primaryItem = feePlanItems[0]?.get ? feePlanItems[0].get({ plain: true }) : feePlanItems[0];
+  const batch = primaryItem.batch || {};
+  const session = batch.session || {};
+  const course = session.course || {};
+
+  const resolvedYear = data.targetYear || primaryItem.year || 1;
+  const batchYear = Number(batch.batch) || null;
+  const courseDuration = Number(course.courseDuration) || 0;
+  const endYear = batchYear && courseDuration ? batchYear + courseDuration : null;
+  const admissionBatch = batchYear
+    ? endYear
+      ? `${batchYear}–${String(endYear).slice(-2)}`
+      : `${batchYear}`
+    : "";
+
+  const calendarYear = batchYear ? batchYear + (resolvedYear - 1) : null;
+  const academicYearText = calendarYear
+    ? `${calendarYear}–${String(calendarYear + 1).slice(-2)}`
+    : "";
+  const academicYearLabel = academicYearText ? `AY ${academicYearText}` : "";
+
+  let totalFeePlan = 0;
+  for (const rawItem of feePlanItems) {
+    const item = rawItem?.get ? rawItem.get({ plain: true }) : rawItem;
+    for (const sub of item.feePlanSubItems || []) {
+      totalFeePlan = decimalAdd(totalFeePlan, toMoneyNumber(sub.amount));
+    }
+  }
+
+  const billingPeriods = [];
+  const paymentTermsPeriods = [];
+  let totalAllocated = 0;
+
+  for (let idx = 0; idx < feePlanItems.length; idx++) {
+    const rawItem = feePlanItems[idx];
+    const item = rawItem?.get ? rawItem.get({ plain: true }) : rawItem;
+    const periodName = item.academicPeriod || item.name || `Period ${idx + 1}`;
+    const academicPeriodText = academicYearLabel
+      ? `${periodName} · ${academicYearLabel}`
+      : periodName;
+
+    const schedules = item.billingScheduleItems || [];
+
+    for (const schedule of schedules) {
+      const scheduleAmount = toMoneyNumber(schedule.amount);
+      totalAllocated = decimalAdd(totalAllocated, scheduleAmount);
+
+      const subLines = (schedule.subItems || []).map((sub) => {
+        const planSub = sub.feePlanSubItem || {};
+        const catalog = planSub.feeTypeCatalog || {};
+        const subAmount = toMoneyNumber(sub.amount);
+        return {
+          billingScheduleSubItemId: sub.billingScheduleSubItemId,
+          feePlanSubItemId: sub.feePlanSubItemId,
+          feeTypeCatalogId: catalog.feeTypeCatalogId || planSub.feeTypeId,
+          feeTypeName: catalog.name || null,
+          ledgerType: catalog.ledgerType || null,
+          refundable: catalog.refundable || null,
+          amount: subAmount,
+          amountFormatted: formatCurrency(subAmount),
+          isMainSubItem: planSub.isMainSubItem === true || planSub.isMainSubItem === 1,
+        };
+      });
+
+      billingPeriods.push({
+        billingScheduleItemId: schedule.billingScheduleItemId,
+        feePlanItemId: item.feePlanItemId,
+        academicPeriod: academicPeriodText,
+        periodName,
+        plannedBillingDate: formatDisplayDate(schedule.plannedDate),
+        plannedDate: schedule.plannedDate,
+        dueDate: schedule.dueDate,
+        dueDateFormatted: formatDisplayDate(schedule.dueDate),
+        feeAmount: scheduleAmount,
+        feeAmountFormatted: formatCurrency(scheduleAmount),
+        status: schedule.status || "pending",
+        subItemsCount: subLines.length,
+        subItems: subLines,
+      });
+
+      const cardTitle = `${periodName} · ${formatCurrency(scheduleAmount)}`;
+      const cardSubtitleParts = [];
+      if (academicYearLabel) cardSubtitleParts.push(academicYearLabel);
+      if (schedule.plannedDate) {
+        cardSubtitleParts.push(`${formatDisplayDate(schedule.plannedDate)} (Planned Billing Date)`);
+      }
+      const cardSubtitle = cardSubtitleParts.join(" · ");
+
+      paymentTermsPeriods.push({
+        billingScheduleItemId: schedule.billingScheduleItemId,
+        feePlanItemId: item.feePlanItemId,
+        title: cardTitle,
+        subtitle: cardSubtitle,
+        periodName,
+        amount: scheduleAmount,
+        amountFormatted: formatCurrency(scheduleAmount),
+        plannedDate: schedule.plannedDate,
+        terms: buildPaymentTermsForSchedule(scheduleAmount, schedule.paymentTerms),
+      });
+    }
+  }
+
+  const difference = decimalSubtract(totalAllocated, totalFeePlan);
+  const isMatched = difference === 0;
+
+  const amountsFormatted = billingPeriods.map((p) => p.feeAmountFormatted);
+  const summaryCalculation =
+    amountsFormatted.length > 1
+      ? `${amountsFormatted.join(" + ")} = ${formatCurrency(totalAllocated)}`
+      : amountsFormatted.length === 1
+      ? `${amountsFormatted[0]} = ${formatCurrency(totalAllocated)}`
+      : formatCurrency(totalAllocated);
+
+  const matchMessage = isMatched
+    ? `Total scheduled amount matches the Year ${resolvedYear} Fee Plan.`
+    : `Total scheduled amount differs by ${formatCurrency(Math.abs(difference))} from the Year ${resolvedYear} Fee Plan.`;
+
+  const termType = course.termType || "Semester";
+  const billingPeriodsCount = billingPeriods.length;
+  const billingPeriodsLabel = `${billingPeriodsCount} ${
+    billingPeriodsCount === 1 ? termType : termType + "s"
+  }`;
+
+  return {
+    title: "Review Billing Schedule",
+    subtitle: `Review the Year ${resolvedYear} billing schedule and payment terms before publishing.`,
+    academicContext: {
+      batchId: Number(batch.batchId) || null,
+      batchYear,
+      admissionBatch,
+      year: resolvedYear,
+      academicYear: academicYearText,
+      academicYearLabel,
+      courseId: course.courseId || null,
+      courseName: course.courseName || null,
+      courseCode: course.courseCode || null,
+      termType,
+    },
+    summary: {
+      billingMethod: "Academic Period",
+      billingPeriodsCount,
+      billingPeriodsLabel,
+      totalFeePlan,
+      totalFeePlanFormatted: formatCurrency(totalFeePlan),
+      allocated: totalAllocated,
+      allocatedFormatted: formatCurrency(totalAllocated),
+      difference,
+      differenceFormatted: formatCurrency(difference),
+      isMatched,
+      matchMessage,
+      summaryCalculation,
+    },
+    billingPeriods,
+    paymentTerms: paymentTermsPeriods,
+    publishInfo: [
+      `This schedule becomes the active Year ${resolvedYear} Billing Schedule.`,
+      "Billing periods will become available for Billing Runs according to their Planned Billing Dates.",
+      "Students can use the enabled Payment Terms for each billing period. If no student-specific Payment Arrangement has been confirmed, the Default Payment Term will apply.",
+    ],
+=======
 function buildYearWiseData(feePlanItems = [], course = {}, batchYear, currentYear) {
   const duration = Number(course?.courseDuration) || 0;
   const planByYear = new Map();
@@ -743,10 +1045,115 @@ export async function getBillingScheduleBatchOverview(queryParams = {}) {
         }
       : null,
     years,
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
   };
 }
 
 /**
+<<<<<<< HEAD
+ * Detailed view of a single billing schedule item.
+ */
+export async function getBillingScheduleView(billingScheduleItemId) {
+  if (!billingScheduleItemId) {
+    throw httpError("billingScheduleItemId is required", 400);
+  }
+
+  const rawItem = await repo.findBillingScheduleItemById(billingScheduleItemId);
+  if (!rawItem) {
+    throw httpError(
+      `Billing schedule item with ID ${billingScheduleItemId} not found`,
+      404
+    );
+  }
+
+  const item = typeof rawItem.get === "function" ? rawItem.get({ plain: true }) : rawItem;
+  const plan = item.feePlanItem || {};
+  const batch = plan.batch || {};
+  const session = batch.session || {};
+  const course = session.course || {};
+
+  const scheduleAmount = toMoneyNumber(item.amount);
+
+  const subLines = (item.subItems || []).map((sub) => {
+    const planSub = sub.feePlanSubItem || {};
+    const catalog = planSub.feeTypeCatalog || {};
+    const subAmount = toMoneyNumber(sub.amount);
+    return {
+      billingScheduleSubItemId: sub.billingScheduleSubItemId,
+      feePlanSubItemId: sub.feePlanSubItemId,
+      feeTypeCatalogId: catalog.feeTypeCatalogId || planSub.feeTypeId,
+      feeTypeName: catalog.name || null,
+      ledgerType: catalog.ledgerType || null,
+      refundable: catalog.refundable || null,
+      amount: subAmount,
+      amountFormatted: formatCurrency(subAmount),
+      isMainSubItem: planSub.isMainSubItem === true || planSub.isMainSubItem === 1,
+      createdAt: sub.createdAt,
+      updatedAt: sub.updatedAt,
+    };
+  });
+
+  const batchYear = Number(batch.batch) || null;
+  const courseDuration = Number(course.courseDuration) || 0;
+  const endYear = batchYear && courseDuration ? batchYear + courseDuration : null;
+  const admissionBatch = batchYear
+    ? endYear
+      ? `${batchYear}–${String(endYear).slice(-2)}`
+      : `${batchYear}`
+    : "";
+
+  const yearNum = plan.year != null ? Number(plan.year) : 1;
+  const calendarYear = batchYear ? batchYear + (yearNum - 1) : null;
+  const academicYearText = calendarYear
+    ? `${calendarYear}–${String(calendarYear + 1).slice(-2)}`
+    : "";
+
+  const paymentOptions = buildPaymentTermsForSchedule(
+    scheduleAmount,
+    item.paymentTerms
+  );
+
+  return {
+    billingScheduleItemId: item.billingScheduleItemId,
+    feePlanItemId: item.feePlanItemId,
+    amount: scheduleAmount,
+    amountFormatted: formatCurrency(scheduleAmount),
+    plannedDate: item.plannedDate,
+    plannedDateFormatted: formatDisplayDate(item.plannedDate),
+    dueDate: item.dueDate,
+    dueDateFormatted: formatDisplayDate(item.dueDate),
+    status: item.status || "pending",
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+    feePlanItem: {
+      feePlanItemId: plan.feePlanItemId,
+      name: plan.name,
+      academicPeriod: plan.academicPeriod,
+      year: plan.year,
+      createDate: plan.createDate,
+      dueDate: plan.dueDate,
+      publishStatus: plan.publishStatus,
+    },
+    academicContext: {
+      batchId: Number(batch.batchId) || null,
+      batchYear,
+      admissionBatch,
+      year: yearNum,
+      academicYear: academicYearText,
+      academicYearLabel: academicYearText ? `AY ${academicYearText}` : "",
+      courseId: course.courseId || null,
+      courseName: course.courseName || null,
+      courseCode: course.courseCode || null,
+      termType: course.termType || "Semester",
+      sessionName: session.sessionName || null,
+    },
+    subItems: subLines,
+    paymentTerms: item.paymentTerms || [],
+    paymentOptionsMatrix: paymentOptions,
+  };
+}
+
+=======
  * Get detailed billing schedule review data for a batch and year.
  * Returns schedule-wise amounts, plannedDates, subItems, and fee plan details.
  * @param {Object} queryParams - { batchId, year }
@@ -840,3 +1247,4 @@ export async function getBillingScheduleBatchReview(queryParams = {}) {
 }
 
 
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a

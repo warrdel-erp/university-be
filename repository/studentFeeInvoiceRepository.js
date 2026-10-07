@@ -38,6 +38,31 @@ function feePlanItemInclude() {
   };
 }
 
+function billingScheduleItemInclude() {
+  return {
+    model: model.billingScheduleItemsModel,
+    as: "billingScheduleItem",
+    required: false,
+    attributes: { exclude: excludeTimestamps() },
+    include: [
+      {
+        model: model.billingScheduleSubItemsModel,
+        as: "subItems",
+        required: false,
+        attributes: { exclude: excludeTimestamps() },
+        include: [
+          {
+            model: model.feePlanSubItemsModel,
+            as: "feePlanSubItem",
+            required: false,
+            attributes: { exclude: excludeTimestamps() },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 function feePlanItemDetailInclude() {
   return {
     model: model.feePlanItemModel,
@@ -152,8 +177,18 @@ export async function findStudentsByIds(studentIds, options = {}) {
   });
 }
 
-export async function findExistingInvoiceStudentIdsByItem(feePlanItemId, studentIds = [], options = {}) {
-  const where = { feePlanItemId: Number(feePlanItemId) };
+export async function findExistingInvoiceStudentIdsByItem(filterOrId, studentIds = [], options = {}) {
+  const where = {};
+  if (typeof filterOrId === "object" && filterOrId !== null) {
+    if (filterOrId.billingScheduleItemId != null) {
+      where.billingScheduleItemId = Number(filterOrId.billingScheduleItemId);
+    } else if (filterOrId.feePlanItemId != null) {
+      where.feePlanItemId = Number(filterOrId.feePlanItemId);
+    }
+  } else if (filterOrId != null) {
+    where.feePlanItemId = Number(filterOrId);
+  }
+
   if (studentIds.length) {
     where.studentId = { [Op.in]: studentIds };
   }
@@ -195,6 +230,63 @@ export async function bulkCreateStudentFeeInvoiceItems(rows, options = {}) {
   });
 }
 
+export async function findBillingScheduleItemWithDetails(billingScheduleItemId, options = {}) {
+  return scoped(model.billingScheduleItemsModel).findOne({
+    where: { billingScheduleItemId: Number(billingScheduleItemId) },
+    include: [
+      {
+        model: model.feePlanItemModel,
+        as: "feePlanItem",
+      },
+      {
+        model: model.billingScheduleSubItemsModel,
+        as: "subItems",
+        required: false,
+        include: [
+          {
+            model: model.feePlanSubItemsModel,
+            as: "feePlanSubItem",
+            required: false,
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findBillingScheduleItemsByFeePlanItemId(feePlanItemId, options = {}) {
+  return scoped(model.billingScheduleItemsModel).findAll({
+    where: { feePlanItemId: Number(feePlanItemId) },
+    include: [
+      {
+        model: model.billingScheduleSubItemsModel,
+        as: "subItems",
+        required: false,
+        include: [
+          {
+            model: model.feePlanSubItemsModel,
+            as: "feePlanSubItem",
+            required: false,
+          },
+        ],
+      },
+    ],
+    order: [["plannedDate", "ASC"], ["billingScheduleItemId", "ASC"]],
+    transaction: options.transaction,
+  });
+}
+
+export async function updateBillingScheduleItemStatus(billingScheduleItemId, status, options = {}) {
+  return scoped(model.billingScheduleItemsModel).update(
+    { status },
+    {
+      where: { billingScheduleItemId: Number(billingScheduleItemId) },
+      transaction: options.transaction,
+    }
+  );
+}
+
 export async function findStudentFeeInvoiceById(studentFeeInvoiceId, options = {}) {
   return scoped(model.studentFeeInvoiceModel).findOne({
     where: { studentFeeInvoiceId },
@@ -202,6 +294,7 @@ export async function findStudentFeeInvoiceById(studentFeeInvoiceId, options = {
       instituteInclude(),
       studentDetailInclude(),
       feePlanItemDetailInclude(),
+      billingScheduleItemInclude(),
       feeInvoiceItemsInclude(),
     ],
     transaction: options.transaction,
@@ -211,7 +304,7 @@ export async function findStudentFeeInvoiceById(studentFeeInvoiceId, options = {
 export async function findStudentFeeInvoicesByStudentId(studentId, options = {}) {
   return scoped(model.studentFeeInvoiceModel).findAll({
     where: { studentId },
-    include: [feePlanItemInclude(), feeInvoiceItemsInclude()],
+    include: [feePlanItemInclude(), billingScheduleItemInclude(), feeInvoiceItemsInclude()],
     order: [["studentFeeInvoiceId", "DESC"]],
     transaction: options.transaction,
   });
