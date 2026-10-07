@@ -34,6 +34,18 @@ const studentFeeInvoiceModel = sequelize.define(
       allowNull: true,
       field: "due_date",
     },
+    baseAmount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      defaultValue: 0,
+      field: "base_amount",
+    },
+    discountAmount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      defaultValue: 0,
+      field: "discount_amount",
+    },
     total: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,

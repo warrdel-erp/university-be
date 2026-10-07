@@ -14,6 +14,7 @@ import {
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
 import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
+import { getStudentBillingBreakdown } from "./studentBillingBreakdownServices.js";
 
 function netInvoiceItemAmount(amount, waiver) {
   const lineAmount = toMoneyNumber(amount);
@@ -127,6 +128,8 @@ function buildInvoiceCascade(invoice, split, payment) {
     createDate: invoice.createDate,
     dueDate: invoice.dueDate,
     total: invoice.total,
+    baseAmount: invoice.baseAmount,
+    discountAmount: invoice.discountAmount,
     status: invoice.status,
     paymentStatus: payment.paymentStatus,
     paidAmount: invoice.paidAmount,
@@ -346,14 +349,31 @@ export async function generateStudentFeeInvoice({
 
     const invoiceTotal = decimalSum(invoiceLines.map((line) => toMoneyNumber(line.amount)));
 
+    const breakdownRes = await getStudentBillingBreakdown({
+      feePlanItemId: feePlanItemId ?? undefined,
+      billingScheduleItemId: effectiveScheduleItemId ?? undefined,
+      batchId: itemBatchId,
+    });
+    
+    const studentBreakdownMap = new Map(
+      breakdownRes.data.students.map((s) => [Number(s.studentId), s])
+    );
+
     const createdInvoiceIds = [];
     for (const student of eligibleStudents) {
+      const sBreakdown = studentBreakdownMap.get(Number(student.studentId));
+      const baseAmount = sBreakdown?.standardFee ?? invoiceTotal;
+      const discountAmount = sBreakdown?.appliedTreatments?.totalDiscount ?? 0;
+      const finalTotal = sBreakdown?.finalBillableAmount ?? invoiceTotal;
+
       const invoice = await repo.createStudentFeeInvoice(
         {
           studentId: student.studentId,
           feePlanItemId: Number(feePlanItem.feePlanItemId),
           billingScheduleItemId: effectiveScheduleItemId,
-          total: invoiceTotal,
+          baseAmount,
+          discountAmount,
+          total: finalTotal,
           createDate: resolvedCreateDate,
           dueDate: resolvedDueDate,
           status: "generated",
@@ -433,10 +453,15 @@ export async function generateAdhocStudentFeeInvoice({
       throw httpError("One or more fee type catalog entries not found", 404);
     }
 
+    const adhocBaseAmount = decimalSum(feeLines.map((line) => line.amount));
+    const adhocDiscountAmount = decimalSum(feeLines.map((line) => line.waiver ?? 0));
+
     const invoice = await repo.createStudentFeeInvoice(
       {
         studentId,
         feePlanItemId: null,
+        baseAmount: adhocBaseAmount,
+        discountAmount: adhocDiscountAmount,
         total: invoiceTotal,
         createDate,
         dueDate: dueDate ?? null,

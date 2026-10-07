@@ -32,7 +32,7 @@ function formatStudentFullName(student) {
  * 2. Active batch policies (from feePolicyBatchesModel)
  * 3. Student-specific policies (from feePolicyStudentsModel)
  */
-function calculateTreatmentsForStudent(
+export function calculateTreatmentsForStudent(
   student,
   { baseComponents, batchPolicies, studentPoliciesMap, existingInvoice }
 ) {
