@@ -509,6 +509,52 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
     null
     : null;
 
+  // 10. Aggregate treatments across all batch students
+  const treatmentAggMap = new Map();
+
+  for (const student of studentsList) {
+    const studentTreatments = student.appliedTreatments?.treatments || [];
+    for (const t of studentTreatments) {
+      const key = t.policyId != null ? `policy_${t.policyId}` : `name_${t.name}`;
+      if (!treatmentAggMap.has(key)) {
+        treatmentAggMap.set(key, {
+          feePolicyId: t.policyId || null,
+          name: t.name || "Treatment",
+          treatment: t.name || "Treatment",
+          effect: t.effect || "reduce_fee",
+          rule: t.rule || null,
+          studentIds: new Set(),
+          totalAdjustment: 0,
+          totalDiscount: 0,
+          totalAddCharge: 0,
+        });
+      }
+      const agg = treatmentAggMap.get(key);
+      agg.studentIds.add(student.studentId);
+      agg.totalAdjustment = decimalAdd(agg.totalAdjustment, t.amount);
+      if (t.effect === "reduce_fee") {
+        agg.totalDiscount = decimalAdd(agg.totalDiscount, Math.abs(t.amount));
+      } else if (t.effect === "add_charge") {
+        agg.totalAddCharge = decimalAdd(agg.totalAddCharge, Math.abs(t.amount));
+      }
+    }
+  }
+
+  const treatmentsSummary = Array.from(treatmentAggMap.values()).map((agg) => {
+    const count = agg.studentIds.size;
+    return {
+      feePolicyId: agg.feePolicyId,
+      treatment: agg.treatment,
+      name: agg.name,
+      appliedStudentCount: count,
+      totalAdjustment: agg.totalAdjustment,
+      totalDiscount: agg.totalDiscount,
+      totalAddCharge: agg.totalAddCharge,
+      effect: agg.effect,
+      rule: agg.rule,
+    };
+  });
+
   const total = studentsList.length;
   const effectiveLimit = limit && limit > 0 ? limit : total;
   const totalPages = effectiveLimit > 0 ? Math.ceil(total / effectiveLimit) : 1;
@@ -554,10 +600,12 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
         totalRunAmount: decimalMultiply(standardFee, total),
         totalDiscounts: totalRunDiscounts,
         totalAddCharges: totalRunAddCharges,
+        totalAdjustments: decimalSubtract(totalRunAddCharges, totalRunDiscounts),
         totalNetBillableAmount: totalRunNetBillable,
         billedStudentsCount: billedCount,
         pendingStudentsCount: total - billedCount,
       },
+      treatmentsSummary,
       ...(targetStudent
         ? {
           student: {
