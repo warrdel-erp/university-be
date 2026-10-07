@@ -308,6 +308,9 @@ export async function generateStudentFeeInvoice({
       if (isSingleStudentMode) {
         throw httpError("Invoice already exists for this student and schedule/fee plan item", 409);
       }
+      if (effectiveScheduleItemId) {
+        await repo.updateBillingScheduleItemStatus(effectiveScheduleItemId, "billed", { transaction });
+      }
       return {
         billingScheduleItemId: effectiveScheduleItemId,
         feePlanItemId: Number(feePlanItem.feePlanItemId),

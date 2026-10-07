@@ -465,3 +465,25 @@ export async function findExistingInvoiceForStudentAndPlan({ studentId, feePlanI
   });
 }
 
+/**
+ * Update billing schedule item status (e.g. to 'billed')
+ */
+export async function updateBillingScheduleItemStatus(billingScheduleItemId, status, options = {}) {
+  const [affected] = await scoped(model.billingScheduleItemsModel).update(
+    { status },
+    {
+      where: { billingScheduleItemId: Number(billingScheduleItemId) },
+      transaction: options.transaction,
+    }
+  );
+  if (!affected) {
+    await model.billingScheduleItemsModel.update(
+      { status },
+      {
+        where: { billingScheduleItemId: Number(billingScheduleItemId) },
+        transaction: options.transaction,
+      }
+    );
+  }
+}
+
