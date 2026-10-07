@@ -71,26 +71,10 @@ export async function updateBillingSchedule(req, res) {
 
 export async function updateBillingScheduleStatus(req, res) {
   try {
-    const feePlanItemId =
-      req.body.feePlanItemId ??
-      req.body.feeplanItemId ??
-      req.query.feePlanItemId ??
-      req.query.feeplanItemId;
-    const billingScheduleItemId =
-      req.body.billingScheduleItemId ?? req.query.billingScheduleItemId;
-    const status = req.body.status ?? req.query.status;
-
-    const data = await service.updateBillingScheduleStatus({
-      feePlanItemId,
-      billingScheduleItemId,
-      status,
-    });
-    return SuccessResponse(
-      res,
-      200,
-      "Billing schedule status updated successfully",
-      data
-    );
+    const id = req.body.billingScheduleItemId;
+    const status = req.body.status;
+    const data = await service.updateBillingScheduleStatus(id, status);
+    return SuccessResponse(res, 200, "Billing schedule status updated successfully", data);
   } catch (error) {
     return ErrorResponse(
       res,

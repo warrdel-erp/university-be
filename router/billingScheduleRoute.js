@@ -67,29 +67,10 @@ const updateBillingScheduleSchema = z.object({
   subItems: z.array(subItemInputSchema).optional(),
 });
 
-const updateStatusSchema = z
-  .object({
-    feePlanItemId: positiveIntegerId.optional(),
-    feeplanItemId: positiveIntegerId.optional(),
-    billingScheduleItemId: positiveIntegerId.optional(),
-    status: z.string().trim().min(1, "status cannot be empty"),
-  })
-  .refine(
-    (data) =>
-      data.feePlanItemId != null ||
-      data.feeplanItemId != null ||
-      data.billingScheduleItemId != null,
-    {
-      message:
-        "Either feePlanItemId or billingScheduleItemId must be provided",
-    }
-  )
-  .transform((data) => ({
-    feePlanItemId: data.feePlanItemId ?? data.feeplanItemId,
-    billingScheduleItemId: data.billingScheduleItemId,
-    status: data.status,
-  }));
-
+const updateStatusSchema = z.object({
+  billingScheduleItemId: positiveIntegerId,
+  status: statusEnum,
+});
 
 const singleScheduleQuerySchema = z.object({
   billingScheduleItemId: positiveIntegerId,
@@ -241,14 +222,6 @@ router.patch(
 );
 
 router.patch(
-  "/status",
-  userAuth,
-  checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value),
-  validate({ body: updateStatusSchema }),
-  controller.updateBillingScheduleStatus,
-);
-
-router.put(
   "/status",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value),

@@ -392,7 +392,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"status\": \"billed\"\n}"
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"status\": \"billed\"\n}"
         },
         "url": {
           "raw": "{{baseurl}}/billingSchedule/status",
@@ -404,7 +404,7 @@
             "status"
           ]
         },
-        "description": "PATCH /billingSchedule/status\n\nUpdates lifecycle status of all billingScheduleItemIds for a feePlanItemId (or a single item via billingScheduleItemId)."
+        "description": "PATCH /billingSchedule/status\n\nUpdates the lifecycle status of a schedule item."
       },
       "response": []
     },

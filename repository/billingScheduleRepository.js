@@ -173,25 +173,6 @@ export async function updateBillingScheduleItem(billingScheduleItemId, data, opt
   });
 }
 
-export async function updateBillingScheduleStatusByFeePlanItemId(feePlanItemId, status, options = {}) {
-  return scoped(model.billingScheduleItemsModel).update(
-    { status },
-    {
-      where: { feePlanItemId: Number(feePlanItemId) },
-      transaction: options.transaction,
-    }
-  );
-}
-
-export async function findBillingScheduleItemsByFeePlanItemId(feePlanItemId, options = {}) {
-  return scoped(model.billingScheduleItemsModel).findAll({
-    where: { feePlanItemId: Number(feePlanItemId) },
-    include: getBillingScheduleIncludes(),
-    order: [["billingScheduleItemId", "ASC"]],
-    transaction: options.transaction,
-  });
-}
-
 export async function deleteBillingScheduleItem(billingScheduleItemId, options = {}) {
   return scoped(model.billingScheduleItemsModel).destroy({
     where: { billingScheduleItemId },
