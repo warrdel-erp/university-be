@@ -4,6 +4,7 @@ import universityModel from "./universityModel.js";
 import studentModel from "./studentModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
 import instituteModel from "./instituteModel.js";
+import billingScheduleItemsModel from "./billingScheduleItemsModel.js";
 
 const studentFeeInvoiceModel = sequelize.define(
   "student_fee_invoice",
@@ -70,6 +71,15 @@ const studentFeeInvoiceModel = sequelize.define(
       references: {
         model: feePlanItemModel,
         key: "fee_plan_item_id",
+      },
+    },
+    billingScheduleItemId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "billing_schedule_item_id",
+      references: {
+        model: billingScheduleItemsModel,
+        key: "billing_schedule_item_id",
       },
     },
     instituteId: {

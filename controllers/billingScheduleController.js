@@ -181,3 +181,43 @@ export async function deleteBillingSchedulePaymentTerm(req, res) {
   }
 }
 
+export async function getBillingScheduleReview(req, res) {
+  try {
+    const data = await service.getBillingScheduleReview(req.query, req.user);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule review retrieved successfully",
+      data
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+
+export async function getBillingScheduleView(req, res) {
+  try {
+    const id =
+      req.query.billingScheduleItemId ||
+      req.params.billingScheduleItemId ||
+      req.body.billingScheduleItemId;
+    const data = await service.getBillingScheduleView(id);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule view retrieved successfully",
+      data
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+

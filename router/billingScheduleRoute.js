@@ -102,6 +102,21 @@ const deletePaymentTermQuerySchema = z.object({
   billingSchedulePaymentTermsId: positiveIntegerId,
 });
 
+const reviewScheduleQuerySchema = z
+  .object({
+    feePlanItemId: positiveIntegerId.optional(),
+    billingScheduleItemId: positiveIntegerId.optional(),
+    batchId: positiveIntegerId.optional(),
+    year: positiveIntegerId.optional(),
+  })
+  .refine(
+    (data) => Boolean(data.feePlanItemId || data.billingScheduleItemId || data.batchId),
+    {
+      message: "At least one of feePlanItemId, billingScheduleItemId, or batchId is required",
+      path: ["feePlanItemId"],
+    }
+  );
+
 // Endpoints
 router.post(
   "/",
@@ -120,11 +135,27 @@ router.get(
 );
 
 router.get(
+  "/review",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN.value),
+  validate({ query: reviewScheduleQuerySchema }),
+  controller.getBillingScheduleReview
+);
+
+router.get(
+  "/view",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN.value),
+  validate({ query: singleScheduleQuerySchema }),
+  controller.getBillingScheduleView
+);
+
+router.get(
   "/single",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: singleScheduleQuerySchema }),
-  controller.getSingleBillingSchedule
+  controller.getBillingScheduleView
 );
 
 router.patch(

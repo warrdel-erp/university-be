@@ -3,12 +3,13 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function generateStudentFeeInvoice(req, res) {
   try {
-    const { studentId, studentIds, batchId, feePlanItemId, dueDate } = req.body;
+    const { studentId, studentIds, batchId, feePlanItemId, billingScheduleItemId, dueDate } = req.body;
     const result = await studentFeeInvoiceService.generateStudentFeeInvoice({
       studentId,
       studentIds,
       batchId,
       feePlanItemId,
+      billingScheduleItemId,
       dueDate,
     });
     return SuccessResponse(res, 201, "Invoice(s) generated successfully", result);

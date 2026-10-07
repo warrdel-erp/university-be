@@ -554,6 +554,87 @@
         },
         "description": "Deletes a specific billing schedule payment term by ID."
       }
+    },
+    {
+      "name": "15. Review Billing Schedule (Review & Verify Screen)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/review?feePlanItemId={{feePlanItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "review"
+          ],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}"
+            },
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}",
+              "disabled": true
+            },
+            {
+              "key": "batchId",
+              "value": "1",
+              "disabled": true
+            },
+            {
+              "key": "year",
+              "value": "1",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Fetches the full Review Billing Schedule dataset matching the UI review card, including summary KPIs, scheduled periods table, summary calculation matching, payment terms cards with structures and default options."
+      }
+    },
+    {
+      "name": "16. View Single Billing Schedule Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/view?billingScheduleItemId={{billingScheduleItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "view"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}"
+            }
+          ]
+        },
+        "description": "Fetches complete view of a single billing schedule item with fee plan details, batch/course context, sub-items catalog, payment terms, and calculated payment options matrix."
+      }
     }
   ]
 }

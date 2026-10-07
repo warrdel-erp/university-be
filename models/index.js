@@ -2718,6 +2718,15 @@ feePlanItemModel.hasMany(studentFeeInvoiceModel, {
   as: "studentFeeInvoices",
 });
 
+studentFeeInvoiceModel.belongsTo(billingScheduleItemsModel, {
+  foreignKey: "billingScheduleItemId",
+  as: "billingScheduleItem",
+});
+billingScheduleItemsModel.hasMany(studentFeeInvoiceModel, {
+  foreignKey: "billingScheduleItemId",
+  as: "studentFeeInvoices",
+});
+
 studentFeeInvoiceModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "instituteStudentFeeInvoice",
