@@ -254,31 +254,63 @@ export async function updateBillingSchedule(
 }
 
 /**
- * Quick status update for billing schedule item
+ * Quick status update for billing schedule item(s) by feePlanItemId or billingScheduleItemId
  */
-export async function updateBillingScheduleStatus(
-  billingScheduleItemId,
-  status,
-) {
-  if (!billingScheduleItemId) {
-    throw httpError("billingScheduleItemId is required", 400);
+export async function updateBillingScheduleStatus(payload, legacyStatus) {
+  let feePlanItemId;
+  let billingScheduleItemId;
+  let status;
+
+  if (typeof payload === "object" && payload !== null) {
+    feePlanItemId = payload.feePlanItemId ?? payload.feeplanItemId;
+    billingScheduleItemId = payload.billingScheduleItemId;
+    status = payload.status;
+  } else {
+    billingScheduleItemId = payload;
+    status = legacyStatus;
   }
+
   if (!status) {
     throw httpError("status is required", 400);
   }
 
-  const existing = await repo.findBillingScheduleItemById(
-    billingScheduleItemId,
-  );
-  if (!existing) {
-    throw httpError(
-      `Billing schedule item with ID ${billingScheduleItemId} not found`,
-      404,
-    );
+  if (feePlanItemId != null) {
+    const existing = await repo.findBillingScheduleItemsByFeePlanItemId(feePlanItemId);
+    if (!existing || existing.length === 0) {
+      throw httpError(
+        `No billing schedule items found for feePlanItemId ${feePlanItemId}`,
+        404,
+      );
+    }
+
+    await repo.updateBillingScheduleStatusByFeePlanItemId(feePlanItemId, status);
+    const updatedItems = await repo.findBillingScheduleItemsByFeePlanItemId(feePlanItemId);
+
+    return {
+      feePlanItemId: Number(feePlanItemId),
+      status,
+      updatedCount: updatedItems.length,
+      items: updatedItems,
+    };
   }
 
-  await repo.updateBillingScheduleItem(billingScheduleItemId, { status });
-  return repo.findBillingScheduleItemById(billingScheduleItemId);
+  if (billingScheduleItemId != null) {
+    const existing = await repo.findBillingScheduleItemById(billingScheduleItemId);
+    if (!existing) {
+      throw httpError(
+        `Billing schedule item with ID ${billingScheduleItemId} not found`,
+        404,
+      );
+    }
+
+    await repo.updateBillingScheduleItem(billingScheduleItemId, { status });
+    return repo.findBillingScheduleItemById(billingScheduleItemId);
+  }
+
+  throw httpError(
+    "Either feePlanItemId or billingScheduleItemId is required",
+    400,
+  );
 }
 
 /**

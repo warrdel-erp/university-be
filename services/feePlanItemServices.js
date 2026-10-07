@@ -122,6 +122,7 @@ function mapScheduleSubItem(sub) {
     billingScheduleSubItemId: sub.billingScheduleSubItemId,
     feePlanSubitemId: sub.feePlanSubItemId,
     feeTypeId: planSub.feeTypeId,
+    feeTypeCatalogId: catalog.feeTypeCatalogId || planSub.feeTypeId || null,
     name: catalog.name || null,
     ledgerType: catalog.ledgerType || null,
     refundable: catalog.refundable || null,
@@ -1241,7 +1242,7 @@ function formatRunDate(dateStr) {
 
 export async function getBillingRuns(filters = {}) {
   const [items, academicCtx] = await Promise.all([
-    repo.findFeePlanItemsWithHierarchy(filters),
+    repo.findBillingScheduleItemsForRuns(filters),
     resolveActiveAcademicYearContext(),
   ]);
 
@@ -1249,13 +1250,34 @@ export async function getBillingRuns(filters = {}) {
   const activeAcademicYear = academicCtx.academicYear;
   const activeAcademicYearText = activeAcademicYear?.academicYear || `${activeBatchYear}-${String(activeBatchYear + 1).slice(-2)}`;
 
-  const feePlanItemIds = items.map((it) => Number(it.feePlanItemId));
-  const batchIds = Array.from(new Set(items.map((it) => Number(it.batchId)).filter(Boolean)));
+  const feePlanItemIds = Array.from(
+    new Set(
+      items
+        .map((it) => Number(it.feePlanItemId))
+        .filter(Boolean)
+    )
+  );
+  const batchIds = Array.from(
+    new Set(
+      items
+        .map((it) => {
+          const plain = it.feePlanItem?.get ? it.feePlanItem.get({ plain: true }) : it.feePlanItem;
+          return Number(plain?.batchId);
+        })
+        .filter(Boolean)
+    )
+  );
 
   const [raisedMap, studentCountMap] = await Promise.all([
     repo.countRaisedInvoicesByFeePlanItemIds(feePlanItemIds),
     repo.countStudentsByBatchIds(batchIds),
   ]);
+
+  const scheduleCountByFeePlan = new Map();
+  for (const it of items) {
+    const fId = Number(it.feePlanItemId);
+    scheduleCountByFeePlan.set(fId, (scheduleCountByFeePlan.get(fId) || 0) + 1);
+  }
 
   const d = new Date();
   const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1266,212 +1288,133 @@ export async function getBillingRuns(filters = {}) {
 
   const search = filters.search ? String(filters.search).trim().toLowerCase() : '';
 
-  for (const rawItem of items) {
-    const plain = rawItem.get ? rawItem.get({ plain: true }) : rawItem;
+  for (const rawSchedule of items) {
+    const schedule = rawSchedule.get ? rawSchedule.get({ plain: true }) : rawSchedule;
+    const plain = schedule.feePlanItem || {};
+
     const batch = plain.batch;
     const session = batch?.session;
     const course = session?.course;
 
-    if (!batch || !session || !course) continue;
+    const batchYear = batch?.batch ? Number(batch.batch) : null;
+    const duration = course ? Number(course.courseDuration) || 0 : 0;
+    const endYear = batchYear && duration ? batchYear + duration : null;
+    const yearNum = plain.year != null ? Number(plain.year) : null;
 
-    const batchYear = Number(batch.batch);
-    const duration = Number(course.courseDuration) || 0;
-    const endYear = batchYear + duration;
-    const yearNum = plain.year != null ? Number(plain.year) : 1;
-
-    // Only send feePlanItems for the current active year of this batch:
-    // e.g. 2025 batch in active calendar year 2026 -> activeYear = 2026 - 2025 + 1 = 2
-    const currentActiveYear = activeBatchYear - batchYear + 1;
-    const targetYear = filters.year != null ? Number(filters.year) : currentActiveYear;
-    if (yearNum !== targetYear) {
+    if (filters.year != null && yearNum !== Number(filters.year)) {
       continue;
     }
 
-    const billingRun = plain.name || `Year ${yearNum} Fee`;
-    const context = `${course.courseName} ${batchYear}-${String(endYear).slice(-2)} · Year ${yearNum}`;
+    const billingRun = plain.name || (yearNum ? `Year ${yearNum} Fee` : `Schedule #${schedule.billingScheduleItemId}`);
+    const context = course && batchYear
+      ? `${course.courseName} ${batchYear}-${endYear ? String(endYear).slice(-2) : ''}${yearNum ? ` · Year ${yearNum}` : ''}`
+      : (plain.name || `Schedule #${schedule.billingScheduleItemId}`);
     const feePlanLabel = `Fee Plan ${activeAcademicYearText}`;
 
     if (search) {
-      const matchText = `${billingRun} ${course.courseName} ${course.courseCode} ${session.sessionName} ${batchYear}`.toLowerCase();
+      const matchText = `${billingRun} ${course?.courseName || ''} ${course?.courseCode || ''} ${session?.sessionName || ''} ${batchYear || ''}`.toLowerCase();
       if (!matchText.includes(search)) continue;
     }
 
-    const students = studentCountMap.get(Number(batch.batchId)) || 0;
-    const raisedInvoiceCount = raisedMap.get(Number(plain.feePlanItemId)) || 0;
+    const students = batch?.batchId ? (studentCountMap.get(Number(batch.batchId)) || 0) : 0;
+    const raisedInvoiceCount = plain.feePlanItemId ? (raisedMap.get(Number(plain.feePlanItemId)) || 0) : 0;
 
-    const schedules = plain.billingScheduleItems || [];
+    const hasMultipleSchedules = plain.feePlanItemId
+      ? (scheduleCountByFeePlan.get(Number(plain.feePlanItemId)) || 0) > 1
+      : false;
+    const scheduleBillingRun = hasMultipleSchedules
+      ? `${billingRun} - Schedule #${schedule.billingScheduleItemId}`
+      : billingRun;
 
-    if (schedules.length > 0) {
-      for (const schedule of schedules) {
-        const scheduleBillingRun = schedules.length > 1
-          ? `${billingRun} - Schedule #${schedule.billingScheduleItemId}`
-          : billingRun;
+    const scheduleSubItems = schedule.subItems || [];
+    let perStudent = toMoneyNumber(schedule.amount);
+    if (!perStudent && scheduleSubItems.length > 0) {
+      perStudent = scheduleSubItems.reduce(
+        (sum, sub) => decimalAdd(sum, toMoneyNumber(sub.amount)),
+        0
+      );
+    }
+    const runTotal = decimalMultiply(perStudent, students);
+    const subLines = scheduleSubItems.map(mapScheduleSubItem);
+    const runPlannedDate = schedule.plannedDate || plain.createDate || null;
 
-        const scheduleSubItems = schedule.subItems || [];
-        let perStudent = toMoneyNumber(schedule.amount);
-        if (!perStudent && scheduleSubItems.length > 0) {
-          perStudent = scheduleSubItems.reduce(
-            (sum, sub) => decimalAdd(sum, toMoneyNumber(sub.amount)),
-            0
-          );
-        }
-        const runTotal = decimalMultiply(perStudent, students);
-        const subLines = scheduleSubItems.map(mapScheduleSubItem);
-        const runPlannedDate = schedule.plannedDate || plain.createDate;
+    const paymentTerms = (schedule.paymentTerms || []).map((pt) => ({
+      billingSchedulePaymentTermsId: pt.billingSchedulePaymentTermsId,
+      billingScheduleItemId: pt.billingScheduleItemId,
+      installment: pt.installment,
+      createdAt: pt.createdAt,
+      updatedAt: pt.updatedAt,
+    }));
 
-        const baseItemData = {
-          billingScheduleItemId: schedule.billingScheduleItemId,
-          feePlanItemId: plain.feePlanItemId,
-          billingRun: scheduleBillingRun,
-          name: plain.name,
-          domain: 'Academic',
-          context,
-          feePlanLabel,
-          batchId: Number(batch.batchId),
-          year: yearNum,
-          students,
-          perStudent,
-          runTotal,
-          raisedInvoiceCount,
-          createDate: plain.createDate,
-          plannedDate: runPlannedDate,
-          status: schedule.status || 'pending',
-          publishStatus: plain.publishStatus,
-          lastUpdated: schedule.updatedAt || plain.updatedAt,
-          createdAt: schedule.createdAt || plain.createdAt,
-          subLines,
-          course: {
-            courseId: course.courseId,
-            courseName: course.courseName,
-            courseCode: course.courseCode,
-          },
-          session: {
-            sessionId: session.sessionId,
-            sessionName: session.sessionName,
-          },
-          batch: {
-            batchId: Number(batch.batchId),
-            batch: batchYear,
-            admissionBatch: `${batchYear}-${String(endYear).slice(-2)}`,
-            status: batch.status,
-          },
-        };
-
-        if (schedule.status === 'billed' || raisedInvoiceCount > 0) {
-          const stage =
-            students > 0 && raisedInvoiceCount >= students
-              ? 'Completed'
-              : raisedInvoiceCount > 0
-              ? 'Partially Completed'
-              : schedule.status === 'billed'
-              ? 'Billed'
-              : plain.publishStatus === 'published'
-              ? 'Ready'
-              : 'Draft';
-
-          activeBillingRuns.push({
-            ...baseItemData,
-            stage,
-          });
-        } else if (runPlannedDate && runPlannedDate > today) {
-          upcomingRuns.push({
-            ...baseItemData,
-            stage: 'Upcoming',
-          });
-        } else {
-          const isPast = runPlannedDate && runPlannedDate < today;
-          const stage = isPast ? 'Due for billing' : 'Ready to raise';
-
-          actionRequired.push({
-            ...baseItemData,
-            stage,
-          });
-        }
-      }
-    } else {
-      const perStudent = sumSubItemsAmount(plain.feePlanSubItems);
-      const runTotal = decimalMultiply(perStudent, students);
-      const subLines = (plain.feePlanSubItems || []).map(mapSubItem);
-
-      const baseItemData = {
-        billingScheduleItemId: null,
-        feePlanItemId: plain.feePlanItemId,
-        billingRun,
-        name: plain.name,
-        domain: 'Academic',
-        context,
-        feePlanLabel,
+    const baseItemData = {
+      billingScheduleItemId: schedule.billingScheduleItemId,
+      feePlanItemId: plain.feePlanItemId || null,
+      billingRun: scheduleBillingRun,
+      name: plain.name || null,
+      domain: 'Academic',
+      context,
+      feePlanLabel,
+      batchId: batch?.batchId ? Number(batch.batchId) : null,
+      year: yearNum,
+      students,
+      perStudent,
+      runTotal,
+      raisedInvoiceCount,
+      createDate: plain.createDate || null,
+      plannedDate: runPlannedDate,
+      status: schedule.status || 'pending',
+      lastUpdated: schedule.updatedAt || plain.updatedAt,
+      createdAt: schedule.createdAt || plain.createdAt,
+      subLines,
+      paymentTerms,
+      course: course ? {
+        courseId: course.courseId,
+        courseName: course.courseName,
+        courseCode: course.courseCode,
+      } : null,
+      session: session ? {
+        sessionId: session.sessionId,
+        sessionName: session.sessionName,
+      } : null,
+      batch: batch ? {
         batchId: Number(batch.batchId),
-        year: yearNum,
-        students,
-        perStudent,
-        runTotal,
-        raisedInvoiceCount,
-        createDate: plain.createDate,
-        plannedDate: plain.createDate,
-        status: 'pending',
-        publishStatus: plain.publishStatus,
-        lastUpdated: plain.updatedAt,
-        createdAt: plain.createdAt,
-        subLines,
-        course: {
-          courseId: course.courseId,
-          courseName: course.courseName,
-          courseCode: course.courseCode,
-        },
-        session: {
-          sessionId: session.sessionId,
-          sessionName: session.sessionName,
-        },
-        batch: {
-          batchId: Number(batch.batchId),
-          batch: batchYear,
-          admissionBatch: `${batchYear}-${String(endYear).slice(-2)}`,
-          status: batch.status,
-        },
-      };
+        batch: batchYear,
+        admissionBatch: endYear ? `${batchYear}-${String(endYear).slice(-2)}` : String(batchYear),
+        status: batch.status,
+      } : null,
+    };
 
-      if (raisedInvoiceCount > 0) {
-        const stage =
-          students > 0 && raisedInvoiceCount >= students
-            ? 'Completed'
-            : raisedInvoiceCount > 0
-            ? 'Partially Completed'
-            : plain.publishStatus === 'published'
-            ? 'Ready'
-            : 'Draft';
+    if (schedule.status === 'billed' || raisedInvoiceCount > 0) {
+      const stage =
+        students > 0 && raisedInvoiceCount >= students
+          ? 'Completed'
+          : raisedInvoiceCount > 0
+          ? 'Partially Completed'
+          : schedule.status === 'billed'
+          ? 'Billed'
+          : 'Ready';
 
-        activeBillingRuns.push({
-          ...baseItemData,
-          stage,
-        });
-      } else if (plain.createDate && plain.createDate > today) {
-        upcomingRuns.push({
-          ...baseItemData,
-          stage: 'Upcoming',
-        });
-      } else {
-        const isPast = plain.createDate && plain.createDate < today;
-        const stage = isPast ? 'Due for billing' : 'Ready to raise';
+      activeBillingRuns.push({
+        ...baseItemData,
+        stage,
+      });
+    } else if (runPlannedDate && runPlannedDate > today) {
+      upcomingRuns.push({
+        ...baseItemData,
+        stage: 'Upcoming',
+      });
+    } else {
+      const isPast = runPlannedDate && runPlannedDate < today;
+      const stage = isPast ? 'Due for billing' : 'Ready to raise';
 
-        actionRequired.push({
-          ...baseItemData,
-          stage,
-        });
-      }
+      actionRequired.push({
+        ...baseItemData,
+        stage,
+      });
     }
   }
 
   return {
-    summary: {
-      actionRequiredCount: actionRequired.length,
-      activeBillingRunsCount: activeBillingRuns.length,
-      upcomingRunsCount: upcomingRuns.length,
-      totalRuns: actionRequired.length + activeBillingRuns.length + upcomingRuns.length,
-    },
-    actionRequired,
-    activeBillingRuns,
-    upcomingRuns,
     ActionRequired: actionRequired,
     ActivebillingRuns: activeBillingRuns,
     upcomingBilling: upcomingRuns,

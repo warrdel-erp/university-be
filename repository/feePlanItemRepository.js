@@ -421,6 +421,115 @@ export async function findRaisedInvoicesByFeePlanItemId(feePlanItemId, options =
   });
 }
 
+export async function findBillingScheduleItemsForRuns(filters = {}, options = {}) {
+  const where = { ...buildScope(model.billingScheduleItemsModel) };
+  if (filters.billingScheduleItemId != null) {
+    where.billingScheduleItemId = Number(filters.billingScheduleItemId);
+  }
+  if (filters.status) {
+    where.status = filters.status;
+  }
+
+  const feePlanItemWhere = { ...buildScope(model.feePlanItemModel) };
+  if (filters.batchId != null) {
+    feePlanItemWhere.batchId = Number(filters.batchId);
+  }
+  if (filters.year != null) {
+    feePlanItemWhere.year = Number(filters.year);
+  }
+  if (filters.publishStatus) {
+    feePlanItemWhere.publishStatus = filters.publishStatus;
+  }
+
+  const hasFeePlanFilter =
+    filters.batchId != null ||
+    filters.year != null ||
+    filters.publishStatus != null;
+
+  const hasCourseOrSessionFilter =
+    filters.courseId != null ||
+    filters.sessionId != null;
+
+  const batchWhere = {};
+  if (filters.batchStatus) {
+    batchWhere.status = filters.batchStatus;
+  }
+
+  return scoped(model.billingScheduleItemsModel).findAll({
+    where,
+    attributes: [
+      'billingScheduleItemId',
+      'feePlanItemId',
+      'amount',
+      'plannedDate',
+      'status',
+      'universityId',
+      'instituteId',
+      'createdAt',
+      'updatedAt',
+    ],
+    include: [
+      {
+        model: model.feePlanItemModel,
+        as: 'feePlanItem',
+        where: Object.keys(feePlanItemWhere).length ? feePlanItemWhere : undefined,
+        required: hasFeePlanFilter || hasCourseOrSessionFilter,
+        attributes: FEE_PLAN_ITEM_ATTRS,
+        include: [
+          {
+            model: model.batchModel,
+            as: 'batch',
+            attributes: BATCH_ATTRS,
+            where: Object.keys(batchWhere).length ? batchWhere : undefined,
+            required: hasCourseOrSessionFilter,
+            include: [sessionCourseInclude(filters)],
+          },
+        ],
+      },
+      {
+        model: model.billingScheduleSubItemsModel,
+        as: 'subItems',
+        required: false,
+        where: buildScope(model.billingScheduleSubItemsModel),
+        include: [
+          {
+            model: model.feePlanSubItemsModel,
+            as: 'feePlanSubItem',
+            required: false,
+            where: buildScope(model.feePlanSubItemsModel),
+            include: [
+              {
+                model: model.feeTypeCatalogModel,
+                as: 'feeTypeCatalog',
+                attributes: ['feeTypeCatalogId', 'name', 'ledgerType', 'refundable'],
+                required: false,
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.billingSchedulePaymentTermsModel,
+        as: 'paymentTerms',
+        required: false,
+        attributes: [
+          'billingSchedulePaymentTermsId',
+          'billingScheduleItemId',
+          'installment',
+          'createdAt',
+          'updatedAt',
+        ],
+      },
+    ],
+    order: [
+      ['plannedDate', 'ASC'],
+      ['billingScheduleItemId', 'ASC'],
+    ],
+    transaction: options.transaction,
+  });
+}
+
+
 export async function findFeePlanItemsWithHierarchy(filters = {}, options = {}) {
   const where = { ...buildScope(model.feePlanItemModel) };
   if (filters.batchId != null) {
@@ -460,4 +569,5 @@ export async function findFeePlanItemsWithHierarchy(filters = {}, options = {}) 
     transaction: options.transaction,
   });
 }
+
 
