@@ -1274,6 +1274,9 @@ export async function getBillingRuns(filters = {}) {
 
     if (!batch || !session || !course) continue;
 
+    const schedules = plain.billingScheduleItems || [];
+    if (!schedules.length) continue;
+
     const batchYear = Number(batch.batch);
     const duration = Number(course.courseDuration) || 0;
     const endYear = batchYear + duration;
@@ -1299,104 +1302,29 @@ export async function getBillingRuns(filters = {}) {
     const students = studentCountMap.get(Number(batch.batchId)) || 0;
     const raisedInvoiceCount = raisedMap.get(Number(plain.feePlanItemId)) || 0;
 
-    const schedules = plain.billingScheduleItems || [];
+    for (const schedule of schedules) {
+      if (!schedule.billingScheduleItemId) continue;
 
-    if (schedules.length > 0) {
-      for (const schedule of schedules) {
-        const scheduleBillingRun = schedules.length > 1
-          ? `${billingRun} - Schedule #${schedule.billingScheduleItemId}`
-          : billingRun;
+      const scheduleBillingRun = schedules.length > 1
+        ? `${billingRun} - Schedule #${schedule.billingScheduleItemId}`
+        : billingRun;
 
-        const scheduleSubItems = schedule.subItems || [];
-        let perStudent = toMoneyNumber(schedule.amount);
-        if (!perStudent && scheduleSubItems.length > 0) {
-          perStudent = scheduleSubItems.reduce(
-            (sum, sub) => decimalAdd(sum, toMoneyNumber(sub.amount)),
-            0
-          );
-        }
-        const runTotal = decimalMultiply(perStudent, students);
-        const subLines = scheduleSubItems.map(mapScheduleSubItem);
-        const runPlannedDate = schedule.plannedDate || plain.createDate;
-
-        const baseItemData = {
-          billingScheduleItemId: schedule.billingScheduleItemId,
-          feePlanItemId: plain.feePlanItemId,
-          billingRun: scheduleBillingRun,
-          name: plain.name,
-          domain: 'Academic',
-          context,
-          feePlanLabel,
-          batchId: Number(batch.batchId),
-          year: yearNum,
-          students,
-          perStudent,
-          runTotal,
-          raisedInvoiceCount,
-          createDate: plain.createDate,
-          plannedDate: runPlannedDate,
-          status: schedule.status || 'pending',
-          publishStatus: plain.publishStatus,
-          lastUpdated: schedule.updatedAt || plain.updatedAt,
-          createdAt: schedule.createdAt || plain.createdAt,
-          subLines,
-          course: {
-            courseId: course.courseId,
-            courseName: course.courseName,
-            courseCode: course.courseCode,
-          },
-          session: {
-            sessionId: session.sessionId,
-            sessionName: session.sessionName,
-          },
-          batch: {
-            batchId: Number(batch.batchId),
-            batch: batchYear,
-            admissionBatch: `${batchYear}-${String(endYear).slice(-2)}`,
-            status: batch.status,
-          },
-        };
-
-        if (schedule.status === 'billed' || raisedInvoiceCount > 0) {
-          const stage =
-            students > 0 && raisedInvoiceCount >= students
-              ? 'Completed'
-              : raisedInvoiceCount > 0
-              ? 'Partially Completed'
-              : schedule.status === 'billed'
-              ? 'Billed'
-              : plain.publishStatus === 'published'
-              ? 'Ready'
-              : 'Draft';
-
-          activeBillingRuns.push({
-            ...baseItemData,
-            stage,
-          });
-        } else if (runPlannedDate && runPlannedDate > today) {
-          upcomingRuns.push({
-            ...baseItemData,
-            stage: 'Upcoming',
-          });
-        } else {
-          const isPast = runPlannedDate && runPlannedDate < today;
-          const stage = isPast ? 'Due for billing' : 'Ready to raise';
-
-          actionRequired.push({
-            ...baseItemData,
-            stage,
-          });
-        }
+      const scheduleSubItems = schedule.subItems || [];
+      let perStudent = toMoneyNumber(schedule.amount);
+      if (!perStudent && scheduleSubItems.length > 0) {
+        perStudent = scheduleSubItems.reduce(
+          (sum, sub) => decimalAdd(sum, toMoneyNumber(sub.amount)),
+          0
+        );
       }
-    } else {
-      const perStudent = sumSubItemsAmount(plain.feePlanSubItems);
       const runTotal = decimalMultiply(perStudent, students);
-      const subLines = (plain.feePlanSubItems || []).map(mapSubItem);
+      const subLines = scheduleSubItems.map(mapScheduleSubItem);
+      const runPlannedDate = schedule.plannedDate || plain.createDate;
 
       const baseItemData = {
-        billingScheduleItemId: null,
+        billingScheduleItemId: schedule.billingScheduleItemId,
         feePlanItemId: plain.feePlanItemId,
-        billingRun,
+        billingRun: scheduleBillingRun,
         name: plain.name,
         domain: 'Academic',
         context,
@@ -1408,11 +1336,11 @@ export async function getBillingRuns(filters = {}) {
         runTotal,
         raisedInvoiceCount,
         createDate: plain.createDate,
-        plannedDate: plain.createDate,
-        status: 'pending',
+        plannedDate: runPlannedDate,
+        status: schedule.status || 'pending',
         publishStatus: plain.publishStatus,
-        lastUpdated: plain.updatedAt,
-        createdAt: plain.createdAt,
+        lastUpdated: schedule.updatedAt || plain.updatedAt,
+        createdAt: schedule.createdAt || plain.createdAt,
         subLines,
         course: {
           courseId: course.courseId,
@@ -1431,12 +1359,14 @@ export async function getBillingRuns(filters = {}) {
         },
       };
 
-      if (raisedInvoiceCount > 0) {
+      if (schedule.status === 'billed' || raisedInvoiceCount > 0) {
         const stage =
           students > 0 && raisedInvoiceCount >= students
             ? 'Completed'
             : raisedInvoiceCount > 0
             ? 'Partially Completed'
+            : schedule.status === 'billed'
+            ? 'Billed'
             : plain.publishStatus === 'published'
             ? 'Ready'
             : 'Draft';
@@ -1445,13 +1375,13 @@ export async function getBillingRuns(filters = {}) {
           ...baseItemData,
           stage,
         });
-      } else if (plain.createDate && plain.createDate > today) {
+      } else if (runPlannedDate && runPlannedDate > today) {
         upcomingRuns.push({
           ...baseItemData,
           stage: 'Upcoming',
         });
       } else {
-        const isPast = plain.createDate && plain.createDate < today;
+        const isPast = runPlannedDate && runPlannedDate < today;
         const stage = isPast ? 'Due for billing' : 'Ready to raise';
 
         actionRequired.push({
@@ -1472,9 +1402,6 @@ export async function getBillingRuns(filters = {}) {
     actionRequired,
     activeBillingRuns,
     upcomingRuns,
-    ActionRequired: actionRequired,
-    ActivebillingRuns: activeBillingRuns,
-    upcomingBilling: upcomingRuns,
   };
 }
 

@@ -90,6 +90,7 @@ const billingRunsQuerySchema = z.object({
   sessionId: positiveIntegerId.optional(),
   batchId: positiveIntegerId.optional(),
   year: positiveIntegerId.optional(),
+  billingScheduleItemId: positiveIntegerId.optional(),
   search: z.string().trim().optional(),
 });
 

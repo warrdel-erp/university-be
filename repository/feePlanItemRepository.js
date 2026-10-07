@@ -83,12 +83,16 @@ function feePlanSubItemsInclude() {
   };
 }
 
-function billingScheduleItemsInclude() {
+function billingScheduleItemsInclude(required = false, filters = {}) {
+  const where = { ...buildScope(model.billingScheduleItemsModel) };
+  if (filters.billingScheduleItemId != null) {
+    where.billingScheduleItemId = Number(filters.billingScheduleItemId);
+  }
   return {
     model: model.billingScheduleItemsModel,
     as: 'billingScheduleItems',
-    required: false,
-    where: buildScope(model.billingScheduleItemsModel),
+    required,
+    where,
     include: [
       {
         model: model.billingScheduleSubItemsModel,
@@ -451,7 +455,7 @@ export async function findFeePlanItemsWithHierarchy(filters = {}, options = {}) 
         include: [sessionCourseInclude(filters)],
       },
       feePlanSubItemsInclude(),
-      billingScheduleItemsInclude(),
+      billingScheduleItemsInclude(true, filters),
     ],
     order: [
       ['createDate', 'ASC'],
