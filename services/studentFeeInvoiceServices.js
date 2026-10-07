@@ -243,12 +243,8 @@ export async function generateStudentFeeInvoice({
     const itemBatchId = Number(feePlanItem.batchId);
     const resolvedDueDate = dueDate !== undefined
       ? (dueDate ?? null)
-      : (effectiveScheduleItem?.dueDate ?? feePlanItem.dueDate ?? null);
+      : (effectiveScheduleItem?.dueDate ?? null);
     const resolvedCreateDate = effectiveScheduleItem?.plannedDate || feePlanItem.createDate;
-
-    if (dueDate !== undefined && dueDate !== feePlanItem.dueDate) {
-      await repo.updateFeePlanItemById(feePlanItem.feePlanItemId, { dueDate: resolvedDueDate }, { transaction });
-    }
 
     let targetStudents = [];
     const isSingleStudentMode = studentId != null && !studentIds?.length && !batchId;
