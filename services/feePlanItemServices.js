@@ -659,6 +659,18 @@ export async function createFeePlanItemWithSubItems(body) {
       httpError(`year must be between 1 and ${duration}`, 400);
     }
 
+    const existingForYear = await repo.findFeePlanItemByBatchAndYear(
+      body.batchId,
+      body.year,
+      { transaction },
+    );
+    if (existingForYear) {
+      httpError(
+        `A fee plan item already exists for this batch (ID: ${body.batchId}) and year ${body.year}`,
+        400,
+      );
+    }
+
     await assertFeeTypeCatalogsExist(feeTypeCatalogIds, transaction);
 
     const item = await repo.createFeePlanItem(
@@ -708,7 +720,22 @@ export async function updateFeePlanItem(body) {
     const updates = {};
     if (body.name !== undefined) updates.name = body.name;
     if (body.createDate !== undefined) updates.createDate = body.createDate;
-    if (body.year !== undefined) updates.year = body.year;
+    if (body.year !== undefined) {
+      if (Number(body.year) !== Number(existing.get({ plain: true }).year)) {
+        const existingForYear = await repo.findFeePlanItemByBatchAndYear(
+          existing.get({ plain: true }).batchId,
+          body.year,
+          { excludeItemId: feePlanItemId, transaction },
+        );
+        if (existingForYear) {
+          httpError(
+            `A fee plan item already exists for this batch and year ${body.year}`,
+            400,
+          );
+        }
+      }
+      updates.year = body.year;
+    }
 
     if (Object.keys(updates).length) {
       await repo.updateFeePlanItemById(feePlanItemId, updates, { transaction });

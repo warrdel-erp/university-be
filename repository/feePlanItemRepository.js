@@ -180,6 +180,21 @@ export async function findFeePlanItemById(feePlanItemId, options = {}) {
   });
 }
 
+export async function findFeePlanItemByBatchAndYear(batchId, year, options = {}) {
+  const where = {
+    batchId: Number(batchId),
+    year: Number(year),
+  };
+  if (options.excludeItemId) {
+    where.feePlanItemId = { [Op.ne]: Number(options.excludeItemId) };
+  }
+  return scoped(model.feePlanItemModel).findOne({
+    attributes: ['feePlanItemId', 'batchId', 'year'],
+    where,
+    transaction: options.transaction,
+  });
+}
+
 export async function createFeePlanItem(data, options = {}) {
   return scoped(model.feePlanItemModel).create(data, {
     transaction: options.transaction,
