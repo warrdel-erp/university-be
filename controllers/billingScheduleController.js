@@ -181,6 +181,7 @@ export async function deleteBillingSchedulePaymentTerm(req, res) {
   }
 }
 
+<<<<<<< HEAD
 export async function getBillingScheduleReview(req, res) {
   try {
     const data = await service.getBillingScheduleReview(req.query, req.user);
@@ -188,6 +189,15 @@ export async function getBillingScheduleReview(req, res) {
       res,
       200,
       "Billing schedule review retrieved successfully",
+=======
+export async function getBillingScheduleBatches(req, res) {
+  try {
+    const data = await service.getBillingScheduleBatches(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule batches fetched successfully",
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
       data
     );
   } catch (error) {
@@ -199,6 +209,7 @@ export async function getBillingScheduleReview(req, res) {
   }
 }
 
+<<<<<<< HEAD
 export async function getBillingScheduleView(req, res) {
   try {
     const id =
@@ -210,6 +221,15 @@ export async function getBillingScheduleView(req, res) {
       res,
       200,
       "Billing schedule view retrieved successfully",
+=======
+export async function getBillingScheduleBatchOverview(req, res) {
+  try {
+    const data = await service.getBillingScheduleBatchOverview(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule batch overview fetched successfully",
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
       data
     );
   } catch (error) {
@@ -221,3 +241,26 @@ export async function getBillingScheduleView(req, res) {
   }
 }
 
+<<<<<<< HEAD
+=======
+export async function getBillingScheduleBatchReview(req, res) {
+  try {
+    const data = await service.getBillingScheduleBatchReview(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      "Billing schedule batch review fetched successfully",
+      data
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}
+
+
+
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a

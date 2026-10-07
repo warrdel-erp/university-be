@@ -181,9 +181,7 @@ async function loadFeePlanItemDetail(feePlanItemId, transaction) {
     batchId: plain.batchId,
     year: plain.year,
     name: plain.name,
-    academicPeriod: plain.academicPeriod,
     createDate: plain.createDate,
-    dueDate: plain.dueDate,
     publishStatus: plain.publishStatus,
     publishedAt: plain.publishedAt,
     publishedBy: plain.publishedBy,
@@ -509,9 +507,7 @@ export async function getBatchFeePlanYear(batchId, year) {
       feePlanItemId: item.feePlanItemId,
       year: item.year != null ? Number(item.year) : yearNum,
       name: item.name,
-      academicPeriod: item.academicPeriod,
       createDate: item.createDate,
-      dueDate: item.dueDate,
       publishStatus: item.publishStatus,
       publishedAt: item.publishedAt,
       amount: sumItemsAmount([item]),
@@ -602,9 +598,7 @@ export async function getBatchBillingDetails(batchId, year) {
     plannedFeeReceipts.push({
       feePlanItemId: item.feePlanItemId,
       name: item.name,
-      academicPeriod: item.academicPeriod,
       plannedRaiseDate: item.createDate,
-      dueDate: item.dueDate,
       publishStatus: item.publishStatus,
       amountPerStudent,
       expectedStudents,
@@ -665,6 +659,18 @@ export async function createFeePlanItemWithSubItems(body) {
       httpError(`year must be between 1 and ${duration}`, 400);
     }
 
+    const existingForYear = await repo.findFeePlanItemByBatchAndYear(
+      body.batchId,
+      body.year,
+      { transaction },
+    );
+    if (existingForYear) {
+      httpError(
+        `A fee plan item already exists for this batch (ID: ${body.batchId}) and year ${body.year}`,
+        400,
+      );
+    }
+
     await assertFeeTypeCatalogsExist(feeTypeCatalogIds, transaction);
 
     const item = await repo.createFeePlanItem(
@@ -672,9 +678,7 @@ export async function createFeePlanItemWithSubItems(body) {
         batchId: body.batchId,
         year: body.year,
         name: body.name,
-        academicPeriod: body.academicPeriod,
         createDate: body.createDate,
-        dueDate: body.dueDate ?? null,
         publishStatus: FEE_PLAN_PUBLISH_STATUS.DRAFT,
       },
       { transaction },
@@ -715,10 +719,23 @@ export async function updateFeePlanItem(body) {
 
     const updates = {};
     if (body.name !== undefined) updates.name = body.name;
-    if (body.academicPeriod !== undefined) updates.academicPeriod = body.academicPeriod;
     if (body.createDate !== undefined) updates.createDate = body.createDate;
-    if (body.dueDate !== undefined) updates.dueDate = body.dueDate;
-    if (body.year !== undefined) updates.year = body.year;
+    if (body.year !== undefined) {
+      if (Number(body.year) !== Number(existing.get({ plain: true }).year)) {
+        const existingForYear = await repo.findFeePlanItemByBatchAndYear(
+          existing.get({ plain: true }).batchId,
+          body.year,
+          { excludeItemId: feePlanItemId, transaction },
+        );
+        if (existingForYear) {
+          httpError(
+            `A fee plan item already exists for this batch and year ${body.year}`,
+            400,
+          );
+        }
+      }
+      updates.year = body.year;
+    }
 
     if (Object.keys(updates).length) {
       await repo.updateFeePlanItemById(feePlanItemId, updates, { transaction });
@@ -1165,10 +1182,8 @@ export async function getSingleFeePlanItemDetails(feePlanItemId, options = {}) {
 
   return {
     feePlanItemId: plainItem.feePlanItemId,
-    invoiceName: plainItem.name || plainItem.academicPeriod || "Fee Receipt",
-    academicPeriod: plainItem.academicPeriod,
+    invoiceName: plainItem.name || "Fee Receipt",
     createDate: plainItem.createDate,
-    dueDate: plainItem.dueDate,
     year: plainItem.year,
     publishStatus: plainItem.publishStatus,
     amount: receiptAmount,
@@ -1303,7 +1318,6 @@ export async function getBillingRuns(filters = {}) {
         const runTotal = decimalMultiply(perStudent, students);
         const subLines = scheduleSubItems.map(mapScheduleSubItem);
         const runPlannedDate = schedule.plannedDate || plain.createDate;
-        const runDueDate = schedule.dueDate || plain.dueDate;
 
         const baseItemData = {
           billingScheduleItemId: schedule.billingScheduleItemId,
@@ -1321,7 +1335,6 @@ export async function getBillingRuns(filters = {}) {
           raisedInvoiceCount,
           createDate: plain.createDate,
           plannedDate: runPlannedDate,
-          dueDate: runDueDate,
           status: schedule.status || 'pending',
           publishStatus: plain.publishStatus,
           lastUpdated: schedule.updatedAt || plain.updatedAt,
@@ -1396,7 +1409,6 @@ export async function getBillingRuns(filters = {}) {
         raisedInvoiceCount,
         createDate: plain.createDate,
         plannedDate: plain.createDate,
-        dueDate: plain.dueDate,
         status: 'pending',
         publishStatus: plain.publishStatus,
         lastUpdated: plain.updatedAt,

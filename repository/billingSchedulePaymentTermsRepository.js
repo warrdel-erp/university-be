@@ -13,7 +13,6 @@ function getPaymentTermIncludes() {
         "billingScheduleItemId",
         "feePlanItemId",
         "amount",
-        "dueDate",
         "plannedDate",
         "status",
       ],

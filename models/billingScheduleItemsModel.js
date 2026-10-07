@@ -28,11 +28,6 @@ const billingScheduleItemsModel = sequelize.define(
       defaultValue: 0.0,
       field: "amount",
     },
-    dueDate: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-      field: "due_date",
-    },
     plannedDate: {
       type: DataTypes.DATEONLY,
       allowNull: true,

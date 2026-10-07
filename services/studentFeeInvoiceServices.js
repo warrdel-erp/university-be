@@ -246,9 +246,13 @@ export async function generateStudentFeeInvoice({
       : (effectiveScheduleItem?.dueDate ?? feePlanItem.dueDate ?? null);
     const resolvedCreateDate = effectiveScheduleItem?.plannedDate || feePlanItem.createDate;
 
+<<<<<<< HEAD
     if (dueDate !== undefined && dueDate !== feePlanItem.dueDate) {
       await repo.updateFeePlanItemById(feePlanItem.feePlanItemId, { dueDate: resolvedDueDate }, { transaction });
     }
+=======
+    const resolvedDueDate = dueDate !== undefined ? (dueDate ?? null) : null;
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
 
     let targetStudents = [];
     const isSingleStudentMode = studentId != null && !studentIds?.length && !batchId;
@@ -537,11 +541,9 @@ export async function listAllStudentFeeInvoices({
       invoicesCount = raisedCount;
       feePlanItem = {
         feePlanItemId: plainItem.feePlanItemId,
-        name: plainItem.name || plainItem.academicPeriod || "Fee Receipt",
-        academicPeriod: plainItem.academicPeriod,
+        name: plainItem.name || "Fee Receipt",
         year: plainItem.year,
         createDate: plainItem.createDate,
-        dueDate: plainItem.dueDate,
         publishStatus: plainItem.publishStatus,
         amount: sumSubItemsAmount(plainItem.feePlanSubItems),
       };
@@ -714,10 +716,8 @@ export async function getBillingBatchesOverview(filters = {}) {
       batchStatus = isPastDue ? "Due" : isReadyToRaise ? "Ready to Raise" : "Upcoming";
       nextPlannedInvoice = {
         feePlanItemId: nextUnraisedFeeItem.feePlanItemId,
-        invoiceName: nextUnraisedFeeItem.name || nextUnraisedFeeItem.academicPeriod || "Fee Receipt",
-        academicPeriod: nextUnraisedFeeItem.academicPeriod,
+        invoiceName: nextUnraisedFeeItem.name || "Fee Receipt",
         createDate: nextUnraisedFeeItem.createDate,
-        dueDate: nextUnraisedFeeItem.dueDate,
         status: batchStatus,
       };
     } else if (totalPlannedInvoices > 0) {
@@ -725,18 +725,14 @@ export async function getBillingBatchesOverview(filters = {}) {
       nextPlannedInvoice = {
         feePlanItemId: null,
         invoiceName: "No remaining planned invoices",
-        academicPeriod: null,
         createDate: null,
-        dueDate: null,
         status: "Fully Billed",
       };
     } else {
       nextPlannedInvoice = {
         feePlanItemId: null,
         invoiceName: "No planned invoices",
-        academicPeriod: null,
         createDate: null,
-        dueDate: null,
         status: "Not Configured",
       };
     }

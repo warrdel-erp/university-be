@@ -16,11 +16,9 @@ const COURSE_ATTRS = [
 const FEE_PLAN_ITEM_ATTRS = [
   'feePlanItemId',
   'createDate',
-  'dueDate',
   'batchId',
   'year',
   'name',
-  'academicPeriod',
   'publishStatus',
   'publishedAt',
   'publishedBy',
@@ -178,6 +176,21 @@ export async function findFeePlanItemById(feePlanItemId, options = {}) {
     attributes: FEE_PLAN_ITEM_ATTRS,
     where: { feePlanItemId: Number(feePlanItemId) },
     include: options.withSubItems ? [feePlanSubItemsInclude()] : [],
+    transaction: options.transaction,
+  });
+}
+
+export async function findFeePlanItemByBatchAndYear(batchId, year, options = {}) {
+  const where = {
+    batchId: Number(batchId),
+    year: Number(year),
+  };
+  if (options.excludeItemId) {
+    where.feePlanItemId = { [Op.ne]: Number(options.excludeItemId) };
+  }
+  return scoped(model.feePlanItemModel).findOne({
+    attributes: ['feePlanItemId', 'batchId', 'year'],
+    where,
     transaction: options.transaction,
   });
 }

@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "109d2039-820c-46f8-97fa-f0d5b513ba1d",
-    "name": "examination",
-    "description": "End-to-end Examination Lifecycle Collection (Assessment Plans, Exam Sessions, Slots, Schedules, Room & Seat Allocation, and Student Hall Tickets)",
+    "_postman_id": "univ-v2-fee-plan-item-v1",
+    "name": "Fee Plan Item API",
+    "description": "Fee Plan Item Lifecycle Management API (Batch Overview, Year Breakdown, Billing Details, Billing Runs, Student Breakdown, Create/Update/Delete Fee Plan Items & Sub-Items, Publish/Unpublish, and Publish History).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -12,58 +12,22 @@
     },
     {
       "key": "token",
-      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0yMlQxMDo0NDoxNS4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkwMDc3ODIwLCJleHAiOjE3OTI2Njk4MjB9.qe-ENzjK2YVd7Rp4Mg1RSuo7ylbykmzDiAknyzySPwA"
-    },
-    {
-      "key": "courseId",
-      "value": "34"
-    },
-    {
-      "key": "sessionId",
-      "value": "2"
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0zMFQxNjo0ODo0My4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkxMTg2MDY0LCJleHAiOjE3OTM3NzgwNjR9._HP3B7j7w5jIum0yaJd5LPDYPrKNXHaGFbwX6QTR_hU"
     },
     {
       "key": "batchId",
       "value": "1"
     },
     {
-      "key": "curriculumSubjectTermMappingId",
-      "value": "2"
-    },
-    {
-      "key": "assessmentPlanId",
+      "key": "year",
       "value": "1"
     },
     {
-      "key": "subjectId",
-      "value": "48"
+      "key": "courseId",
+      "value": "36"
     },
     {
-      "key": "mappingId",
-      "value": "1"
-    },
-    {
-      "key": "examSetupTypeId",
-      "value": "46"
-    },
-    {
-      "key": "examinationSessionId",
-      "value": "6"
-    },
-    {
-      "key": "examinationSessionSlotId",
-      "value": "1"
-    },
-    {
-      "key": "examScheduleId",
-      "value": "1"
-    },
-    {
-      "key": "classRoomSectionId",
-      "value": "12"
-    },
-    {
-      "key": "examScheduleRoomCapacityId",
+      "key": "sessionId",
       "value": "1"
     },
     {
@@ -71,1636 +35,713 @@
       "value": "101"
     },
     {
-      "key": "hallTicketId",
+      "key": "feePlanItemId",
       "value": "1"
     },
     {
-      "key": "qr",
-      "value": "e98e4e9f-7d1a-4712-b5e1-cf28a7e0e7a2"
-    },
-    {
-      "key": "page",
+      "key": "feePlanSubitemId",
       "value": "1"
     },
     {
-      "key": "limit",
-      "value": "10"
+      "key": "feeTypeCatalogId",
+      "value": "1"
     },
     {
-      "key": "assessmentPlanComponentId",
+      "key": "billingScheduleItemId",
+      "value": "1"
+    },
+    {
+      "key": "feePlanPublishHistoryId",
       "value": "1"
     }
   ],
   "item": [
     {
-      "name": "1. Assessment Plan",
-      "item": [
-        {
-          "name": "1.1 Get Batch Courses With Sessions",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/batchCoursesSessions?courseId={{courseId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "batchCoursesSessions"
-              ],
-              "query": [
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                }
-              ]
-            }
+      "name": "1. Get Fee Plan Batches (List & Status)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
-        },
-        {
-          "name": "1.2 Create Assessment Plan Subject Mapping",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assessmentPlanId\": {{assessmentPlanId}},\n  \"batchId\": {{batchId}},\n  \"curriculumSubjectTermMappingId\": {{curriculumSubjectTermMappingId}},\n  \"subjectId\": {{subjectId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/batches?courseId={{courseId}}&sessionId={{sessionId}}&search=&status=Draft",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "batches"
+          ],
+          "query": [
+            {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Filter by Course ID"
             },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/subjectMapping",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "subjectMapping"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.3 Get Assessment Plans (List)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan?status=Published&courseId={{courseId}}&regulationId={{regulationId}}&gradingId={{gradingId}}&search=&page={{page}}&limit={{limit}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan"
-              ],
-              "query": [
-                {
-                  "key": "status",
-                  "value": "Published",
-                  "description": "Draft | Published"
-                },
-                {
-                  "key": "courseId",
-                  "value": "{{courseId}}"
-                },
-                {
-                  "key": "regulationId",
-                  "value": "{{regulationId}}"
-                },
-                {
-                  "key": "gradingId",
-                  "value": "{{gradingId}}"
-                },
-                {
-                  "key": "search",
-                  "value": ""
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.4 Get Course Assessment Plan Overview",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/overview?batchId={{batchId}}&term=1&assignmentStatus=all&status=current&search=&assessmentPlanId={{assessmentPlanId}}&subjectId={{subjectId}}&academicRegulationId={{academicRegulationId}}&page={{page}}&limit={{limit}}&pageSize={{pageSize}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}",
-                  "description": "Positive integer batch ID"
-                },
-                {
-                  "key": "term",
-                  "value": "1",
-                  "description": "Term/Semester number (e.g. 1, 2, 3)"
-                },
-                {
-                  "key": "assignmentStatus",
-                  "value": "all",
-                  "description": "Enum: assigned | unassigned | all (default: all)"
-                },
-                {
-                  "key": "status",
-                  "value": "current",
-                  "description": "Enum: current | previous | upcoming"
-                },
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "Search subject name / code"
-                },
-                {
-                  "key": "assessmentPlanId",
-                  "value": "{{assessmentPlanId}}",
-                  "description": "Filter by assessment plan ID"
-                },
-                {
-                  "key": "subjectId",
-                  "value": "{{subjectId}}",
-                  "description": "Filter by subject ID"
-                },
-                {
-                  "key": "academicRegulationId",
-                  "value": "{{academicRegulationId}}",
-                  "description": "Filter by regulation ID"
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}",
-                  "description": "Page number (default: 1)"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}",
-                  "description": "Page limit (default: 10)"
-                },
-                {
-                  "key": "pageSize",
-                  "value": "{{pageSize}}",
-                  "description": "Page size alias"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "1.5 Update Assessment Plan",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"planName\": \"Updated Assessment Plan 2026\",\n  \"planCode\": \"AP-2026-01\",\n  \"description\": \"Updated standard assessment plan with theoretical and practical components\",\n  \"courseId\": {{courseId}},\n  \"regulationId\": 1,\n  \"gradingId\": 1,\n  \"status\": \"Published\",\n  \"isActive\": true,\n  \"components\": [\n    {\n      \"examSetupTypeId\": {{examSetupTypeId}},\n      \"weightagePercentage\": 60,\n      \"maxAssessments\": 1,\n      \"duration\": 180\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "Filter by Session ID"
             },
-            "url": {
-              "raw": "{{baseurl}}/assessmentPlan/{{assessmentPlanId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "assessmentPlan",
-                "{{assessmentPlanId}}"
-              ]
+            {
+              "key": "search",
+              "value": "",
+              "description": "Search by Course Name, Code, Session, or Batch Year"
+            },
+            {
+              "key": "status",
+              "value": "Draft",
+              "description": "Published | In Review | Draft | Setup Required"
             }
-          },
-          "response": []
-        }
-      ]
+          ]
+        },
+        "description": "GET /feePlanItem/batches\n\nReturns all batches grouped with Course, Session, Academic Year context and overall fee plan configuration status."
+      },
+      "response": []
     },
     {
-      "name": "2. Examination Session",
-      "item": [
-        {
-          "name": "2.1 Get Class Section Terms By Setup Type",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/classSectionTerms?examSetupTypeId={{examSetupTypeId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "classSectionTerms"
-              ],
-              "query": [
-                {
-                  "key": "examSetupTypeId",
-                  "value": "{{examSetupTypeId}}"
-                }
-              ]
-            }
+      "name": "2. Get Batch Fee Plan Overview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/batches/overview?batchId={{batchId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "batches",
+            "overview"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Batch ID"
+            }
+          ]
         },
-        {
-          "name": "2.2 Get Examination Structure",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/structure?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "structure"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.3 Create Examination Session",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"assessmentTypeId\": {{examSetupTypeId}},\n  \"sessionName\": \"Midterm Examination Session 2026\",\n  \"status\": \"Draft\",\n  \"terms\": [\n    {\n      \"term\": 1,\n      \"batchId\": {{batchId}},\n      \"includeElectives\": true,\n      \"remarks\": \"Term 1 regular exams\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSession",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.4 Update Examination Session",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"sessionName\": \"Updated Examination Session 2026\",\n  \"allowRevaluation\": true,\n  \"terms\": [\n    {\n      \"term\": 1,\n      \"batchId\": {{batchId}},\n      \"includeElectives\": true,\n      \"remarks\": \"Updated term details\"\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSession?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.5 Get Single Examination Session",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/single?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "single"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.6 Get Answer Sheets",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/answerSheets?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "answerSheets"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.7 Get Mapped Subjects By Session And Term",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/subjects?examinationSessionId={{examinationSessionId}}&selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D&filterStatus=all",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "subjects"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}",
-                  "description": "Positive integer examinationSession ID"
-                },
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]",
-                  "description": "JSON array of {batchId, terms: [number]}"
-                },
-                {
-                  "key": "filterStatus",
-                  "value": "all",
-                  "description": "all | needsScheduling | roomPending | ready | published | notAssigned | assigned | moderationActive | approved"
-                },
-                {
-                  "key": "date",
-                  "value": "2026-05-15",
-                  "disabled": true,
-                  "description": "Optional YYYY-MM-DD date filter"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "2.8 Create Examination Session Term",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"batchId\": {{batchId}},\n  \"term\": 1,\n  \"includeElectives\": true,\n  \"remarks\": \"Term 1 regular exams\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSession/term",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSession",
-                "term"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
+        "description": "GET /feePlanItem/batches/overview?batchId=\n\nReturns batch-level fee plan configuration overview across all course duration years, including summaries, student counts, and status per year."
+      },
+      "response": []
     },
     {
-      "name": "3. Examination Session Slots",
-      "item": [
-        {
-          "name": "3.1 Create Examination Session Slot",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"slotNumber\": 1,\n  \"startTime\": \"09:00:00\",\n  \"endTime\": \"12:00:00\",\n  \"durationMinutes\": 180\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+      "name": "3. Get Batch Year Fee Receipts",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/batches/year?batchId={{batchId}}&year={{year}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "batches",
+            "year"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Batch ID"
             },
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ]
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Required Year (e.g. 1, 2, 3)"
             }
-          },
-          "response": []
+          ]
         },
-        {
-          "name": "3.2 Update Examination Session Slot",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "[\n  {\n    \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n    \"slotNumber\": 1,\n    \"startTime\": \"09:30:00\",\n    \"endTime\": \"12:30:00\",\n    \"durationMinutes\": 180\n  }\n]",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.3 Get Examination Session Slots",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionId={{examinationSessionId}}&selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D&filterStatus=all",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]"
-                },
-                {
-                  "key": "filterStatus",
-                  "value": "all"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.4 Get Single Examination Session Slot",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot/single?examinationSessionSlotId={{examinationSessionSlotId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot",
-                "single"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "{{examinationSessionSlotId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.5 Get Examination Session Slots Count",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot/count?examinationSessionId={{examinationSessionId}}&selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D&filterStatus=all",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot",
-                "count"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]"
-                },
-                {
-                  "key": "filterStatus",
-                  "value": "all"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "3.6 Delete Examination Session Slot",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examinationSessionSlot?examinationSessionSlotId={{examinationSessionSlotId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examinationSessionSlot"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionSlotId",
-                  "value": "{{examinationSessionSlotId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
+        "description": "GET /feePlanItem/batches/year?batchId=&year=\n\nReturns detailed fee receipts configuration for a specific batch and year, including feePlanSubItems lines and catalog details."
+      },
+      "response": []
     },
     {
-      "name": "4. Exam Schedule Mapping & Schedule",
-      "item": [
-        {
-          "name": "4.1 Create Exam Schedule Mapping",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"batchId\": {{batchId}},\n  \"curriculumSubjectTermMappingId\": {{curriculumSubjectTermMappingId}},\n  \"subjectId\": {{subjectId}},\n  \"examDate\": \"2026-10-15\",\n  \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n  \"type\": \"Theory\",\n  \"duration\": \"180\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+      "name": "4. Get Batch Billing Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/batches/billing?batchId={{batchId}}&year={{year}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "batches",
+            "billing"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Batch ID"
             },
-            "url": {
-              "raw": "{{baseurl}}/examStructureScheduleMapping/schedule",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructureScheduleMapping",
-                "schedule"
-              ]
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Required Year (e.g. 1, 2, 3)"
             }
-          },
-          "response": []
+          ]
         },
-        {
-          "name": "4.2 Update Exam Schedule Mapping",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": {{examScheduleId}},\n  \"subjectId\": {{subjectId}},\n  \"batchId\": {{batchId}},\n  \"curriculumSubjectTermMappingId\": {{curriculumSubjectTermMappingId}},\n  \"examinationSessionSlotId\": {{examinationSessionSlotId}},\n  \"examDate\": \"2026-10-16\",\n  \"type\": \"Theory\",\n  \"duration\": \"180\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examStructureScheduleMapping/schedule",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructureScheduleMapping",
-                "schedule"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4.3 Delete Exam Schedule Mapping",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examStructureScheduleMapping/schedule?examScheduleId={{examScheduleId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examStructureScheduleMapping",
-                "schedule"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "{{examScheduleId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4.4 Get Exam Schedules (List)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule?examinationSessionId={{examinationSessionId}}&batchId={{batchId}}&curriculumSubjectTermMappingId={{curriculumSubjectTermMappingId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "batchId",
-                  "value": "{{batchId}}"
-                },
-                {
-                  "key": "curriculumSubjectTermMappingId",
-                  "value": "{{curriculumSubjectTermMappingId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4.5 Get Single Exam Schedule",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/{{examScheduleId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "{{examScheduleId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "4.6 Get Exam Schedule Students",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/students?examScheduleId={{examScheduleId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "students"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "{{examScheduleId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
+        "description": "GET /feePlanItem/batches/billing?batchId=&year=\n\nReturns billing status and billing forecast per receipt for a batch and year, showing raised invoice counts, amounts per student, and expected batch totals."
+      },
+      "response": []
     },
     {
-      "name": "5. Room & Seating Allocation",
-      "item": [
-        {
-          "name": "5.1 Get Available Rooms for Exam Schedule",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/availableRooms?examScheduleId={{examScheduleId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "availableRooms"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "{{examScheduleId}}"
-                }
-              ]
-            }
+      "name": "5. Get Billing Runs",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
-        },
-        {
-          "name": "5.2 Assign Room Capacity to Exam Schedule",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": {{examScheduleId}},\n  \"classRoomSectionIds\": [\n    {\n      \"classRoomSectionId\": {{classRoomSectionId}},\n      \"orderKey\": 1\n    }\n  ]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/billingRuns?courseId={{courseId}}&sessionId={{sessionId}}&batchId={{batchId}}&year={{year}}&search=",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "billingRuns"
+          ],
+          "query": [
+            {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Optional Course ID filter"
             },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/assignRoom",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "assignRoom"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "5.3 Get Room Assignments for Exam Schedule",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/roomAssignments?examScheduleId={{examScheduleId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "roomAssignments"
-              ],
-              "query": [
-                {
-                  "key": "examScheduleId",
-                  "value": "{{examScheduleId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "5.4 Update Room Capacity",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleRoomCapacityId\": {{examScheduleRoomCapacityId}},\n  \"capacity\": 30,\n  \"columns\": 3\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+            {
+              "key": "sessionId",
+              "value": "{{sessionId}}",
+              "description": "Optional Session ID filter"
             },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/roomAssignment",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "roomAssignment"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "5.5 Delete Room Capacity",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/roomAssignment/{{examScheduleRoomCapacityId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "roomAssignment",
-                "{{examScheduleRoomCapacityId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "5.6 Allocate Seats Randomly",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": {{examScheduleId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Optional Batch ID filter"
             },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/allocateSeats/randomly",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "allocateSeats",
-                "randomly"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "5.7 Allocate Seats Ascending",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": {{examScheduleId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Optional Year level filter"
             },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/allocateSeats/ascending",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "allocateSeats",
-                "ascending"
-              ]
+            {
+              "key": "search",
+              "value": "",
+              "description": "Optional text search"
             }
-          },
-          "response": []
+          ]
         },
-        {
-          "name": "5.8 Allocate Seats Descending",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examScheduleId\": {{examScheduleId}}\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/examSchedule/allocateSeats/descending",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "examSchedule",
-                "allocateSeats",
-                "descending"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
+        "description": "GET /feePlanItem/billingRuns\n\nReturns categorized billing runs categorized by stage: actionRequired, activeBillingRuns, and upcomingRuns."
+      },
+      "response": []
     },
     {
-      "name": "6. Student Hall Ticket",
-      "item": [
-        {
-          "name": "6.1 Get Session Students for Examination Session",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/sessionStudents/{{examinationSessionId}}?selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D&page={{page}}&limit={{limit}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "sessionStudents",
-                "{{examinationSessionId}}"
-              ],
-              "query": [
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]"
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}"
-                }
-              ]
-            }
+      "name": "6. Get Student Billing Breakdown / Run Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
-        },
-        {
-          "name": "6.2 Filter Students by Review Reasons",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/reviewFilterStudents?examinationSessionId={{examinationSessionId}}&selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D&filters=ATTENDANCE_PENDING&page={{page}}&limit={{limit}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "reviewFilterStudents"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]"
-                },
-                {
-                  "key": "filters",
-                  "value": "ATTENDANCE_PENDING"
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.3 Get Student Eligibility Details",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/eligibility/{{examinationSessionId}}/{{studentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "eligibility",
-                "{{examinationSessionId}}",
-                "{{studentId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.4 Get Student Review Details",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/reviewDetails/{{studentId}}?examinationSessionId={{examinationSessionId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "reviewDetails",
-                "{{studentId}}"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.5 Get Hall Ticket Eligibility Overview Counts",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/eligibilityOverview/{{examinationSessionId}}?selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "eligibilityOverview",
-                "{{examinationSessionId}}"
-              ],
-              "query": [
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.6 Get Hall Ticket Summary",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/summary/{{examinationSessionId}}?selections=%5B%7B%22batchId%22%3A{{batchId}}%2C%22terms%22%3A%5B1%5D%7D%5D",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "summary",
-                "{{examinationSessionId}}"
-              ],
-              "query": [
-                {
-                  "key": "selections",
-                  "value": "[{\"batchId\":{{batchId}},\"terms\":[1]}]"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.7 Mark Student As Eligible (COE Override)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [{{studentId}}]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/billingRuns/details?batchId={{batchId}}&year={{year}}&studentId={{studentId}}&feePlanItemId={{feePlanItemId}}&billingScheduleItemId={{billingScheduleItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "billingRuns",
+            "details"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Batch ID"
             },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/markAsEligible",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "markAsEligible"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.8 Generate / Regenerate Hall Tickets",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [{{studentId}}]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Required Year"
             },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/generate",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "generate"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.9 Publish Hall Tickets",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"examinationSessionId\": {{examinationSessionId}},\n  \"studentIds\": [{{studentId}}]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Required Student ID"
             },
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/publish",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "publish"
-              ]
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}",
+              "description": "Optional Fee Plan Item ID"
+            },
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}",
+              "description": "Optional Billing Schedule Item ID"
             }
-          },
-          "response": []
+          ]
         },
-        {
-          "name": "6.10 List Hall Tickets",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket?examinationSessionId={{examinationSessionId}}&page={{page}}&limit={{limit}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket"
-              ],
-              "query": [
-                {
-                  "key": "examinationSessionId",
-                  "value": "{{examinationSessionId}}"
-                },
-                {
-                  "key": "page",
-                  "value": "{{page}}"
-                },
-                {
-                  "key": "limit",
-                  "value": "{{limit}}"
-                }
-              ]
-            }
+        "description": "GET /feePlanItem/billingRuns/details\n\nReturns detailed financial breakdown for a specific student, including base fee components, applied fee policies/scholarships, and net payable amount."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get Single Fee Plan Item Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
           },
-          "response": []
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/single?feePlanItemId={{feePlanItemId}}&page=1&limit=10",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "single"
+          ],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}",
+              "description": "Required Fee Plan Item ID"
+            },
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number for students list"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Page size"
+            }
+          ]
         },
+        "description": "GET /feePlanItem/single?feePlanItemId=&page=&limit=\n\nReturns single fee plan item with child sub-items, catalog names, pagination, and list of students with their invoice status."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Create Fee Plan Item (with Sub-Items)",
+      "event": [
         {
-          "name": "6.11 Get Complete Hall Ticket By ID",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "if (jsonData && jsonData.data && jsonData.data.feePlanItemId) {",
+              "    pm.collectionVariables.set('feePlanItemId', jsonData.data.feePlanItemId);",
+              "    if (jsonData.data.feePlanSubItems && jsonData.data.feePlanSubItems.length > 0) {",
+              "        pm.collectionVariables.set('feePlanSubitemId', jsonData.data.feePlanSubItems[0].feePlanSubitemId);",
+              "    }",
+              "}"
             ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/{{hallTicketId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "{{hallTicketId}}"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.12 Get Hall Ticket By QR",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/byQr?qr={{qr}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "byQr"
-              ],
-              "query": [
-                {
-                  "key": "qr",
-                  "value": "{{qr}}"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "6.13 Block / Cancel Hall Ticket",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/studentHallTicket/block/{{hallTicketId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "studentHallTicket",
-                "block",
-                "{{hallTicketId}}"
-              ]
-            }
-          },
-          "response": []
+            "type": "text/javascript"
+          }
         }
-      ]
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"batchId\": {{batchId}},\n  \"year\": {{year}},\n  \"name\": \"Admission / Semester 1 Fee\",\n  \"createDate\": \"2026-08-01\",\n  \"feePlanSubItems\": [\n    {\n      \"feeTypeCatalogId\": {{feeTypeCatalogId}},\n      \"amount\": \"50000.00\",\n      \"isMainSubItem\": true\n    },\n    {\n      \"feeTypeCatalogId\": 2,\n      \"amount\": \"15000.00\",\n      \"isMainSubItem\": false\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem"
+          ]
+        },
+        "description": "POST /feePlanItem\n\nCreates a new planned fee receipt item for a batch and year, along with its component sub-items in an atomic transaction."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Update Fee Plan Item",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"name\": \"Updated Semester 1 Tuition Fee\",\n  \"createDate\": \"2026-08-15\",\n  \"year\": {{year}},\n  \"feePlanSubItems\": [\n    {\n      \"feeTypeCatalogId\": {{feeTypeCatalogId}},\n      \"amount\": \"55000.00\",\n      \"isMainSubItem\": true\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem"
+          ]
+        },
+        "description": "PATCH /feePlanItem\n\nUpdates an un-published fee plan item's details (name, createDate, year) and synchronizes sub-item components."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Delete Fee Plan Item",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem?feePlanItemId={{feePlanItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem"
+          ],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}"
+            }
+          ]
+        },
+        "description": "DELETE /feePlanItem?feePlanItemId=\n\nDeletes a draft fee plan item and its associated sub-items."
+      },
+      "response": []
+    },
+    {
+      "name": "11. Add Fee Plan Sub-Item",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"feeTypeCatalogId\": {{feeTypeCatalogId}},\n  \"amount\": \"10000.00\",\n  \"isMainSubItem\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/subItem",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "subItem"
+          ]
+        },
+        "description": "POST /feePlanItem/subItem\n\nAppends a new component sub-item to an existing draft fee plan item."
+      },
+      "response": []
+    },
+    {
+      "name": "12. Delete Fee Plan Sub-Item",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/subItem?feePlanSubitemId={{feePlanSubitemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "subItem"
+          ],
+          "query": [
+            {
+              "key": "feePlanSubitemId",
+              "value": "{{feePlanSubitemId}}"
+            }
+          ]
+        },
+        "description": "DELETE /feePlanItem/subItem?feePlanSubitemId=\n\nDeletes an individual component sub-item line."
+      },
+      "response": []
+    },
+    {
+      "name": "13. Publish Batch Fee Plan Year",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"batchId\": {{batchId}},\n  \"year\": {{year}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/publish",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "publish"
+          ]
+        },
+        "description": "PATCH /feePlanItem/publish\n\nPublishes all fee plan items for a batch and year, recording published_at, published_by and an entry in fee_plan_publish_history."
+      },
+      "response": []
+    },
+    {
+      "name": "14. Unpublish Batch Fee Plan Year",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"batchId\": {{batchId}},\n  \"year\": {{year}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/unpublish",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "unpublish"
+          ]
+        },
+        "description": "PATCH /feePlanItem/unpublish\n\nReverts a published fee plan year back to draft state (blocked if raised invoices exist for the year)."
+      },
+      "response": []
+    },
+    {
+      "name": "15. Get Fee Plan Publish History",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/publishHistory?batchId={{batchId}}&year={{year}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "publishHistory"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Batch ID"
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Optional Year filter"
+            }
+          ]
+        },
+        "description": "GET /feePlanItem/publishHistory?batchId=&year=\n\nRetrieves audit trail log of publish / unpublish actions for a batch and year."
+      },
+      "response": []
+    },
+    {
+      "name": "16. Get Single Fee Plan Publish History Entry",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePlanItem/publishHistory/single?feePlanPublishHistoryId={{feePlanPublishHistoryId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "feePlanItem",
+            "publishHistory",
+            "single"
+          ],
+          "query": [
+            {
+              "key": "feePlanPublishHistoryId",
+              "value": "{{feePlanPublishHistoryId}}",
+              "description": "Required Publish History ID"
+            }
+          ]
+        },
+        "description": "GET /feePlanItem/publishHistory/single?feePlanPublishHistoryId=\n\nRetrieves single audit record of fee plan publish/unpublish action by ID."
+      },
+      "response": []
     }
   ]
 }

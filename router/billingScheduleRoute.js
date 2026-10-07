@@ -39,7 +39,6 @@ const paymentTermInputSchema = z.object({
 const singleScheduleInputSchema = z.object({
   feePlanItemId: positiveIntegerId,
   amount: moneyNumber.optional(),
-  dueDate: dateOnly.optional().nullable(),
   plannedDate: dateOnly.optional().nullable(),
   status: statusEnum.optional().default("pending"),
   subItems: z.array(subItemInputSchema).optional(),
@@ -48,18 +47,21 @@ const singleScheduleInputSchema = z.object({
 });
 
 const createBillingScheduleSchema = z.union([
-  z.array(singleScheduleInputSchema).min(1, "At least one billing schedule item is required"),
+  z
+    .array(singleScheduleInputSchema)
+    .min(1, "At least one billing schedule item is required"),
   singleScheduleInputSchema,
   z.object({
     feePlanItemId: positiveIntegerId.optional(),
-    schedules: z.array(singleScheduleInputSchema).min(1, "At least one billing schedule item is required"),
+    schedules: z
+      .array(singleScheduleInputSchema)
+      .min(1, "At least one billing schedule item is required"),
   }),
 ]);
 
 const updateBillingScheduleSchema = z.object({
   billingScheduleItemId: positiveIntegerId,
   amount: moneyNumber.optional(),
-  dueDate: dateOnly.optional().nullable(),
   plannedDate: dateOnly.optional().nullable(),
   status: statusEnum.optional(),
   subItems: z.array(subItemInputSchema).optional(),
@@ -72,6 +74,21 @@ const updateStatusSchema = z.object({
 
 const singleScheduleQuerySchema = z.object({
   billingScheduleItemId: positiveIntegerId,
+});
+
+const listBatchesQuerySchema = z
+  .object({
+    search: z.string().trim().optional(),
+    status: z.string().trim().optional(),
+    courseId: positiveIntegerId.optional(),
+    sessionId: positiveIntegerId.optional(),
+    batchId: positiveIntegerId.optional(),
+  })
+  .passthrough();
+
+const batchOverviewQuerySchema = z.object({
+  batchId: positiveIntegerId,
+  year: positiveIntegerId.optional(),
 });
 
 const listScheduleQuerySchema = z.object({
@@ -102,6 +119,7 @@ const deletePaymentTermQuerySchema = z.object({
   billingSchedulePaymentTermsId: positiveIntegerId,
 });
 
+<<<<<<< HEAD
 const reviewScheduleQuerySchema = z
   .object({
     feePlanItemId: positiveIntegerId.optional(),
@@ -116,6 +134,39 @@ const reviewScheduleQuerySchema = z
       path: ["feePlanItemId"],
     }
   );
+=======
+const batchReviewQuerySchema = z
+  .object({
+    batchId: positiveIntegerId,
+    year: positiveIntegerId,
+  })
+  .passthrough();
+
+// 1. Get batches overview by year by query key batchId
+router.get(
+  "/batches/overview",
+  userAuth,
+  validate({ query: batchOverviewQuerySchema }),
+  controller.getBillingScheduleBatchOverview,
+);
+
+// 2. Get all batches grouped course-wise
+router.get(
+  "/batches",
+  userAuth,
+  validate({ query: listBatchesQuerySchema }),
+  controller.getBillingScheduleBatches,
+);
+
+// 3. Get detailed schedule review for a batch and year
+router.get(
+  "/batches/review",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN.value),
+  validate({ query: batchReviewQuerySchema }),
+  controller.getBillingScheduleBatchReview,
+);
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
 
 // Endpoints
 router.post(
@@ -123,7 +174,7 @@ router.post(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_ADD.value),
   validate({ body: createBillingScheduleSchema }),
-  controller.createBillingSchedule
+  controller.createBillingSchedule,
 );
 
 router.get(
@@ -131,7 +182,7 @@ router.get(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: listScheduleQuerySchema }),
-  controller.getBillingSchedules
+  controller.getBillingSchedules,
 );
 
 router.get(
@@ -155,7 +206,11 @@ router.get(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value),
   validate({ query: singleScheduleQuerySchema }),
+<<<<<<< HEAD
   controller.getBillingScheduleView
+=======
+  controller.getSingleBillingSchedule,
+>>>>>>> 0b04d5972c5f6fb82b8bd854632601bd2e0b8d0a
 );
 
 router.patch(
@@ -163,7 +218,7 @@ router.patch(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value),
   validate({ body: updateBillingScheduleSchema }),
-  controller.updateBillingSchedule
+  controller.updateBillingSchedule,
 );
 
 router.patch(
@@ -171,7 +226,7 @@ router.patch(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value),
   validate({ body: updateStatusSchema }),
-  controller.updateBillingScheduleStatus
+  controller.updateBillingScheduleStatus,
 );
 
 router.delete(
@@ -179,7 +234,7 @@ router.delete(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value),
   validate({ query: singleScheduleQuerySchema }),
-  controller.deleteBillingSchedule
+  controller.deleteBillingSchedule,
 );
 
 router.post(
@@ -187,7 +242,7 @@ router.post(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_ADD.value),
   validate({ body: addSubItemSchema }),
-  controller.addBillingScheduleSubItem
+  controller.addBillingScheduleSubItem,
 );
 
 router.delete(
@@ -195,15 +250,16 @@ router.delete(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value),
   validate({ query: deleteSubItemQuerySchema }),
-  controller.deleteBillingScheduleSubItem
+  controller.deleteBillingScheduleSubItem,
 );
 
+// Create payment terms (Add one or many payment terms)
 router.post(
   "/paymentTerm",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_ADD.value),
   validate({ body: addPaymentTermSchema }),
-  controller.addBillingSchedulePaymentTerm
+  controller.addBillingSchedulePaymentTerm,
 );
 
 router.delete(
@@ -211,7 +267,7 @@ router.delete(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value),
   validate({ query: deletePaymentTermQuerySchema }),
-  controller.deleteBillingSchedulePaymentTerm
+  controller.deleteBillingSchedulePaymentTerm,
 );
 
 export default router;
