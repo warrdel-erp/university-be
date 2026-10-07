@@ -143,88 +143,10 @@ function calculateTreatmentsForStudent(
     }
   }
 
-  // 8. Calculate Final Billable Amount
-  let finalBillableAmount = decimalSubtract(standardFee, totalDiscount);
-  if (totalAddCharge > 0) {
-    finalBillableAmount = decimalAdd(finalBillableAmount, totalAddCharge);
-  }
-  if (finalBillableAmount < 0) {
-    finalBillableAmount = 0;
-  }
-
-  // 9. Payment Arrangement
-  let paymentArrangement = {
-    title: "Payment Arrangement",
-    terms: [],
-  };
-
-  if (schedule && Array.isArray(schedule.paymentTerms) && schedule.paymentTerms.length > 0) {
-    const sortedTerms = [...schedule.paymentTerms].sort((a, b) => a.installment - b.installment);
-    const n = sortedTerms.length;
-    const structurePercent = Math.floor(100 / n);
-    const structureArr = Array(n).fill(`${structurePercent}%`);
-    if (n * structurePercent < 100) {
-      structureArr[n - 1] = `${100 - (n - 1) * structurePercent}%`;
-    }
-    const structure = structureArr.join(" \u00b7 ");
-    const dueSchedule = sortedTerms.map((t, idx) => `+${15 + idx * 30} days`);
-
-    paymentArrangement.terms.push({
-      paymentTerm: `${n} Instalments`,
-      structure,
-      dueSchedule,
-    });
-  } else {
-    paymentArrangement.terms.push({
-      paymentTerm: `1 Instalment`,
-      structure: `100%`,
-      dueSchedule: [],
-    });
-  }
-
-  // 10. Format response exactly matching the UI layout
   return {
-    student: {
-      studentId: student.studentId,
-      name: studentName,
-      scholarNumber,
-      enrollNumber: student.enrollNumber || null,
-      courseName,
-      batch: admissionBatch,
-      context,
-      status,
-      statusColor,
-    },
-    billingSchedule: schedule
-      ? {
-        billingScheduleItemId: effectiveBillingScheduleItemId,
-        feePlanItemId: effectiveFeePlanItemId,
-        plannedDate: schedule.plannedDate || feePlanItem?.createDate || null,
-        status: schedule.status || "pending",
-        amount: standardFee,
-      }
-      : null,
-    feePlanItem: feePlanItem
-      ? {
-        feePlanItemId: effectiveFeePlanItemId,
-        name: feePlanItem.name || null,
-        year: feePlanItem.year != null ? Number(feePlanItem.year) : null,
-        publishStatus: feePlanItem.publishStatus || null,
-      }
-      : null,
-    baseCharges: {
-      title: schedule ? "Base Charges (from billing schedule)" : "Base Charges (from fee plan)",
-      components: baseComponents,
-      standardFee,
-    },
-    appliedTreatments: {
-      title: "Applied Treatments",
-      treatments,
-      totalDiscount,
-      totalAddCharge,
-    },
-    paymentArrangement,
-    finalBillableAmount,
+    treatments,
+    totalDiscount,
+    totalAddCharge,
   };
 }
 
@@ -371,6 +293,36 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
       };
     });
     standardFee = decimalSum(baseComponents.map((c) => c.amount));
+  }
+
+  // 4.5. Pre-calculate Payment Arrangement once for the batch
+  let paymentArrangement = {
+    title: "Payment Arrangement",
+    terms: [],
+  };
+
+  if (schedule && Array.isArray(schedule.paymentTerms) && schedule.paymentTerms.length > 0) {
+    const sortedTerms = [...schedule.paymentTerms].sort((a, b) => a.installment - b.installment);
+    const n = sortedTerms.length;
+    const structurePercent = Math.floor(100 / n);
+    const structureArr = Array(n).fill(`${structurePercent}%`);
+    if (n * structurePercent < 100) {
+      structureArr[n - 1] = `${100 - (n - 1) * structurePercent}%`;
+    }
+    const structure = structureArr.join(" \u00b7 ");
+    const dueSchedule = sortedTerms.map((t, idx) => `+${15 + idx * 30} days`);
+
+    paymentArrangement.terms.push({
+      paymentTerm: `${n} Instalments`,
+      structure,
+      dueSchedule,
+    });
+  } else {
+    paymentArrangement.terms.push({
+      paymentTerm: `1 Instalment`,
+      structure: `100%`,
+      dueSchedule: [],
+    });
   }
 
   // 5. Fetch students in the batch
@@ -527,6 +479,7 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
         totalDiscount,
         totalAddCharge,
       },
+      paymentArrangement,
       finalBillableAmount,
     };
   });
@@ -620,11 +573,196 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
             isInvoiceRaised: targetStudent.isInvoiceRaised,
           },
           appliedTreatments: targetStudent.appliedTreatments,
+          paymentArrangement: targetStudent.paymentArrangement,
           finalBillableAmount: targetStudent.finalBillableAmount,
         }
         : {}),
       students: paginatedStudents,
     },
     paginationData,
+  };
+}
+
+export async function getSingleStudentBillingBreakdown(queryParams = {}, authUser = {}) {
+  const { studentId, billingScheduleItemId } = queryParams;
+
+  if (!studentId || !billingScheduleItemId) {
+    throw httpError("Both studentId and billingScheduleItemId are required", 400);
+  }
+
+  const effectiveBillingScheduleItemId = Number(billingScheduleItemId);
+
+  // 1. Fetch Student Details
+  const studentRow = await repo.findStudentById(studentId);
+  if (!studentRow) {
+    throw httpError(`Student with ID ${studentId} not found`, 404);
+  }
+  const student = toPlain(studentRow);
+
+  // 2. Fetch Billing Schedule
+  const scheduleRow = await repo.findBillingScheduleItemWithDetails(effectiveBillingScheduleItemId);
+  if (!scheduleRow) {
+    throw httpError(`Billing schedule item with ID ${effectiveBillingScheduleItemId} not found`, 404);
+  }
+  const schedule = toPlain(scheduleRow);
+  const feePlanItem = schedule.feePlanItem || null;
+  const targetYear = feePlanItem?.year != null ? Number(feePlanItem.year) : null;
+
+  // 3. Resolve Batch details
+  const targetBatchId = student.batchId;
+  let batch = feePlanItem?.batch || null;
+  if (!batch && targetBatchId) {
+    const batchRow = await repo.findBatchById(targetBatchId);
+    batch = toPlain(batchRow);
+  }
+
+  // 4. Calculate Base Charges
+  let baseComponents = [];
+  let standardFee = 0;
+
+  if (schedule && Array.isArray(schedule.subItems) && schedule.subItems.length > 0) {
+    baseComponents = schedule.subItems.map((sub) => {
+      const planSub = sub.feePlanSubItem || {};
+      const catalog = planSub.feeTypeCatalog || {};
+      return {
+        billingScheduleSubItemId: sub.billingScheduleSubItemId,
+        feePlanSubItemId: sub.feePlanSubItemId,
+        feeTypeCatalogId: catalog.feeTypeCatalogId || planSub.feeTypeId,
+        name: catalog.name || "Fee Component",
+        amount: toMoneyNumber(sub.amount),
+        refundable: catalog.refundable === true || catalog.refundable === 1,
+        isMainSubItem: planSub.isMainSubItem === true || planSub.isMainSubItem === 1,
+      };
+    });
+    standardFee = toMoneyNumber(schedule.amount);
+    if (!standardFee && baseComponents.length > 0) {
+      standardFee = decimalSum(baseComponents.map((c) => c.amount));
+    }
+  }
+
+  // 5. Fetch Policies (Batch level + Student specific)
+  const batchPoliciesRows = await repo.findFeePoliciesForBatchAndYear({
+    batchId: targetBatchId,
+    courseId: student.courseId,
+    year: targetYear,
+    instituteId: schedule.instituteId || authUser?.instituteId,
+  });
+  const batchPolicies = batchPoliciesRows.map(toPlain);
+
+  const studentPolicyRows = await repo.findFeePoliciesForStudents([Number(studentId)]);
+  const studentPoliciesMap = new Map();
+  studentPoliciesMap.set(Number(studentId), studentPolicyRows.map(row => toPlain(row).policy).filter(Boolean));
+
+  // 6. Fetch Existing Invoice
+  const invoiceRows = feePlanItem?.feePlanItemId ? await repo.findInvoicesForPlanAndStudents({
+    feePlanItemId: feePlanItem.feePlanItemId,
+    studentIds: [Number(studentId)],
+  }) : [];
+  const existingInvoice = invoiceRows.length > 0 ? toPlain(invoiceRows[0]) : null;
+
+  // 7. Calculate Treatments using existing helper
+  const { treatments, totalDiscount, totalAddCharge } = calculateTreatmentsForStudent(
+    student,
+    {
+      baseComponents,
+      batchPolicies,
+      studentPoliciesMap,
+      existingInvoice,
+    }
+  );
+
+  let finalBillableAmount = decimalSubtract(standardFee, totalDiscount);
+  if (totalAddCharge > 0) {
+    finalBillableAmount = decimalAdd(finalBillableAmount, totalAddCharge);
+  }
+  if (finalBillableAmount < 0) {
+    finalBillableAmount = 0;
+  }
+
+  // 8. Format Student Status
+  let status = "Ready";
+  let statusColor = "green";
+  if (existingInvoice) {
+    status = existingInvoice.paymentStatus === "paid" ? "Paid" : "Billed";
+    statusColor = existingInvoice.paymentStatus === "paid" ? "green" : "blue";
+  } else if (schedule?.status === "billed") {
+    status = "Billed";
+    statusColor = "blue";
+  }
+
+  const course = student.course || {};
+  const batchYear = batch?.batch ? Number(batch.batch) : null;
+  const courseDuration = Number(course.courseDuration) || 0;
+  const endYear = batchYear && courseDuration ? batchYear + courseDuration : null;
+  const admissionBatch = batchYear
+    ? endYear
+      ? `${batchYear}–${String(endYear).slice(-2)}`
+      : `${batchYear}`
+    : "";
+
+  const scholarNumber = student.scholarNumber || student.enrollNumber || student.admissionNumber || "";
+  const studentName = formatStudentFullName(student);
+  const courseName = course.courseName || "";
+  const studentContext = [
+    scholarNumber,
+    [courseName, admissionBatch].filter(Boolean).join(" "),
+  ].filter(Boolean).join(" · ");
+
+  // 9. Payment Arrangement
+  let paymentArrangement = {
+    title: "Payment Arrangement",
+    terms: [],
+  };
+
+  if (schedule && Array.isArray(schedule.paymentTerms) && schedule.paymentTerms.length > 0) {
+    const sortedTerms = [...schedule.paymentTerms].sort((a, b) => a.installment - b.installment);
+    const n = sortedTerms.length;
+    const structurePercent = Math.floor(100 / n);
+    const structureArr = Array(n).fill(`${structurePercent}%`);
+    if (n * structurePercent < 100) {
+      structureArr[n - 1] = `${100 - (n - 1) * structurePercent}%`;
+    }
+    const structure = structureArr.join(" \u00b7 ");
+    const dueSchedule = sortedTerms.map((t, idx) => `+${15 + idx * 30} days`);
+
+    paymentArrangement.terms.push({
+      paymentTerm: `${n} Instalments`,
+      structure,
+      dueSchedule,
+    });
+  } else {
+    paymentArrangement.terms.push({
+      paymentTerm: `1 Instalment`,
+      structure: `100%`,
+      dueSchedule: [],
+    });
+  }
+
+  // 10. Return final structure
+  return {
+    student: {
+      name: studentName,
+      context: studentContext,
+      status,
+      statusColor,
+    },
+    baseCharges: {
+      title: "Base Charges (from billing schedule)",
+      components: baseComponents.map(c => ({
+        feeComponent: c.name,
+        amount: c.amount
+      })),
+      standardFee,
+    },
+    appliedTreatments: {
+      title: "Applied Treatments",
+      treatments: treatments.map(t => ({
+        name: t.name,
+        rule: t.rule,
+        amount: t.amount
+      }))
+    },
+    paymentArrangement,
+    finalBillableAmount
   };
 }

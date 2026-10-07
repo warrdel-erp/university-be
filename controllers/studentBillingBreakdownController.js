@@ -25,3 +25,21 @@ export async function getStudentBillingBreakdown(req, res) {
   }
 }
 
+
+export async function getSingleStudentBillingBreakdown(req, res) {
+  try {
+    const result = await service.getSingleStudentBillingBreakdown(req.query, req.user);
+    return SuccessResponse(
+      res,
+      200,
+      "Student billing breakdown retrieved successfully",
+      result
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
+  }
+}

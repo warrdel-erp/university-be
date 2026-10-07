@@ -2,7 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../utility/validation.js";
 import userAuth from "../middleware/authUser.js";
-import { getStudentBillingBreakdown } from "../controllers/studentBillingBreakdownController.js";
+import { getStudentBillingBreakdown, getSingleStudentBillingBreakdown } from "../controllers/studentBillingBreakdownController.js";
 
 const router = Router();
 
@@ -28,11 +28,16 @@ export const studentBillingBreakdownQuerySchema = z
     }
   );
 
+const singleStudentBillingBreakdownQuerySchema = z.object({
+  billingScheduleItemId: positiveIntegerId,
+  studentId: positiveIntegerId,
+});
+
 router.get(
   "/",
   userAuth,
-  validate({ query: studentBillingBreakdownQuerySchema }),
-  getStudentBillingBreakdown
+  validate({ query: singleStudentBillingBreakdownQuerySchema }),
+  getSingleStudentBillingBreakdown
 );
 
 router.get(
