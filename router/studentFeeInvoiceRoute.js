@@ -79,14 +79,16 @@ const studentIdQuerySchema = z.object({
 const listAllInvoicesQuerySchema = z
   .object({
     feePlanItemId: positiveIntegerId.optional(),
-    status: z.enum(["all", "pending", "completed"]).optional(),
-    paymentTab: z.enum(["all", "pending", "completed"]).optional(),
+    status: z.enum(["all", "pending", "completed", "paid", "unpaid", "partial"]).optional(),
+    paymentTab: z.enum(["all", "pending", "completed", "paid", "unpaid", "partial"]).optional(),
+    search: z.string().optional(),
     page: positiveIntegerId.optional(),
     limit: positiveIntegerId.optional(),
   })
   .transform((d) => ({
     feePlanItemId: d.feePlanItemId,
     status: d.status ?? d.paymentTab ?? "all",
+    search: d.search ? d.search.trim() : undefined,
     page: d.page,
     limit: d.limit,
   }));

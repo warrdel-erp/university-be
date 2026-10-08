@@ -56,10 +56,11 @@ export async function listStudentFeeInvoicesByStudent(req, res) {
 
 export async function listAllStudentFeeInvoices(req, res) {
   try {
-    const { feePlanItemId, status, page, limit } = req.query;
+    const { feePlanItemId, status, search, page, limit } = req.query;
     const data = await studentFeeInvoiceService.listAllStudentFeeInvoices({
       feePlanItemId,
       status,
+      search,
       page,
       limit,
     });
