@@ -410,6 +410,22 @@ export async function getTimeTableStructureDetailsById(timeTableNameId, options 
     });
 }
 
+export async function getStructureVariantsBySourceId(sourceTimeTableNameId, options = {}) {
+    return await scoped(model.timeTableStructureModel).findAll({
+        where: { sourceTimeTableNameId: Number(sourceTimeTableNameId) },
+        attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
+        include: [
+            {
+                model: model.timeTableStructurePeriodsModel,
+                as: "timeTableName",
+                attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+            },
+        ],
+        order: [["timeTableNameId", "ASC"]],
+        transaction: options.transaction,
+    });
+}
+
 export async function getStructureMappingPrintRows(filters = {}) {
     const where = {};
     if (filters.timetableStructureCourseMapperId != null) {
