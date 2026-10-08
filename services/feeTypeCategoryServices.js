@@ -24,7 +24,7 @@ export async function addFeeTypeCategory(body) {
 
 export async function listFeeTypeCategories() {
   return sequelize.transaction(async (transaction) =>
-    feeTypeCategoryRepo.findFeeTypeCategoriesByInstitute({ transaction })
+    feeTypeCategoryRepo.findFeeTypeCategories({ transaction })
   );
 }
 
@@ -41,7 +41,7 @@ export async function updateFeeTypeCategory(feeTypeCategoryId, body) {
       transaction,
     });
     if (!affected) {
-      throw new Error("Fee type category not found or not in your institute");
+      throw new Error("Fee type category not found or not in your university");
     }
     return feeTypeCategoryRepo.findFeeTypeCategoryById(feeTypeCategoryId, { transaction });
   });
@@ -59,7 +59,7 @@ export async function deleteFeeTypeCategory(feeTypeCategoryId) {
     }
     const ok = await feeTypeCategoryRepo.deleteFeeTypeCategory(feeTypeCategoryId, { transaction });
     if (!ok) {
-      throw new Error("Fee type category not found or not in your institute");
+      throw new Error("Fee type category not found or not in your university");
     }
   });
 

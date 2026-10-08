@@ -315,6 +315,35 @@ export async function countRaisedInvoicesByFeePlanItemIds(feePlanItemIds) {
   return countMap;
 }
 
+/** Raised student invoices per billing_schedule_item_id. */
+export async function countRaisedInvoicesByBillingScheduleItemIds(billingScheduleItemIds) {
+  const countMap = new Map();
+  if (!billingScheduleItemIds || !billingScheduleItemIds.length) {
+    return countMap;
+  }
+
+  const rows = await scoped(model.studentFeeInvoiceModel).findAll({
+    attributes: [
+      'billingScheduleItemId',
+      [fn('COUNT', col('student_fee_invoice_id')), 'raisedCount'],
+    ],
+    where: {
+      billingScheduleItemId: { [Op.in]: billingScheduleItemIds },
+      status: 'generated',
+    },
+    group: ['billingScheduleItemId'],
+    raw: true,
+  });
+
+  for (const row of rows) {
+    const id = row.billingScheduleItemId ?? row.billing_schedule_item_id;
+    if (id != null) {
+      countMap.set(Number(id), Number(row.raisedCount) || 0);
+    }
+  }
+  return countMap;
+}
+
 export async function findFeePlanItemsByBatchAndYear(batchId, year, options = {}) {
   return scoped(model.feePlanItemModel).findAll({
     attributes: FEE_PLAN_ITEM_ATTRS,

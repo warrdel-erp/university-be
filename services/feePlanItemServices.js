@@ -1251,11 +1251,21 @@ export async function getBillingRuns(filters = {}) {
   const activeAcademicYear = academicCtx?.academicYear;
   const activeAcademicYearText = activeAcademicYear?.academicYear || `${activeBatchYear}-${String(activeBatchYear + 1).slice(-2)}`;
 
-  const feePlanItemIds = items.map((it) => Number(it.feePlanItemId));
   const batchIds = Array.from(new Set(items.map((it) => Number(it.batchId)).filter(Boolean)));
+  const billingScheduleItemIds = [];
+  for (const rawItem of items) {
+    const plain = rawItem.get ? rawItem.get({ plain: true }) : rawItem;
+    for (const schedule of plain.billingScheduleItems || []) {
+      if (schedule.billingScheduleItemId) {
+        billingScheduleItemIds.push(Number(schedule.billingScheduleItemId));
+      }
+    }
+  }
 
-  const [raisedMap, studentCountMap] = await Promise.all([
-    repo.countRaisedInvoicesByFeePlanItemIds(feePlanItemIds),
+  const uniqueScheduleItemIds = Array.from(new Set(billingScheduleItemIds));
+
+  const [raisedByScheduleMap, studentCountMap] = await Promise.all([
+    repo.countRaisedInvoicesByBillingScheduleItemIds(uniqueScheduleItemIds),
     repo.countStudentsByBatchIds(batchIds),
   ]);
 
@@ -1304,10 +1314,12 @@ export async function getBillingRuns(filters = {}) {
     }
 
     const students = studentCountMap.get(Number(batch.batchId)) || 0;
-    const raisedInvoiceCount = raisedMap.get(Number(plain.feePlanItemId)) || 0;
 
     for (const schedule of schedules) {
       if (!schedule.billingScheduleItemId) continue;
+
+      const scheduleId = Number(schedule.billingScheduleItemId);
+      const scheduleRaisedInvoiceCount = raisedByScheduleMap.get(scheduleId) || 0;
 
       const scheduleBillingRun = schedules.length > 1
         ? `${billingRun} - Schedule #${schedule.billingScheduleItemId}`
@@ -1340,7 +1352,7 @@ export async function getBillingRuns(filters = {}) {
         students,
         perStudent,
         runTotal,
-        raisedInvoiceCount,
+        raisedInvoiceCount: scheduleRaisedInvoiceCount,
         createDate: plain.createDate,
         plannedDate: runPlannedDate,
         status: schedule.status || 'pending',
@@ -1365,11 +1377,11 @@ export async function getBillingRuns(filters = {}) {
         },
       };
 
-      if (schedule.status === 'billed' || raisedInvoiceCount > 0) {
+      if (schedule.status === 'billed' || scheduleRaisedInvoiceCount > 0) {
         const stage =
-          students > 0 && raisedInvoiceCount >= students
+          students > 0 && scheduleRaisedInvoiceCount >= students
             ? 'Completed'
-            : raisedInvoiceCount > 0
+            : scheduleRaisedInvoiceCount > 0
             ? 'Partially Completed'
             : schedule.status === 'billed'
             ? 'Billed'
