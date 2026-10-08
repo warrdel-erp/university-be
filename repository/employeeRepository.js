@@ -798,7 +798,10 @@ export async function getTeacherSubjectsFromSchedule(userId) {
                     model: model.timeTableRoutineModel,
                     as: 'timeTableRoutine',
                     required: true,
-                    where: buildScope(model.timeTableRoutineModel),
+                    where: {
+                        isPublish: true,
+                        ...buildScope(model.timeTableRoutineModel),
+                    },
                     attributes: ['timeTableRoutineId'],
                 },
                 {

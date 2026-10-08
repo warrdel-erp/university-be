@@ -355,9 +355,13 @@ export async function getActiveAssignmentsWithUsers(slots, options = {}) {
   });
 }
 
-
-export async function getSchedulesFiltered(filters = {}, pagination = {}, options = {}) {
-  const { courseId, sessionId, term, examDate, examinationSessionSlotId } = filters;
+export async function getSchedulesFiltered(
+  filters = {},
+  pagination = {},
+  options = {},
+) {
+  const { courseId, sessionId, term, examDate, examinationSessionSlotId } =
+    filters;
   const { page, limit } = pagination;
 
   const examScheduleWhere = {
@@ -366,7 +370,10 @@ export async function getSchedulesFiltered(filters = {}, pagination = {}, option
   if (examDate) {
     examScheduleWhere.examDate = examDate;
   }
-  if (examinationSessionSlotId !== undefined && examinationSessionSlotId !== null) {
+  if (
+    examinationSessionSlotId !== undefined &&
+    examinationSessionSlotId !== null
+  ) {
     const val = Number(examinationSessionSlotId);
     if (!isNaN(val)) {
       examScheduleWhere.examinationSessionSlotId = val;
@@ -433,7 +440,10 @@ export async function getSchedulesFiltered(filters = {}, pagination = {}, option
     ],
     limit: limitNum,
     offset: offsetNum,
-    order: [["examDate", "ASC"], ["examinationSessionSlotId", "ASC"]],
+    order: [
+      ["examDate", "ASC"],
+      ["examinationSessionSlotId", "ASC"],
+    ],
     transaction: options.transaction,
   });
 }
@@ -485,7 +495,12 @@ export async function getRoomCapacitiesForSchedules(scheduleIds, options = {}) {
   return Array.from(unique.values());
 }
 
-export async function getAssignmentsForRooms(classRoomSectionIds, examDates, slotIds, options = {}) {
+export async function getAssignmentsForRooms(
+  classRoomSectionIds,
+  examDates,
+  slotIds,
+  options = {},
+) {
   return scoped(model.examInvigilatorAssignmentModel).findAll({
     where: {
       classRoomSectionId: { [Op.in]: classRoomSectionIds },
@@ -512,7 +527,12 @@ export async function getAssignmentsForRooms(classRoomSectionIds, examDates, slo
   });
 }
 
-export async function getDuplicateChecks(classRoomSectionIds, examDates, slotIds, options = {}) {
+export async function getDuplicateChecks(
+  classRoomSectionIds,
+  examDates,
+  slotIds,
+  options = {},
+) {
   return scoped(model.examScheduleRoomCapacityModel).findAll({
     attributes: [
       "classRoomSectionId",
@@ -524,7 +544,10 @@ export async function getDuplicateChecks(classRoomSectionIds, examDates, slotIds
       [
         sequelize.fn(
           "COUNT",
-          sequelize.fn("DISTINCT", sequelize.col("exam_schedule_room_capacity.exam_schedule_id")),
+          sequelize.fn(
+            "DISTINCT",
+            sequelize.col("exam_schedule_room_capacity.exam_schedule_id"),
+          ),
         ),
         "scheduleCount",
       ],
@@ -571,7 +594,11 @@ export async function getAssignmentsByUserId(
     ...buildScope(model.examinationSessionSlotModel),
   };
 
-  if (examinationSessionId !== undefined && examinationSessionId !== null && examinationSessionId !== "") {
+  if (
+    examinationSessionId !== undefined &&
+    examinationSessionId !== null &&
+    examinationSessionId !== ""
+  ) {
     const parsedSessionId = Number(examinationSessionId);
     if (!isNaN(parsedSessionId)) {
       slotWhere.examinationSessionId = parsedSessionId;
@@ -691,7 +718,10 @@ export async function findScheduleById(examScheduleId, options = {}) {
   });
 }
 
-export async function findRoomCapacitiesBySchedule(examScheduleId, options = {}) {
+export async function findRoomCapacitiesBySchedule(
+  examScheduleId,
+  options = {},
+) {
   return scoped(model.examScheduleRoomCapacityModel).findAll({
     where: {
       examScheduleId,
@@ -723,7 +753,11 @@ export async function findRoomCapacitiesBySchedule(examScheduleId, options = {})
   });
 }
 
-export async function getAssignmentsByDateAndSlot(examDate, examinationSessionSlotId, options = {}) {
+export async function getAssignmentsByDateAndSlot(
+  examDate,
+  examinationSessionSlotId,
+  options = {},
+) {
   return scoped(model.examInvigilatorAssignmentModel).findAll({
     where: {
       examDate,
@@ -753,7 +787,11 @@ export async function getAllEmployeesWithUser(options = {}) {
   });
 }
 
-export async function findRoomCapacityByScheduleAndSection(examScheduleId, classRoomSectionId, options = {}) {
+export async function findRoomCapacityByScheduleAndSection(
+  examScheduleId,
+  classRoomSectionId,
+  options = {},
+) {
   return scoped(model.examScheduleRoomCapacityModel).findOne({
     where: {
       examScheduleId,
@@ -785,7 +823,6 @@ export async function findRoomCapacityByScheduleAndSection(examScheduleId, class
     transaction: options.transaction,
   });
 }
-
 
 export async function getRoomsWithExams(filters = {}, options = {}) {
   const { examinationSessionId, examDate, selections } = filters;
@@ -920,12 +957,7 @@ async function fetchRoomCapacityRows(scheduleWhere, options = {}) {
           {
             model: model.subjectModel,
             as: "subjectSchedule",
-            attributes: [
-              "subjectId",
-              "subjectName",
-              "subjectCode",
-              "courseId",
-            ],
+            attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
             required: true,
           },
           curriculumBatchTermScheduleInclude(),
@@ -971,7 +1003,11 @@ async function fetchRoomCapacityRows(scheduleWhere, options = {}) {
   return Array.from(unique.values());
 }
 
-export async function getRoomCapacitiesByRoom(classRoomSectionId, filters = {}, options = {}) {
+export async function getRoomCapacitiesByRoom(
+  classRoomSectionId,
+  filters = {},
+  options = {},
+) {
   const { examinationSessionId, examDate, examinationSessionSlotId } = filters;
 
   const scheduleWhere = {
@@ -1060,4 +1096,3 @@ export async function getRoomCapacitiesByRoom(classRoomSectionId, filters = {}, 
     transaction: options.transaction,
   });
 }
-

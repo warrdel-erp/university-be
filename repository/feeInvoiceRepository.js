@@ -51,6 +51,7 @@ function feeInvoiceStudentInclude(businessWhere = {}) {
       "lastName",
       "scholarNumber",
       "enrollNumber",
+      "admissionNumber",
       "classSectionTermId",
       "sessionId",
     ],

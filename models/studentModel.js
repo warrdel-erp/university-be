@@ -140,6 +140,11 @@ const studentModel = sequelize.define(
             field: 'enroll_number',
             // unique:true
         },
+        admissionNumber: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            field: 'admission_number',
+        },
         firstName: {
             type: DataTypes.STRING(100),
             allowNull: false,

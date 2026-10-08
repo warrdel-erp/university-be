@@ -46,6 +46,16 @@ const examinationSessionModel = sequelize.define(
             allowNull: false,
             field: 'session_name'
         },
+        executionType: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            field: 'execution_type'
+        },
+        executionProfile: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            field: 'execution_profile'
+        },
         examStartDate: {
             type: DataTypes.DATEONLY,
             allowNull: true,

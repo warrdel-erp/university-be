@@ -355,6 +355,7 @@ export async function findStudentsByBatchId(batchId, options = {}) {
       'lastName',
       'scholarNumber',
       'enrollNumber',
+      'admissionNumber',
       'batchId',
     ],
     where: { batchId: Number(batchId) },

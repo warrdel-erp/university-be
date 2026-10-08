@@ -6,6 +6,7 @@ const studentListAttributes = [
   "studentId",
   "scholarNumber",
   "enrollNumber",
+  "admissionNumber",
   "admisssionDate",
   [
     fn(
@@ -233,6 +234,7 @@ export async function findStudents(filters) {
       { lastName: { [Op.like]: like } },
       { scholarNumber: { [Op.like]: like } },
       { enrollNumber: { [Op.like]: like } },
+      { admissionNumber: { [Op.like]: like } },
     ];
   }
 

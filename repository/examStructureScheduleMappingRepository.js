@@ -627,6 +627,7 @@ export async function findStudentsForTerm(courseId, academicYearId, term, sessio
         ],
         "enrollNumber",
         "scholarNumber",
+        "admissionNumber",
         "fatherName",
         "email",
         "phoneNumber",

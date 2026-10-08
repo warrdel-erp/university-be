@@ -5,7 +5,7 @@ import { timeTableRoutineClassSectionInclude } from "../utility/classSectionIncl
 
 function routineActiveOnDateWhere(currentDate) {
   return {
-    is_publish: true,
+    isPublish: true,
     [Op.and]: [
       Sequelize.where(Sequelize.fn("DATE", Sequelize.col("starting_date")), {
         [Op.lte]: currentDate,
@@ -134,29 +134,103 @@ function isRowForTeacher(row, userId) {
 async function getTeacherCellFilters(userId) {
   const numericUserId = Number(userId);
 
-  const [dateWiseTeacherRows, teacherMappingCells] = await Promise.all([
-    model.timeTableCellTeachersDateWiseModel.findAll({
-      where: { userId: numericUserId },
-      attributes: ['timeTableCellDateWiseId'],
-      raw: true,
-    }),
-    model.timeTableCellModel.findAll({
-      where: { teacherSubjectMappingId: { [Op.ne]: null } },
-      include: [{
-        model: model.teacherSubjectMappingModel,
-        as: 'timeTableTeacherSubject',
+  const [dateWiseTeacherRows, weekTeacherCells, teacherMappingCells] =
+    await Promise.all([
+      model.timeTableCellTeachersDateWiseModel.findAll({
         where: { userId: numericUserId },
-        required: true,
-        attributes: [],
-      }],
-      attributes: ['timeTableCellId'],
-      raw: true,
-    }),
-  ]);
+        attributes: ["timeTableCellDateWiseId"],
+        include: [
+          {
+            model: model.timeTableCellDateWiseModel,
+            as: "timeTableCellDateWise",
+            required: true,
+            attributes: [],
+            include: [
+              {
+                model: model.timeTableCellModel,
+                as: "timeTableCell",
+                required: true,
+                attributes: [],
+                include: [
+                  {
+                    model: model.timeTableRoutineModel,
+                    as: "timeTableRoutine",
+                    where: {
+                      isPublish: true,
+                      ...buildScope(model.timeTableRoutineModel),
+                    },
+                    required: true,
+                    attributes: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        raw: true,
+      }),
+      model.timeTableCellTeachersModel.findAll({
+        where: { userId: numericUserId },
+        attributes: ["timeTableCellId"],
+        include: [
+          {
+            model: model.timeTableCellModel,
+            as: "timeTableCell",
+            required: true,
+            attributes: [],
+            include: [
+              {
+                model: model.timeTableRoutineModel,
+                as: "timeTableRoutine",
+                where: {
+                  isPublish: true,
+                  ...buildScope(model.timeTableRoutineModel),
+                },
+                required: true,
+                attributes: [],
+              },
+            ],
+          },
+        ],
+        raw: true,
+      }),
+      model.timeTableCellModel.findAll({
+        where: { teacherSubjectMappingId: { [Op.ne]: null } },
+        include: [
+          {
+            model: model.teacherSubjectMappingModel,
+            as: "timeTableTeacherSubject",
+            where: { userId: numericUserId },
+            required: true,
+            attributes: [],
+          },
+          {
+            model: model.timeTableRoutineModel,
+            as: "timeTableRoutine",
+            where: {
+              isPublish: true,
+              ...buildScope(model.timeTableRoutineModel),
+            },
+            required: true,
+            attributes: [],
+          },
+        ],
+        attributes: ["timeTableCellId"],
+        raw: true,
+      }),
+    ]);
+
+  const cellIdSet = new Set();
+  for (const r of weekTeacherCells) {
+    if (r.timeTableCellId != null) cellIdSet.add(r.timeTableCellId);
+  }
+  for (const r of teacherMappingCells) {
+    if (r.timeTableCellId != null) cellIdSet.add(r.timeTableCellId);
+  }
 
   return {
-    dateWiseIds: dateWiseTeacherRows.map(r => r.timeTableCellDateWiseId),
-    cellIds: teacherMappingCells.map(r => r.timeTableCellId),
+    dateWiseIds: dateWiseTeacherRows.map((r) => r.timeTableCellDateWiseId),
+    cellIds: Array.from(cellIdSet),
   };
 }
 
@@ -172,9 +246,10 @@ function buildTeacherWhereClause(dateWiseIds, cellIds) {
   return orConditions.length === 1 ? orConditions[0] : { [Op.or]: orConditions };
 }
 
-function dateWiseScheduleIncludes({ sessionId } = {}) {
+function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
   const routineWhere = {
-    is_publish: true,
+    isPublish: true,
+    ...(academicYearId != null && !isNaN(Number(academicYearId)) && { academicYearId: Number(academicYearId) }),
     ...buildScope(model.timeTableRoutineModel),
   };
 
@@ -416,10 +491,34 @@ export async function getTodayClassScheduleForEmployee(
 
 export async function getPastClassSchedulesForEmployee(
   userId,
-  currentDate,
-  sessionId,
-  pagination = {},
+  academicYearIdOrDate,
+  currentDateOrSessionId,
+  sessionIdOrPagination,
+  paginationArg = {},
+  academicYearIdArg,
 ) {
+  let academicYearId;
+  let currentDate;
+  let sessionId;
+  let pagination;
+
+  if (
+    typeof academicYearIdOrDate === "string" &&
+    (academicYearIdOrDate.includes("-") || isNaN(Number(academicYearIdOrDate)))
+  ) {
+    // Signature: (userId, currentDate, sessionId, pagination, academicYearId)
+    currentDate = academicYearIdOrDate;
+    sessionId = currentDateOrSessionId;
+    pagination = sessionIdOrPagination || {};
+    academicYearId = academicYearIdArg ?? null;
+  } else {
+    // Signature: (userId, academicYearId, currentDate, sessionId, pagination)
+    academicYearId = academicYearIdOrDate ?? null;
+    currentDate = currentDateOrSessionId;
+    sessionId = sessionIdOrPagination;
+    pagination = paginationArg || {};
+  }
+
   const { dateWiseIds, cellIds } = await getTeacherCellFilters(userId);
   const teacherWhere = buildTeacherWhereClause(dateWiseIds, cellIds);
   if (!teacherWhere) return { rows: [], total: 0 };
@@ -437,7 +536,7 @@ export async function getPastClassSchedulesForEmployee(
       "subjectId",
       "electiveSubjectId",
     ],
-    include: dateWiseScheduleIncludes({ sessionId }),
+    include: dateWiseScheduleIncludes({ sessionId, academicYearId }),
     order: [["date", "DESC"]],
     subQuery: false,
   };
@@ -457,9 +556,29 @@ export async function getPastClassSchedulesForEmployee(
 
 export async function getUpcomingClassSchedulesForEmployee(
   userId,
-  currentDate,
-  pagination = {},
+  academicYearIdOrDate,
+  currentDateOrPagination = {},
+  paginationArg = {},
 ) {
+  let academicYearId;
+  let currentDate;
+  let pagination;
+
+  if (
+    typeof academicYearIdOrDate === "string" &&
+    (academicYearIdOrDate.includes("-") || isNaN(Number(academicYearIdOrDate)))
+  ) {
+    // Signature: (userId, currentDate, pagination)
+    academicYearId = null;
+    currentDate = academicYearIdOrDate;
+    pagination = currentDateOrPagination || {};
+  } else {
+    // Signature: (userId, academicYearId, currentDate, pagination)
+    academicYearId = academicYearIdOrDate ?? null;
+    currentDate = currentDateOrPagination;
+    pagination = paginationArg || {};
+  }
+
   const { dateWiseIds, cellIds } = await getTeacherCellFilters(userId);
   const teacherWhere = buildTeacherWhereClause(dateWiseIds, cellIds);
   if (!teacherWhere) return { rows: [], total: 0 };
@@ -477,7 +596,7 @@ export async function getUpcomingClassSchedulesForEmployee(
       "subjectId",
       "electiveSubjectId",
     ],
-    include: dateWiseScheduleIncludes(),
+    include: dateWiseScheduleIncludes({ academicYearId }),
     order: [["date", "ASC"]],
     subQuery: false,
   };
@@ -495,7 +614,10 @@ export async function getUpcomingClassSchedulesForEmployee(
   return { rows: result, total };
 }
 
-export async function getUniqueClassSectionSubjectsForEmployee(userId) {
+export async function getUniqueClassSectionSubjectsForEmployee(
+  userId,
+  academicYearId,
+) {
   const employee = await model.employeeModel.findOne({
     where: { userId: Number(userId) },
     attributes: [
@@ -548,6 +670,10 @@ export async function getUniqueClassSectionSubjectsForEmployee(userId) {
         required: true,
         where: {
           instituteId: Number(empPlain.instituteId),
+          isPublish: true,
+          ...(academicYearId != null && !isNaN(Number(academicYearId)) && {
+            academicYearId: Number(academicYearId),
+          }),
           ...buildScope(model.timeTableRoutineModel),
         },
         attributes: [
@@ -618,70 +744,71 @@ function nonBreakPeriodInclude() {
 
 export async function countEmployeeDateWiseSchedules(
   userId,
-  currentDate,
+  academicYearIdOrDate,
+  currentDateArg,
 ) {
+  let academicYearId;
+  let currentDate;
+
+  if (
+    typeof academicYearIdOrDate === "string" &&
+    (academicYearIdOrDate.includes("-") || isNaN(Number(academicYearIdOrDate)))
+  ) {
+    // Called as: (userId, currentDate)
+    academicYearId = null;
+    currentDate = academicYearIdOrDate;
+  } else {
+    // Called as: (userId, academicYearId, currentDate)
+    academicYearId =
+      academicYearIdOrDate != null && !isNaN(Number(academicYearIdOrDate))
+        ? Number(academicYearIdOrDate)
+        : null;
+    currentDate = currentDateArg;
+  }
+
+  const { dateWiseIds, cellIds } = await getTeacherCellFilters(userId);
+  const teacherWhere = buildTeacherWhereClause(dateWiseIds, cellIds);
+  if (!teacherWhere) return { pastCount: 0, upcomingCount: 0 };
+
+  const routineWhere = {
+    isPublish: true,
+    ...(academicYearId != null && !isNaN(Number(academicYearId)) && {
+      academicYearId: Number(academicYearId),
+    }),
+    ...buildScope(model.timeTableRoutineModel),
+  };
+
+  const baseInclude = [
+    {
+      model: model.timeTableCellModel,
+      as: "timeTableCell",
+      required: true,
+      attributes: [],
+      include: [
+        {
+          model: model.timeTableRoutineModel,
+          as: "timeTableRoutine",
+          required: true,
+          attributes: [],
+          where: routineWhere,
+        },
+        nonBreakPeriodInclude(),
+      ],
+    },
+  ];
+
   const pastCount = await model.timeTableCellDateWiseModel.count({
-    where: { date: { [Op.lt]: currentDate } },
-    include: [
-      {
-        model: model.timeTableCellTeachersDateWiseModel,
-        as: "timeTableCellTeachersDateWise",
-        required: true,
-        where: { userId: Number(userId) },
-        attributes: [],
-      },
-      {
-        model: model.timeTableCellModel,
-        as: "timeTableCell",
-        required: true,
-        attributes: [],
-        include: [
-          {
-            model: model.timeTableRoutineModel,
-            as: "timeTableRoutine",
-            required: true,
-            attributes: [],
-            where: {
-              is_publish: true,
-              ...buildScope(model.timeTableRoutineModel),
-            },
-          },
-          nonBreakPeriodInclude(),
-        ],
-      },
-    ],
+    where: { date: { [Op.lt]: currentDate }, ...teacherWhere },
+    include: baseInclude,
+    distinct: true,
+    col: "time_table_cell_date_wise_id",
   });
 
   const upcomingCount = await model.timeTableCellDateWiseModel.count({
-    where: { date: { [Op.gte]: currentDate } },
-    include: [
-      {
-        model: model.timeTableCellTeachersDateWiseModel,
-        as: "timeTableCellTeachersDateWise",
-        required: true,
-        where: { userId: Number(userId) },
-        attributes: [],
-      },
-      {
-        model: model.timeTableCellModel,
-        as: "timeTableCell",
-        required: true,
-        attributes: [],
-        include: [
-          {
-            model: model.timeTableRoutineModel,
-            as: "timeTableRoutine",
-            required: true,
-            attributes: [],
-            where: {
-              is_publish: true,
-              ...buildScope(model.timeTableRoutineModel),
-            },
-          },
-          nonBreakPeriodInclude(),
-        ],
-      },
-    ],
+    where: { date: { [Op.gte]: currentDate }, ...teacherWhere },
+    include: baseInclude,
+    distinct: true,
+    col: "time_table_cell_date_wise_id",
   });
 
   return { pastCount, upcomingCount };
@@ -690,7 +817,7 @@ export async function countEmployeeDateWiseSchedules(
 export async function getTeacherWeekCells(userId) {
   return model.timeTableRoutineModel.findAll({
     where: {
-      is_publish: true,
+      isPublish: true,
       ...buildScope(model.timeTableRoutineModel),
     },
     attributes: {
@@ -838,6 +965,7 @@ export async function getTeacherSubjectsFromWeekCells(userId, filters = {}) {
 
   // 2. Fetch routine cells
   const routineWhere = {
+    isPublish: true,
     ...buildScope(model.timeTableRoutineModel),
     ...(courseId != null && { courseId: Number(courseId) }),
   };
@@ -1056,6 +1184,7 @@ export async function getEmployeeSectionDateWiseRows(
               "classSectionTermId",
             ],
             where: {
+              isPublish: true,
               classSectionTermId: Number(classSectionTermId),
               ...buildScope(model.timeTableRoutineModel),
             },

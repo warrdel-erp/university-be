@@ -545,3 +545,80 @@ export const INVIGILATOR_ROOM_STATUS = {
   READY: "READY",
 };
 
+/** Examination execution type enums */
+export const EXECUTION_TYPE = {
+  WRITTEN_EXAMINATION: "Written Examination",
+  PRACTICAL_EXAMINATION: "Practical Examination",
+  VIVA_ORAL_EXAMINATION: "Viva / Oral Examination",
+  JURY_REVIEW_EXAMINATION: "Jury / Review Examination",
+  ATTENDANCE_SCORE: "Attendance Score",
+  MANUAL_SCORE_ENTRY: "Manual Score Entry",
+};
+
+export const EXECUTION_TYPES = Object.values(EXECUTION_TYPE);
+
+/** Examination execution profile enums */
+export const EXECUTION_PROFILE = {
+  // Written Examination
+  THEORY_PAPERS: "theory papers",
+  MID_TERM: "mid-term",
+  END_TERM: "end-term",
+  WRITTEN_TESTS: "written tests",
+
+  // Practical Examination
+  LAB_EXAMS: "lab exams",
+  WORKSHOP_EXAMS: "workshop exams",
+  EXTERNAL_PRACTICALS: "external practicals",
+
+  // Viva / Oral Examination
+  VIVA_VOCE: "viva voce",
+  ORAL_EXAMS: "oral exams",
+  DEFENCE: "defence",
+
+  // Jury / Review Examination
+  DESIGN_JURY: "design jury",
+  STUDIO_JURY: "studio jury",
+  PROJECT_REVIEW: "project review",
+  EXTERNAL_JURY: "external jury",
+
+  // Attendance Score
+  ATTENDANCE_SCORE: "Attendance Score",
+
+  // Manual Score Entry
+  MANUAL_SCORE_ENTRY: "Manual Score Entry",
+};
+
+export const EXECUTION_PROFILES = Object.values(EXECUTION_PROFILE);
+
+/** Map of executionType to its corresponding valid executionProfiles */
+export const EXECUTION_TYPE_PROFILES_MAP = {
+  [EXECUTION_TYPE.WRITTEN_EXAMINATION]: [
+    EXECUTION_PROFILE.THEORY_PAPERS,
+    EXECUTION_PROFILE.MID_TERM,
+    EXECUTION_PROFILE.END_TERM,
+    EXECUTION_PROFILE.WRITTEN_TESTS,
+  ],
+  [EXECUTION_TYPE.PRACTICAL_EXAMINATION]: [
+    EXECUTION_PROFILE.LAB_EXAMS,
+    EXECUTION_PROFILE.WORKSHOP_EXAMS,
+    EXECUTION_PROFILE.EXTERNAL_PRACTICALS,
+  ],
+  [EXECUTION_TYPE.VIVA_ORAL_EXAMINATION]: [
+    EXECUTION_PROFILE.VIVA_VOCE,
+    EXECUTION_PROFILE.ORAL_EXAMS,
+    EXECUTION_PROFILE.DEFENCE,
+  ],
+  [EXECUTION_TYPE.JURY_REVIEW_EXAMINATION]: [
+    EXECUTION_PROFILE.DESIGN_JURY,
+    EXECUTION_PROFILE.STUDIO_JURY,
+    EXECUTION_PROFILE.PROJECT_REVIEW,
+    EXECUTION_PROFILE.EXTERNAL_JURY,
+  ],
+  [EXECUTION_TYPE.ATTENDANCE_SCORE]: [
+    EXECUTION_PROFILE.ATTENDANCE_SCORE,
+  ],
+  [EXECUTION_TYPE.MANUAL_SCORE_ENTRY]: [
+    EXECUTION_PROFILE.MANUAL_SCORE_ENTRY,
+  ],
+};
+

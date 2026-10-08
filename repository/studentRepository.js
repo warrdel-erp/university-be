@@ -91,6 +91,7 @@ function buildStudentListWhere(search, courseId, sessionId, batchId) {
             { middleName: { [Op.like]: term } },
             { scholarNumber: { [Op.like]: term } },
             { enrollNumber: { [Op.like]: term } },
+            { admissionNumber: { [Op.like]: term } },
             { fatherName: { [Op.like]: term } },
             { birthDate: { [Op.like]: term } },
             { '$course.course_name$': { [Op.like]: term } },
@@ -729,6 +730,7 @@ const promotionStudentAttributes = [
     'studentId',
     'scholarNumber',
     'enrollNumber',
+    'admissionNumber',
     'firstName',
     'middleName',
     'lastName',
@@ -1512,6 +1514,7 @@ export async function getSectionStudentMapping(classSectionTermId, academicYearI
                 { middleName: { [Op.like]: like } },
                 { scholarNumber: { [Op.like]: like } },
                 { enrollNumber: { [Op.like]: like } },
+                { admissionNumber: { [Op.like]: like } },
                 { fatherName: { [Op.like]: like } },
             ];
         }
@@ -2019,6 +2022,7 @@ export async function getStudentsByFeePlanList(filters = {}) {
                 'middleName',
                 'lastName',
                 'scholarNumber',
+                'admissionNumber',
                 'batchId',
                 'courseId',
             ],
@@ -2086,6 +2090,7 @@ export async function getEmptyFeeDetails(filters = {}) {
                 { middleName: { [Op.like]: like } },
                 { scholarNumber: { [Op.like]: like } },
                 { enrollNumber: { [Op.like]: like } },
+                { admissionNumber: { [Op.like]: like } },
             ];
         }
 
@@ -2447,6 +2452,7 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId,
                 "studentId",
                 "scholarNumber",
                 "enrollNumber",
+                "admissionNumber",
                 "firstName",
                 "lastName",
                 "classSectionTermId",
@@ -2536,6 +2542,7 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
             "lastName",
             "enrollNumber",
             "scholarNumber",
+            "admissionNumber",
             "classSectionTermId",
         ],
         include: [

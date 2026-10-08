@@ -381,6 +381,7 @@ export async function getStudentSeats(examScheduleRoomCapacityId) {
           "lastName",
           "scholarNumber",
           "enrollNumber",
+          "admissionNumber",
         ],
       },
     ],
@@ -583,6 +584,7 @@ export async function getAttendancesWithStudent(
           "lastName",
           "scholarNumber",
           "enrollNumber",
+          "admissionNumber",
         ],
       },
       {
@@ -692,6 +694,7 @@ export async function getStudentSeatsByCapacityIds(capacityIds, transaction = nu
           "lastName",
           "scholarNumber",
           "enrollNumber",
+          "admissionNumber",
         ],
       }
     ],
