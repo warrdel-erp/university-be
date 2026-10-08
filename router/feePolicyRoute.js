@@ -12,6 +12,7 @@ import {
   mapStudentFeePolicy,
   removeStudentFeePolicyMapping,
   getStudentFeePolicies,
+  getStudentFeeTreatmentSummary,
 } from "../controllers/feePolicyController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -49,15 +50,17 @@ const yearTermSchema = z.object({
   terms: z.array(z.coerce.number().int().positive()).optional(),
 });
 
-const courseScopeItemSchema = z.object({
-  courseId: positiveIntegerId.optional(),
-  batchId: positiveIntegerId.nullable().optional(),
-  year: z.coerce.number().int().positive().nullable().optional(),
-  terms: z.array(z.coerce.number().int().positive()).optional(),
-  years: z.array(yearTermSchema).optional(),
-}).refine((data) => data.courseId != null || data.batchId != null, {
-  message: "Either courseId or batchId must be provided in scope mapping",
-});
+const courseScopeItemSchema = z
+  .object({
+    courseId: positiveIntegerId.optional(),
+    batchId: positiveIntegerId.nullable().optional(),
+    year: z.coerce.number().int().positive().nullable().optional(),
+    terms: z.array(z.coerce.number().int().positive()).optional(),
+    years: z.array(yearTermSchema).optional(),
+  })
+  .refine((data) => data.courseId != null || data.batchId != null, {
+    message: "Either courseId or batchId must be provided in scope mapping",
+  });
 
 const batchItemSchema = courseScopeItemSchema;
 
@@ -132,7 +135,7 @@ router.post(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_ADD.value, null),
   validate({ body: createFeePolicySchema }),
-  createFeePolicy
+  createFeePolicy,
 );
 
 router.get(
@@ -140,7 +143,7 @@ router.get(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value, null),
   validate({ query: listFeePolicyQuerySchema }),
-  getFeePolicies
+  getFeePolicies,
 );
 
 router.get(
@@ -148,7 +151,7 @@ router.get(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value, null),
   validate({ query: policyIdQuerySchema }),
-  getSingleFeePolicy
+  getSingleFeePolicy,
 );
 
 router.patch(
@@ -156,7 +159,7 @@ router.patch(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null),
   validate({ body: updateFeePolicySchema }),
-  updateFeePolicy
+  updateFeePolicy,
 );
 
 router.patch(
@@ -164,7 +167,7 @@ router.patch(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_PUBLISH.value, null),
   validate({ body: publishBodySchema }),
-  publishFeePolicy
+  publishFeePolicy,
 );
 
 router.patch(
@@ -172,7 +175,7 @@ router.patch(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_PUBLISH.value, null),
   validate({ body: publishBodySchema }),
-  unpublishFeePolicy
+  unpublishFeePolicy,
 );
 
 router.delete(
@@ -180,7 +183,7 @@ router.delete(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value, null),
   validate({ query: policyIdQuerySchema }),
-  deleteFeePolicy
+  deleteFeePolicy,
 );
 
 const mapStudentFeePolicySchema = z
@@ -194,7 +197,7 @@ const mapStudentFeePolicySchema = z
         z.object({
           studentId: positiveIntegerId,
           feePolicyId: positiveIntegerId,
-        })
+        }),
       )
       .optional(),
     replace: z.boolean().optional().default(false),
@@ -208,8 +211,9 @@ const mapStudentFeePolicySchema = z
       return hasSinglePair || hasMappings;
     },
     {
-      message: "At least one mapping between studentId and feePolicyId must be provided",
-    }
+      message:
+        "At least one mapping between studentId and feePolicyId must be provided",
+    },
   );
 
 const deleteStudentFeePolicyQuerySchema = z
@@ -231,7 +235,36 @@ router.post(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_EDIT.value, null),
   validate({ body: mapStudentFeePolicySchema }),
-  mapStudentFeePolicy
+  mapStudentFeePolicy,
+);
+
+const studentFeeSummaryQuerySchema = z.object({
+  studentId: positiveIntegerId,
+  year: positiveIntegerId.optional(),
+});
+
+router.get(
+  "/student/summary",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN.value, null),
+  validate({ query: studentFeeSummaryQuerySchema }),
+  getStudentFeeTreatmentSummary,
+);
+
+router.get(
+  "/student/statement",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN.value, null),
+  validate({ query: studentFeeSummaryQuerySchema }),
+  getStudentFeeTreatmentSummary,
+);
+
+router.get(
+  "/student/fee-treatment",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN.value, null),
+  validate({ query: studentFeeSummaryQuerySchema }),
+  getStudentFeeTreatmentSummary,
 );
 
 router.get(
@@ -239,7 +272,7 @@ router.get(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value, null),
   validate({ query: getStudentFeePolicyQuerySchema }),
-  getStudentFeePolicies
+  getStudentFeePolicies,
 );
 
 router.delete(
@@ -247,7 +280,7 @@ router.delete(
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value, null),
   validate({ query: deleteStudentFeePolicyQuerySchema }),
-  removeStudentFeePolicyMapping
+  removeStudentFeePolicyMapping,
 );
 
 export default router;

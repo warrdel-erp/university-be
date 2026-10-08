@@ -1242,11 +1242,13 @@ function formatRunDate(dateStr) {
 export async function getBillingRuns(filters = {}) {
   const [items, academicCtx] = await Promise.all([
     repo.findFeePlanItemsWithHierarchy(filters),
-    resolveActiveAcademicYearContext(),
+    resolveActiveAcademicYearContext().catch(() => null),
   ]);
 
-  const activeBatchYear = Number(academicCtx.activeBatchYear);
-  const activeAcademicYear = academicCtx.academicYear;
+  const activeBatchYear = academicCtx?.activeBatchYear
+    ? Number(academicCtx.activeBatchYear)
+    : new Date().getFullYear();
+  const activeAcademicYear = academicCtx?.academicYear;
   const activeAcademicYearText = activeAcademicYear?.academicYear || `${activeBatchYear}-${String(activeBatchYear + 1).slice(-2)}`;
 
   const feePlanItemIds = items.map((it) => Number(it.feePlanItemId));
@@ -1282,11 +1284,13 @@ export async function getBillingRuns(filters = {}) {
     const endYear = batchYear + duration;
     const yearNum = plain.year != null ? Number(plain.year) : 1;
 
-    // Only send feePlanItems for the current active year of this batch:
+    // Current active position of this batch based on calendar/academic year
     // e.g. 2025 batch in active calendar year 2026 -> activeYear = 2026 - 2025 + 1 = 2
     const currentActiveYear = activeBatchYear - batchYear + 1;
-    const targetYear = filters.year != null ? Number(filters.year) : currentActiveYear;
-    if (yearNum !== targetYear) {
+    const isCurrentPosition = yearNum === currentActiveYear;
+
+    // Filter by year ONLY if explicitly provided in query filters
+    if (filters.year != null && yearNum !== Number(filters.year)) {
       continue;
     }
 
@@ -1331,6 +1335,8 @@ export async function getBillingRuns(filters = {}) {
         feePlanLabel,
         batchId: Number(batch.batchId),
         year: yearNum,
+        currentPosition: currentActiveYear,
+        isCurrentPosition,
         students,
         perStudent,
         runTotal,

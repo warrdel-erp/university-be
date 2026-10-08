@@ -494,6 +494,42 @@
         "description": "DELETE /feePolicy/student?studentId=&feePolicyId=\n\nRemoves mapping between student and fee policy."
       },
       "response": []
+    },
+    {
+      "name": "13. Get Student Fee Treatment Summary & Statement",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/student/summary?studentId={{studentId}}&year={{year}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "student", "summary"],
+          "query": [
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Required student ID"
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Optional year filter (e.g. 1, 2)",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "GET /feePolicy/student/summary?studentId=&year=\n\nFetches:\n1. Student info (name, scholarNumber, enrollNumber, course, batch, session).\n2. Overall financial summary (totalFeeAmount, totalDiscount, amountToBePaid, amountPaidTillNow, currentBalance, isOverdue, totalOverdueAmount, totalRefundableDeposit, paymentStatus).\n3. feeTreatments: All fee treatments / scholarships and waivers applied to the student with calculated discount, percentage, max cap, and net payable.\n4. feeAmountWiseBreakdown: Array of objects of total fee amount-wise refundable amount with current balance from studentFeeInvoice.\n5. yearWiseFeeStatus: Year-wise fee status for all course years (amount paid till now, overdue status & amount, refundable deposit, payment status, and invoices list).\n6. invoices: Detailed student fee invoices from studentFeeInvoiceModel."
+      },
+      "response": []
     }
   ]
 }

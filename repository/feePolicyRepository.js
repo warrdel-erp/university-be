@@ -319,3 +319,135 @@ export async function findPoliciesByIds(feePolicyIds, options = {}) {
     transaction: options.transaction,
   });
 }
+
+export async function findStudentFeeDetailsWithIncludes(studentId, options = {}) {
+  return scoped(model.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findOne({
+    where: { studentId: Number(studentId) },
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "enrollNumber",
+      "admissionNumber",
+      "batchId",
+      "courseId",
+    ],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "courseCode", "courseDuration"],
+        required: false,
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch"],
+        required: false,
+        include: [
+          {
+            model: model.feePolicyBatchesModel,
+            as: "feePolicyBatches",
+            required: false,
+            include: [
+              {
+                model: model.feePolicyModel,
+                as: "policy",
+                required: false,
+                where: { publishStatus: "published", isActive: true },
+                include: [
+                  {
+                    model: model.feePolicyComponentsModel,
+                    as: "policyComponents",
+                    required: false,
+                    include: [
+                      {
+                        model: model.feeTypeCatalogModel,
+                        as: "feeTypeCatalog",
+                        required: false,
+                        attributes: ["feeTypeCatalogId", "name", "refundable"],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.feePolicyStudentsModel,
+        as: "feePolicyStudents",
+        required: false,
+        include: [
+          {
+            model: model.feePolicyModel,
+            as: "policy",
+            required: false,
+            where: { publishStatus: "published", isActive: true },
+            include: [
+              {
+                model: model.feePolicyComponentsModel,
+                as: "policyComponents",
+                required: false,
+                include: [
+                  {
+                    model: model.feeTypeCatalogModel,
+                    as: "feeTypeCatalog",
+                    required: false,
+                    attributes: ["feeTypeCatalogId", "name", "refundable"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.studentFeeInvoiceModel,
+        as: "studentFeeInvoices",
+        required: false,
+        attributes: [
+          "studentFeeInvoiceId",
+          "createDate",
+          "dueDate",
+          "total",
+          "status",
+          "paymentStatus",
+          "paidAmount",
+          "studentId",
+          "feePlanItemId",
+          "billingScheduleItemId",
+        ],
+        include: [
+          {
+            model: model.feePlanItemModel,
+            as: "feePlanItem",
+            required: false,
+            attributes: ["feePlanItemId", "year", "name"],
+          },
+          {
+            model: model.studentFeeInvoiceItemsModel,
+            as: "feeInvoiceItems",
+            required: false,
+            attributes: ["studentFeeInvoiceItemsId", "feeTypeId", "amount", "waiver", "isMainItem"],
+            include: [
+              {
+                model: model.feeTypeCatalogModel,
+                as: "feeTypeCatalog",
+                required: false,
+                attributes: ["feeTypeCatalogId", "name", "ledgerType", "refundable"],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
