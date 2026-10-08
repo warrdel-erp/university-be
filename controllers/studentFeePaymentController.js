@@ -39,8 +39,11 @@ export async function recordStudentFeePaymentFromDetails(req, res) {
 
 export async function getPaymentDetails(req, res) {
   try {
-    const { studentId } = req.query;
-    const data = await studentFeePaymentService.getPaymentDetails(studentId);
+    const { studentId, billingScheduleItemId, billing_schedule_item_id } = req.query;
+    const scheduleItemId = billingScheduleItemId || billing_schedule_item_id;
+    const data = await studentFeePaymentService.getPaymentDetails(studentId, {
+      billingScheduleItemId: scheduleItemId,
+    });
     return SuccessResponse(res, 200, "Payment details fetched successfully", data);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

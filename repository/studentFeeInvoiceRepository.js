@@ -1,4 +1,4 @@
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
@@ -322,6 +322,7 @@ export async function findStudentFeeInvoicesByStudentId(studentId, options = {})
 export async function findStudentFeeInvoicesOverview({
   feePlanItemId,
   status = "all",
+  search,
   page,
   limit,
   options = {},
@@ -332,10 +333,47 @@ export async function findStudentFeeInvoicesOverview({
     where.feePlanItemId = Number(feePlanItemId);
   }
 
-  if (status === "pending") {
+  if (status === "pending" || status === "unpaid") {
     where.paymentStatus = { [Op.in]: ["unpaid", "partial"] };
-  } else if (status === "completed") {
+  } else if (status === "completed" || status === "paid") {
     where.paymentStatus = "paid";
+  } else if (status === "partial") {
+    where.paymentStatus = "partial";
+  }
+
+  if (search && search.trim()) {
+    const term = search.trim();
+    const pattern = { [Op.like]: `%${term}%` };
+    const matchingStudents = await scoped(model.studentModel).findAll({
+      where: {
+        [Op.or]: [
+          { firstName: pattern },
+          { middleName: pattern },
+          { lastName: pattern },
+          { scholarNumber: pattern },
+          { enrollNumber: pattern },
+          { admissionNumber: pattern },
+        ],
+      },
+      attributes: ["studentId"],
+      raw: true,
+      transaction: options.transaction,
+    });
+
+    const studentIds = matchingStudents.map((s) => s.studentId);
+    const searchOrConds = [];
+    if (studentIds.length > 0) {
+      searchOrConds.push({ studentId: { [Op.in]: studentIds } });
+    }
+    const numId = Number(term);
+    if (!isNaN(numId) && Number.isInteger(numId) && numId > 0) {
+      searchOrConds.push({ studentFeeInvoiceId: numId });
+    }
+    if (searchOrConds.length > 0) {
+      where[Op.and] = [...(where[Op.and] || []), { [Op.or]: searchOrConds }];
+    } else {
+      where.studentFeeInvoiceId = -1;
+    }
   }
 
   const queryOptions = {
@@ -344,7 +382,12 @@ export async function findStudentFeeInvoicesOverview({
       "studentFeeInvoiceId",
       "studentId",
       "feePlanItemId",
+      "billingScheduleItemId",
       "instituteId",
+      "universityId",
+      "campusId",
+      "baseAmount",
+      "discountAmount",
       "total",
       "createDate",
       "dueDate",
@@ -382,9 +425,45 @@ export async function findStudentFeeInvoicesOverview({
     queryOptions.offset = (pageNum - 1) * limitNum;
   }
 
-  const { count: totalRecords, rows } = await scoped(
-    model.studentFeeInvoiceModel
-  ).findAndCountAll(queryOptions);
+  const baseCountWhere = { status: "generated" };
+  if (feePlanItemId != null) {
+    baseCountWhere.feePlanItemId = Number(feePlanItemId);
+  }
+  if (where[Op.and]) {
+    baseCountWhere[Op.and] = where[Op.and];
+  } else if (where.studentFeeInvoiceId) {
+    baseCountWhere.studentFeeInvoiceId = where.studentFeeInvoiceId;
+  }
+
+  const [countResult, statusCounts] = await Promise.all([
+    scoped(model.studentFeeInvoiceModel).findAndCountAll(queryOptions),
+    scoped(model.studentFeeInvoiceModel).findAll({
+      where: baseCountWhere,
+      attributes: [
+        "paymentStatus",
+        [Sequelize.fn("COUNT", Sequelize.col("student_fee_invoice_id")), "count"],
+      ],
+      group: ["paymentStatus"],
+      raw: true,
+      transaction: options.transaction,
+    }),
+  ]);
+
+  const { count: totalRecords, rows } = countResult;
+
+  let paidInvoicesCount = 0;
+  let pendingInvoicesCount = 0;
+  let totalInvoices = 0;
+
+  for (const sc of statusCounts || []) {
+    const cnt = Number(sc.count) || 0;
+    totalInvoices += cnt;
+    if (sc.paymentStatus === "paid") {
+      paidInvoicesCount += cnt;
+    } else if (sc.paymentStatus === "unpaid" || sc.paymentStatus === "partial") {
+      pendingInvoicesCount += cnt;
+    }
+  }
 
   const limitNum = isPaginated ? Math.max(1, Number(limit) || 10) : totalRecords;
   const pageNum = isPaginated ? Math.max(1, Number(page) || 1) : 1;
@@ -396,6 +475,10 @@ export async function findStudentFeeInvoicesOverview({
     pageSize: limitNum,
     isPaginated,
     rows,
+    paidInvoicesCount,
+    pendingInvoicesCount,
+    unpaidInvoicesCount: pendingInvoicesCount,
+    totalInvoicesCount: totalInvoices,
   };
 }
 

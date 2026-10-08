@@ -143,8 +143,11 @@ export async function recordStudentFeePaymentFromDetails(body, createdBy) {
     const lines = [];
 
     for (const line of body.paymentItems) {
-      const referenceId = line.referenceId;
-      const referenceType = line.referenceType;
+      let referenceId = line.referenceId || line.studentFeeInvoiceId;
+      const billingScheduleItemId = line.billingScheduleItemId || line.billing_schedule_item_id;
+      const referenceType =
+        line.referenceType ||
+        (billingScheduleItemId || line.studentFeeInvoiceId ? "STUDENT_FEE_INVOICE" : "STUDENT_FEE_INVOICE");
       const amount = toMoneyNumber(line.amount);
 
       if (decimalCompare(amount, 0) <= 0) {
@@ -154,6 +157,25 @@ export async function recordStudentFeePaymentFromDetails(body, createdBy) {
       if (referenceType === "STUDENT_FEE_INVOICE") {
         if (body.payeeType !== "STUDENT") {
           throw httpError("payeeType must be STUDENT for student fee invoice payment items", 400);
+        }
+
+        if (!referenceId && billingScheduleItemId) {
+          const inv = await paymentRepo.findInvoiceByBillingScheduleItemAndStudent(
+            billingScheduleItemId,
+            body.payeeId,
+            { transaction }
+          );
+          if (!inv) {
+            throw httpError(
+              `No generated invoice found for billingScheduleItemId ${billingScheduleItemId} and student ${body.payeeId}`,
+              404
+            );
+          }
+          referenceId = inv.studentFeeInvoiceId;
+        }
+
+        if (!referenceId) {
+          throw httpError("Either referenceId or billingScheduleItemId is required for each payment item", 400);
         }
 
         const invoiceTotals = await paymentRepo.getInvoicePaymentTotals(referenceId, {
@@ -166,7 +188,7 @@ export async function recordStudentFeePaymentFromDetails(body, createdBy) {
         const invoicePlain = toPlain(invoiceTotals.invoice);
         const invoiceTotal = invoiceTotals.total;
         const previousPaidAmount = invoiceTotals.paidAmount;
-        const dueAmount = decimalSubtract(invoiceTotal, previousPaidAmount);
+        const dueAmount = Math.max(0, decimalSubtract(invoiceTotal, previousPaidAmount));
 
         if (Number(body.payeeId) !== Number(invoicePlain.studentId)) {
           throw httpError("payeeId does not match the invoice student", 400);
@@ -367,10 +389,10 @@ export async function listStudentFeePayments(query) {
   };
 }
 
-export async function getPaymentDetails(studentId) {
+export async function getPaymentDetails(studentId, { billingScheduleItemId } = {}) {
   const [studentRow, invoiceRows, lastPaymentRow] = await Promise.all([
     paymentRepo.findStudentForPaymentDetails(studentId),
-    paymentRepo.findGeneratedInvoicesForPaymentDetails(studentId),
+    paymentRepo.findGeneratedInvoicesForPaymentDetails(studentId, { billingScheduleItemId }),
     paymentRepo.findLastIncomingPaymentForStudentPayee(studentId),
   ]);
 
@@ -386,18 +408,29 @@ export async function getPaymentDetails(studentId) {
     invoiceIds.push(invoice.studentFeeInvoiceId);
   }
 
-  const [paidByReferenceId, totalByInvoiceId] = await Promise.all([
-    paymentRepo.sumPaidAmountByReferenceIds(invoiceIds, "STUDENT_FEE_INVOICE"),
-    paymentRepo.sumInvoiceTotalsByInvoiceIds(invoiceIds),
-  ]);
+  const paidByReferenceId = await paymentRepo.sumPaidAmountByReferenceIds(
+    invoiceIds,
+    "STUDENT_FEE_INVOICE"
+  );
 
   const outstandingInvoices = [];
   const balanceDueAmounts = [];
 
   for (const invoice of invoices) {
-    const paidAmount = toMoneyNumber(paidByReferenceId.get(invoice.studentFeeInvoiceId) ?? 0);
-    const total = toMoneyNumber(totalByInvoiceId.get(invoice.studentFeeInvoiceId) ?? 0);
-    const balanceDue = decimalSubtract(total, paidAmount);
+    const baseAmount = toMoneyNumber(
+      invoice.baseAmount != null
+        ? invoice.baseAmount
+        : Number(invoice.total || 0) + Number(invoice.discountAmount || 0)
+    );
+    const discountAmount = toMoneyNumber(
+      invoice.discountAmount != null ? invoice.discountAmount : 0
+    );
+    // baseAmount - discountAmount is the truth
+    const total = Math.max(0, decimalSubtract(baseAmount, discountAmount));
+    const paidAmount = toMoneyNumber(
+      paidByReferenceId.get(invoice.studentFeeInvoiceId) ?? invoice.paidAmount ?? 0
+    );
+    const balanceDue = Math.max(0, decimalSubtract(total, paidAmount));
 
     if (decimalCompare(paidAmount, total) >= 0) continue;
 
@@ -409,14 +442,24 @@ export async function getPaymentDetails(studentId) {
     outstandingInvoices.push({
       studentFeeInvoiceId: invoice.studentFeeInvoiceId,
       studentId: invoice.studentId,
-      feePlanItemId: invoice.feePlanItemId,
-      createDate: invoice.createDate,
-      dueDate: invoice.dueDate ?? null,
-      status: invoice.status,
+      billing_schedule_item_id: invoice.billingScheduleItemId ?? null,
+      billingScheduleItem: invoice.billingScheduleItem
+        ? {
+            billing_schedule_item_id: invoice.billingScheduleItem.billingScheduleItemId,
+            amount: toMoneyNumber(invoice.billingScheduleItem.amount),
+            plannedDate: invoice.billingScheduleItem.plannedDate,
+            status: invoice.billingScheduleItem.status,
+          }
+        : null,
+      baseAmount,
+      discountAmount,
       total,
       paidAmount,
       balanceDue,
+      status: invoice.status,
       paymentStatus,
+      createDate: invoice.createDate,
+      dueDate: invoice.dueDate ?? null,
     });
     balanceDueAmounts.push(balanceDue);
   }

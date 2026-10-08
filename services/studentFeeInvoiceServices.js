@@ -540,6 +540,7 @@ function formatFeesInvoiceTableRow(row) {
 export async function listAllStudentFeeInvoices({
   feePlanItemId,
   status = "all",
+  search,
   page = 1,
   limit = 10,
 } = {}) {
@@ -573,6 +574,7 @@ export async function listAllStudentFeeInvoices({
   const queryResult = await repo.findStudentFeeInvoicesOverview({
     feePlanItemId,
     status,
+    search,
     page,
     limit,
   });
@@ -590,7 +592,17 @@ export async function listAllStudentFeeInvoices({
       .join(" ")
       .trim();
 
+    const baseAmount = toMoneyNumber(
+      p.baseAmount != null
+        ? p.baseAmount
+        : Number(p.total || 0) + Number(p.discountAmount || 0)
+    );
+    const discountAmount = toMoneyNumber(p.discountAmount != null ? p.discountAmount : 0);
+    const total = toMoneyNumber(p.total);
+    const paidAmount = toMoneyNumber(p.paidAmount);
+
     return {
+      ...p,
       studentFeeInvoiceId: p.studentFeeInvoiceId,
       invoiceNo: p.studentFeeInvoiceId,
       invoiceNumber: p.studentFeeInvoiceId,
@@ -598,15 +610,22 @@ export async function listAllStudentFeeInvoices({
       studentName: fullName || formatStudentDisplayName(student),
       scholarNumber: student.scholarNumber || null,
       enrollNumber: student.enrollNumber || null,
-      amount: toMoneyNumber(p.total),
-      total: toMoneyNumber(p.total),
-      paid: payment.totalPaid,
-      paidAmount: payment.totalPaid,
+      admissionNumber: student.admissionNumber || null,
+      baseAmount,
+      discountAmount,
+      amount: total,
+      total,
+      paid: paidAmount,
+      paidAmount,
       balanceDue: payment.balanceDue,
       status: p.paymentStatus ? p.paymentStatus.toUpperCase() : "UNPAID",
       paymentStatus: p.paymentStatus || "unpaid",
+      invoiceStatus: p.status,
       createDate: p.createDate,
       dueDate: p.dueDate,
+      billingScheduleItemId: p.billingScheduleItemId || null,
+      feePlanItemId: p.feePlanItemId || null,
+      student,
     };
   });
 
@@ -619,8 +638,11 @@ export async function listAllStudentFeeInvoices({
     feePlanItemName: feePlanItem ? feePlanItem.name : null,
     feePlanItem,
     studentCount,
-    invoicesCount,
-    pendingInvoicesCount: Math.max(0, studentCount - invoicesCount),
+    invoicesCount: queryResult.totalInvoicesCount ?? invoicesCount,
+    totalInvoicesCount: queryResult.totalInvoicesCount ?? invoicesCount,
+    paidInvoicesCount: queryResult.paidInvoicesCount || 0,
+    pendingInvoicesCount: queryResult.pendingInvoicesCount || 0,
+    unpaidInvoicesCount: queryResult.unpaidInvoicesCount || queryResult.pendingInvoicesCount || 0,
     status,
     pagination: {
       totalRecords: queryResult.totalRecords,

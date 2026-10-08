@@ -31,11 +31,26 @@ const referenceTypeEnum = z.enum([
   "ASSET_SECURITY",
 ]);
 
-const paymentDetailsPaymentItemSchema = z.object({
-  referenceId: positiveIntegerId,
-  referenceType: referenceTypeEnum.optional().default("OTHER"),
-  amount: moneyAmount,
-});
+const paymentDetailsPaymentItemSchema = z
+  .object({
+    referenceId: positiveIntegerId.optional(),
+    studentFeeInvoiceId: positiveIntegerId.optional(),
+    billingScheduleItemId: positiveIntegerId.optional(),
+    billing_schedule_item_id: positiveIntegerId.optional(),
+    referenceType: referenceTypeEnum.optional().default("STUDENT_FEE_INVOICE"),
+    amount: moneyAmount,
+  })
+  .refine(
+    (data) =>
+      data.referenceId != null ||
+      data.studentFeeInvoiceId != null ||
+      data.billingScheduleItemId != null ||
+      data.billing_schedule_item_id != null,
+    {
+      message:
+        "Either billingScheduleItemId, billing_schedule_item_id, studentFeeInvoiceId, or referenceId is required",
+    }
+  );
 
 const recordPaymentDetailsBodySchema = z.object({
   payeeId: positiveIntegerId,
@@ -90,6 +105,8 @@ const listPaymentsQuerySchema = z.object({
 
 const paymentDetailsQuerySchema = z.object({
   studentId: positiveIntegerId,
+  billingScheduleItemId: positiveIntegerId.optional(),
+  billing_schedule_item_id: positiveIntegerId.optional(),
 });
 
 const studentFeePaymentIdQuerySchema = z.object({
