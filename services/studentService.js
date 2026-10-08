@@ -2286,6 +2286,7 @@ export async function getFeeDetailsByStudentId(studentId) {
       const p = typeof inv.get === "function" ? inv.get({ plain: true }) : inv;
       const items = (p.feeInvoiceItems || []).map((item) => ({
         name: item.feeTypeCatalog?.name || item.name || "Fee Item",
+        refundable: item.feeTypeCatalog?.refundable ?? null,
         dueDate: p.dueDate,
         amount: Number(item.amount || 0),
         subTotal: Number(item.amount || 0),

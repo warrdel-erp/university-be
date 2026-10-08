@@ -15,7 +15,10 @@ import {
   getFeePlanPublishHistory,
   getFeePlanPublishHistoryById,
   getSingleFeePlanItemDetails,
+  getBillingRuns,
 } from "../controllers/feePlanItemController.js";
+import { getStudentBillingBreakdown } from "../controllers/studentBillingBreakdownController.js";
+import { studentBillingBreakdownQuerySchema } from "./studentBillingBreakdownRoute.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";
@@ -82,6 +85,15 @@ const feePlanBatchesQuerySchema = z.object({
   status: feePlanStatusEnum.optional(),
 });
 
+const billingRunsQuerySchema = z.object({
+  courseId: positiveIntegerId.optional(),
+  sessionId: positiveIntegerId.optional(),
+  batchId: positiveIntegerId.optional(),
+  year: positiveIntegerId.optional(),
+  billingScheduleItemId: positiveIntegerId.optional(),
+  search: z.string().trim().optional(),
+});
+
 const batchOverviewQuerySchema = z.object({
   batchId: positiveIntegerId,
 });
@@ -96,9 +108,7 @@ const createFeePlanItemBodySchema = z
     batchId: positiveIntegerId,
     year: positiveIntegerId,
     name: z.string().trim().min(1),
-    academicPeriod: z.string().trim().min(1),
     createDate: dateOnly,
-    dueDate: dateOnly.optional().nullable(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1),
   })
   .superRefine((body, ctx) =>
@@ -109,18 +119,14 @@ const updateFeePlanItemBodySchema = z
   .object({
     feePlanItemId: positiveIntegerId,
     name: z.string().trim().min(1).optional(),
-    academicPeriod: z.string().trim().min(1).optional(),
     createDate: dateOnly.optional(),
-    dueDate: dateOnly.optional().nullable(),
     year: positiveIntegerId.optional(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1).optional(),
   })
   .superRefine((body, ctx) => {
     const hasUpdate =
       body.name !== undefined ||
-      body.academicPeriod !== undefined ||
       body.createDate !== undefined ||
-      body.dueDate !== undefined ||
       body.year !== undefined ||
       body.feePlanSubItems !== undefined;
 
@@ -173,6 +179,20 @@ const publishHistoryQuerySchema = z.object({
 const publishHistorySingleQuerySchema = z.object({
   feePlanPublishHistoryId: positiveIntegerId,
 });
+
+router.get(
+  "/billingRuns",
+  userAuth,
+  validate({ query: billingRunsQuerySchema }),
+  getBillingRuns,
+);
+
+router.get(
+  "/billingRuns/details",
+  userAuth,
+  validate({ query: studentBillingBreakdownQuerySchema }),
+  getStudentBillingBreakdown,
+);
 
 router.get(
   "/batches",

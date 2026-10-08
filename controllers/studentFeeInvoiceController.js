@@ -3,14 +3,16 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function generateStudentFeeInvoice(req, res) {
   try {
-    const { studentId, studentIds, batchId, feePlanItemId } = req.body;
-    await studentFeeInvoiceService.generateStudentFeeInvoice({
+    const { studentId, studentIds, batchId, feePlanItemId, billingScheduleItemId, dueDate } = req.body;
+    const result = await studentFeeInvoiceService.generateStudentFeeInvoice({
       studentId,
       studentIds,
       batchId,
       feePlanItemId,
+      billingScheduleItemId,
+      dueDate,
     });
-    return SuccessResponse(res, 201, "Invoice(s) generated successfully");
+    return SuccessResponse(res, 201, "Invoice(s) generated successfully", result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -54,10 +56,11 @@ export async function listStudentFeeInvoicesByStudent(req, res) {
 
 export async function listAllStudentFeeInvoices(req, res) {
   try {
-    const { feePlanItemId, status, page, limit } = req.query;
+    const { feePlanItemId, status, search, page, limit } = req.query;
     const data = await studentFeeInvoiceService.listAllStudentFeeInvoices({
       feePlanItemId,
       status,
+      search,
       page,
       limit,
     });

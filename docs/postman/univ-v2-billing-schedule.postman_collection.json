@@ -1,0 +1,668 @@
+{
+  "info": {
+    "_postman_id": "univ-v2-billing-schedule-v1",
+    "name": "Billing Schedule API",
+    "description": "Billing Schedule and Sub-Items Management API ordered by: 1. Batches, 2. Batches Overview, 3. Batches Review, 4. Create, 5. Billing Schedule (List & Single), 6. Update Billing Schedule & Status, 7. Delete, Sub-Items, Payment Terms.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0zMFQxNjo0ODo0My4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzkxMTg2MDY0LCJleHAiOjE3OTM3NzgwNjR9._HP3B7j7w5jIum0yaJd5LPDYPrKNXHaGFbwX6QTR_hU"
+    },
+    {
+      "key": "batchId",
+      "value": "1"
+    },
+    {
+      "key": "courseId",
+      "value": "36"
+    },
+    {
+      "key": "year",
+      "value": "1"
+    },
+    {
+      "key": "billingScheduleItemId",
+      "value": "1"
+    },
+    {
+      "key": "billingScheduleSubItemId",
+      "value": "1"
+    },
+    {
+      "key": "feePlanItemId",
+      "value": "1"
+    },
+    {
+      "key": "feePlanSubItemId",
+      "value": "1"
+    },
+    {
+      "key": "billingSchedulePaymentTermsId",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Get Batches (Grouped Course-wise)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/batches?batchId={{batchId}}&courseId={{courseId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "batches"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Optional Batch ID filter"
+            },
+            {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Optional Course ID filter"
+            }
+          ]
+        },
+        "description": "GET /billingSchedule/batches\n\nReturns all batches grouped course-wise with session and fee plan overview."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Batches Overview (by Year)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/batches/overview?batchId={{batchId}}&year={{year}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "batches",
+            "overview"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Batch ID"
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Optional year filter (e.g. 1, 2, 3)"
+            }
+          ]
+        },
+        "description": "GET /billingSchedule/batches/overview?batchId=&year=\n\nReturns batch fee configuration overview with course details, batch year, planned dates, amounts, status, and sub-items breakdown."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Detailed Schedule Review (by Batch & Year)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/batches/review?batchId={{batchId}}&year={{year}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "batches",
+            "review"
+          ],
+          "query": [
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Required Batch ID"
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Required Year (e.g. 1, 2, 3)"
+            }
+          ]
+        },
+        "description": "GET /billingSchedule/batches/review?batchId=&year=\n\nReturns detailed schedule review for a specific batch and year, including schedules, scheduleItems, payment terms, and feePlanItem basic details."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Create Billing Schedules (Bulk Array - 2 Entries)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "var firstItem = Array.isArray(jsonData.data) ? jsonData.data[0] : jsonData.data;",
+              "if (firstItem && firstItem.billingScheduleItemId) {",
+              "    pm.collectionVariables.set('billingScheduleItemId', firstItem.billingScheduleItemId);",
+              "    if (firstItem.subItems && firstItem.subItems.length > 0) {",
+              "        pm.collectionVariables.set('billingScheduleSubItemId', firstItem.subItems[0].billingScheduleSubItemId);",
+              "    }",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "[\n  {\n    \"feePlanItemId\": {{feePlanItemId}},\n    \"amount\": 25000.00,\n    \"plannedDate\": \"2026-11-20\",\n    \"status\": \"pending\",\n    \"subItems\": [\n      {\n        \"feePlanSubItemId\": {{feePlanSubItemId}},\n        \"amount\": 25000.00\n      }\n    ],\n    \"paymentTerms\": [\n      {\n        \"installment\": 1\n      }\n    ]\n  },\n  {\n    \"feePlanItemId\": {{feePlanItemId}},\n    \"amount\": 25000.00,\n    \"plannedDate\": \"2026-12-20\",\n    \"status\": \"pending\",\n    \"subItems\": [\n      {\n        \"feePlanSubItemId\": {{feePlanSubItemId}},\n        \"amount\": 25000.00\n      }\n    ],\n    \"paymentTerms\": [\n      {\n        \"installment\": 2\n      }\n    ]\n  }\n]"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ]
+        },
+        "description": "POST /billingSchedule\n\nCreates multiple billing schedule items along with their respective sub-items and payment terms in an atomic database transaction."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Create Billing Schedule (Simple - Without Sub-Items)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"feePlanItemId\": {{feePlanItemId}},\n  \"amount\": 15000.00,\n  \"plannedDate\": \"2026-12-01\",\n  \"status\": \"pending\"\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ]
+        },
+        "description": "POST /billingSchedule\n\nCreates a single parent billing schedule item without sub-items breakdown."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Get All Billing Schedules (List & Filters)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule?feePlanItemId={{feePlanItemId}}&status=pending&page=1&limit=10",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}"
+            },
+            {
+              "key": "status",
+              "value": "pending"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        },
+        "description": "GET /billingSchedule\n\nFetches a paginated list of billing schedule items with total count and nested sub-items."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get Single Billing Schedule (Details with Sub-Items)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/single?billingScheduleItemId={{billingScheduleItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "single"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}"
+            }
+          ]
+        },
+        "description": "GET /billingSchedule/single?billingScheduleItemId=\n\nRetrieves full details of a single billing schedule item including linked feePlanItem and child subItems with catalog lines."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Update Billing Schedule (Amount, Dates, Sub-Items Sync)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"amount\": 30000.00,\n  \"plannedDate\": \"2026-11-25\",\n  \"status\": \"scheduled\",\n  \"subItems\": [\n    {\n      \"feePlanSubItemId\": {{feePlanSubItemId}},\n      \"amount\": 30000.00\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ]
+        },
+        "description": "PATCH /billingSchedule\n\nUpdates parent fields and atomically synchronizes child sub-items."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Update Billing Schedule Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"status\": \"billed\"\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/status",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "status"
+          ]
+        },
+        "description": "PATCH /billingSchedule/status\n\nUpdates the lifecycle status of a schedule item."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Delete Billing Schedule",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule?billingScheduleItemId={{billingScheduleItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}"
+            }
+          ]
+        },
+        "description": "DELETE /billingSchedule?billingScheduleItemId=\n\nDeletes a billing schedule item and cascades child sub-items."
+      },
+      "response": []
+    },
+    {
+      "name": "11. Add Single Sub-Item to Existing Schedule",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"feePlanSubItemId\": {{feePlanSubItemId}},\n  \"amount\": 10000.00\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/subItem",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "subItem"
+          ]
+        },
+        "description": "POST /billingSchedule/subItem\n\nAppends an individual breakdown line to a billing schedule item."
+      },
+      "response": []
+    },
+    {
+      "name": "12. Delete Billing Schedule Sub-Item",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/subItem?billingScheduleSubItemId={{billingScheduleSubItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "subItem"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleSubItemId",
+              "value": "{{billingScheduleSubItemId}}"
+            }
+          ]
+        },
+        "description": "DELETE /billingSchedule/subItem?billingScheduleSubItemId=\n\nRemoves an individual child sub-item without deleting parent schedule."
+      },
+      "response": []
+    },
+    {
+      "name": "13. Add Payment Term to Billing Schedule",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"billingScheduleItemId\": {{billingScheduleItemId}},\n  \"installment\": 1\n}"
+        },
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/paymentTerm",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "paymentTerm"
+          ]
+        },
+        "description": "POST /billingSchedule/paymentTerm\n\nCreates a new payment term (installment) for a billing schedule item."
+      },
+      "response": []
+    },
+    {
+      "name": "14. Delete Billing Schedule Payment Term",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/paymentTerm?billingSchedulePaymentTermsId={{billingSchedulePaymentTermsId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "paymentTerm"
+          ],
+          "query": [
+            {
+              "key": "billingSchedulePaymentTermsId",
+              "value": "{{billingSchedulePaymentTermsId}}"
+            }
+          ]
+        },
+        "description": "DELETE /billingSchedule/paymentTerm?billingSchedulePaymentTermsId=\n\nDeletes a specific billing schedule payment term by ID."
+      },
+      "response": []
+    },
+    {
+      "name": "15. Review Billing Schedule (Review & Verify Screen)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/review?feePlanItemId={{feePlanItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "review"
+          ],
+          "query": [
+            {
+              "key": "feePlanItemId",
+              "value": "{{feePlanItemId}}"
+            },
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}",
+              "disabled": true
+            },
+            {
+              "key": "batchId",
+              "value": "1",
+              "disabled": true
+            },
+            {
+              "key": "year",
+              "value": "1",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Fetches the full Review Billing Schedule dataset matching the UI review card, including summary KPIs, scheduled periods table, summary calculation matching, payment terms cards with structures and default options."
+      },
+      "response": []
+    },
+    {
+      "name": "16. View Single Billing Schedule Details",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/billingSchedule/view?billingScheduleItemId={{billingScheduleItemId}}",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "billingSchedule",
+            "view"
+          ],
+          "query": [
+            {
+              "key": "billingScheduleItemId",
+              "value": "{{billingScheduleItemId}}"
+            }
+          ]
+        },
+        "description": "Fetches complete view of a single billing schedule item with fee plan details, batch/course context, sub-items catalog, payment terms, and calculated payment options matrix."
+      },
+      "response": []
+    }
+  ]
+}

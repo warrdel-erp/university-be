@@ -4,10 +4,11 @@ import universityModel from "./universityModel.js";
 import studentModel from "./studentModel.js";
 import feePlanItemModel from "./feePlanItemModel.js";
 import instituteModel from "./instituteModel.js";
+import billingScheduleItemsModel from "./billingScheduleItemsModel.js";
 
 const studentFeeInvoiceModel = sequelize.define(
   "student_fee_invoice",
-  {
+  { 
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -32,6 +33,18 @@ const studentFeeInvoiceModel = sequelize.define(
       type: DataTypes.DATEONLY,
       allowNull: true,
       field: "due_date",
+    },
+    baseAmount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      defaultValue: 0,
+      field: "base_amount",
+    },
+    discountAmount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true,
+      defaultValue: 0,
+      field: "discount_amount",
     },
     total: {
       type: DataTypes.DECIMAL(12, 2),
@@ -70,6 +83,15 @@ const studentFeeInvoiceModel = sequelize.define(
       references: {
         model: feePlanItemModel,
         key: "fee_plan_item_id",
+      },
+    },
+    billingScheduleItemId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "billing_schedule_item_id",
+      references: {
+        model: billingScheduleItemsModel,
+        key: "billing_schedule_item_id",
       },
     },
     instituteId: {

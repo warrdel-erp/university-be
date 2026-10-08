@@ -22,6 +22,28 @@ export const listCourses = async (req, res) => {
   }
 };
 
+export const getCoursesWithDurationYears = async (req, res) => {
+  try {
+    const { search } = req.query;
+
+    const result = await courseService.getCoursesWithDurationYears({ search });
+
+    return SuccessResponse(
+      res,
+      200,
+      'Courses with duration years fetched successfully',
+      result,
+    );
+  } catch (error) {
+    console.error('Error in getCoursesWithDurationYears Controller:', error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+
 export const getCourseWithSubjects = async (req, res) => {
   try {
     const result = await courseService.getCourseWithSubjects();
