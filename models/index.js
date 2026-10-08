@@ -2059,6 +2059,15 @@ roleModel.hasMany(userModel, {
   as: "defaultRoleUsers",
 });
 
+roleModel.belongsTo(universityModel, {
+  foreignKey: "university_id",
+  as: "university",
+});
+universityModel.hasMany(roleModel, {
+  foreignKey: "university_id",
+  as: "roles",
+});
+
 // HOD Departments mapping
 // dormitory join
 addDormitoryModel.belongsTo(dormitoryListModel, {
