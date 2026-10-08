@@ -575,6 +575,76 @@ export async function cloneTimeTableStructure(sourceTimeTableNameId, name, creat
     }
 }
 
+export async function copyTimeTableStructure(data, createdBy, updatedBy) {
+    const { timeTableNameId, name } = data;
+
+    return await sequelize.transaction(async (transaction) => {
+        const source = await timeTableRepository.getTimeTableStructureDetailsById(timeTableNameId, {
+            transaction,
+        });
+        if (!source) {
+            const err = new Error('Source timetable structure not found');
+            err.statusCode = 404;
+            throw err;
+        }
+
+        const plain = source.get ? source.get({ plain: true }) : source;
+        const sourcePeriods = plain.timeTableName || [];
+
+        const newName = name && name.trim()
+            ? name.trim()
+            : (plain.name && plain.name.startsWith('Copy of ') ? `${plain.name} (1)` : `Copy of ${plain.name || 'Structure'}`);
+
+        // 1. Create cloned structure header
+        const newStructure = await timeTableRepository.addTimeTableName(
+            {
+                name: newName,
+                maximumPeriod: plain.maximumPeriod,
+                periodLength: plain.periodLength,
+                periodGap: plain.periodGap,
+                startingTime: plain.startingTime,
+                weekOff: plain.weekOff,
+                sourceTimeTableNameId: null,
+                createdBy,
+                updatedBy,
+            },
+            transaction,
+        );
+
+        const newTimeTableNameId = newStructure.timeTableNameId;
+
+        // 2. Clone periods (time slots)
+        const timeSlots = sourcePeriods.map((period) => ({
+            timeTableNameId: newTimeTableNameId,
+            periodName: period.periodName,
+            startTime: period.startTime,
+            endTime: period.endTime,
+            type: period.type,
+            isCourse: period.isCourse,
+            isBreak: period.isBreak,
+            createdBy,
+            updatedBy,
+        }));
+
+        let periods = [];
+        if (timeSlots.length) {
+            periods = await timeTableRepository.addTimeTable({ timeSlots }, transaction);
+        }
+
+        return {
+            timeTableNameId: newTimeTableNameId,
+            name: newName,
+            sourceTimeTableNameId: null,
+            maximumPeriod: plain.maximumPeriod,
+            periodLength: plain.periodLength,
+            periodGap: plain.periodGap,
+            startingTime: plain.startingTime,
+            weekOff: plain.weekOff,
+            periods,
+        };
+    });
+}
+
 export async function getTimetableListPrintData(filters = {}) {
     return await timeTableRepository.getTimetableListPrintRows(filters);
 }

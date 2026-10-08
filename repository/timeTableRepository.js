@@ -401,11 +401,12 @@ export async function getTimeTableStructures(filters = {}) {
     });
 }
 
-export async function getTimeTableStructureDetailsById(timeTableNameId) {
+export async function getTimeTableStructureDetailsById(timeTableNameId, options = {}) {
     return await scoped(model.timeTableStructureModel).findOne({
         where: { timeTableNameId: Number(timeTableNameId) },
         attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
         include: structureListInclude,
+        transaction: options.transaction,
     });
 }
 
