@@ -104,3 +104,25 @@ export async function getFeePolicyImpact(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function getStudentFeeTreatmentSummary(req, res) {
+  try {
+    const data = await feePolicyService.getStudentFeeTreatmentSummary(req.query, req.user);
+    return SuccessResponse(res, 200, "Student fee summary fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getFeePolicyOptions(req, res) {
+  try {
+    const data = await feePolicyService.getFeePolicyOptions(req.query, req.user);
+    return SuccessResponse(res, 200, "Fee policy options fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getFeePoliciesByStudentId(req, res) {
+  return getFeePolicyOptions(req, res);
+}

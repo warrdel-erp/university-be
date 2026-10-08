@@ -319,3 +319,332 @@ export async function findPoliciesByIds(feePolicyIds, options = {}) {
     transaction: options.transaction,
   });
 }
+
+export async function findStudentFeeDetailsWithIncludes(studentId, options = {}) {
+  return scoped(model.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findOne({
+    where: { studentId: Number(studentId) },
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "enrollNumber",
+      "admissionNumber",
+      "batchId",
+      "courseId",
+    ],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "courseCode", "courseDuration"],
+        required: false,
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch"],
+        required: false,
+        include: [
+          {
+            model: model.feePolicyBatchesModel,
+            as: "feePolicyBatches",
+            required: false,
+            include: [
+              {
+                model: model.feePolicyModel,
+                as: "policy",
+                required: false,
+                where: { publishStatus: "published", isActive: true },
+                include: [
+                  {
+                    model: model.feePolicyComponentsModel,
+                    as: "policyComponents",
+                    required: false,
+                    include: [
+                      {
+                        model: model.feeTypeCatalogModel,
+                        as: "feeTypeCatalog",
+                        required: false,
+                        attributes: ["feeTypeCatalogId", "name", "refundable"],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.feePolicyStudentsModel,
+        as: "feePolicyStudents",
+        required: false,
+        include: [
+          {
+            model: model.feePolicyModel,
+            as: "policy",
+            required: false,
+            where: { publishStatus: "published", isActive: true },
+            include: [
+              {
+                model: model.feePolicyComponentsModel,
+                as: "policyComponents",
+                required: false,
+                include: [
+                  {
+                    model: model.feeTypeCatalogModel,
+                    as: "feeTypeCatalog",
+                    required: false,
+                    attributes: ["feeTypeCatalogId", "name", "refundable"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      {
+        model: model.studentFeeInvoiceModel,
+        as: "studentFeeInvoices",
+        required: false,
+        attributes: [
+          "studentFeeInvoiceId",
+          "createDate",
+          "dueDate",
+          "total",
+          "status",
+          "paymentStatus",
+          "paidAmount",
+          "studentId",
+          "feePlanItemId",
+          "billingScheduleItemId",
+        ],
+        include: [
+          {
+            model: model.feePlanItemModel,
+            as: "feePlanItem",
+            required: false,
+            attributes: ["feePlanItemId", "year", "name"],
+          },
+          {
+            model: model.studentFeeInvoiceItemsModel,
+            as: "feeInvoiceItems",
+            required: false,
+            attributes: ["studentFeeInvoiceItemsId", "feeTypeId", "amount", "waiver", "isMainItem"],
+            include: [
+              {
+                model: model.feeTypeCatalogModel,
+                as: "feeTypeCatalog",
+                required: false,
+                attributes: ["feeTypeCatalogId", "name", "ledgerType", "refundable"],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function findFeePoliciesByStudentId(studentId, { year } = {}, options = {}) {
+  const student = await scoped(model.studentModel, {
+    scopeConfig: { academicYear: false },
+  }).findOne({
+    where: { studentId: Number(studentId) },
+    attributes: [
+      "studentId",
+      "firstName",
+      "middleName",
+      "lastName",
+      "scholarNumber",
+      "enrollNumber",
+      "admissionNumber",
+      "batchId",
+      "courseId",
+      "classSectionTermId",
+    ],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "courseCode"],
+        required: false,
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch"],
+        required: false,
+      },
+      {
+        model: model.classSectionTermModel,
+        as: "studentClassSectionTerm",
+        attributes: ["classSectionTermId", "term", "classSectionsId"],
+        required: false,
+        include: [
+          {
+            model: model.classSectionModel,
+            as: "classSection",
+            attributes: ["classSectionsId", "year"],
+            required: false,
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  if (!student) return null;
+
+  // Resolve student's year: explicitly passed query year > classSection year > latest invoice year
+  let resolvedYear =
+    year != null && year !== ""
+      ? Number(year)
+      : student.studentClassSectionTerm?.classSection?.year != null
+      ? Number(student.studentClassSectionTerm.classSection.year)
+      : null;
+
+  if (resolvedYear == null) {
+    const latestInvoice = await scoped(model.studentFeeInvoiceModel, {
+      scopeConfig: { academicYear: false },
+    }).findOne({
+      where: { studentId: Number(studentId) },
+      include: [
+        {
+          model: model.feePlanItemModel,
+          as: "feePlanItem",
+          attributes: ["year"],
+          required: true,
+        },
+      ],
+      attributes: ["studentFeeInvoiceId", "feePlanItemId"],
+      order: [["createDate", "DESC"]],
+      transaction: options.transaction,
+    });
+    if (latestInvoice?.feePlanItem?.year != null) {
+      resolvedYear = Number(latestInvoice.feePlanItem.year);
+    }
+  }
+
+  const batchConditions = [];
+  if (student.batchId) batchConditions.push({ batchId: Number(student.batchId) });
+  if (student.courseId) batchConditions.push({ courseId: Number(student.courseId), batchId: null });
+
+  const policyBatchesWhere = {};
+  if (batchConditions.length > 0) {
+    policyBatchesWhere[Op.or] = batchConditions;
+  }
+  // Scope feePolicyBatches year-wise: matches if year is null (all years) or matches the student's year
+  if (resolvedYear != null) {
+    policyBatchesWhere.year = {
+      [Op.or]: [null, resolvedYear],
+    };
+  }
+
+  const [studentPolicyRows, batchPolicyRows] = await Promise.all([
+    scoped(model.feePolicyStudentsModel).findAll({
+      where: { studentId: Number(studentId) },
+      include: [
+        {
+          model: model.feePolicyModel,
+          as: "policy",
+          required: true,
+          attributes: ["feePolicyId", "policyName", "publishStatus", "effect"],
+        },
+      ],
+      transaction: options.transaction,
+    }),
+    batchConditions.length > 0
+      ? scoped(model.feePolicyModel).findAll({
+          include: [
+            {
+              model: model.feePolicyBatchesModel,
+              as: "policyBatches",
+              where: policyBatchesWhere,
+              required: true,
+              attributes: ["feePolicyBatchId", "feePolicyId", "courseId", "batchId", "year", "term"],
+            },
+          ],
+          attributes: ["feePolicyId", "policyName", "publishStatus", "effect"],
+          transaction: options.transaction,
+        })
+      : [],
+  ]);
+
+  return { student, studentPolicyRows, batchPolicyRows, resolvedYear };
+}
+
+export async function findFeePoliciesOptions({
+  publishStatus,
+  effect,
+  calculationType,
+  courseId,
+  batchId,
+  year,
+  search,
+} = {}, options = {}) {
+  const where = {};
+
+  if (publishStatus && publishStatus !== "all") {
+    where.publishStatus = publishStatus;
+  }
+  if (effect) {
+    where.effect = effect;
+  }
+  if (calculationType) {
+    where.calculationType = calculationType;
+  }
+  if (search && search.trim()) {
+    where.policyName = { [Op.like]: `%${search.trim()}%` };
+  }
+
+  const include = [];
+
+  // If courseId, batchId, or year is passed, check scope in feePolicyBatchesModel
+  if (courseId || batchId || (year != null && year !== "")) {
+    const batchWhere = {};
+    if (courseId && batchId) {
+      batchWhere[Op.or] = [
+        { batchId: Number(batchId) },
+        { courseId: Number(courseId), batchId: null },
+      ];
+    } else if (batchId) {
+      batchWhere.batchId = Number(batchId);
+    } else if (courseId) {
+      batchWhere.courseId = Number(courseId);
+    }
+
+    if (year != null && year !== "") {
+      batchWhere.year = {
+        [Op.or]: [null, Number(year)],
+      };
+    }
+
+    include.push({
+      model: model.feePolicyBatchesModel,
+      as: "policyBatches",
+      where: batchWhere,
+      required: true,
+      attributes: ["feePolicyBatchId", "feePolicyId", "courseId", "batchId", "year", "term"],
+    });
+  }
+
+  return scoped(model.feePolicyModel).findAll({
+    where,
+    attributes: [
+      "feePolicyId",
+      "policyName",
+      "effect",
+      "publishStatus",
+    ],
+    include,
+    order: [["policyName", "ASC"]],
+    transaction: options.transaction,
+  });
+}
+

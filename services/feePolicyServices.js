@@ -4,7 +4,12 @@ import * as feeTypeCatalogRepo from "../repository/feeTypeCatalogRepository.js";
 import * as studentRepo from "../repository/studentBillingBreakdownRepository.js";
 import * as feePlanRepo from "../repository/feePlanItemRepository.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
-import { toMoneyNumber, decimalAdd, decimalSubtract } from "../utility/decimalMoney.js";
+import {
+  decimalAdd,
+  decimalSubtract,
+  decimalSum,
+  toMoneyNumber,
+} from "../utility/decimalMoney.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -763,5 +768,274 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
       feeAfterTreatment: finalFee > 0 ? finalFee : 0,
       note: `This treatment will apply to eligible billing for Term Year ${termYear}.`
     }
+  };
+}
+
+function formatFeePolicyOption(p) {
+  return {
+    label: p.policyName,
+    value: p.feePolicyId,
+    feePolicyId: p.feePolicyId,
+    policyName: p.policyName,
+  };
+}
+
+export async function getFeePolicyOptions(query = {}, authUser = {}) {
+  const { studentId, courseId, batchId, year, effect, calculationType, search, publishStatus } = query;
+
+  if (studentId) {
+    const numStudentId = Number(studentId);
+    if (!numStudentId || !Number.isInteger(numStudentId) || numStudentId <= 0) {
+      throw httpError("Valid studentId is required", 400);
+    }
+
+    const result = await feePolicyRepo.findFeePoliciesByStudentId(numStudentId, { year });
+    if (!result || !result.student) {
+      throw httpError(`Student with ID ${numStudentId} not found`, 404);
+    }
+
+    const { studentPolicyRows, batchPolicyRows } = result;
+    const policyMap = new Map();
+
+    for (const row of studentPolicyRows || []) {
+      const p = row.policy
+        ? typeof row.policy.get === "function"
+          ? row.policy.get({ plain: true })
+          : row.policy
+        : null;
+      if (p && p.feePolicyId) {
+        policyMap.set(Number(p.feePolicyId), p);
+      }
+    }
+
+    for (const pRow of batchPolicyRows || []) {
+      const p = typeof pRow.get === "function" ? pRow.get({ plain: true }) : pRow;
+      if (p && p.feePolicyId && !policyMap.has(Number(p.feePolicyId))) {
+        policyMap.set(Number(p.feePolicyId), p);
+      }
+    }
+
+    let policies = Array.from(policyMap.values());
+
+    if (publishStatus && publishStatus !== "all") {
+      policies = policies.filter((p) => p.publishStatus === publishStatus);
+    }
+    if (effect) {
+      policies = policies.filter((p) => p.effect === effect);
+    }
+    return policies.map(formatFeePolicyOption);
+  }
+
+  const policies = await feePolicyRepo.findFeePoliciesOptions({
+    courseId,
+    batchId,
+    year,
+    effect,
+    calculationType,
+    publishStatus: publishStatus || "all",
+    search,
+  });
+
+  return policies.map((p) => {
+    const plain = typeof p.get === "function" ? p.get({ plain: true }) : p;
+    return formatFeePolicyOption(plain);
+  });
+}
+
+export async function getFeePoliciesByStudentId(query = {}, authUser = {}) {
+  return getFeePolicyOptions(query, authUser);
+}
+
+export async function getStudentFeeTreatmentSummary(query = {}, authUser = {}) {
+  const studentId = Number(query.studentId);
+  if (!studentId || !Number.isInteger(studentId) || studentId <= 0) {
+    throw httpError("Valid studentId is required", 400);
+  }
+
+  const studentRow = await feePolicyRepo.findStudentFeeDetailsWithIncludes(studentId);
+  if (!studentRow) {
+    throw httpError(`Student with ID ${studentId} not found`, 404);
+  }
+
+  const student = studentRow.get({ plain: true });
+  const invoices = student.studentFeeInvoices || [];
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // 1. Fee components breakdown & refundable calculation from studentFeeInvoice
+  const componentMap = new Map();
+  let totalFee = 0;
+  let totalPaid = 0;
+
+  for (const inv of invoices) {
+    const invTotal = Number(inv.total) || 0;
+    const invPaid = Number(inv.paidAmount) || 0;
+    const paidRatio = invTotal > 0 ? invPaid / invTotal : 0;
+    totalFee += invTotal;
+    totalPaid += invPaid;
+
+    for (const item of inv.feeInvoiceItems || []) {
+      const catId = item.feeTypeId;
+      const amount = Number(item.amount) || 0;
+      const waiver = Number(item.waiver) || 0;
+      const net = Math.max(0, amount - waiver);
+      const isRefundable = Boolean(item.feeTypeCatalog?.refundable);
+      const itemPaid = invPaid >= invTotal ? net : net * paidRatio;
+
+      if (!componentMap.has(catId)) {
+        componentMap.set(catId, {
+          feeTypeId: catId,
+          name: item.feeTypeCatalog?.name || "Fee Component",
+          totalAmount: 0,
+          waiver: 0,
+          netAmount: 0,
+          isRefundable,
+          refundableAmount: 0,
+          paidAmount: 0,
+          currentBalance: 0,
+        });
+      }
+      const c = componentMap.get(catId);
+      c.totalAmount = toMoneyNumber(c.totalAmount + amount);
+      c.waiver = toMoneyNumber(c.waiver + waiver);
+      c.netAmount = toMoneyNumber(c.netAmount + net);
+      c.paidAmount = toMoneyNumber(c.paidAmount + itemPaid);
+      c.currentBalance = toMoneyNumber(Math.max(0, c.netAmount - c.paidAmount));
+      if (isRefundable) {
+        c.refundableAmount = c.netAmount;
+      }
+    }
+  }
+
+  const feeAmountWiseBreakdown = Array.from(componentMap.values());
+
+  // 2. Fee Treatments (student-specific & batch-level policies)
+  const policies = [];
+  const seenPolicy = new Set();
+  const addPolicy = (p) => {
+    if (!p || seenPolicy.has(p.feePolicyId)) return;
+    seenPolicy.add(p.feePolicyId);
+    policies.push(p);
+  };
+  for (const sp of student.feePolicyStudents || []) addPolicy(sp.policy);
+  for (const bp of student.batch?.feePolicyBatches || []) addPolicy(bp.policy);
+
+  let totalDiscount = 0;
+  let totalAddCharge = 0;
+
+  const feeTreatments = policies.map((policy) => {
+    let targetAmount = totalFee;
+    if (policy.appliesTo === "selected_components") {
+      const compIds = (policy.policyComponents || []).map((pc) => pc.feeTypeCatalogId);
+      targetAmount = feeAmountWiseBreakdown
+        .filter((c) => compIds.includes(c.feeTypeId))
+        .reduce((sum, c) => sum + c.totalAmount, 0);
+    }
+
+    let calculatedDiscount = 0;
+    if (policy.calculationType === "percentage") {
+      calculatedDiscount = (targetAmount * (Number(policy.percentageRate) || 0)) / 100;
+    } else if (policy.calculationType === "fixed_amount") {
+      calculatedDiscount = Number(policy.fixedAmount) || 0;
+    }
+    if (policy.maxCapAmount && calculatedDiscount > Number(policy.maxCapAmount)) {
+      calculatedDiscount = Number(policy.maxCapAmount);
+    }
+    calculatedDiscount = toMoneyNumber(calculatedDiscount);
+
+    if (policy.effect === "reduce_fee") {
+      totalDiscount += calculatedDiscount;
+    } else if (policy.effect === "add_charge") {
+      totalAddCharge += calculatedDiscount;
+    }
+
+    return {
+      feePolicyId: policy.feePolicyId,
+      policyName: policy.policyName,
+      effect: policy.effect,
+      calculationType: policy.calculationType,
+      percentageRate: policy.percentageRate,
+      calculatedDiscount: policy.effect === "reduce_fee" ? calculatedDiscount : 0,
+      calculatedCharge: policy.effect === "add_charge" ? calculatedDiscount : 0,
+      amountToBePaid: toMoneyNumber(Math.max(0, targetAmount - calculatedDiscount)),
+    };
+  });
+
+  // 3. Year-wise fee status
+  const yearMap = new Map();
+  for (const inv of invoices) {
+    const y = inv.feePlanItem?.year || 1;
+    const invTotal = Number(inv.total) || 0;
+    const invPaid = Number(inv.paidAmount) || 0;
+    const balance = Math.max(0, invTotal - invPaid);
+    const isOverdue = inv.paymentStatus !== "paid" && Boolean(inv.dueDate && inv.dueDate < todayStr);
+    const overdueAmount = isOverdue ? balance : 0;
+
+    let refundable = 0;
+    for (const item of inv.feeInvoiceItems || []) {
+      if (item.feeTypeCatalog?.refundable) {
+        refundable += Math.max(0, (Number(item.amount) || 0) - (Number(item.waiver) || 0));
+      }
+    }
+
+    if (!yearMap.has(y)) {
+      yearMap.set(y, {
+        year: y,
+        totalAmount: 0,
+        amountPaidTillNow: 0,
+        currentBalance: 0,
+        isOverdue: false,
+        overdueAmount: 0,
+        refundableDeposit: 0,
+        paymentStatus: "unpaid",
+      });
+    }
+    const yStat = yearMap.get(y);
+    yStat.totalAmount = toMoneyNumber(yStat.totalAmount + invTotal);
+    yStat.amountPaidTillNow = toMoneyNumber(yStat.amountPaidTillNow + invPaid);
+    yStat.currentBalance = toMoneyNumber(yStat.currentBalance + balance);
+    yStat.refundableDeposit = toMoneyNumber(yStat.refundableDeposit + refundable);
+    if (isOverdue) {
+      yStat.isOverdue = true;
+      yStat.overdueAmount = toMoneyNumber(yStat.overdueAmount + overdueAmount);
+    }
+    yStat.paymentStatus =
+      yStat.amountPaidTillNow >= yStat.totalAmount
+        ? "paid"
+        : yStat.amountPaidTillNow > 0
+        ? "partial"
+        : "unpaid";
+  }
+
+  const yearWiseFeeStatus = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
+
+  // 4. Overall Summary
+  const amountToBePaid = toMoneyNumber(Math.max(0, totalFee - totalDiscount + totalAddCharge));
+  const currentBalance = toMoneyNumber(Math.max(0, totalFee - totalPaid));
+  const totalOverdue = toMoneyNumber(yearWiseFeeStatus.reduce((sum, y) => sum + y.overdueAmount, 0));
+  const totalRefundable = toMoneyNumber(yearWiseFeeStatus.reduce((sum, y) => sum + y.refundableDeposit, 0));
+
+  return {
+    student: {
+      studentId: student.studentId,
+      studentName: [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" "),
+      scholarNumber: student.scholarNumber,
+      enrollNumber: student.enrollNumber,
+      admissionNumber: student.admissionNumber,
+      batch: student.batch?.batch || null,
+      course: student.course?.courseName || null,
+    },
+    summary: {
+      totalFeeAmount: toMoneyNumber(totalFee),
+      totalDiscount: toMoneyNumber(totalDiscount),
+      amountToBePaid,
+      amountPaidTillNow: toMoneyNumber(totalPaid),
+      currentBalance,
+      isOverdue: totalOverdue > 0,
+      overdueAmount: totalOverdue,
+      refundableDeposit: totalRefundable,
+    },
+    feeTreatments,
+    feeAmountWiseBreakdown,
+    yearWiseFeeStatus,
   };
 }

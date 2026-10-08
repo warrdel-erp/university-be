@@ -494,6 +494,109 @@
         "description": "DELETE /feePolicy/student?studentId=&feePolicyId=\n\nRemoves mapping between student and fee policy."
       },
       "response": []
+    },
+    {
+      "name": "13. Get Student Fee Treatment Summary & Statement",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/student/summary?studentId={{studentId}}&year={{year}}",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "student", "summary"],
+          "query": [
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Required student ID"
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Optional year filter (e.g. 1, 2)",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "GET /feePolicy/student/summary?studentId=&year=\n\nFetches:\n1. Student info (name, scholarNumber, enrollNumber, course, batch, session).\n2. Overall financial summary (totalFeeAmount, totalDiscount, amountToBePaid, amountPaidTillNow, currentBalance, isOverdue, totalOverdueAmount, totalRefundableDeposit, paymentStatus).\n3. feeTreatments: All fee treatments / scholarships and waivers applied to the student with calculated discount, percentage, max cap, and net payable.\n4. feeAmountWiseBreakdown: Array of objects of total fee amount-wise refundable amount with current balance from studentFeeInvoice.\n5. yearWiseFeeStatus: Year-wise fee status for all course years (amount paid till now, overdue status & amount, refundable deposit, payment status, and invoices list).\n6. invoices: Detailed student fee invoices from studentFeeInvoiceModel."
+      },
+      "response": []
+    },
+    {
+      "name": "14. Get Fee Policy Options (Dropdown / Select)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Accept",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseurl}}/feePolicy/options?studentId={{studentId}}&year={{year}}&effect=reduce_fee&publishStatus=published",
+          "host": ["{{baseurl}}"],
+          "path": ["feePolicy", "options"],
+          "query": [
+            {
+              "key": "studentId",
+              "value": "{{studentId}}",
+              "description": "Optional: Filter policies applicable to a specific student (mapped + batch-scoped with year check)",
+              "disabled": true
+            },
+            {
+              "key": "year",
+              "value": "{{year}}",
+              "description": "Optional: Program year (1, 2, 3...) to check feePolicyBatches year scope",
+              "disabled": true
+            },
+            {
+              "key": "courseId",
+              "value": "{{courseId}}",
+              "description": "Optional: Filter policies by course",
+              "disabled": true
+            },
+            {
+              "key": "batchId",
+              "value": "{{batchId}}",
+              "description": "Optional: Filter policies by batch",
+              "disabled": true
+            },
+            {
+              "key": "effect",
+              "value": "reduce_fee",
+              "description": "Optional: Filter by effect (reduce_fee | add_charge | refund)",
+              "disabled": true
+            },
+            {
+              "key": "publishStatus",
+              "value": "published",
+              "description": "Optional: Filter by publishStatus (all | published | draft)",
+              "disabled": true
+            },
+            {
+              "key": "search",
+              "value": "",
+              "description": "Optional: Search policy name",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "GET /feePolicy/options\n\nAlso available at: GET /options/feePolicies\n\nReturns an array of objects where each object contains exactly 4 keys:\n[\n  {\n    \"label\": \"Merit Scholarship 10%\",\n    \"value\": 1,\n    \"feePolicyId\": 1,\n    \"policyName\": \"Merit Scholarship 10%\"\n  }\n]\n\nScope Checking:\n- Checks scope of feePolicyBatchesModel year-wise (applies when policy batch year is null or matches the resolved year).\n- For students, year is resolved from query `year` > classSection year > latest invoice year."
+      },
+      "response": []
     }
   ]
 }
