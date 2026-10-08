@@ -77,7 +77,7 @@ import amcContractModel from "./amcContractModel.js";
 import amcServiceTicketModel from "./amcServiceTicketModel.js";
 import userStudentEmployeeModel from "./userStudentEmployeeModel.js";
 import roleModel from "./roleModel.js";
-import rolePermissionMappingModel from "./rolePermissionMappingModel.js";
+import rolePermissionsModel from "./rolePermissionsModel.js";
 import userRolePermissionModel from "./userRolePermissionModel.js";
 import roomTypeModel from "./roomTypeModel.js";
 import dormitoryListModel from "./dormitoryListModel.js";
@@ -2021,11 +2021,11 @@ employeeModel.hasMany(userStudentEmployeeModel, {
 });
 
 // role_permissions template: belongs to role only (permission/scope are strings)
-rolePermissionMappingModel.belongsTo(roleModel, {
+rolePermissionsModel.belongsTo(roleModel, {
   foreignKey: "role_id",
   as: "role",
 });
-roleModel.hasMany(rolePermissionMappingModel, {
+roleModel.hasMany(rolePermissionsModel, {
   foreignKey: "role_id",
   as: "rolePermissions",
 });
@@ -4142,7 +4142,7 @@ export {
   amcServiceTicketModel,
   userStudentEmployeeModel,
   roleModel,
-  rolePermissionMappingModel,
+  rolePermissionsModel,
   userRolePermissionModel,
   roomTypeModel,
   dormitoryListModel,

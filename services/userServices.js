@@ -645,13 +645,13 @@ async function seedLegacyRoleAndPermissions(
 ) {
   // 1. Find or create the CLIENT_ADMIN role
   let clientAdminRole = await model.roleModel.findOne({
-    where: { role: "CLIENT_ADMIN", instituteId },
+    where: { role: "CLIENT_ADMIN" },
     transaction,
   });
 
   if (!clientAdminRole) {
     clientAdminRole = await model.roleModel.create(
-      { role: "CLIENT_ADMIN", instituteId: instituteId },
+      { role: "CLIENT_ADMIN" },
       { transaction },
     );
   }
@@ -671,14 +671,7 @@ async function seedLegacyRoleAndPermissions(
     });
   }
 
-  // 4. Sync role_permissions template
-  await model.rolePermissionMappingModel.destroy({
-    where: { roleId: clientAdminRole.roleId },
-    transaction,
-  });
-  await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, {
-    transaction,
-  });
+  // 4. Removed role_permissions sync logic since we only use userRolePermissionModel now.
 
   // 5. Assign the CLIENT_ADMIN role to the user (copies all non-perm_access_inst rows)
   await userRoleService.assignRoleToUser(
@@ -1094,14 +1087,7 @@ export async function giveFullAccess(info) {
       });
     }
 
-    // 3. Sync role_permissions template
-    await model.rolePermissionMappingModel.destroy({
-      where: { roleId },
-      transaction,
-    });
-    await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, {
-      transaction,
-    });
+    // 3. Removed role_permissions sync logic since we only use userRolePermissionModel now.
 
     // 4. Clear existing user permissions in user_role_permission_scope for this user
     await model.userRolePermissionModel.destroy({
