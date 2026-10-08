@@ -24,19 +24,12 @@ const dateOnlyString = z
 
 const generateInvoiceBodySchema = z
   .object({
-    billingScheduleItemId: positiveIntegerId.optional(),
-    feePlanItemId: positiveIntegerId.optional(),
+    billingScheduleItemId: positiveIntegerId,
     studentId: positiveIntegerId.optional(),
     studentIds: z.array(positiveIntegerId).min(1).optional(),
     batchId: positiveIntegerId.optional(),
     dueDate: dateOnlyString.optional().nullable(),
-  })
-  .refine(
-    (data) => data.billingScheduleItemId != null || data.feePlanItemId != null,
-    {
-      message: "Either billingScheduleItemId or feePlanItemId is required",
-    },
-  );
+  });
 
 const adhocFeeTypeCatalogLineSchema = z
   .object({
