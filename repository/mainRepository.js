@@ -1025,35 +1025,17 @@ export async function getSectionByClassId(classId) {
 
 export async function getMonthlyIncomeRepository() {
     try {
-        return scoped(model.feeInvoiceDetailRecordModel).findAll({
+        return scoped(model.studentFeePaymentModel).findAll({
             attributes: [
                 [
-                    sequelize.fn("DATE_FORMAT", sequelize.col("payment_date"), "%Y-%m-01"),
+                    sequelize.fn("DATE_FORMAT", sequelize.col("created_at"), "%Y-%m-01"),
                     "month"
                 ],
-                [sequelize.fn("SUM", sequelize.col("paid_amount")), "totalIncome"]
+                [sequelize.fn("SUM", sequelize.col("amount")), "totalIncome"]
             ],
             where: {
-                paymentStatus: "paid"
+                paymentType: "INCOMING"
             },
-            include: [
-                {
-                    model: model.studentInvoiceMapperModel,
-                    as: "studentMakePayment",
-                    attributes: [],
-                    required: true,
-                    where: buildScope(model.studentInvoiceMapperModel),
-                    include: [
-                        {
-                            model: model.studentModel,
-                            as: "studentinvoice",
-                            attributes: [],
-                            where: buildScope(model.studentModel),
-                            required: true,
-                        },
-                    ],
-                },
-            ],
             group: ["month"],
             order: [[sequelize.literal("month"), "ASC"]]
         });
