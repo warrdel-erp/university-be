@@ -1,6 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as feePolicyRepo from "../repository/feePolicyRepository.js";
 import * as feeTypeCatalogRepo from "../repository/feeTypeCatalogRepository.js";
+import * as studentRepo from "../repository/studentBillingBreakdownRepository.js";
+import * as feePlanRepo from "../repository/feePlanItemRepository.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import { toMoneyNumber, decimalAdd, decimalSubtract } from "../utility/decimalMoney.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -618,4 +622,146 @@ export async function getStudentFeePolicies(query = {}, authUser = {}) {
     studentId: studentId ? Number(studentId) : undefined,
     feePolicyId: feePolicyId ? Number(feePolicyId) : undefined,
   });
+}
+
+export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
+  const { studentId, feePolicyId } = query;
+
+  if (!studentId || !feePolicyId) {
+    throw httpError("studentId and feePolicyId are required", 400);
+  }
+
+  // 1. Fetch Student Details
+  const studentRow = await studentRepo.findStudentById(studentId);
+  if (!studentRow) {
+    throw httpError(`Student with ID ${studentId} not found`, 404);
+  }
+  const student = typeof studentRow.get === "function" ? studentRow.get({ plain: true }) : studentRow;
+
+  // 2. Fetch Fee Policy Details
+  const policyRow = await feePolicyRepo.findFeePolicyById(feePolicyId);
+  if (!policyRow) {
+    throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
+  }
+  const policy = typeof policyRow.get === "function" ? policyRow.get({ plain: true }) : policyRow;
+
+  // 3. Get Active Year and Context
+  const academicCtx = await resolveActiveAcademicYearContext();
+  const activeBatchYear = Number(academicCtx.activeBatchYear) || new Date().getFullYear();
+
+  const batchId = student.batchId;
+  let batch = null;
+  if (batchId) {
+    const batchRow = await studentRepo.findBatchById(batchId);
+    if (batchRow) batch = typeof batchRow.get === "function" ? batchRow.get({ plain: true }) : batchRow;
+  }
+
+  const batchYear = batch?.batch ? Number(batch.batch) : null;
+  const termYear = batchYear ? activeBatchYear - batchYear + 1 : 1;
+
+  // 4. Find Active Fee Plan and Applicable Base Components
+  let baseComponents = [];
+  let applicableTotal = 0;
+  
+  if (batchId) {
+    const feePlanItemMeta = await feePlanRepo.findFeePlanItemByBatchAndYear(batchId, termYear);
+    if (feePlanItemMeta) {
+      const feePlanItemRow = await studentRepo.findFeePlanItemWithSubItems(feePlanItemMeta.feePlanItemId);
+      if (feePlanItemRow) {
+        const feePlanItem = typeof feePlanItemRow.get === "function" ? feePlanItemRow.get({ plain: true }) : feePlanItemRow;
+        
+        let targetComponentIds = [];
+        if (policy.appliesTo === "selected_components" && policy.policyComponents?.length) {
+            targetComponentIds = policy.policyComponents.map(pc => Number(pc.feeTypeCatalogId));
+        }
+
+        const subItems = feePlanItem.feePlanSubItems || [];
+        for (const sub of subItems) {
+           const catalogId = sub.feeTypeCatalog?.feeTypeCatalogId || sub.feeTypeId;
+           const amount = toMoneyNumber(sub.amount);
+           if (policy.appliesTo === "all_components" || targetComponentIds.includes(Number(catalogId))) {
+               baseComponents.push({
+                   name: sub.feeTypeCatalog?.name || "Component",
+                   amount
+               });
+               applicableTotal = decimalAdd(applicableTotal, amount);
+           }
+        }
+      }
+    }
+  }
+
+  // 5. Calculate Discount/Impact
+  let policyAmount = 0;
+  let ruleDesc = policy.description || "";
+  let treatmentName = policy.policyName;
+  
+  if (policy.calculationType === "percentage") {
+    const rate = Number(policy.percentageRate) || 0;
+    policyAmount = toMoneyNumber((applicableTotal * rate) / 100);
+    ruleDesc = `${policy.effect === "reduce_fee" ? "Reduce Fee" : "Add Charge"} · ${rate}%`;
+    treatmentName = `${policy.policyName} · ${rate}%`;
+  } else if (policy.calculationType === "fixed_amount") {
+    policyAmount = toMoneyNumber(policy.fixedAmount || 0);
+    ruleDesc = `${policy.effect === "reduce_fee" ? "Reduce Fee" : "Add Charge"} · Fixed Amount`;
+  }
+
+  if (policy.maxCapAmount != null && policy.maxCapAmount > 0) {
+    const cap = toMoneyNumber(policy.maxCapAmount);
+    if (policyAmount > cap) {
+      policyAmount = cap;
+    }
+  }
+
+  let finalFee = applicableTotal;
+  if (policyAmount > 0) {
+     finalFee = policy.effect === "reduce_fee" 
+        ? decimalSubtract(applicableTotal, policyAmount)
+        : decimalAdd(applicableTotal, policyAmount);
+  }
+
+  // 6. Format the response
+  const course = student.course || {};
+  const courseDuration = Number(course.courseDuration) || 0;
+  const endYear = batchYear && courseDuration ? batchYear + courseDuration : null;
+  const admissionBatch = batchYear ? (endYear ? `${batchYear}–${String(endYear).slice(-2)}` : `${batchYear}`) : "";
+  const academicYearText = academicCtx.academicYear || `${activeBatchYear}–${String(activeBatchYear + 1).slice(-2)}`;
+
+  const contextStr = [
+    course.courseCode || course.courseName || "Course",
+    admissionBatch,
+    `Term Year ${termYear}`,
+    `AY ${academicYearText}`
+  ].filter(Boolean).join(" · ");
+
+  let appliesToText = "All Components";
+  if (policy.appliesTo === "selected_components") {
+      appliesToText = baseComponents.map(c => c.name).join(", ");
+      if (!appliesToText && policy.policyComponents?.length) {
+        appliesToText = policy.policyComponents.map(pc => pc.feeTypeCatalog?.name).filter(Boolean).join(", ") || "Selected Components";
+      }
+  }
+
+  const studentName = [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" ");
+
+  return {
+    policyOverview: {
+      name: policy.policyName,
+      appliesTo: appliesToText,
+      scope: `${course.courseCode || course.courseName} · Term Year ${termYear}`,
+      rule: ruleDesc,
+      maximumBenefit: policy.maxCapAmount ? toMoneyNumber(policy.maxCapAmount) : null,
+      isApplicable: applicableTotal > 0,
+      applicableMessage: applicableTotal > 0 ? `This policy is applicable to ${studentName}.` : `This policy is not applicable to ${studentName}.`
+    },
+    impact: {
+      studentName,
+      context: contextStr,
+      applicableTuitionFee: applicableTotal,
+      treatmentName: treatmentName,
+      treatmentAmount: policy.effect === "reduce_fee" ? -policyAmount : policyAmount,
+      feeAfterTreatment: finalFee > 0 ? finalFee : 0,
+      note: `This treatment will apply to eligible billing for Term Year ${termYear}.`
+    }
+  };
 }

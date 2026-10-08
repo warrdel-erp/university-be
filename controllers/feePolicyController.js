@@ -95,3 +95,12 @@ export async function getStudentFeePolicies(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function getFeePolicyImpact(req, res) {
+  try {
+    const data = await feePolicyService.calculateFeePolicyImpact(req.query, req.user);
+    return SuccessResponse(res, 200, "Fee policy impact fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}

@@ -12,6 +12,7 @@ import {
   mapStudentFeePolicy,
   removeStudentFeePolicyMapping,
   getStudentFeePolicies,
+  getFeePolicyImpact,
 } from "../controllers/feePolicyController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -248,6 +249,19 @@ router.delete(
   checkAccess(PERMISSIONS.FEES_PLAN_DELETE.value, null),
   validate({ query: deleteStudentFeePolicyQuerySchema }),
   removeStudentFeePolicyMapping
+);
+
+const getFeePolicyImpactQuerySchema = z.object({
+  feePolicyId: positiveIntegerId,
+  studentId: positiveIntegerId,
+});
+
+router.get(
+  "/impact",
+  userAuth,
+  checkAccess(PERMISSIONS.FEES_PLAN.value, null),
+  validate({ query: getFeePolicyImpactQuerySchema }),
+  getFeePolicyImpact
 );
 
 export default router;
