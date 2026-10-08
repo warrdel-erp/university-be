@@ -7,7 +7,7 @@ function catalogIncludeCategory() {
     {
       model: model.feeTypeCategoryModel,
       as: "feeTypeCategory",
-      attributes: ["feeTypeCategoryId", "name", "description", "instituteId"],
+      attributes: ["feeTypeCategoryId", "name", "description", "universityId"],
       where: buildScope(model.feeTypeCategoryModel),
       required: true,
     },
@@ -55,7 +55,7 @@ export async function findFeeTypeCatalogsByIds(feeTypeCatalogIds, options = {}) 
 
 export async function findFeeTypeCategoryByIdForInstitute(feeTypeCategoryId, options = {}) {
   return scoped(model.feeTypeCategoryModel).findOne({
-    attributes: ["feeTypeCategoryId", "instituteId"],
+    attributes: ["feeTypeCategoryId", "universityId"],
     where: { feeTypeCategoryId },
     transaction: options.transaction,
   });

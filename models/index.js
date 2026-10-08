@@ -1761,12 +1761,12 @@ employeeModel.hasMany(timeTableCellTeachersDateWiseModel, {
   as: "timeTableCellTeachersDateWise",
 });
 
-feeTypeCategoryModel.belongsTo(instituteModel, {
-  foreignKey: "instituteId",
-  as: "instituteFeeTypeCategory",
+feeTypeCategoryModel.belongsTo(universityModel, {
+  foreignKey: "universityId",
+  as: "universityFeeTypeCategory",
 });
-instituteModel.hasMany(feeTypeCategoryModel, {
-  foreignKey: "instituteId",
+universityModel.hasMany(feeTypeCategoryModel, {
+  foreignKey: "universityId",
   as: "feeTypeCategories",
 });
 

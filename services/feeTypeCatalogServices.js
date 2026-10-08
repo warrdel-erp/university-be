@@ -15,7 +15,7 @@ export async function addFeeTypeCatalog(body) {
       { transaction }
     );
     if (!category) {
-      throw new Error("feeTypeCategoryId not found or not in your institute");
+      throw new Error("feeTypeCategoryId not found or not in your university");
     }
 
     const created = await feeTypeCatalogRepo.createFeeTypeCatalog(
@@ -65,7 +65,7 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, body) {
         { transaction }
       );
       if (!cat) {
-        throw new Error("feeTypeCategoryId not found or not in your institute");
+        throw new Error("feeTypeCategoryId not found or not in your university");
       }
     }
 
