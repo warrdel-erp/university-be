@@ -105,3 +105,17 @@ export async function getStudentFeeTreatmentSummary(req, res) {
   }
 }
 
+export async function getFeePolicyOptions(req, res) {
+  try {
+    const data = await feePolicyService.getFeePolicyOptions(req.query, req.user);
+    return SuccessResponse(res, 200, "Fee policy options fetched successfully", data);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getFeePoliciesByStudentId(req, res) {
+  return getFeePolicyOptions(req, res);
+}
+
+

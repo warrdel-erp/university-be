@@ -626,6 +626,82 @@ export async function getStudentFeePolicies(query = {}, authUser = {}) {
   });
 }
 
+function formatFeePolicyOption(p) {
+  return {
+    label: p.policyName,
+    value: p.feePolicyId,
+    feePolicyId: p.feePolicyId,
+    policyName: p.policyName,
+  };
+}
+
+export async function getFeePolicyOptions(query = {}, authUser = {}) {
+  const { studentId, courseId, batchId, year, effect, calculationType, search, publishStatus } = query;
+
+  if (studentId) {
+    const numStudentId = Number(studentId);
+    if (!numStudentId || !Number.isInteger(numStudentId) || numStudentId <= 0) {
+      throw httpError("Valid studentId is required", 400);
+    }
+
+    const result = await feePolicyRepo.findFeePoliciesByStudentId(numStudentId, { year });
+    if (!result || !result.student) {
+      throw httpError(`Student with ID ${numStudentId} not found`, 404);
+    }
+
+    const { studentPolicyRows, batchPolicyRows } = result;
+    const policyMap = new Map();
+
+    for (const row of studentPolicyRows || []) {
+      const p = row.policy
+        ? typeof row.policy.get === "function"
+          ? row.policy.get({ plain: true })
+          : row.policy
+        : null;
+      if (p && p.feePolicyId) {
+        policyMap.set(Number(p.feePolicyId), p);
+      }
+    }
+
+    for (const pRow of batchPolicyRows || []) {
+      const p = typeof pRow.get === "function" ? pRow.get({ plain: true }) : pRow;
+      if (p && p.feePolicyId && !policyMap.has(Number(p.feePolicyId))) {
+        policyMap.set(Number(p.feePolicyId), p);
+      }
+    }
+
+    let policies = Array.from(policyMap.values());
+
+    if (publishStatus && publishStatus !== "all") {
+      policies = policies.filter((p) => p.publishStatus === publishStatus);
+    }
+    if (effect) {
+      policies = policies.filter((p) => p.effect === effect);
+    }
+    return policies.map(formatFeePolicyOption);
+  }
+
+  const policies = await feePolicyRepo.findFeePoliciesOptions({
+    courseId,
+    batchId,
+    year,
+    effect,
+    calculationType,
+    publishStatus: publishStatus || "all",
+    search,
+  });
+
+  return policies.map((p) => {
+    const plain = typeof p.get === "function" ? p.get({ plain: true }) : p;
+    return formatFeePolicyOption(plain);
+  });
+}
+
+export async function getFeePoliciesByStudentId(query = {}, authUser = {}) {
+  return getFeePolicyOptions(query, authUser);
+}
+
+
 export async function getStudentFeeTreatmentSummary(query = {}, authUser = {}) {
   const studentId = Number(query.studentId);
   if (!studentId || !Number.isInteger(studentId) || studentId <= 0) {

@@ -13,6 +13,8 @@ import {
   removeStudentFeePolicyMapping,
   getStudentFeePolicies,
   getStudentFeeTreatmentSummary,
+  getFeePoliciesByStudentId,
+  getFeePolicyOptions,
 } from "../controllers/feePolicyController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -251,20 +253,23 @@ router.get(
   getStudentFeeTreatmentSummary,
 );
 
-router.get(
-  "/student/statement",
-  userAuth,
-  checkAccess(PERMISSIONS.FEES_PLAN.value, null),
-  validate({ query: studentFeeSummaryQuerySchema }),
-  getStudentFeeTreatmentSummary,
-);
+const feePolicyOptionsQuerySchema = z.object({
+  studentId: positiveIntegerId.optional(),
+  courseId: positiveIntegerId.optional(),
+  batchId: positiveIntegerId.optional(),
+  year: positiveIntegerId.optional(),
+  publishStatus: z.enum(["all", "draft", "published"]).optional(),
+  effect: effectEnum.optional(),
+  calculationType: calculationTypeEnum.optional(),
+  search: z.string().trim().optional(),
+});
 
 router.get(
-  "/student/fee-treatment",
+  "/student/options",
   userAuth,
   checkAccess(PERMISSIONS.FEES_PLAN.value, null),
-  validate({ query: studentFeeSummaryQuerySchema }),
-  getStudentFeeTreatmentSummary,
+  validate({ query: feePolicyOptionsQuerySchema }),
+  getFeePolicyOptions,
 );
 
 router.get(
