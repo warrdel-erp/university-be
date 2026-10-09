@@ -13,8 +13,12 @@ export async function findStudentFeeInvoiceForPayment(studentFeeInvoiceId, optio
     attributes: [
       "studentFeeInvoiceId",
       "studentId",
-      "feePlanItemId",
+      "billingScheduleItemId",
       "instituteId",
+      "baseAmount",
+      "discountAmount",
+      "total",
+      "paidAmount",
       "status",
       "paymentStatus",
     ],
@@ -23,66 +27,69 @@ export async function findStudentFeeInvoiceForPayment(studentFeeInvoiceId, optio
   });
 }
 
-// Invoice total = SUM(amount - waiver) from student_fee_invoice_items (not invoice.total).
+// Invoice total: invoice.total is payable amount (baseAmount - discountAmount is truth).
 export async function sumInvoiceTotalFromInvoiceItemsByInvoiceId(studentFeeInvoiceId, options = {}) {
-  const row = await scoped(model.studentFeeInvoiceItemsModel).findOne({
-    attributes: [[fn("SUM", invoiceItemNetAmountSql), "invoiceTotal"]],
-    where: { studentFeeInvoiceId },
-    include: [
-      {
-        model: model.studentFeeInvoiceModel,
-        as: "studentFeeInvoice",
-        attributes: [],
-        required: true,
-        where: { studentFeeInvoiceId, ...buildScope(model.studentFeeInvoiceModel) },
-      },
-    ],
-    raw: true,
-    transaction: options.transaction,
-  });
-
-  return toMoneyNumber(row?.invoiceTotal ?? 0);
+  const invoice = await findStudentFeeInvoiceForPayment(studentFeeInvoiceId, options);
+  if (!invoice) return 0;
+  const invPlain = invoice.get ? invoice.get({ plain: true }) : invoice;
+  const base = toMoneyNumber(invPlain.baseAmount != null ? invPlain.baseAmount : invPlain.total);
+  const disc = toMoneyNumber(invPlain.discountAmount ?? 0);
+  return toMoneyNumber(
+    invPlain.total != null && Number(invPlain.total) > 0
+      ? invPlain.total
+      : Math.max(0, base - disc)
+  );
 }
 
 export async function sumInvoiceTotalsByInvoiceIds(studentFeeInvoiceIds, options = {}) {
   const totals = new Map();
   if (!studentFeeInvoiceIds.length) return totals;
 
-  const rows = await scoped(model.studentFeeInvoiceItemsModel).findAll({
+  const rows = await scoped(model.studentFeeInvoiceModel).findAll({
     attributes: [
       "studentFeeInvoiceId",
-      [fn("SUM", invoiceItemNetAmountSql), "invoiceTotal"],
+      "baseAmount",
+      "discountAmount",
+      "total",
     ],
     where: { studentFeeInvoiceId: { [Op.in]: studentFeeInvoiceIds } },
-    include: [
-      {
-        model: model.studentFeeInvoiceModel,
-        as: "studentFeeInvoice",
-        attributes: [],
-        required: true,
-        where: buildScope(model.studentFeeInvoiceModel),
-      },
-    ],
-    group: ["studentFeeInvoiceId"],
     raw: true,
     transaction: options.transaction,
   });
 
   for (const row of rows) {
-    totals.set(Number(row.studentFeeInvoiceId), toMoneyNumber(row.invoiceTotal ?? 0));
+    const base = toMoneyNumber(row.baseAmount != null ? row.baseAmount : row.total);
+    const disc = toMoneyNumber(row.discountAmount ?? 0);
+    const tot = toMoneyNumber(
+      row.total != null && Number(row.total) > 0 ? row.total : Math.max(0, base - disc)
+    );
+    totals.set(Number(row.studentFeeInvoiceId), tot);
   }
 
   return totals;
 }
 
 export async function getInvoicePaymentTotals(studentFeeInvoiceId, options = {}) {
-  const [invoice, total, paidAmount] = await Promise.all([
+  const [invoice, paidAmount] = await Promise.all([
     findStudentFeeInvoiceForPayment(studentFeeInvoiceId, options),
-    sumInvoiceTotalFromInvoiceItemsByInvoiceId(studentFeeInvoiceId, options),
     sumPaidAmountFromPaymentItemsByInvoiceId(studentFeeInvoiceId, options),
   ]);
 
   if (!invoice) return null;
+
+  const invPlain = invoice.get ? invoice.get({ plain: true }) : invoice;
+  const baseAmount = toMoneyNumber(
+    invPlain.baseAmount != null
+      ? invPlain.baseAmount
+      : Number(invPlain.total || 0) + Number(invPlain.discountAmount || 0)
+  );
+  const discountAmount = toMoneyNumber(invPlain.discountAmount != null ? invPlain.discountAmount : 0);
+  // Total is payable amount, baseAmount - discountAmount is truth
+  const total = toMoneyNumber(
+    invPlain.total != null && Number(invPlain.total) > 0
+      ? invPlain.total
+      : Math.max(0, baseAmount - discountAmount)
+  );
 
   return { invoice, total, paidAmount };
 }
@@ -220,6 +227,7 @@ async function findStudentIdsMatchingPaymentSearch(search, options = {}) {
         { lastName: pattern },
         { scholarNumber: pattern },
         { enrollNumber: pattern },
+        { admissionNumber: pattern },
         { email: pattern },
         { mobileNumber: pattern },
       ],
@@ -305,6 +313,7 @@ export async function findStudentForPaymentDetails(studentId, options = {}) {
       "email",
       "mobileNumber",
       "enrollNumber",
+      "admissionNumber",
       "courseId",
       "sessionId",
       "batchId",
@@ -338,18 +347,60 @@ export async function findLastIncomingPaymentForStudentPayee(studentId, options 
   });
 }
 
-export async function findGeneratedInvoicesForPaymentDetails(studentId, options = {}) {
+export async function findGeneratedInvoicesForPaymentDetails(
+  studentId,
+  { billingScheduleItemId } = {},
+  options = {}
+) {
+  const where = { studentId, status: "generated" };
+  if (billingScheduleItemId != null) {
+    where.billingScheduleItemId = Number(billingScheduleItemId);
+  }
+
   return scoped(model.studentFeeInvoiceModel).findAll({
-    where: { studentId, status: "generated" },
+    where,
     attributes: [
       "studentFeeInvoiceId",
       "studentId",
-      "feePlanItemId",
+      "billingScheduleItemId",
+      "baseAmount",
+      "discountAmount",
+      "total",
+      "paidAmount",
+      "paymentStatus",
       "createDate",
       "dueDate",
       "status",
     ],
+    include: [
+      {
+        model: model.billingScheduleItemsModel,
+        as: "billingScheduleItem",
+        required: false,
+        attributes: [
+          "billingScheduleItemId",
+          "amount",
+          "plannedDate",
+          "status",
+        ],
+      },
+    ],
     order: [["studentFeeInvoiceId", "DESC"]],
+    transaction: options.transaction,
+  });
+}
+
+export async function findInvoiceByBillingScheduleItemAndStudent(
+  billingScheduleItemId,
+  studentId,
+  options = {}
+) {
+  return scoped(model.studentFeeInvoiceModel).findOne({
+    where: {
+      billingScheduleItemId: Number(billingScheduleItemId),
+      studentId: Number(studentId),
+      status: "generated",
+    },
     transaction: options.transaction,
   });
 }
@@ -423,6 +474,7 @@ export async function findStudentsByIdsForPaymentList(studentIds, options = {}) 
       "email",
       "mobileNumber",
       "enrollNumber",
+      "admissionNumber",
     ],
     include: [
       {
@@ -455,6 +507,7 @@ export async function findStudentCourseSessionById(studentId, options = {}) {
       "email",
       "mobileNumber",
       "enrollNumber",
+      "admissionNumber",
     ],
     include: [
       {

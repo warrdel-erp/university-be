@@ -367,7 +367,7 @@ export const saveUserDefaults = async (req, res) => {
         // Roles are per-institute (e.g. CLIENT_ADMIN can exist for institute 12 and 18).
         // Resolve by role name + defaultInstituteId so we do not pick the wrong roleId.
         const roleWhere = isNaN(Number(defaultRole))
-          ? { role: defaultRole, instituteId: Number(defaultInstituteId) }
+          ? { role: defaultRole }
           : { roleId: Number(defaultRole) };
 
         const role = await sequelize.models.role.findOne({ where: roleWhere });

@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
 import {
-    addExamStructureSchedule,
     getAllExamStructureSchedule,
     publishExamSchedule,
     updateExamSchedule,
@@ -84,18 +83,6 @@ const deleteScheduleSchema = {
     examScheduleId: positiveIntegerQueryId,
   }),
 };
-
-const addExamStructureScheduleSchema = {
-  body: z.object({
-    examSetupTypeId: z.coerce.number().int().positive({ message: "examSetupTypeId is required" }),
-    sessionId: z.coerce.number().int().positive({ message: "sessionId is required" }),
-    academicYearId: z.coerce.number().int().positive().optional().nullable(),
-    name: z.string().min(1, "name is required"),
-    startingDate: z.string().optional().nullable(),
-  }),
-};
-
-router.post("/", userAuth, validate(addExamStructureScheduleSchema), addExamStructureSchedule);
 
 router.patch("/publish", userAuth, publishExamSchedule);
 

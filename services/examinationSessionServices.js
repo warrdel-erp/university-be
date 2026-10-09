@@ -891,6 +891,8 @@ export async function getExaminationSessions(filters = {}, options = {}) {
     search,
     status = "all",
     assessmentTypeId,
+    executionType,
+    executionProfile,
     universityId,
     instituteId,
     page = 1,
@@ -904,7 +906,15 @@ export async function getExaminationSessions(filters = {}, options = {}) {
   if (assessmentTypeId) where.assessmentTypeId = Number(assessmentTypeId);
   if (universityId) where.universityId = Number(universityId);
   if (instituteId) where.instituteId = Number(instituteId);
-  if (search) where.sessionName = { [Op.like]: `%${search}%` };
+  if (executionType) where.executionType = executionType;
+  if (executionProfile) where.executionProfile = executionProfile;
+  if (search) {
+    where[Op.or] = [
+      { sessionName: { [Op.like]: `%${search}%` } },
+      { executionType: { [Op.like]: `%${search}%` } },
+      { executionProfile: { [Op.like]: `%${search}%` } },
+    ];
+  }
 
   const lifecycleStatus = status === "all" ? undefined : status;
 

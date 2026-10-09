@@ -176,11 +176,6 @@ export async function getUserRolePermissionByUserId(userId) {
                                     attributes: ["courseName", 'courseId', 'courseCode', "capacity"],
                                 },
                                 {
-                                    model: model.studentInvoiceMapperModel,
-                                    as: 'invoicestudent',
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-                                },
-                                {
                                     model: model.classStudentMapperModel,
                                     as: 'studentMapped',
                                     distinct: true,

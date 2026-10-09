@@ -14,11 +14,14 @@ const roleModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
-        instituteId: {
+        universityId: {
             type: DataTypes.INTEGER,
             allowNull: true,
-            field: 'institute_id',
-            comment: 'Multi-tenant isolation for roles'
+            field: 'university_id',
+            references: {
+                model: 'university',
+                key: 'university_id'
+            }
         },
         createdAt: {
             type: DataTypes.DATE,
@@ -45,6 +48,6 @@ const roleModel = sequelize.define(
     }
 );
 
-roleModel.scopeConfig = { university: false, institute: true, academicYear: false };
+roleModel.scopeConfig = { university: true, academicYear: false };
 
 export default roleModel;

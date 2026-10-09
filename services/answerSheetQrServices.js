@@ -821,20 +821,30 @@ export async function getAnswerSheetSkuStatsByExaminationSession(
 export async function assignObtainedMarksToAnswerSheet(
   answerSheetQrId,
   obtainedMarks,
+  assignedToUserId = null,
 ) {
   const transaction = await sequelize.transaction();
   try {
     const answerSheet = await answerSheetQrRepository.getAnswerSheetQrById(
       answerSheetQrId,
-      transaction
+      transaction,
     );
 
     if (!answerSheet) {
-      {
-        const err = new Error("Answer sheet QR not found.");
-        err.statusCode = 404;
-        throw err;
-      }
+      const err = new Error("Answer sheet QR not found.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (
+      assignedToUserId != null &&
+      Number(answerSheet.assignedToUser) !== Number(assignedToUserId)
+    ) {
+      const err = new Error(
+        `Answer sheet ${answerSheetQrId} is not assigned to the current user.`,
+      );
+      err.statusCode = 403;
+      throw err;
     }
 
     const evaluatedAt = new Date();
@@ -842,8 +852,10 @@ export async function assignObtainedMarksToAnswerSheet(
       answerSheetQrId,
       obtainedMarks,
       evaluatedAt,
-      transaction
+      transaction,
     );
+
+    await syncStudentResultItems([answerSheetQrId], transaction);
 
     const result = {
       answerSheetQrId,
@@ -951,7 +963,7 @@ export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
       }
     }
 
-    await syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction);
+    await syncStudentResultItems(uniqueIds, transaction);
 
     await transaction.commit();
   } catch (error) {
@@ -960,7 +972,7 @@ export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
   }
 }
 
-async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
+async function syncStudentResultItems(uniqueIds, transaction) {
   if (!uniqueIds || !uniqueIds.length) return;
 
   const sheets = await scoped(model.answerSheetQrModel).findAll({
@@ -993,6 +1005,7 @@ async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
       "examinationSessionId",
       "batchId",
       "subjectId",
+      "term",
     ],
     transaction,
   });
@@ -1005,6 +1018,73 @@ async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
     if (sched.examinationSessionId) sessionIds.add(Number(sched.examinationSessionId));
     if (sched.curriculumSubjectTermMappingId) {
       cstmIds.add(Number(sched.curriculumSubjectTermMappingId));
+    }
+  }
+
+  // Fallback: If any schedule lacks curriculumSubjectTermMappingId, try resolving via batch and subject
+  const missingCstmSchedules = schedules.filter(
+    (s) => !s.curriculumSubjectTermMappingId && s.subjectId && s.batchId,
+  );
+  if (missingCstmSchedules.length > 0) {
+    const batchIds = [...new Set(missingCstmSchedules.map((s) => Number(s.batchId)))];
+    const batchMappings = await scoped(model.curriculumBatchMappingModel).findAll({
+      where: { batchId: { [Op.in]: batchIds } },
+      attributes: ["batchId", "curriculumId"],
+      transaction,
+    });
+    const curriculumByBatch = new Map();
+    for (const bm of batchMappings) {
+      if (bm.batchId && bm.curriculumId) {
+        curriculumByBatch.set(Number(bm.batchId), Number(bm.curriculumId));
+      }
+    }
+
+    const curriculumIds = [...new Set(curriculumByBatch.values())];
+    const subjectIds = [...new Set(missingCstmSchedules.map((s) => Number(s.subjectId)))];
+
+    if (curriculumIds.length > 0 && subjectIds.length > 0) {
+      const cstmMappings = await scoped(model.curriculumSubjectTermMappingModel).findAll({
+        where: {
+          curriculumId: { [Op.in]: curriculumIds },
+          subjectId: { [Op.in]: subjectIds },
+        },
+        attributes: [
+          "curriculumSubjectTermMappingId",
+          "curriculumId",
+          "subjectId",
+          "term",
+        ],
+        transaction,
+      });
+
+      const cstmByCurrSubj = new Map();
+      for (const m of cstmMappings) {
+        cstmByCurrSubj.set(
+          `${Number(m.curriculumId)}_${Number(m.subjectId)}_${Number(m.term)}`,
+          Number(m.curriculumSubjectTermMappingId),
+        );
+        if (!cstmByCurrSubj.has(`${Number(m.curriculumId)}_${Number(m.subjectId)}`)) {
+          cstmByCurrSubj.set(
+            `${Number(m.curriculumId)}_${Number(m.subjectId)}`,
+            Number(m.curriculumSubjectTermMappingId),
+          );
+        }
+      }
+
+      for (const sched of missingCstmSchedules) {
+        const currId = curriculumByBatch.get(Number(sched.batchId));
+        if (currId) {
+          const resolvedCstmId =
+            (sched.term
+              ? cstmByCurrSubj.get(`${currId}_${Number(sched.subjectId)}_${Number(sched.term)}`)
+              : null) ||
+            cstmByCurrSubj.get(`${currId}_${Number(sched.subjectId)}`);
+          if (resolvedCstmId) {
+            sched.curriculumSubjectTermMappingId = resolvedCstmId;
+            cstmIds.add(resolvedCstmId);
+          }
+        }
+      }
     }
   }
 
@@ -1033,25 +1113,36 @@ async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
     transaction,
   });
   const planIdByCstm = new Map();
+  const planIds = new Set();
   for (const pm of planMappings) {
     if (pm.curriculumSubjectTermMappingId && pm.assessmentPlanId) {
       planIdByCstm.set(
         Number(pm.curriculumSubjectTermMappingId),
         Number(pm.assessmentPlanId),
       );
+      planIds.add(Number(pm.assessmentPlanId));
     }
   }
 
   const componentWhere = {};
+  const orConditions = [];
   if (assessmentTypeIds.size > 0) {
-    componentWhere.examSetupTypeId = { [Op.in]: [...assessmentTypeIds] };
+    orConditions.push({ examSetupTypeId: { [Op.in]: [...assessmentTypeIds] } });
   }
+  if (planIds.size > 0) {
+    orConditions.push({ assessmentPlanId: { [Op.in]: [...planIds] } });
+  }
+  if (orConditions.length > 0) {
+    componentWhere[Op.or] = orConditions;
+  }
+
   const components = await scoped(model.assessmentPlanComponentModel).findAll({
     where: componentWhere,
     attributes: ["assessmentPlanComponentId", "assessmentPlanId", "examSetupTypeId"],
     transaction,
   });
   const componentMap = new Map();
+  const componentsByPlan = new Map();
   for (const comp of components) {
     if (comp.assessmentPlanId && comp.examSetupTypeId) {
       componentMap.set(
@@ -1061,6 +1152,9 @@ async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
     }
     if (comp.examSetupTypeId && !componentMap.has(`type_${Number(comp.examSetupTypeId)}`)) {
       componentMap.set(`type_${Number(comp.examSetupTypeId)}`, Number(comp.assessmentPlanComponentId));
+    }
+    if (comp.assessmentPlanId && !componentsByPlan.has(Number(comp.assessmentPlanId))) {
+      componentsByPlan.set(Number(comp.assessmentPlanId), Number(comp.assessmentPlanComponentId));
     }
   }
 
@@ -1085,19 +1179,50 @@ async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
     if (!assessmentPlanComponentId && assessmentTypeId) {
       assessmentPlanComponentId = componentMap.get(`type_${assessmentTypeId}`);
     }
+    if (!assessmentPlanComponentId && planId) {
+      assessmentPlanComponentId = componentsByPlan.get(planId);
+    }
+
+    let existing = null;
+    if (assessmentPlanComponentId) {
+      existing = await scoped(model.studentResultItemModel).findOne({
+        where: {
+          studentId: Number(sheet.studentId),
+          curriculumSubjectTermMappingId: Number(
+            schedule.curriculumSubjectTermMappingId,
+          ),
+          assessmentPlanComponentId: Number(assessmentPlanComponentId),
+        },
+        transaction,
+      });
+    }
+
+    if (!existing) {
+      existing = await scoped(model.studentResultItemModel).findOne({
+        where: {
+          studentId: Number(sheet.studentId),
+          curriculumSubjectTermMappingId: Number(
+            schedule.curriculumSubjectTermMappingId,
+          ),
+        },
+        transaction,
+      });
+    }
+
+    if (!assessmentPlanComponentId && existing) {
+      assessmentPlanComponentId = existing.assessmentPlanComponentId;
+    }
+
+    if (!assessmentPlanComponentId) {
+      const fallbackComp = await scoped(model.assessmentPlanComponentModel).findOne({
+        transaction,
+      });
+      if (fallbackComp) {
+        assessmentPlanComponentId = fallbackComp.assessmentPlanComponentId;
+      }
+    }
 
     if (!assessmentPlanComponentId) continue;
-
-    const existing = await scoped(model.studentResultItemModel).findOne({
-      where: {
-        studentId: Number(sheet.studentId),
-        curriculumSubjectTermMappingId: Number(
-          schedule.curriculumSubjectTermMappingId,
-        ),
-        assessmentPlanComponentId: Number(assessmentPlanComponentId),
-      },
-      transaction,
-    });
 
     const maxMarks =
       schedule.maximumMarks != null ? Number(schedule.maximumMarks) : 100;
@@ -1109,6 +1234,7 @@ async function syncStudentResultItemsOnFinalSubmit(uniqueIds, transaction) {
         {
           maximumMarks: maxMarks,
           obtainedMarks: obtMarks,
+          assessmentPlanComponentId: Number(assessmentPlanComponentId),
           updatedAt: new Date(),
         },
         {

@@ -27,11 +27,6 @@ const feePlanItemModel = sequelize.define(
       allowNull: false,
       field: "create_date",
     },
-    dueDate: {
-      type: DataTypes.DATEONLY,
-      allowNull: true,
-      field: "due_date",
-    },
     batchId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -52,12 +47,6 @@ const feePlanItemModel = sequelize.define(
       allowNull: true,
       field: "name",
       comment: "Planned fee receipt label (e.g. Admission / Semester I Fee)",
-    },
-    academicPeriod: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      field: "academic_period",
-      comment: "Academic period tag (e.g. Semester I)",
     },
     publishStatus: {
       type: DataTypes.ENUM("draft", "published"),

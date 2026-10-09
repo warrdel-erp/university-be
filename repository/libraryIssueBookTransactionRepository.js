@@ -830,6 +830,7 @@ export async function getLibraryBookInventoryIssueHistoryByInventoryId(inventory
               "lastName",
               "scholarNumber",
               "enrollNumber",
+              "admissionNumber",
               "email",
               "phoneNumber",
             ],

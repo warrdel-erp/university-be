@@ -42,6 +42,7 @@ const studentAttributes = [
   "studentId",
   "scholarNumber",
   "enrollNumber",
+  "admissionNumber",
   "firstName",
   "middleName",
   "lastName",

@@ -5,7 +5,7 @@ import studentFeeInvoiceModel from "./studentFeeInvoiceModel.js";
 
 const studentFeeInvoiceItemsModel = sequelize.define(
   "student_fee_invoice_items",
-  {
+  { 
     studentFeeInvoiceItemsId: {
       type: DataTypes.INTEGER,
       primaryKey: true,

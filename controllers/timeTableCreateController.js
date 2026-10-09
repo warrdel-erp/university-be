@@ -375,7 +375,7 @@ export const getRoutineByTeacherAndAcademicYear = async (req, res) => {
         courseId,
         sessionId,
         subjectId,
-        { batchId },
+        { batchId, publishedOnly: true },
       );
     return SuccessResponse(
       res,
@@ -406,7 +406,7 @@ export const getMyRoutineByTeacherAndAcademicYear = async (req, res) => {
         courseId,
         sessionId,
         subjectId,
-        { batchId },
+        { batchId, publishedOnly: true },
       );
     return SuccessResponse(
       res,

@@ -27,7 +27,7 @@ export async function addUserRole(userId, roleId, transaction = null) {
     }
 
     // Fetch the role template defaults
-    const templatePermissions = await model.rolePermissionMappingModel.findAll({
+    const templatePermissions = await model.rolePermissionsModel.findAll({
       where: { roleId: role.roleId },
       transaction,
     });
@@ -46,22 +46,7 @@ export async function addUserRole(userId, roleId, transaction = null) {
       }
     });
 
-    // Implicitly grant base access context based on the role's association
-    if (role.instituteId) {
-      const existingBaseAccess = await model.userRolePermissionModel.count({
-        where: { userId, permission: "perm_access_inst", resourceId: role.instituteId },
-        transaction
-      });
-      if (existingBaseAccess === 0) {
-        dataToInsert.push({
-          userId,
-          roleId: null,
-          permission: "perm_access_inst",
-          scope: "INSTITUTE",
-          resourceId: role.instituteId
-        });
-      }
-    }
+    // No longer implicitly grant base access context because roles are no longer institute-wise
 
     if (dataToInsert.length > 0) {
       await model.userRolePermissionModel.bulkCreate(dataToInsert, { transaction });

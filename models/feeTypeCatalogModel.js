@@ -41,6 +41,12 @@ const feeTypeCatalogModel = sequelize.define(
       allowNull: false,
       field: "ledger_type",
     },
+    refundable: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: null,
+      field: "refundable",
+    },
     feeTypeCategoryId: {
       type: DataTypes.INTEGER,
       allowNull: false,

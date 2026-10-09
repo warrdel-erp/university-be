@@ -204,3 +204,22 @@ export const getSingleFeePlanItemDetails = async (req, res) => {
     );
   }
 };
+
+export const getBillingRuns = async (req, res) => {
+  try {
+    const data = await feePlanItemServices.getBillingRuns(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      'Billing runs retrieved successfully',
+      data,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || 'Internal Server Error',
+    );
+  }
+};
+

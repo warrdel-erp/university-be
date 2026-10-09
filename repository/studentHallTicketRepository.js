@@ -61,6 +61,7 @@ function getHallTicketIncludes() {
         "lastName",
         "scholarNumber",
         "enrollNumber",
+        "admissionNumber",
         "courseId",
         "sessionId",
         "batchId",
@@ -89,7 +90,7 @@ function getHallTicketIncludes() {
     {
       model: model.examinationSessionModel,
       as: "examinationSession",
-      attributes: ["examinationSessionId", "sessionName", "examStartDate", "examEndDate", "assessmentTypeId"],
+      attributes: ["examinationSessionId", "sessionName", "examStartDate", "examEndDate", "assessmentTypeId", "executionType", "executionProfile"],
       where: buildScope(model.examinationSessionModel),
       required: false,
       include: [
@@ -110,6 +111,7 @@ const LIST_STUDENT_ATTRIBUTES = [
   "lastName",
   "scholarNumber",
   "enrollNumber",
+  "admissionNumber",
   "courseId",
   "sessionId",
   "batchId",
@@ -327,6 +329,8 @@ export async function findExaminationSessionById(examinationSessionId, transacti
       "examinationSessionId",
       "sessionName",
       "assessmentTypeId",
+      "executionType",
+      "executionProfile",
       "status",
     ],
     include: [
@@ -416,7 +420,7 @@ export async function getStudentsByExaminationSessionId(examinationSessionId, fi
   const isPaginated = filters.page != null || filters.limit != null;
 
   const examSession = await scoped(model.examinationSessionModel).findByPk(examinationSessionId, {
-    attributes: ["examinationSessionId", "sessionName", "assessmentTypeId"],
+    attributes: ["examinationSessionId", "sessionName", "assessmentTypeId", "executionType", "executionProfile"],
     transaction,
   });
 

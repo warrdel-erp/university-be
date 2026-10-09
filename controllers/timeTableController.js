@@ -159,4 +159,23 @@ export const cloneTimeTableStructure = async (req, res) => {
   }
 };
 
+export const copyTimeTableStructure = async (req, res) => {
+  try {
+    const data = req.body;
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+
+    const result = await timeTableServices.copyTimeTableStructure(
+      data,
+      createdBy,
+      updatedBy,
+    );
+    return SuccessResponse(res, 201, "Time table structure copied successfully", result);
+  } catch (error) {
+    console.error("Error in copying timetable structure:", error);
+    return ErrorResponse(res, error.statusCode || 400, error.message || "Internal Server Error");
+  }
+};
+
+
 

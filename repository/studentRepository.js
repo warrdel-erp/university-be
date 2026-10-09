@@ -91,6 +91,7 @@ function buildStudentListWhere(search, courseId, sessionId, batchId) {
             { middleName: { [Op.like]: term } },
             { scholarNumber: { [Op.like]: term } },
             { enrollNumber: { [Op.like]: term } },
+            { admissionNumber: { [Op.like]: term } },
             { fatherName: { [Op.like]: term } },
             { birthDate: { [Op.like]: term } },
             { '$course.course_name$': { [Op.like]: term } },
@@ -729,6 +730,7 @@ const promotionStudentAttributes = [
     'studentId',
     'scholarNumber',
     'enrollNumber',
+    'admissionNumber',
     'firstName',
     'middleName',
     'lastName',
@@ -1512,6 +1514,7 @@ export async function getSectionStudentMapping(classSectionTermId, academicYearI
                 { middleName: { [Op.like]: like } },
                 { scholarNumber: { [Op.like]: like } },
                 { enrollNumber: { [Op.like]: like } },
+                { admissionNumber: { [Op.like]: like } },
                 { fatherName: { [Op.like]: like } },
             ];
         }
@@ -1843,16 +1846,6 @@ export async function getPromotionClassSections({
     });
 }
 
-export async function addStudentInvoiceMapper(dataList, transaction) {
-    try {
-        const result = await model.studentInvoiceMapperModel.bulkCreate(dataList, { transaction });
-        return result;
-    } catch (error) {
-        console.error("Error in add Student Invoice Mapper:", error);
-        throw error;
-    }
-};
-
 export async function updateStudentfeeStatus(studentId, data) {
     try {
         const existing = await assertScopedStudent(studentId);
@@ -2019,6 +2012,7 @@ export async function getStudentsByFeePlanList(filters = {}) {
                 'middleName',
                 'lastName',
                 'scholarNumber',
+                'admissionNumber',
                 'batchId',
                 'courseId',
             ],
@@ -2086,6 +2080,7 @@ export async function getEmptyFeeDetails(filters = {}) {
                 { middleName: { [Op.like]: like } },
                 { scholarNumber: { [Op.like]: like } },
                 { enrollNumber: { [Op.like]: like } },
+                { admissionNumber: { [Op.like]: like } },
             ];
         }
 
@@ -2447,6 +2442,7 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId,
                 "studentId",
                 "scholarNumber",
                 "enrollNumber",
+                "admissionNumber",
                 "firstName",
                 "lastName",
                 "classSectionTermId",
@@ -2496,14 +2492,19 @@ export async function getStudentsByPlacement(placement, timeTableCellDateWiseId,
 export async function getScopedExamScheduleForEvaluation(examScheduleId) {
     return scoped(model.examScheduleModel).findOne({
         where: { examScheduleId },
-        attributes: ["examScheduleId", "term", "batchId", "curriculumSubjectTermMappingId"],
+        attributes: ["examScheduleId", "term", "batchId", "curriculumSubjectTermMappingId", "examinationSessionId"],
         include: [
             {
-                model: model.examSetupTypeTermModel,
-                as: "examSetupTypeTerm",
-                attributes: ["examSetupTypeTermId", "courseId", "examSetupTypeId", "instituteId", "universityId", "term"],
-                where: buildScope(model.examSetupTypeTermModel),
-                required: true,
+                model: model.batchModel,
+                as: "batch",
+                attributes: ["batchId", "sessionId", "courseId"],
+                required: false,
+            },
+            {
+                model: model.examinationSessionModel,
+                as: "examinationSession",
+                attributes: ["examinationSessionId", "sessionId", "courseId"],
+                required: false,
             },
         ],
     });
@@ -2536,6 +2537,7 @@ export async function getStudentsWithAnswerSheetStatus(sessionId, courseId, term
             "lastName",
             "enrollNumber",
             "scholarNumber",
+            "admissionNumber",
             "classSectionTermId",
         ],
         include: [

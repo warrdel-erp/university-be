@@ -42,6 +42,7 @@ const addFeeTypeCatalogSchema = z.object({
   feeTypeCategoryId: positiveIntegerId,
   ledgerType: ledgerTypeSchema,
   description: z.string().trim().optional().nullable(),
+  refundable: z.boolean({ required_error: "refundable is required" }).nullable(),
 });
 
 const updateFeeTypeCatalogSchema = z
@@ -52,6 +53,7 @@ const updateFeeTypeCatalogSchema = z
     amount: amountString.optional(),
     feeTypeCategoryId: positiveIntegerId.optional(),
     ledgerType: ledgerTypeSchema.optional(),
+    refundable: z.boolean().nullable().optional(),
   })
   .refine(
     (d) =>
@@ -59,10 +61,11 @@ const updateFeeTypeCatalogSchema = z
       d.description !== undefined ||
       d.amount !== undefined ||
       d.feeTypeCategoryId !== undefined ||
-      d.ledgerType !== undefined,
+      d.ledgerType !== undefined ||
+      d.refundable !== undefined,
     {
       message:
-        "At least one of name, description, amount, feeTypeCategoryId, ledgerType is required",
+        "At least one of name, description, amount, feeTypeCategoryId, ledgerType, refundable is required",
     }
   );
 

@@ -40,7 +40,7 @@ import {
 import { resolveTimeTableRoutineSection } from "../utility/classSectionIncludes.js";
 import { ROLES } from "../const/roles.js";
 import moment from "moment";
-import { getTenantStore } from "../utility/requestContext.js";
+import { getTenantStore, getAcademicYearId } from "../utility/requestContext.js";
 import { decimalAdd } from "../utility/decimalMoney.js";
 import { getDownloadSignedUrl } from "../utility/s3Helper.js";
 
@@ -2193,11 +2193,40 @@ async function applyGroupAttendanceStatus(groups) {
  */
 export async function getPastClassSchedules(
   userId,
-  currentDateString,
-  groupPeriods = false,
-  sessionId,
-  pagination = {},
+  academicYearIdOrDate,
+  currentDateOrGrouping,
+  groupPeriodsOrSessionId = false,
+  sessionIdOrPagination,
+  paginationArg = {},
 ) {
+  let academicYearId;
+  let currentDateString;
+  let groupPeriods;
+  let sessionId;
+  let pagination;
+
+  if (
+    typeof academicYearIdOrDate === "string" &&
+    (academicYearIdOrDate.includes("-") || isNaN(Number(academicYearIdOrDate)))
+  ) {
+    // Called as (userId, formattedDate, groupingType, sessionId, pagination)
+    academicYearId = getAcademicYearId() || null;
+    currentDateString = academicYearIdOrDate;
+    groupPeriods = currentDateOrGrouping || false;
+    sessionId = groupPeriodsOrSessionId;
+    pagination = sessionIdOrPagination || {};
+  } else {
+    // Called as (userId, academicYearId, currentDateString, groupPeriods, sessionId, pagination)
+    academicYearId =
+      academicYearIdOrDate != null && !isNaN(Number(academicYearIdOrDate))
+        ? Number(academicYearIdOrDate)
+        : getAcademicYearId() || null;
+    currentDateString = currentDateOrGrouping;
+    groupPeriods = groupPeriodsOrSessionId || false;
+    sessionId = sessionIdOrPagination;
+    pagination = paginationArg || {};
+  }
+
   const { page, limit } = pagination;
   const hasPagination = Boolean(page && limit);
 
@@ -2293,10 +2322,36 @@ export async function getPastClassSchedules(
 
 export async function getUpcomingClassSchedules(
   userId,
-  currentDateString,
-  groupPeriods = false,
-  pagination = {},
+  academicYearIdOrDate,
+  currentDateOrGrouping,
+  groupPeriodsOrPagination = false,
+  paginationArg = {},
 ) {
+  let academicYearId;
+  let currentDateString;
+  let groupPeriods;
+  let pagination;
+
+  if (
+    typeof academicYearIdOrDate === "string" &&
+    (academicYearIdOrDate.includes("-") || isNaN(Number(academicYearIdOrDate)))
+  ) {
+    // Called as (userId, formattedDate, groupingType, pagination)
+    academicYearId = getAcademicYearId() || null;
+    currentDateString = academicYearIdOrDate;
+    groupPeriods = currentDateOrGrouping || false;
+    pagination = groupPeriodsOrPagination || {};
+  } else {
+    // Called as (userId, academicYearId, currentDateString, groupPeriods, pagination)
+    academicYearId =
+      academicYearIdOrDate != null && !isNaN(Number(academicYearIdOrDate))
+        ? Number(academicYearIdOrDate)
+        : getAcademicYearId() || null;
+    currentDateString = currentDateOrGrouping;
+    groupPeriods = groupPeriodsOrPagination || false;
+    pagination = paginationArg || {};
+  }
+
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || undefined;
   const hasPagination = limit != null && limit > 0;
@@ -2668,10 +2723,16 @@ function getEmployeeDetails(schedules) {
   };
 }
 
-export async function getUniqueClassSectionSubjects(userId) {
+export async function getUniqueClassSectionSubjects(userId, academicYearId) {
+  const resolvedAcademicYearId =
+    academicYearId != null && !isNaN(Number(academicYearId))
+      ? Number(academicYearId)
+      : getAcademicYearId() || null;
+
   const schedules =
     await employeeScheduleRepository.getUniqueClassSectionSubjectsForEmployee(
       userId,
+      resolvedAcademicYearId,
     );
 
   const employeeDetails = getEmployeeDetails(schedules);
@@ -2685,8 +2746,29 @@ export async function getUniqueClassSectionSubjects(userId) {
 
 export async function getSectionCounts(
   userId,
-  currentDateString,
+  academicYearIdOrDate,
+  currentDateStringArg,
 ) {
+  let academicYearId;
+  let currentDateString;
+
+  if (
+    typeof academicYearIdOrDate === "string" &&
+    (academicYearIdOrDate.includes("-") || isNaN(Number(academicYearIdOrDate)))
+  ) {
+    // Called as (userId, formattedDate)
+    academicYearId = getAcademicYearId() || null;
+    currentDateString = academicYearIdOrDate;
+  } else {
+    // Called as (userId, academicYearId, currentDateString)
+    academicYearId =
+      academicYearIdOrDate != null && !isNaN(Number(academicYearIdOrDate))
+        ? Number(academicYearIdOrDate)
+        : getAcademicYearId() || null;
+    currentDateString =
+      currentDateStringArg || new Date().toISOString().split("T")[0];
+  }
+
   const { pastCount, upcomingCount } =
     await employeeScheduleRepository.countEmployeeDateWiseSchedules(
       userId,

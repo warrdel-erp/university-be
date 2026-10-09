@@ -21,8 +21,7 @@ import { studentRegister } from "../services/userServices.js";
 import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
 import * as sessionRepository from "../repository/sessionRepository.js";
 import * as roleRepository from "../repository/roleRepository.js";
-import { parseCustomDate } from "../utility/dateFormat.js";
-import * as feeInvoiceRepository from "../repository/feeInvoiceRepository.js";
+import * as studentFeeInvoiceRepo from "../repository/studentFeeInvoiceRepository.js";
 import * as libraryRepository from "../repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
@@ -394,6 +393,7 @@ export async function addStudent(
       studentId: plainStudent.studentId,
       scholarNumber: plainStudent.scholarNumber,
       enrollNumber: plainStudent.enrollNumber,
+      admissionNumber: plainStudent.admissionNumber,
       email: plainStudent.email,
       firstName: plainStudent.firstName,
       lastName: plainStudent.lastName,
@@ -1026,6 +1026,7 @@ const STUDENT_SCALAR_UPDATE_FIELDS = new Set([
   "batchId",
   "scholarNumber",
   "enrollNumber",
+  "admissionNumber",
   "firstName",
   "middleName",
   "lastName",
@@ -1655,6 +1656,7 @@ function mapPromotionHistoryStudent(student) {
     name: buildStudentName(plain),
     scholarNumber: plain.scholarNumber,
     enrollNumber: plain.enrollNumber ?? null,
+    admissionNumber: plain.admissionNumber ?? null,
     admissionDate: plain.admisssionDate ?? null,
     course: plain.course
       ? {
@@ -2239,13 +2241,8 @@ export async function getFeeDetailsByStudentId(studentId) {
       };
     }
 
-    const invoices =
-      await feeInvoiceRepository.getFeeDetailsByStudentId(studentId);
-
-    // --- Filter only invoiceStatus = true ---
-    const filtered = invoices.filter((inv) => inv.invoiceStatus === true);
-
-    if (filtered.length === 0) {
+    const student = await studentRepository.getSingleStudentDetail(studentId);
+    if (!student) {
       return {
         studentInfo: {},
         personalInfo: {},
@@ -2255,166 +2252,79 @@ export async function getFeeDetailsByStudentId(studentId) {
       };
     }
 
-    //  NEW: Convert new DB structure into old key for backward compatibility
-    filtered.forEach((inv) => {
-      inv.studentinvoiceFeeType = inv.feeTypeGroup?.feeTypes || null;
-    });
-
-    // -------- STUDENT INFO ---------
-    const student = filtered[0].studentinvoice || {};
+    const plainStudent = typeof student.get === "function" ? student.get({ plain: true }) : student;
 
     const studentInfo = {
       studentName:
-        `${student.firstName || ""} ${student.middleName || ""} ${student.lastName || ""}`.trim(),
-      course: student.course?.courseName || "",
-      scholarNumber: student.scholarNumber || "",
-      classSection: resolveStudentSection(student)?.section || "",
+        `${plainStudent.firstName || ""} ${plainStudent.middleName || ""} ${plainStudent.lastName || ""}`.trim(),
+      course: plainStudent.course?.courseName || "",
+      scholarNumber: plainStudent.scholarNumber || "",
+      classSection: resolveStudentSection(plainStudent)?.section || "",
       term:
-        student.studentClassSectionTerm?.term ??
-        resolveProgramTerm(resolveStudentSection(student)) ??
+        plainStudent.studentClassSectionTerm?.term ??
+        resolveProgramTerm(resolveStudentSection(plainStudent)) ??
         null,
-      academicYear: student.studentSession?.sessionAcedmic?.yearTitle || "",
+      academicYear: plainStudent.studentSession?.sessionAcedmic?.yearTitle || "",
     };
 
     const personalInfo = {
-      contactNo: student.phoneNumber || "",
-      email: student.email || "",
+      contactNo: plainStudent.phoneNumber || "",
+      email: plainStudent.email || "",
     };
 
     const parentInfo = {
-      fatherName: student.fatherName || "",
-      contactNo: student.parentNumber || "",
-      email: student.parentEmail || "",
-      address: student.pAddress || "",
+      fatherName: plainStudent.fatherName || "",
+      contactNo: plainStudent.parentNumber || "",
+      email: plainStudent.parentEmail || "",
+      address: plainStudent.pAddress || "",
     };
 
-    // -------- INVOICE LOOP ---------
-    const formattedInvoices = filtered.map((inv) => {
-      const hasPlan =
-        inv.feeInvoicedata && typeof inv.feeInvoicedata === "object";
-      const hasFeeType = !hasPlan && inv.studentinvoiceFeeType;
-      const hasFeeTypeGroup =
-        !hasPlan &&
-        !hasFeeType &&
-        Array.isArray(inv.feeTypeGroup) &&
-        inv.feeTypeGroup.length > 0;
+    const invoiceRows =
+      await studentFeeInvoiceRepo.findStudentFeeInvoicesByStudentId(studentId);
 
-      let invoiceNo = inv.invoiceNumber || "";
-      let dueDate = inv.dueDate || "";
-      let title = "";
-      let total = 0;
-      let feeItems = [];
+    const formattedInvoices = (invoiceRows || []).map((inv) => {
+      const p = typeof inv.get === "function" ? inv.get({ plain: true }) : inv;
+      const items = (p.feeInvoiceItems || []).map((item) => ({
+        name: item.feeTypeCatalog?.name || item.name || "Fee Item",
+        refundable: item.feeTypeCatalog?.refundable ?? null,
+        dueDate: p.dueDate,
+        amount: Number(item.amount || 0),
+        subTotal: Number(item.amount || 0),
+        waiver: Number(item.waiver || 0),
+      }));
 
-      // -------- CASE 1: PLAN INVOICE ---------
-      if (hasPlan) {
-        const fee = inv.feeInvoicedata;
-
-        const semesters = Array.isArray(fee.semesters) ? fee.semesters : [];
-        const additionalFees = Array.isArray(fee.additionalFees)
-          ? fee.additionalFees
-          : [];
-
-        semesters.forEach((s) => {
-          feeItems.push({
-            name: s.name || "",
-            dueDate: fee.EndDate || dueDate,
-            amount: s.fee || 0,
-            subTotal: s.fee || 0,
-          });
-        });
-
-        additionalFees.forEach((a) => {
-          feeItems.push({
-            name: a.name || "",
-            dueDate: fee.EndDate || dueDate,
-            amount: a.fee || 0,
-            subTotal: a.fee || 0,
-          });
-        });
-
-        total =
-          fee.total || feeItems.reduce((sum, i) => sum + Number(i.amount), 0);
-        invoiceNo = fee.InvoiceNumber || invoiceNo;
-        title = semesters[0]?.name || fee.name || "";
-        dueDate = fee.EndDate || dueDate;
-      }
-
-      // -------- CASE 2: OLD FEE TYPE INVOICE ---------
-      else if (hasFeeType) {
-        const ft = inv.studentinvoiceFeeType;
-
-        const amount = Number(ft.feeValue || 0);
-
-        feeItems.push({
-          name: ft.name || "",
-          dueDate,
-          amount,
-          subTotal: amount,
-        });
-
-        total = amount;
-        title = ft.name;
-      }
-
-      // -------- ⭐ CASE 3: NEW FEE TYPE GROUP INVOICE ---------
-      else if (hasFeeTypeGroup) {
-        inv.feeTypeGroup.forEach((ftg) => {
-          const ft = ftg.feeTypes;
-
-          feeItems.push({
-            name: ft?.name || "",
-            dueDate,
-            amount: Number(ftg.subtotal || ftg.amount || 0),
-            subTotal: Number(ftg.subtotal || ftg.amount || 0),
-          });
-
-          total += Number(ftg.subtotal || ftg.amount || 0);
-        });
-
-        title = feeItems[0]?.name || "";
-      }
-
-      // -------- PAYMENTS ---------
-      const payments = Array.isArray(inv.studentMakePayment)
-        ? inv.studentMakePayment
-        : [];
-      const isApplied = payments.some((p) => p.isApplyed === true);
+      const total = Number(p.total || 0);
+      const paidAmount = Number(p.paidAmount || 0);
 
       return {
-        studentInvoiceMapperId: inv.studentInvoiceMapperId,
-        invoiceNo,
-        title,
-        dueDate,
-        isApplied: false,
+        studentFeeInvoiceId: p.studentFeeInvoiceId,
+        invoiceNo: String(p.studentFeeInvoiceId),
+        title: p.feePlanItem?.name || items[0]?.name || "Fee Invoice",
+        dueDate: p.dueDate || "",
+        isApplied: p.paymentStatus === "paid",
         total,
         subTotal: total,
-        feeItems,
-        payments,
+        paidAmount,
+        balanceDue: Math.max(0, total - paidAmount),
+        paymentStatus: p.paymentStatus,
+        feeItems: items,
+        payments: [],
       };
-    });
-
-    // -------- SUMMARY ---------
-    let appliedPayments = 0;
-    let unappliedPayments = 0;
-
-    filtered.forEach((inv) => {
-      const payments = inv.studentMakePayment || [];
-      payments.forEach((p) => {
-        const amt = Number(p.paidAmount || 0);
-        if (p.isApplyed) appliedPayments += amt;
-        else unappliedPayments += amt;
-      });
     });
 
     const totalDue = formattedInvoices.reduce(
       (sum, f) => sum + (f.total || 0),
       0,
     );
-    const remainingAmount = totalDue - appliedPayments;
+    const appliedPayments = formattedInvoices.reduce(
+      (sum, f) => sum + (f.paidAmount || 0),
+      0,
+    );
+    const remainingAmount = Math.max(0, totalDue - appliedPayments);
 
     const summary = {
-      appliedPayments: "",
-      unappliedPayments: "",
+      appliedPayments: appliedPayments,
+      unappliedPayments: 0,
       remainingAmount: remainingAmount,
       totalDue: totalDue,
     };
@@ -2918,10 +2828,11 @@ export async function getAllAnswerSheets(filters) {
     throw error;
   }
 
-  const examSetupTypeTerm = schedule.examSetupTypeTerm;
-  const sessionId = schedule.sessionId;
-  const courseId = examSetupTypeTerm?.courseId;
-  const term = schedule.term ?? examSetupTypeTerm?.term;
+  const sessionId =
+    schedule.batch?.sessionId ;
+  const courseId =
+    schedule.batch?.courseId ;
+  const term = schedule.term;
 
   if (sessionId == null || courseId == null || term == null) {
     return [];
@@ -3047,6 +2958,7 @@ export async function getStudentsByElectiveSubject({
           "studentId",
           "scholarNumber",
           "enrollNumber",
+          "admissionNumber",
           "firstName",
           "lastName",
           "classSectionTermId",

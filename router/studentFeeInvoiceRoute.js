@@ -22,12 +22,14 @@ const dateOnlyString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "date must be YYYY-MM-DD" });
 
-const generateInvoiceBodySchema = z.object({
-  feePlanItemId: positiveIntegerId,
-  studentId: positiveIntegerId.optional(),
-  studentIds: z.array(positiveIntegerId).min(1).optional(),
-  batchId: positiveIntegerId.optional(),
-});
+const generateInvoiceBodySchema = z
+  .object({
+    billingScheduleItemId: positiveIntegerId,
+    studentId: positiveIntegerId.optional(),
+    studentIds: z.array(positiveIntegerId).min(1).optional(),
+    batchId: positiveIntegerId.optional(),
+    dueDate: dateOnlyString.optional().nullable(),
+  });
 
 const adhocFeeTypeCatalogLineSchema = z
   .object({
@@ -77,14 +79,16 @@ const studentIdQuerySchema = z.object({
 const listAllInvoicesQuerySchema = z
   .object({
     feePlanItemId: positiveIntegerId.optional(),
-    status: z.enum(["all", "pending", "completed"]).optional(),
-    paymentTab: z.enum(["all", "pending", "completed"]).optional(),
+    status: z.enum(["all", "pending", "completed", "paid", "unpaid", "partial"]).optional(),
+    paymentTab: z.enum(["all", "pending", "completed", "paid", "unpaid", "partial"]).optional(),
+    search: z.string().optional(),
     page: positiveIntegerId.optional(),
     limit: positiveIntegerId.optional(),
   })
   .transform((d) => ({
     feePlanItemId: d.feePlanItemId,
     status: d.status ?? d.paymentTab ?? "all",
+    search: d.search ? d.search.trim() : undefined,
     page: d.page,
     limit: d.limit,
   }));
@@ -101,44 +105,49 @@ router.post(
   "/",
   userAuth,
   validate({ body: generateInvoiceBodySchema }),
-  generateStudentFeeInvoice
+  generateStudentFeeInvoice,
 );
 
 router.post(
   "/adhoc",
   userAuth,
   validate({ body: adhocInvoiceBodySchema }),
-  generateAdhocStudentFeeInvoice
+  generateAdhocStudentFeeInvoice,
 );
 
 router.get(
   "/batches",
   userAuth,
   validate({ query: billingBatchesQuerySchema }),
-  getBillingBatchesOverview
+  getBillingBatchesOverview,
 );
 
 router.get(
   "/billingOverview",
   userAuth,
   validate({ query: billingBatchesQuerySchema }),
-  getBillingBatchesOverview
+  getBillingBatchesOverview,
 );
 
 router.get(
   "/all",
   userAuth,
   validate({ query: listAllInvoicesQuerySchema }),
-  listAllStudentFeeInvoices
+  listAllStudentFeeInvoices,
 );
 
 router.get(
   "/single",
   userAuth,
   validate({ query: studentFeeInvoiceIdQuerySchema }),
-  getStudentFeeInvoiceById
+  getStudentFeeInvoiceById,
 );
 
-router.get("/", userAuth, validate({ query: studentIdQuerySchema }), listStudentFeeInvoicesByStudent);
+router.get(
+  "/",
+  userAuth,
+  validate({ query: studentIdQuerySchema }),
+  listStudentFeeInvoicesByStudent,
+);
 
 export default router;
