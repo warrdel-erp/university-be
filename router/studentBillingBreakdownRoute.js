@@ -18,7 +18,7 @@ export const studentBillingBreakdownQuerySchema = z
     studentId: positiveIntegerId.optional(),
     feePlanItemId: positiveIntegerId.optional(),
     year: positiveIntegerId.optional(),
-    currentTerm: positiveIntegerId.optional(),
+    currentTerm: z.string().trim().optional(),
     termType: z.string().trim().optional(),
     search: z.string().trim().optional(),
     page: positiveIntegerId.optional(),

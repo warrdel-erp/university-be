@@ -48,6 +48,20 @@ export async function findStudentById(studentId, options = {}) {
 export async function findBatchById(batchId, options = {}) {
   return model.batchModel.findByPk(Number(batchId), {
     attributes: ["batchId", "batch", "sessionId", "status"],
+    include: [
+      {
+        model: model.sessionModel,
+        as: "session",
+        attributes: ["sessionId", "courseId"],
+        include: [
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: ["courseId", "courseName", "courseCode", "courseDuration", "termType"],
+          },
+        ],
+      },
+    ],
     transaction: options.transaction,
   });
 }
@@ -97,6 +111,20 @@ export async function findFeePlanItemWithSubItems(feePlanItemId, options = {}) {
         as: "batch",
         attributes: ["batchId", "batch", "sessionId", "status"],
         required: false,
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "courseId"],
+            include: [
+              {
+                model: model.courseModel,
+                as: "course",
+                attributes: ["courseId", "courseName", "courseCode", "courseDuration", "termType"],
+              },
+            ],
+          },
+        ],
       },
       {
         model: model.billingScheduleItemsModel,
@@ -157,6 +185,20 @@ export async function findBillingScheduleItemWithDetails(billingScheduleItemId, 
             as: "batch",
             attributes: ["batchId", "batch", "sessionId", "status"],
             required: false,
+            include: [
+              {
+                model: model.sessionModel,
+                as: "session",
+                attributes: ["sessionId", "courseId"],
+                include: [
+                  {
+                    model: model.courseModel,
+                    as: "course",
+                    attributes: ["courseId", "courseName", "courseCode", "courseDuration", "termType"],
+                  },
+                ],
+              },
+            ],
           },
         ],
       },

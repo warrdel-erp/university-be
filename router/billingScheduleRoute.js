@@ -20,7 +20,7 @@ const dateOnly = z
   .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
-const statusEnum = z.enum(["pending", "published", "billed", "cancelled"]);
+const statusEnum = z.enum(["pending", "published", "billed", "cancelled", "scheduled"]);
 
 const subItemInputSchema = z.object({
   feePlanSubItemId: positiveIntegerId,

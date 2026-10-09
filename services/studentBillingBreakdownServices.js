@@ -6,6 +6,8 @@ import {
   decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
+import { resolveBatchCurrentPosition, buildCurrentTermsLabel } from "../utility/courseTerms.js";
+import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -180,7 +182,6 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
   // 1. Fetch billing schedule item (primary) or fee plan item
   let schedule = null;
   let feePlanItem = null;
-
   if (effectiveBillingScheduleItemId) {
     const scheduleRow = await repo.findBillingScheduleItemWithDetails(
       effectiveBillingScheduleItemId
@@ -350,7 +351,7 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
   const studentIds = students.map((s) => Number(s.studentId));
 
   // 6. Fetch batch-level fee policies (feePolicyBatchesModel)
-  const primaryCourseId = students[0]?.courseId || null;
+  const primaryCourseId = students[0]?.courseId || batch?.session?.courseId || null;
   const batchPoliciesRows = await repo.findFeePoliciesForBatchAndYear({
     batchId: targetBatchId,
     courseId: primaryCourseId,
@@ -485,7 +486,7 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
   });
 
   // Batch header info
-  const primaryCourse = students[0]?.course || {};
+  const primaryCourse = students[0]?.course || batch?.session?.course || {};
   const batchYear = batch?.batch ? Number(batch.batch) : null;
   const courseDuration = Number(primaryCourse.courseDuration) || 0;
   const endYear = batchYear && courseDuration ? batchYear + courseDuration : null;
@@ -580,6 +581,24 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
     }
   }
 
+  let finalCurrentTerm = schedule?.name || feePlanItem?.name || queryParams.currentTerm || null;
+  if (!finalCurrentTerm && batchYear && primaryCourse?.termType) {
+    try {
+      const academicCtx = await resolveActiveAcademicYearContext();
+      if (academicCtx?.activeBatchYear) {
+        const activeCalendarYear = Number(academicCtx.activeBatchYear);
+        const { currentTermsLabel } = resolveBatchCurrentPosition({
+          batchYear,
+          course: primaryCourse,
+          activeCalendarYear,
+        });
+        if (currentTermsLabel) finalCurrentTerm = currentTermsLabel;
+      }
+    } catch (err) {
+      // ignore
+    }
+  }
+
   return {
     data: {
       billingSchedule: schedule
@@ -598,8 +617,8 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
         admissionBatch,
         context: batchContext,
         year: targetYear,
-        currentTerm: queryParams.currentTerm || null,
-        termType: queryParams.termType || null,
+        currentTerm: finalCurrentTerm,
+        termType: primaryCourse?.termType || queryParams.termType || null,
       },
       baseCharges: {
         title: schedule
