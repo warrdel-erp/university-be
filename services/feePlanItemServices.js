@@ -1329,7 +1329,7 @@ export async function getBillingRuns(filters = {}) {
         billingScheduleItemId: schedule.billingScheduleItemId,
         feePlanItemId: plain.feePlanItemId,
         billingRun: scheduleBillingRun,
-        name: plain.name,
+        name: schedule.name || plain.name,
         domain: 'Academic',
         context,
         feePlanLabel,

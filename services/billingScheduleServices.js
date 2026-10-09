@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/billingScheduleRepository.js";
 import * as repoPaymentTerms from "../repository/billingSchedulePaymentTermsRepository.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
-import { resolveBatchCurrentPosition, buildCurrentTermsForYear } from "../utility/courseTerms.js";
+import { resolveBatchCurrentPosition, buildCurrentTermsForYear, termsForYear, buildTermName } from "../utility/courseTerms.js";
 import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
 
 function httpError(message, statusCode = 400) {
@@ -46,15 +46,41 @@ export async function createBillingSchedule(payload, user = {}) {
     if (!feePlanItem) {
       throw httpError(`Fee plan item with ID ${id} not found`, 404);
     }
-    planItemMap.set(id, feePlanItem);
+    
+    // Fetch course details manually if not included by the repo function
+    const { batchModel, sessionModel, courseModel } = await import("../models/index.js");
+    const feePlanItemWithCourse = await feePlanItem.reload({
+      include: [
+        {
+          model: batchModel,
+          as: "batch",
+          include: [
+            {
+              model: sessionModel,
+              as: "session",
+              include: [
+                {
+                  model: courseModel,
+                  as: "course"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    
+    planItemMap.set(id, feePlanItemWithCourse);
   }
 
   const createdIds = [];
 
   // 2. Execute all creation in a single transaction
   await sequelize.transaction(async (t) => {
+    const termCounterMap = new Map();
+
     for (const item of scheduleItems) {
-      const { feePlanItemId, amount, plannedDate, status, subItems } =
+      const { feePlanItemId, name, amount, plannedDate, status, subItems } =
         item;
 
       let totalAmount = amount != null ? toMoneyNumber(amount) : 0;
@@ -69,9 +95,27 @@ export async function createBillingSchedule(payload, user = {}) {
       const universityId = user?.universityId || feePlan?.universityId || null;
       const instituteId = user?.instituteId || feePlan?.instituteId;
 
+      let scheduleName = name || null;
+      if (!scheduleName) {
+        let currentIndex = termCounterMap.get(feePlanItemId) || 0;
+        const course = feePlan?.batch?.session?.course;
+        if (course) {
+          const generatedTerms = termsForYear(feePlan.year, course);
+          if (generatedTerms && currentIndex < generatedTerms.length) {
+            scheduleName = buildTermName(course.termType, generatedTerms[currentIndex]);
+          } else {
+            scheduleName = `Installment ${currentIndex + 1}`;
+          }
+        } else {
+          scheduleName = `Installment ${currentIndex + 1}`;
+        }
+        termCounterMap.set(feePlanItemId, currentIndex + 1);
+      }
+
       const parentRecord = await repo.createBillingScheduleItem(
         {
           feePlanItemId,
+          name: scheduleName,
           amount: totalAmount,
           plannedDate: plannedDate || null,
           status: status || "pending",
