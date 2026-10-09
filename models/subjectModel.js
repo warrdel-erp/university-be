@@ -154,7 +154,14 @@ const subjectModel = sequelize.define(
     {
         tableName: 'subject',
         timestamps: true,
-        paranoid: true
+        paranoid: true,
+        indexes: [
+            {
+                unique: true,
+                name: 'unique_subject_code_institute_id',
+                fields: ['subject_code', 'institute_id']
+            }
+        ]
     }
 );
 
