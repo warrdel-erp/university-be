@@ -155,12 +155,7 @@ export async function countStudentsForClassSectionTerm(classSectionTermId, optio
     transaction,
   });
 
-  const onMapper = await scoped(model.classStudentMapperModel).count({
-    where: { classSectionTermId: id },
-    transaction,
-  });
-
-  return onStudent + onMapper;
+  return onStudent;
 }
 
 export async function countStudentsForClassSectionTerms(classSectionTermIds, options = {}) {
@@ -177,12 +172,7 @@ export async function countStudentsForClassSectionTerms(classSectionTermIds, opt
     transaction,
   });
 
-  const onMapper = await scoped(model.classStudentMapperModel).count({
-    where: whereClause,
-    transaction,
-  });
-
-  return onStudent + onMapper;
+  return onStudent;
 }
 
 export async function countStudentsByClassSectionTermIds(classSectionTermIds, options = {}) {

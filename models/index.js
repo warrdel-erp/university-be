@@ -25,7 +25,6 @@ import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import classSectionModel from "./classSectionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
 import classSubjectMapperModel from "./classSubjectMapperModel.js";
-import classStudentMapperModel from "./classSectionStudentMapperModel.js";
 import studentElectiveSubjectModel from "./studentElectiveSubjectModel.js";
 import studentMetaData from "./studentMetaData.js";
 import studentClassSectionsHistoryModel from "./studentClassSectionsHistoryModel.js";
@@ -720,25 +719,7 @@ subjectModel.hasMany(classSubjectMapperModel, {
   as: "subjects",
 });
 
-// class student mapper join to student
-classStudentMapperModel.belongsTo(studentModel, {
-  foreignKey: "student_id",
-  as: "studentMapped",
-});
-studentModel.hasMany(classStudentMapperModel, {
-  foreignKey: "student_id",
-  as: "studentMapped",
-});
 
-// class student mapper join to class section
-classStudentMapperModel.belongsTo(classSectionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "studentTermPlacement",
-});
-classSectionTermModel.hasMany(classStudentMapperModel, {
-  foreignKey: "class_section_term_id",
-  as: "studentTermPlacement",
-});
 
 subjectMapperModel.belongsTo(classSectionTermModel, {
   foreignKey: "class_section_term_id",
@@ -749,10 +730,7 @@ classSectionTermModel.hasMany(subjectMapperModel, {
   as: "subjectMappers",
 });
 
-classStudentMapperModel.belongsTo(sessionModel, {
-  foreignKey: "session_id",
-  as: "studentSessionPlacement",
-});
+
 
 //student join to there 2 more table
 studentsEntranceDetail.belongsTo(studentModel, {
@@ -1218,14 +1196,7 @@ studentModel.belongsTo(userModel, {
 });
 userModel.hasMany(studentModel, { foreignKey: "createdBy", as: "userStudent" });
 
-classStudentMapperModel.belongsTo(userModel, {
-  foreignKey: "createdBy",
-  as: "userClassStudentMapper",
-});
-userModel.hasMany(classStudentMapperModel, {
-  foreignKey: "createdBy",
-  as: "userClassStudentMapper",
-});
+
 
 classSectionModel.belongsTo(userModel, {
   foreignKey: "createdBy",
@@ -4096,7 +4067,6 @@ export {
   classSectionModel,
   classSectionTermModel,
   classSubjectMapperModel,
-  classStudentMapperModel,
   subjectMapperModel,
   studentElectiveSubjectModel,
   studentMetaData,
