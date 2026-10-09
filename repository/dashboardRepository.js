@@ -890,26 +890,9 @@ export async function countTeacherDashboardStudents(classSectionTermIds, courseI
       where: { classSectionTermId: { [Op.in]: classSectionTermIds } },
       attributes: ['studentId'],
     });
-    const mappedStudents = await scoped(model.classStudentMapperModel).findAll({
-      where: { classSectionTermId: { [Op.in]: classSectionTermIds } },
-      attributes: ['studentId'],
-      include: [
-        {
-          model: model.studentModel,
-          as: 'studentMapped',
-          required: true,
-          where: buildScope(model.studentModel),
-          attributes: [],
-        },
-      ],
-    });
-
     const studentIds = new Set();
     for (const student of directStudents) {
       studentIds.add(Number(student.studentId));
-    }
-    for (const mapper of mappedStudents) {
-      studentIds.add(Number(mapper.studentId));
     }
     return studentIds.size;
   }

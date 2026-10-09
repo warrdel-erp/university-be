@@ -64,11 +64,6 @@ export async function getAdminRegisterStudent() {
               where: buildScope(model.courseModel),
               required: false,
             },
-            {
-              model: model.classStudentMapperModel,
-              as: "studentMapped",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "student_id", "class_sections_id"] },
-            },
             studentClassSectionTermWithSectionInclude({
               sectionWhere: buildScope(model.classSectionModel),
             }),
