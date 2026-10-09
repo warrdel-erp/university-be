@@ -30,7 +30,14 @@ module.exports = {
           }
         }, { transaction });
 
-        // 2. Permanently delete the user records for these soft-deleted students.
+        // 2. Permanently delete connected permissions to satisfy FK constraints on users
+        await queryInterface.bulkDelete('user_role_permission', {
+          user_id: {
+            [Sequelize.Op.in]: userIds
+          }
+        }, { transaction });
+
+        // 3. Permanently delete the user records for these soft-deleted students.
         await queryInterface.bulkDelete('users', {
           user_id: {
             [Sequelize.Op.in]: userIds
