@@ -1309,9 +1309,11 @@ export async function getBillingRuns(filters = {}) {
     for (const schedule of schedules) {
       if (!schedule.billingScheduleItemId) continue;
 
-      const scheduleBillingRun = schedules.length > 1
-        ? `${billingRun} - Schedule #${schedule.billingScheduleItemId}`
-        : billingRun;
+      const scheduleBillingRun = schedule.name
+        ? schedule.name
+        : schedules.length > 1
+          ? `${billingRun} - Schedule #${schedule.billingScheduleItemId}`
+          : billingRun;
 
       const scheduleSubItems = schedule.subItems || [];
       let perStudent = toMoneyNumber(schedule.amount);

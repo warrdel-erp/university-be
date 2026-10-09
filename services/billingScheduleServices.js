@@ -243,12 +243,17 @@ export async function updateBillingSchedule(
     );
   }
 
+  if (existingItem.status === "published") {
+    throw httpError("Cannot edit data because the billing schedule is already published", 400);
+  }
+
   const universityId = user?.universityId || existingItem.universityId || null;
   const instituteId = user?.instituteId || existingItem.instituteId;
 
   await sequelize.transaction(async (t) => {
     const updateData = {};
 
+    if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.plannedDate !== undefined)
       updateData.plannedDate = payload.plannedDate;
     if (payload.status !== undefined) updateData.status = payload.status;
@@ -825,7 +830,10 @@ function buildYearWiseData(feePlanItems = [], course = {}, batchYear, currentYea
       null;
 
     const plannedDate = activeSchedule?.plannedDate || null;
-    const amount = activeSchedule?.amount != null ? Number(activeSchedule.amount) : 0;
+    const amount = schedules.reduce((sum, s) => {
+      if (s.status === "cancelled") return sum;
+      return sum + (s.amount != null ? Number(s.amount) : 0);
+    }, 0);
 
     const status = !feePlanItem
       ? "Fee Plan Required"
@@ -977,7 +985,16 @@ export async function getBillingScheduleBatchOverview(queryParams = {}) {
 
     const plain = row.get ? row.get({ plain: true }) : row;
     const feePlanItem = (plain.feePlanItems || []).find((f) => Number(f.year) === year);
-    const schedule = feePlanItem?.billingScheduleItems?.[0];
+    const schedules = feePlanItem?.billingScheduleItems || [];
+    const activeSchedule =
+      schedules.find((s) => s.plannedDate && s.status !== "billed" && s.status !== "cancelled") ||
+      schedules[0] ||
+      null;
+
+    const amount = schedules.reduce((sum, s) => {
+      if (s.status === "cancelled") return sum;
+      return sum + (s.amount != null ? Number(s.amount) : 0);
+    }, 0);
 
     return {
       batchId,
@@ -987,9 +1004,9 @@ export async function getBillingScheduleBatchOverview(queryParams = {}) {
       year,
       feePlanItemName: feePlanItem?.name || null,
       feePlanItemId: feePlanItem?.feePlanItemId || null,
-      plannedDate: schedule?.plannedDate || null,
-      amount: schedule ? Number(schedule.amount) : 0,
-      status: !feePlanItem ? "Fee Plan Required" : !schedule ? "Setup Required" : "Published",
+      plannedDate: activeSchedule?.plannedDate || null,
+      amount: amount,
+      status: !feePlanItem ? "Fee Plan Required" : schedules.length === 0 ? "Setup Required" : "Published",
     };
   }
 

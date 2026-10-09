@@ -425,7 +425,7 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
     } else if (schedule?.status === "billed") {
       status = "Billed";
       statusColor = "blue";
-    } else if (schedule?.status === "pending" || schedule?.status === "scheduled") {
+    } else if (schedule?.status === "pending" || schedule?.status === "published") {
       status = "Ready";
       statusColor = "green";
     }
@@ -598,6 +598,8 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
         admissionBatch,
         context: batchContext,
         year: targetYear,
+        currentTerm: queryParams.currentTerm || null,
+        termType: queryParams.termType || null,
       },
       baseCharges: {
         title: schedule

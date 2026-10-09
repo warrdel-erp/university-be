@@ -38,6 +38,7 @@ const feeTypeCatalogIdQuerySchema = z.object({
 
 const addFeeTypeCatalogSchema = z.object({
   name: z.string().trim().min(1),
+  code: z.string().trim().optional().nullable(),
   amount: amountString,
   feeTypeCategoryId: positiveIntegerId,
   ledgerType: ledgerTypeSchema,
@@ -49,6 +50,7 @@ const updateFeeTypeCatalogSchema = z
   .object({
     feeTypeCatalogId: positiveIntegerId,
     name: z.string().trim().min(1).optional(),
+    code: z.string().trim().optional().nullable(),
     description: z.string().optional().nullable(),
     amount: amountString.optional(),
     feeTypeCategoryId: positiveIntegerId.optional(),
@@ -58,6 +60,7 @@ const updateFeeTypeCatalogSchema = z
   .refine(
     (d) =>
       d.name !== undefined ||
+      d.code !== undefined ||
       d.description !== undefined ||
       d.amount !== undefined ||
       d.feeTypeCategoryId !== undefined ||

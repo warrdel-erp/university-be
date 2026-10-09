@@ -20,7 +20,7 @@ const dateOnly = z
   .trim()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 
-const statusEnum = z.enum(["pending", "scheduled", "billed", "cancelled"]);
+const statusEnum = z.enum(["pending", "published", "billed", "cancelled"]);
 
 const subItemInputSchema = z.object({
   feePlanSubItemId: positiveIntegerId,
@@ -38,6 +38,7 @@ const paymentTermInputSchema = z.object({
 
 const singleScheduleInputSchema = z.object({
   feePlanItemId: positiveIntegerId,
+  name: z.string().trim().optional().nullable(),
   amount: moneyNumber.optional(),
   plannedDate: dateOnly.optional().nullable(),
   status: statusEnum.optional().default("pending"),
@@ -61,6 +62,7 @@ const createBillingScheduleSchema = z.union([
 
 const updateBillingScheduleSchema = z.object({
   billingScheduleItemId: positiveIntegerId,
+  name: z.string().trim().optional().nullable(),
   amount: moneyNumber.optional(),
   plannedDate: dateOnly.optional().nullable(),
   status: statusEnum.optional(),
