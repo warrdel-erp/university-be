@@ -22,8 +22,8 @@ module.exports = {
         
         // Delete 2nd-level dependencies
         await queryInterface.sequelize.query(`DELETE FROM student_fee_invoice_items WHERE student_fee_invoice_id IN (SELECT student_fee_invoice_id FROM student_fee_invoice WHERE student_id IN (${studentIdsStr}))`, { transaction });
-        await queryInterface.sequelize.query(`DELETE FROM library_book_issue_inventory_item WHERE library_book_inventory_id IN (SELECT library_book_inventory_id FROM library_book_inventory WHERE student_id IN (${studentIdsStr}))`, { transaction });
-        await queryInterface.sequelize.query(`DELETE FROM answer_sheet_annotation WHERE answer_sheet_qr_id IN (SELECT answer_sheet_qr_id FROM answer_sheet_qr WHERE student_id IN (${studentIdsStr}))`, { transaction });
+        await queryInterface.sequelize.query(`DELETE FROM library_book_issue_inventory_item WHERE inventory_id IN (SELECT inventory_id FROM library_book_inventory WHERE student_id IN (${studentIdsStr}))`, { transaction });
+        await queryInterface.sequelize.query(`DELETE FROM answer_sheet_annotation WHERE answer_sheet_qr_id IN (SELECT id FROM answer_sheet_qr WHERE student_id IN (${studentIdsStr}))`, { transaction });
 
         // Delete 1st-level dependencies
         const tablesWithStudentId = [
