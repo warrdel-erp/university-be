@@ -14,19 +14,35 @@ module.exports = {
       const userIds = students.map(s => s.user_id);
       const studentIds = students.map(s => s.student_id);
 
-      if (userIds.length > 0) {
+      if (userIds.length > 0 && studentIds.length > 0) {
+        
+        const studentIdsStr = studentIds.join(',');
 
-        // 0. Permanently delete connected metadata first to satisfy FK constraints
-        await queryInterface.bulkDelete('students_meta_data', {
-          student_id: {
-            [Sequelize.Op.in]: studentIds
-          }
-        }, { transaction });
+        // 0. Permanently delete connected data first to satisfy FK constraints
+        
+        // Delete 2nd-level dependencies
+        await queryInterface.sequelize.query(`DELETE FROM student_fee_invoice_items WHERE student_fee_invoice_id IN (SELECT student_fee_invoice_id FROM student_fee_invoice WHERE student_id IN (${studentIdsStr}))`, { transaction });
+        await queryInterface.sequelize.query(`DELETE FROM library_book_issue_inventory_item WHERE library_book_inventory_id IN (SELECT library_book_inventory_id FROM library_book_inventory WHERE student_id IN (${studentIdsStr}))`, { transaction });
+        await queryInterface.sequelize.query(`DELETE FROM answer_sheet_annotation WHERE answer_sheet_qr_id IN (SELECT answer_sheet_qr_id FROM answer_sheet_qr WHERE student_id IN (${studentIdsStr}))`, { transaction });
+
+        // Delete 1st-level dependencies
+        const tablesWithStudentId = [
+          'user_student_employee', 'subject_mapper', 'students_meta_data', 'students_entrance_detail',
+          'students_address', 'student_result_item', 'student_result', 'student_invoice_mapper__deprecated',
+          'student_hall_ticket', 'student_fee_invoice', 'student_exam_seat', 'student_elective_subject',
+          'student_cor_address', 'student_class_sections_history', 'library_book_inventory',
+          'internal_assessment_student_evaluation', 'fee_policy_students', 'examination_session_eligibility',
+          'exam_attendance', 'attendance', 'assessment_evalution', 'answer_sheet_qr', 'academic_group_student'
+        ];
+
+        for (const table of tablesWithStudentId) {
+          await queryInterface.sequelize.query(`DELETE FROM ${table} WHERE student_id IN (${studentIdsStr})`, { transaction });
+        }
 
         // 1. Permanently delete the connected soft-deleted students first
         await queryInterface.bulkDelete('students', {
-          user_id: {
-            [Sequelize.Op.in]: userIds
+          student_id: {
+            [Sequelize.Op.in]: studentIds
           }
         }, { transaction });
 
