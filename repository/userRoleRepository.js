@@ -155,10 +155,11 @@ export async function findDistinctRolesByUserIds(userIds) {
 /**
  * Check if user already has a specific role assigned.
  */
-export async function checkUserRoleExists(userId, roleId) {
+export async function checkUserRoleExists(userId, roleId, transaction = null) {
   try {
     const role = await model.roleModel.findOne({
       where: isNaN(Number(roleId)) ? { role: roleId } : { roleId },
+      transaction,
     });
     if (!role) {
       return false;
@@ -166,6 +167,7 @@ export async function checkUserRoleExists(userId, roleId) {
 
     const count = await model.userRolePermissionModel.count({
       where: { userId, roleId: role.roleId },
+      transaction,
     });
     return count > 0;
   } catch (error) {

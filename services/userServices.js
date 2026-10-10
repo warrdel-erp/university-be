@@ -645,7 +645,7 @@ async function seedLegacyRoleAndPermissions(
 ) {
   // 1. Find or create the CLIENT_ADMIN role
   let clientAdminRole = await model.roleModel.findOne({
-    where: { role: "CLIENT_ADMIN" },
+    where: { role: "CLIENT_ADMIN", universityId },
     transaction,
   });
 
@@ -1060,13 +1060,13 @@ export async function giveFullAccess(info) {
   try {
     // 1. Find or create the CLIENT_ADMIN role
     let clientAdminRole = await model.roleModel.findOne({
-      where: { role: "CLIENT_ADMIN", instituteId },
+      where: { role: "CLIENT_ADMIN", universityId },
       transaction,
     });
 
     if (!clientAdminRole) {
       clientAdminRole = await model.roleModel.create(
-        { role: "CLIENT_ADMIN", instituteId },
+        { role: "CLIENT_ADMIN", universityId },
         { transaction },
       );
     }
