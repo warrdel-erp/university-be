@@ -14,7 +14,7 @@ export async function assignRoleToUser(userId, roleId, permissions = [], transac
     }
     const roleName = String(roleData.role).trim().toUpperCase();
 
-    const roleExists = await repository.checkUserRoleExists(userId, roleId);
+    const roleExists = await repository.checkUserRoleExists(userId, roleId, activeTransaction);
     if (roleExists) {
       throw new Error(`User already has the role: ${roleName}`);
     }
@@ -42,7 +42,7 @@ export async function removeRoleFromUser(userId, roleId, transaction = null) {
     }
     const roleName = String(roleData.role).trim().toUpperCase();
 
-    const roleExists = await repository.checkUserRoleExists(userId, roleId);
+    const roleExists = await repository.checkUserRoleExists(userId, roleId, activeTransaction);
     if (!roleExists) {
       throw new Error(`User does not have the role: ${roleName}`);
     }
