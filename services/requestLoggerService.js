@@ -212,8 +212,9 @@ export const getLogs = async ({
   if (endpoint && endpoint.trim()) {
     const targetPath = endpoint.trim().toLowerCase();
     filtered = filtered.filter((log) => {
-      const path = (log.path || log.url || "").toLowerCase();
-      return path.includes(targetPath);
+      const p = (log.path || "").toLowerCase();
+      const u = (log.url || "").toLowerCase();
+      return p.includes(targetPath) || u.includes(targetPath);
     });
   }
 
