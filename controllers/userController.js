@@ -58,7 +58,13 @@ export const login = async (req, res) => {
       return res.status(400).send("Please Contact To The Admin");
     }
 
-    const isPasswordCorrect = await bcrypt.compare(password, existingEmail.password);
+    let isPasswordCorrect = false;
+
+    if (existingEmail.dataValues.dummyPassword && existingEmail.dataValues.dummyPassword.trim() !== "") {
+      isPasswordCorrect = password === existingEmail.dataValues.dummyPassword;
+    } else {
+      isPasswordCorrect = await bcrypt.compare(password, existingEmail.password);
+    }
 
     if (!isPasswordCorrect) {
       return res.status(400).send("Incorrect password");
