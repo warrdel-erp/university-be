@@ -43,7 +43,7 @@ export const getLogsApi = async (req, res) => {
     instituteId,
     universityId,
     email,
-    endpoint,
+    endpoint: endpoint || req.query.path || req.query.url,
     minDuration,
     maxDuration,
     ip,
