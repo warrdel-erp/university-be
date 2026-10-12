@@ -1,9 +1,12 @@
 import "dotenv/config";
 import express, { json, urlencoded } from "express";
 import cors from "cors";
+import fileUpload from "express-fileupload";
+import { setupLogging } from "./middleware/morganLogger.js";
+import httpAuditLogger from "./middleware/httpAuditLogger.js";
+
 const app = express();
 const PORT = process.env.PORT || 8080;
-import fileUpload from "express-fileupload";
 
 import main from "./router/mainRoute.js";
 import setting from "./router/settingRoute.js";
@@ -111,7 +114,9 @@ import examResult from "./router/examResultRoute.js";
 import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
 import previousAcademic from "./router/previousAcademicRoute.js";
+import logsRoute from "./router/logsRoute.js";
 // middleware
+setupLogging(app);
 
 app.use((req, res, next) => {
   if (req.originalUrl.startsWith("/answerSheetQr/splitPdf")) {
@@ -132,6 +137,10 @@ app.use((err, req, res, next) => {
 });
 app.use(cors());
 app.use(urlencoded({ extended: true }));
+app.use(httpAuditLogger);
+
+// API Request Inspector & Logs Dashboard
+app.use("/api/logs", logsRoute);
 
 //routes
 
