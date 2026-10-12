@@ -72,6 +72,17 @@ const addTimeTableSchema = z
     }
   });
 
+const variantMappingItemSchema = z
+  .object({
+    timeTableStructureVariantId: positiveIntegerId,
+    startingDate: z.string().min(1, "startingDate is required"),
+    endingDate: z.string().min(1, "endingDate is required"),
+  })
+  .refine((data) => new Date(data.endingDate) >= new Date(data.startingDate), {
+    message: "variant endingDate cannot be before startingDate",
+    path: ["endingDate"],
+  });
+
 const addStructureCourseMappingSchema = z
   .object({
     timeTableNameId: positiveIntegerId,
@@ -81,6 +92,7 @@ const addStructureCourseMappingSchema = z
     sessionId: positiveIntegerId,
     startingDate: z.string().min(1, "startingDate is required"),
     endingDate: z.string().min(1, "endingDate is required"),
+    variants: z.array(variantMappingItemSchema).min(1, "variants array cannot be empty").optional(),
   })
   .refine((data) => data.courseId != null || data.academicGroupScopeId != null, {
     message: "Either courseId or academicGroupScopeId must be provided",
@@ -170,6 +182,7 @@ const updateStructureSchema = z
     sessionId: positiveIntegerId.optional(),
     startingDate: z.string().min(1).optional(),
     endingDate: z.string().min(1).optional(),
+    variants: z.array(variantMappingItemSchema).min(1).optional(),
   })
   .refine(
     (data) =>
@@ -178,7 +191,8 @@ const updateStructureSchema = z
       data.courseId ||
       data.sessionId ||
       data.startingDate ||
-      data.endingDate,
+      data.endingDate ||
+      (Array.isArray(data.variants) && data.variants.length > 0),
     { message: "Provide at least one field to update" },
   )
   .refine(

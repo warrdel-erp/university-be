@@ -53,6 +53,142 @@ async function assertNoOverlappingCourseSessionDates({
     return { start, end };
 }
 
+function parseDateOnly(dateStr) {
+    if (typeof dateStr !== 'string') {
+        dateStr = formatQueryDate(dateStr);
+    }
+    const match = String(dateStr).match(/^(\d{4}-\d{2}-\d{2})/);
+    const cleanStr = match ? match[1] : dateStr;
+    const [y, m, d] = cleanStr.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d));
+}
+
+function formatDateOnly(date) {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+function getNextDayString(dateStr) {
+    const d = parseDateOnly(dateStr);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return formatDateOnly(d);
+}
+
+export async function validateAndNormalizeVariantMappings({
+    courseStart,
+    courseEnd,
+    rawVariants,
+    timeTableNameId,
+    structureVariants = null,
+    transaction,
+}) {
+    const start = toDateOnlyString(courseStart);
+    const end = toDateOnlyString(courseEnd);
+
+    if (!start || !end) {
+        throw new Error('Course startingDate and endingDate are required');
+    }
+    if (start > end) {
+        throw new Error('Course endingDate cannot be before startingDate');
+    }
+
+    if (!Array.isArray(rawVariants) || rawVariants.length === 0) {
+        throw new Error('At least one variant mapping is required');
+    }
+
+    const variantsList = structureVariants != null
+        ? structureVariants
+        : await timeTableRepository.findVariantsByStructureId(timeTableNameId, { transaction });
+    const variantMap = new Map();
+    for (const sv of variantsList) {
+        const vPlain = sv.get ? sv.get({ plain: true }) : sv;
+        variantMap.set(vPlain.timeTableStructureVariantId, vPlain);
+    }
+
+    const normalized = [];
+    for (const item of rawVariants) {
+        const vId = Number(item.timeTableStructureVariantId);
+        if (!vId || isNaN(vId)) {
+            throw new Error('timeTableStructureVariantId is required for each variant mapping');
+        }
+        if (!variantMap.has(vId)) {
+            throw new Error(`Variant with ID ${vId} does not belong to timetable structure ${timeTableNameId}`);
+        }
+        const vStart = toDateOnlyString(item.startingDate);
+        const vEnd = toDateOnlyString(item.endingDate);
+        if (!vStart || !vEnd) {
+            throw new Error(`startingDate and endingDate are required for variant ID ${vId}`);
+        }
+        if (vStart > vEnd) {
+            const vName = variantMap.get(vId)?.name || `ID ${vId}`;
+            throw new Error(`Variant '${vName}' startingDate (${vStart}) cannot be after endingDate (${vEnd})`);
+        }
+        normalized.push({
+            timeTableStructureVariantId: vId,
+            name: variantMap.get(vId)?.name || 'Regular',
+            startingDate: vStart,
+            endingDate: vEnd,
+        });
+    }
+
+    // Sort variants chronologically by startingDate
+    normalized.sort((a, b) => a.startingDate.localeCompare(b.startingDate));
+
+    // 1. Course ki Date Range se Bahar Nahi Hona Chahiye
+    for (const item of normalized) {
+        if (item.startingDate < start) {
+            throw new Error(
+                `Variant '${item.name}' start date (${item.startingDate}) cannot be before course start date (${start})`,
+            );
+        }
+        if (item.endingDate > end) {
+            throw new Error(
+                `Variant '${item.name}' end date (${item.endingDate}) cannot be after course end date (${end})`,
+            );
+        }
+    }
+
+    // 2. Complete Date Coverage: First variant must start on course start date
+    if (normalized[0].startingDate !== start) {
+        throw new Error(
+            `Date gap detected: Course starts on ${start}, but first variant '${normalized[0].name}' starts on ${normalized[0].startingDate}`,
+        );
+    }
+
+    // 3. Complete Date Coverage: Last variant must end on course end date
+    const lastItem = normalized[normalized.length - 1];
+    if (lastItem.endingDate !== end) {
+        throw new Error(
+            `Incomplete date coverage: Course ends on ${end}, but last variant '${lastItem.name}' ends on ${lastItem.endingDate}`,
+        );
+    }
+
+    // 4. Consecutive mappings check: No overlaps and no gaps
+    for (let i = 0; i < normalized.length - 1; i++) {
+        const current = normalized[i];
+        const next = normalized[i + 1];
+
+        // Overlap Check
+        if (next.startingDate <= current.endingDate) {
+            throw new Error(
+                `Date ranges overlap: Variant '${current.name}' (${current.startingDate} to ${current.endingDate}) overlaps with '${next.name}' (${next.startingDate} to ${next.endingDate})`,
+            );
+        }
+
+        // Gap Check
+        const expectedNextStart = getNextDayString(current.endingDate);
+        if (next.startingDate !== expectedNextStart) {
+            throw new Error(
+                `Date gap detected: Missing date coverage between ${current.endingDate} and ${next.startingDate}`,
+            );
+        }
+    }
+
+    return normalized;
+}
+
 function shapeStructureVariantTree(structures) {
     const byId = new Map();
     const roots = [];
@@ -234,6 +370,14 @@ export async function getStructureMappingPrintData(filters = {}) {
         const scopeCourse = academicGroupScope ? academicGroupScope.course : null;
         const scopeSession = academicGroupScope ? academicGroupScope.session : null;
 
+        const variantMappings = (plain.variantCourseMappings || []).map((vm) => ({
+            id: vm.id,
+            timeTableStructureVariantId: vm.timeTableStructureVariantId,
+            name: vm.name,
+            startingDate: vm.startingDate,
+            endingDate: vm.endingDate,
+        }));
+
         result.push({
             timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
             timeTableNameId: plain.timeTableNameId,
@@ -252,6 +396,9 @@ export async function getStructureMappingPrintData(filters = {}) {
             sessionName: session ? session.sessionName : (scopeSession ? scopeSession.sessionName : null),
             startingDate: plain.startingDate,
             endingDate: plain.endingDate,
+            timeTableStructureVariantId: variantMappings[0]?.timeTableStructureVariantId || null,
+            variantName: variantMappings.map((v) => v.name).filter(Boolean).join(', ') || null,
+            variants: variantMappings,
         });
     }
 
@@ -381,22 +528,91 @@ export async function updateStructure(body, updatedBy) {
         }
     }
 
-    const result = await timeTableRepository.updateStructureCourseMappingById(
-        mapping.timetableStructureCourseMapperId,
-        updates,
-        mapping.courseId,
-    );
+    const transaction = await sequelize.transaction();
+    try {
+        const result = await timeTableRepository.updateStructureCourseMappingById(
+            mapping.timetableStructureCourseMapperId,
+            updates,
+            mapping.courseId,
+            { transaction },
+        );
 
-    await timeTableRepository.updateVariantCourseMappingByMapperId(
-        mapping.timetableStructureCourseMapperId,
-        {
-            startingDate: updates.startingDate,
-            endingDate: updates.endingDate,
-            updatedBy,
-        },
-    );
+        if (Array.isArray(body.variants) && body.variants.length > 0) {
+            const validatedVariants = await validateAndNormalizeVariantMappings({
+                courseStart: start,
+                courseEnd: end,
+                rawVariants: body.variants,
+                timeTableNameId: updates.timeTableNameId,
+                transaction,
+            });
 
-    return result;
+            await timeTableRepository.deleteVariantCourseMappingsByMapperId(
+                mapping.timetableStructureCourseMapperId,
+                transaction,
+            );
+
+            const variantRows = validatedVariants.map((v) => ({
+                timetableStructureCourseMapperId: mapping.timetableStructureCourseMapperId,
+                timeTableStructureVariantId: v.timeTableStructureVariantId,
+                name: v.name,
+                startingDate: v.startingDate,
+                endingDate: v.endingDate,
+                universityId: structure.universityId,
+                instituteId: structure.instituteId,
+                academicYearId: structure.academicYearId,
+                createdBy: updatedBy,
+                updatedBy,
+            }));
+
+            await timeTableRepository.bulkCreateVariantCourseMappings(variantRows, transaction);
+        } else if (body.timeTableStructureVariantId) {
+            const singleVariant = await timeTableRepository.findVariantById(body.timeTableStructureVariantId, { transaction });
+            if (!singleVariant) {
+                throw new Error(`Variant with ID ${body.timeTableStructureVariantId} not found`);
+            }
+            await timeTableRepository.deleteVariantCourseMappingsByMapperId(
+                mapping.timetableStructureCourseMapperId,
+                transaction,
+            );
+            await timeTableRepository.createVariantCourseMapping(
+                {
+                    timetableStructureCourseMapperId: mapping.timetableStructureCourseMapperId,
+                    timeTableStructureVariantId: Number(body.timeTableStructureVariantId),
+                    name: singleVariant.name || 'Regular',
+                    startingDate: start,
+                    endingDate: end,
+                    universityId: structure.universityId,
+                    instituteId: structure.instituteId,
+                    academicYearId: structure.academicYearId,
+                    createdBy: updatedBy,
+                    updatedBy,
+                },
+                transaction,
+            );
+        } else if (body.startingDate || body.endingDate) {
+            const existingVariants = await timeTableRepository.findVariantCourseMappingsByMapperId(
+                mapping.timetableStructureCourseMapperId,
+                { transaction },
+            );
+            if (existingVariants.length === 1) {
+                await timeTableRepository.updateVariantCourseMappingByMapperId(
+                    mapping.timetableStructureCourseMapperId,
+                    {
+                        startingDate: start,
+                        endingDate: end,
+                        updatedBy,
+                    },
+                    transaction,
+                );
+            }
+        }
+
+        await transaction.commit();
+        return result;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }
 
 export async function addStructureCourseMapping(data, createdBy, updatedBy) {
@@ -447,80 +663,131 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         }
     }
 
+    let existingMapping = null;
     if (isScopeMapping) {
-        const existingScopeMapping = await timeTableRepository.getStructureScopeMapping(
+        existingMapping = await timeTableRepository.getStructureScopeMapping(
             data.timeTableNameId,
             targetScopeId,
             targetSessionId,
         );
-        if (existingScopeMapping) {
-            throw new Error('Group scope mapping already exists for this structure and session');
-        }
     } else {
-        const existingCourseMapping = await timeTableRepository.getStructureCourseMapping(
+        existingMapping = await timeTableRepository.getStructureCourseMapping(
             data.timeTableNameId,
             targetCourseId,
             targetSessionId,
         );
-        if (existingCourseMapping) {
-            throw new Error('Course mapping already exists for this structure, course and session');
-        }
     }
 
+    const excludeMapperId = existingMapping ? existingMapping.timetableStructureCourseMapperId : null;
     const res = await assertNoOverlappingCourseSessionDates({
         academicGroupScopeId: targetScopeId,
         courseId: targetCourseId,
         sessionId: targetSessionId,
         startingDate: data.startingDate,
         endingDate: data.endingDate,
+        excludeMapperId,
     });
 
-    const mapping = await timeTableRepository.addStructureCourseMapping({
-        timeTableNameId: data.timeTableNameId,
-        courseId: targetCourseId,
-        academicGroupScopeId: targetScopeId,
-        sessionId: targetSessionId,
-        universityId: structure.universityId,
-        instituteId: structure.instituteId,
-        academicYearId: structure.academicYearId,
-        startingDate: res.start,
-        endingDate: res.end,
-        createdBy,
-        updatedBy,
-    });
-
-    // Link course mapping with timetable variant (default to Regular variant if not specified)
-    let targetVariantId = data.timeTableStructureVariantId;
-    let variantName = 'Regular';
-    if (!targetVariantId) {
-        const defaultVariant = await timeTableRepository.findDefaultVariantByStructureId(data.timeTableNameId);
-        if (defaultVariant) {
-            targetVariantId = defaultVariant.timeTableStructureVariantId;
-            variantName = defaultVariant.name || 'Regular';
+    let rawVariants = data.variants;
+    if (!Array.isArray(rawVariants) || rawVariants.length === 0) {
+        let singleVariantId = data.timeTableStructureVariantId;
+        if (!singleVariantId) {
+            const defaultVariant = await timeTableRepository.findDefaultVariantByStructureId(data.timeTableNameId);
+            if (defaultVariant) {
+                singleVariantId = defaultVariant.timeTableStructureVariantId;
+            }
         }
-    } else {
-        const targetVariant = await timeTableRepository.findVariantById(targetVariantId);
-        if (targetVariant) {
-            variantName = targetVariant.name || 'Regular';
+        if (!singleVariantId) {
+            const anyVariants = await timeTableRepository.findVariantsByStructureId(data.timeTableNameId);
+            if (anyVariants && anyVariants.length > 0) {
+                singleVariantId = anyVariants[0].timeTableStructureVariantId;
+            }
         }
+        if (!singleVariantId) {
+            throw new Error('No timetable structure variant found for this structure');
+        }
+        rawVariants = [
+            {
+                timeTableStructureVariantId: singleVariantId,
+                startingDate: res.start,
+                endingDate: res.end,
+            },
+        ];
     }
 
-    if (targetVariantId) {
-        await timeTableRepository.createVariantCourseMapping({
-            timetableStructureCourseMapperId: mapping.timetableStructureCourseMapperId,
-            timeTableStructureVariantId: targetVariantId,
-            name: variantName,
-            startingDate: res.start,
-            endingDate: res.end,
+    const validatedVariants = await validateAndNormalizeVariantMappings({
+        courseStart: res.start,
+        courseEnd: res.end,
+        rawVariants,
+        timeTableNameId: data.timeTableNameId,
+    });
+
+    const transaction = await sequelize.transaction();
+    try {
+        let mapping;
+        if (existingMapping) {
+            mapping = existingMapping;
+            await timeTableRepository.updateStructureCourseMappingById(
+                mapping.timetableStructureCourseMapperId,
+                {
+                    startingDate: res.start,
+                    endingDate: res.end,
+                    updatedBy,
+                },
+                mapping.courseId,
+                { transaction },
+            );
+            await timeTableRepository.deleteVariantCourseMappingsByMapperId(
+                mapping.timetableStructureCourseMapperId,
+                transaction,
+            );
+        } else {
+            mapping = await timeTableRepository.addStructureCourseMapping(
+                {
+                    timeTableNameId: data.timeTableNameId,
+                    courseId: targetCourseId,
+                    academicGroupScopeId: targetScopeId,
+                    sessionId: targetSessionId,
+                    universityId: structure.universityId,
+                    instituteId: structure.instituteId,
+                    academicYearId: structure.academicYearId,
+                    startingDate: res.start,
+                    endingDate: res.end,
+                    createdBy,
+                    updatedBy,
+                },
+                transaction,
+            );
+        }
+
+        const mapperId = mapping.timetableStructureCourseMapperId;
+
+        const variantRows = validatedVariants.map((v) => ({
+            timetableStructureCourseMapperId: mapperId,
+            timeTableStructureVariantId: v.timeTableStructureVariantId,
+            name: v.name,
+            startingDate: v.startingDate,
+            endingDate: v.endingDate,
             universityId: structure.universityId,
             instituteId: structure.instituteId,
             academicYearId: structure.academicYearId,
             createdBy,
             updatedBy,
-        });
-    }
+        }));
 
-    return mapping;
+        await timeTableRepository.bulkCreateVariantCourseMappings(variantRows, transaction);
+
+        await transaction.commit();
+
+        const plainMapping = mapping.get ? mapping.get({ plain: true }) : { ...mapping };
+        plainMapping.startingDate = res.start;
+        plainMapping.endingDate = res.end;
+        plainMapping.variants = validatedVariants;
+        return plainMapping;
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
 }
 
 function parseTimeString(timeString) {

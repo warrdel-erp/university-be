@@ -247,11 +247,12 @@ export async function deleteStructureCourseMappingById(timetableStructureCourseM
     };
 }
 
-export async function updateStructureCourseMappingById(timetableStructureCourseMapperId, updates, previousCourseId) {
+export async function updateStructureCourseMappingById(timetableStructureCourseMapperId, updates, previousCourseId, options = {}) {
     await scoped(model.timeTableStructureCourseModel).update(updates, {
         where: {
             timetableStructureCourseMapperId,
         },
+        transaction: options.transaction,
     });
 
     if (updates.courseId !== previousCourseId) {
@@ -264,11 +265,12 @@ export async function updateStructureCourseMappingById(timetableStructureCourseM
                 where: {
                     timetableStructureCourseMapperId,
                 },
+                transaction: options.transaction,
             },
         );
     }
 
-    return getStructureCourseMappingById(timetableStructureCourseMapperId);
+    return getStructureCourseMappingById(timetableStructureCourseMapperId, options);
 }
 
 export async function getStructurePeriodsByStructureId(timeTableNameId, options = {}) {
@@ -406,6 +408,12 @@ export async function getTimeTableStructures(filters = {}) {
                 attributes: ["academicGroupScopeId", "title"],
                 required: false,
             },
+            {
+                model: model.timeTableStructureVariantCourseMappingModel,
+                as: "variantCourseMappings",
+                attributes: ["id", "timeTableStructureVariantId", "name", "startingDate", "endingDate"],
+                required: false,
+            },
         ],
     };
 
@@ -526,6 +534,12 @@ export async function getStructureMappingPrintRows(filters = {}) {
                 as: 'session',
                 required: false,
                 attributes: ['sessionId', 'sessionName'],
+            },
+            {
+                model: model.timeTableStructureVariantCourseMappingModel,
+                as: 'variantCourseMappings',
+                required: false,
+                attributes: ['id', 'timeTableStructureVariantId', 'name', 'startingDate', 'endingDate'],
             },
         ],
         order: [
@@ -1185,3 +1199,28 @@ export async function updateVariantCourseMappingByMapperId(timetableStructureCou
         transaction,
     });
 }
+
+export async function bulkCreateVariantCourseMappings(dataArray, transaction) {
+    if (!dataArray || dataArray.length === 0) return [];
+    return await scoped(model.timeTableStructureVariantCourseMappingModel).bulkCreate(dataArray, { transaction });
+}
+
+export async function deleteVariantCourseMappingsByMapperId(timetableStructureCourseMapperId, transaction) {
+    return await scoped(model.timeTableStructureVariantCourseMappingModel).destroy({
+        where: {
+            timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId),
+        },
+        transaction,
+    });
+}
+
+export async function findVariantCourseMappingsByMapperId(timetableStructureCourseMapperId, options = {}) {
+    return await scoped(model.timeTableStructureVariantCourseMappingModel).findAll({
+        where: {
+            timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId),
+        },
+        order: [['startingDate', 'ASC']],
+        transaction: options.transaction,
+    });
+}
+

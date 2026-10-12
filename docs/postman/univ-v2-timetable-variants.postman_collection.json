@@ -278,7 +278,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"timeTableNameId\": 1,\n  \"courseId\": 1,\n  \"sessionId\": 1,\n  \"timeTableStructureVariantId\": 1,\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\"\n}",
+          "raw": "{\n  \"timeTableNameId\": 1,\n  \"courseId\": 1,\n  \"sessionId\": 1,\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\",\n  \"variants\": [\n    {\n      \"timeTableStructureVariantId\": 1,\n      \"startingDate\": \"2026-08-01\",\n      \"endingDate\": \"2026-09-30\"\n    },\n    {\n      \"timeTableStructureVariantId\": 2,\n      \"startingDate\": \"2026-10-01\",\n      \"endingDate\": \"2026-11-15\"\n    },\n    {\n      \"timeTableStructureVariantId\": 1,\n      \"startingDate\": \"2026-11-16\",\n      \"endingDate\": \"2026-12-31\"\n    }\n  ]\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -295,7 +295,7 @@
             "courseMapping"
           ]
         },
-        "description": "Maps a course/session to a structure. Creates a row in time_table_structure_course and also links it in time_table_structure_variant_course_mapping (defaults to 'Regular' variant if timeTableStructureVariantId is omitted)."
+        "description": "Maps a course/session to a structure with one or multiple variants covering the exact date range. Validates that variant date ranges cover the entire course date range with no gaps and no overlaps. Single variant fallback with timeTableStructureVariantId is also supported."
       },
       "response": []
     },
