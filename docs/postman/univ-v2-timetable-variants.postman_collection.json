@@ -390,6 +390,80 @@
         "description": "Fetches structures with their variants for select dropdowns in routine creation."
       },
       "response": []
+    },
+    {
+      "name": "11. POST Create Single Variant (Quick Copy Base Periods)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"timeTableNameId\": 1,\n  \"name\": \"Winter Timings\",\n  \"isDefault\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/timeTable/variant",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "timeTable",
+            "variant"
+          ]
+        },
+        "description": "Creates a new single variant under an existing structure. If periods are omitted, it automatically copies all periods from the base structure into time_table_structure_variant_periods."
+      },
+      "response": []
+    },
+    {
+      "name": "12. POST Create Single Variant (With Custom Period Timings)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"timeTableNameId\": 1,\n  \"name\": \"Winter Timings\",\n  \"isDefault\": false,\n  \"periods\": [\n    {\n      \"timeTableStructurePeriodsId\": 1,\n      \"startTime\": \"09:30 AM\",\n      \"endTime\": \"10:20 AM\",\n      \"isCourse\": true\n    },\n    {\n      \"timeTableStructurePeriodsId\": 2,\n      \"startTime\": \"10:25 AM\",\n      \"endTime\": \"11:15 AM\",\n      \"isCourse\": true\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseurl}}/timeTable/variant",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "timeTable",
+            "variant"
+          ]
+        },
+        "description": "Creates a new single variant under an existing structure with custom starting and ending times for periods."
+      },
+      "response": []
     }
   ]
 }

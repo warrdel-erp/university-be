@@ -15,6 +15,7 @@ import {
   deleteStructureCourseMapping,
   cloneTimeTableStructure,
   copyTimeTableStructure,
+  addTimeTableVariant,
 } from "../controllers/timeTableController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -122,6 +123,18 @@ const cloneTimeTableStructureSchema = z.object({
   name: z.string().trim().min(1, "name cannot be empty").optional(),
 });
 
+const addTimeTableVariantSchema = z.object({
+  timeTableNameId: positiveIntegerId,
+  name: z.string().trim().min(1, "name is required"),
+  isDefault: z.boolean().optional(),
+  periods: z.array(z.object({
+    timeTableStructurePeriodsId: positiveIntegerId,
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+    isCourse: z.boolean().optional(),
+  })).optional(),
+});
+
 const copyTimeTableStructureSchema = z.object({
   timeTableNameId: positiveIntegerId,
   name: z.string().trim().min(1, "name cannot be empty").optional(),
@@ -204,6 +217,14 @@ router.post(
   checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null),
   validate({ body: cloneTimeTableStructureSchema }),
   cloneTimeTableStructure,
+);
+
+router.post(
+  "/variant",
+  userAuth,
+  checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null),
+  validate({ body: addTimeTableVariantSchema }),
+  addTimeTableVariant,
 );
 
 router.post(

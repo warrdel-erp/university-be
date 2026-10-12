@@ -641,6 +641,99 @@ export async function addTimeTablePeriod(data, createdBy, updatedBy) {
     }
 }
 
+export async function addTimeTableVariant(data, createdBy, updatedBy) {
+    const structure = await timeTableRepository.getTimeTableStructureById(data.timeTableNameId);
+    if (!structure) {
+        throw new Error('Time table structure not found for this institute and academic year');
+    }
+
+    const transaction = await sequelize.transaction();
+
+    try {
+        if (data.isDefault) {
+            await model.timeTableStructureVariantModel.update(
+                { isDefault: false },
+                {
+                    where: { timeTableStructureId: Number(data.timeTableNameId) },
+                    transaction,
+                },
+            );
+        }
+
+        const variant = await timeTableRepository.createStructureVariant(
+            {
+                name: data.name,
+                timeTableStructureId: Number(data.timeTableNameId),
+                isDefault: Boolean(data.isDefault),
+                universityId: structure.universityId,
+                instituteId: structure.instituteId,
+                academicYearId: structure.academicYearId,
+                createdBy,
+                updatedBy,
+            },
+            transaction,
+        );
+
+        const variantId = variant.timeTableStructureVariantId;
+        const variantPeriods = [];
+
+        if (Array.isArray(data.periods) && data.periods.length > 0) {
+            for (const p of data.periods) {
+                variantPeriods.push({
+                    timeTableStructureVariantId: variantId,
+                    timeTableStructurePeriodsId: Number(p.timeTableStructurePeriodsId),
+                    startTime: p.startTime || '',
+                    endTime: p.endTime || '',
+                    isCourse: p.isCourse ?? true,
+                    universityId: structure.universityId,
+                    instituteId: structure.instituteId,
+                    academicYearId: structure.academicYearId,
+                    createdBy,
+                    updatedBy,
+                });
+            }
+        } else {
+            const basePeriods = await timeTableRepository.getStructurePeriodsByStructureId(
+                data.timeTableNameId,
+                { transaction },
+            );
+            for (const bp of basePeriods) {
+                const plain = bp.get ? bp.get({ plain: true }) : bp;
+                variantPeriods.push({
+                    timeTableStructureVariantId: variantId,
+                    timeTableStructurePeriodsId: plain.timeTableCreationId,
+                    startTime: plain.startTime || '',
+                    endTime: plain.endTime || '',
+                    isCourse: plain.isCourse ?? true,
+                    universityId: structure.universityId,
+                    instituteId: structure.instituteId,
+                    academicYearId: structure.academicYearId,
+                    createdBy,
+                    updatedBy,
+                });
+            }
+        }
+
+        let createdPeriods = [];
+        if (variantPeriods.length > 0) {
+            createdPeriods = await timeTableRepository.bulkCreateVariantPeriods(variantPeriods, transaction);
+        }
+
+        await transaction.commit();
+
+        return {
+            timeTableStructureVariantId: variantId,
+            timeTableStructureId: Number(data.timeTableNameId),
+            name: data.name,
+            isDefault: Boolean(data.isDefault),
+            variantPeriods: createdPeriods,
+        };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+}
+
 export async function cloneTimeTableStructure(sourceTimeTableNameId, name, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
 

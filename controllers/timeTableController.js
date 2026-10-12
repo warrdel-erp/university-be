@@ -179,5 +179,18 @@ export const copyTimeTableStructure = async (req, res) => {
   }
 };
 
+export const addTimeTableVariant = async (req, res) => {
+  try {
+    const result = await timeTableServices.addTimeTableVariant(
+      req.body,
+      req.user.userId,
+      req.user.userId,
+    );
+    return SuccessResponse(res, 201, "Time table variant created successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
+
 
 
