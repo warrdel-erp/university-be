@@ -312,6 +312,27 @@ export async function incrementStructureMaximumPeriod(timeTableNameId, transacti
     return currentMax + 1;
 }
 
+const variantListInclude = {
+    model: model.timeTableStructureVariantModel,
+    as: "structureVariants",
+    attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
+    required: false,
+    include: [
+        {
+            model: model.timeTableStructureVariantPeriodsModel,
+            as: "variantPeriods",
+            attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
+            required: false,
+        },
+        {
+            model: model.timeTableStructureVariantCourseMappingModel,
+            as: "variantCourseMappings",
+            attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
+            required: false,
+        },
+    ],
+};
+
 const structureListInclude = [
     {
         model: model.timeTableStructureCourseModel,
@@ -337,6 +358,12 @@ const structureListInclude = [
                 ],
                 required: false,
             },
+            {
+                model: model.academicGroupScopeModel,
+                as: "academicGroupScope",
+                attributes: ["academicGroupScopeId", "title"],
+                required: false,
+            },
         ],
     },
     {
@@ -344,6 +371,7 @@ const structureListInclude = [
         as: "timeTableName",
         attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
     },
+    variantListInclude,
 ];
 
 export async function getTimeTableStructures(filters = {}) {
@@ -372,6 +400,12 @@ export async function getTimeTableStructures(filters = {}) {
                 ],
                 required: false,
             },
+            {
+                model: model.academicGroupScopeModel,
+                as: "academicGroupScope",
+                attributes: ["academicGroupScopeId", "title"],
+                required: false,
+            },
         ],
     };
 
@@ -397,6 +431,10 @@ export async function getTimeTableStructures(filters = {}) {
                 as: "timeTableName",
                 attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
             },
+            variantListInclude,
+        ],
+        order: [
+            ["timeTableNameId", "ASC"],
         ],
     });
 }
@@ -1062,5 +1100,88 @@ export async function getProgramsOverviewRows(filters = {}) {
                 ]
             }
         ]
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Timetable Structure Variants Repository Helpers
+// ---------------------------------------------------------------------------
+
+export async function createStructureVariant(data, transaction) {
+    return await scoped(model.timeTableStructureVariantModel).create(data, { transaction });
+}
+
+export async function bulkCreateVariantPeriods(dataArray, transaction) {
+    if (!dataArray || dataArray.length === 0) return [];
+    return await model.timeTableStructureVariantPeriodsModel.bulkCreate(dataArray, { transaction });
+}
+
+export async function createVariantCourseMapping(data, transaction) {
+    return await scoped(model.timeTableStructureVariantCourseMappingModel).create(data, { transaction });
+}
+
+export async function findDefaultVariantByStructureId(timeTableStructureId, options = {}) {
+    return await scoped(model.timeTableStructureVariantModel).findOne({
+        where: {
+            timeTableStructureId: Number(timeTableStructureId),
+            isDefault: true,
+        },
+        transaction: options.transaction,
+    });
+}
+
+export async function findVariantsByStructureId(timeTableStructureId, options = {}) {
+    return await scoped(model.timeTableStructureVariantModel).findAll({
+        where: {
+            timeTableStructureId: Number(timeTableStructureId),
+        },
+        include: [
+            {
+                model: model.timeTableStructureVariantPeriodsModel,
+                as: 'variantPeriods',
+                required: false,
+            },
+            {
+                model: model.timeTableStructureVariantCourseMappingModel,
+                as: 'variantCourseMappings',
+                required: false,
+            },
+        ],
+        transaction: options.transaction,
+    });
+}
+
+export async function findVariantById(timeTableStructureVariantId, options = {}) {
+    return await scoped(model.timeTableStructureVariantModel).findByPk(
+        Number(timeTableStructureVariantId),
+        {
+            include: [
+                {
+                    model: model.timeTableStructureVariantPeriodsModel,
+                    as: 'variantPeriods',
+                    required: false,
+                },
+            ],
+            transaction: options.transaction,
+        },
+    );
+}
+
+export async function updateVariantPeriodRow(timeTableStructureVariantId, timeTableStructurePeriodsId, updates, transaction) {
+    return await model.timeTableStructureVariantPeriodsModel.update(updates, {
+        where: {
+            timeTableStructureVariantId: Number(timeTableStructureVariantId),
+            timeTableStructurePeriodsId: Number(timeTableStructurePeriodsId),
+        },
+        transaction,
+    });
+}
+
+export async function updateVariantCourseMappingByMapperId(timetableStructureCourseMapperId, updates, transaction) {
+    return await model.timeTableStructureVariantCourseMappingModel.update(updates, {
+        where: {
+            timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId),
+        },
+        transaction,
     });
 }

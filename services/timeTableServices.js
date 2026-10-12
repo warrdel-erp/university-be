@@ -58,7 +58,7 @@ function shapeStructureVariantTree(structures) {
     const roots = [];
 
     for (const row of structures) {
-        const plain = row.get({ plain: true });
+        const plain = row.get ? row.get({ plain: true }) : row;
         plain.variants = [];
         byId.set(plain.timeTableNameId, plain);
     }
@@ -68,6 +68,10 @@ function shapeStructureVariantTree(structures) {
         if (sourceId != null && byId.has(sourceId)) {
             byId.get(sourceId).variants.push(structure);
             continue;
+        }
+        // If no cloned structures in variants, expose structureVariants in variants for backward compatibility
+        if (structure.variants.length === 0 && structure.structureVariants && structure.structureVariants.length > 0) {
+            structure.variants = structure.structureVariants;
         }
         roots.push(structure);
     }
@@ -153,6 +157,38 @@ export async function addTimeTable(data, createdBy, updatedBy) {
 
         const timeTableEntry = await timeTableRepository.addTimeTable(data, transaction);
 
+        // Automatically create default 'Regular' variant
+        const defaultVariant = await timeTableRepository.createStructureVariant({
+            name: 'Regular',
+            timeTableStructureId: timeTableNameId,
+            isDefault: true,
+            universityId: result.dataValues.universityId,
+            instituteId: result.dataValues.instituteId,
+            academicYearId: result.dataValues.academicYearId,
+            createdBy,
+            updatedBy,
+        }, transaction);
+
+        const defaultVariantId = defaultVariant.timeTableStructureVariantId || defaultVariant.dataValues?.timeTableStructureVariantId;
+
+        // Link all newly created periods to the default variant
+        const variantPeriods = timeTableEntry.map((period) => {
+            const p = period.dataValues || period;
+            return {
+                timeTableStructureVariantId: defaultVariantId,
+                timeTableStructurePeriodsId: p.timeTableCreationId,
+                startTime: p.startTime,
+                endTime: p.endTime,
+                isCourse: p.isCourse ?? true,
+                universityId: result.dataValues.universityId,
+                instituteId: result.dataValues.instituteId,
+                academicYearId: result.dataValues.academicYearId,
+                createdBy,
+                updatedBy,
+            };
+        });
+        await timeTableRepository.bulkCreateVariantPeriods(variantPeriods, transaction);
+
         await transaction.commit();
         return timeTableEntry;
     } catch (error) {
@@ -161,8 +197,11 @@ export async function addTimeTable(data, createdBy, updatedBy) {
     }
 }
 
-export async function getTimeTableDetails() {
-    const structures = await timeTableRepository.getTimeTableStructures();
+export async function getTimeTableDetails(query = {}) {
+    const structures = await timeTableRepository.getTimeTableStructures({
+        courseId: query.courseId,
+        sessionId: query.sessionId,
+    });
     return shapeStructureVariantTree(structures);
 }
 
@@ -224,11 +263,30 @@ export async function getAllStructureScopeMappings(filters = {}) {
 }
 
 
-export async function updateTimeTable(info) {
+export async function updateTimeTable(info, variantId = null) {
     const results = [];
     for (const item of info) {
         const result = await timeTableRepository.updateTimeTable(item.timeTableCreationId, item);
         results.push(result);
+
+        const periodUpdates = {};
+        if (item.startTime !== undefined) periodUpdates.startTime = item.startTime;
+        if (item.endTime !== undefined) periodUpdates.endTime = item.endTime;
+        if (item.isCourse !== undefined) periodUpdates.isCourse = item.isCourse;
+
+        if (Object.keys(periodUpdates).length > 0) {
+            if (variantId) {
+                await timeTableRepository.updateVariantPeriodRow(
+                    variantId,
+                    item.timeTableCreationId,
+                    periodUpdates,
+                );
+            } else {
+                await model.timeTableStructureVariantPeriodsModel.update(periodUpdates, {
+                    where: { timeTableStructurePeriodsId: item.timeTableCreationId },
+                });
+            }
+        }
     }
     return results;
 }
@@ -323,11 +381,22 @@ export async function updateStructure(body, updatedBy) {
         }
     }
 
-    return timeTableRepository.updateStructureCourseMappingById(
+    const result = await timeTableRepository.updateStructureCourseMappingById(
         mapping.timetableStructureCourseMapperId,
         updates,
         mapping.courseId,
     );
+
+    await timeTableRepository.updateVariantCourseMappingByMapperId(
+        mapping.timetableStructureCourseMapperId,
+        {
+            startingDate: updates.startingDate,
+            endingDate: updates.endingDate,
+            updatedBy,
+        },
+    );
+
+    return result;
 }
 
 export async function addStructureCourseMapping(data, createdBy, updatedBy) {
@@ -394,7 +463,7 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         endingDate: data.endingDate,
     });
 
-    return timeTableRepository.addStructureCourseMapping({
+    const mapping = await timeTableRepository.addStructureCourseMapping({
         timeTableNameId: data.timeTableNameId,
         courseId: targetCourseId,
         academicGroupScopeId: targetScopeId,
@@ -407,6 +476,39 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         createdBy,
         updatedBy,
     });
+
+    // Link course mapping with timetable variant (default to Regular variant if not specified)
+    let targetVariantId = data.timeTableStructureVariantId;
+    let variantName = 'Regular';
+    if (!targetVariantId) {
+        const defaultVariant = await timeTableRepository.findDefaultVariantByStructureId(data.timeTableNameId);
+        if (defaultVariant) {
+            targetVariantId = defaultVariant.timeTableStructureVariantId;
+            variantName = defaultVariant.name || 'Regular';
+        }
+    } else {
+        const targetVariant = await timeTableRepository.findVariantById(targetVariantId);
+        if (targetVariant) {
+            variantName = targetVariant.name || 'Regular';
+        }
+    }
+
+    if (targetVariantId) {
+        await timeTableRepository.createVariantCourseMapping({
+            timetableStructureCourseMapperId: mapping.timetableStructureCourseMapperId,
+            timeTableStructureVariantId: targetVariantId,
+            name: variantName,
+            startingDate: res.start,
+            endingDate: res.end,
+            universityId: structure.universityId,
+            instituteId: structure.instituteId,
+            academicYearId: structure.academicYearId,
+            createdBy,
+            updatedBy,
+        });
+    }
+
+    return mapping;
 }
 
 function parseTimeString(timeString) {
@@ -498,6 +600,24 @@ export async function addTimeTablePeriod(data, createdBy, updatedBy) {
             },
             transaction,
         );
+
+        // Sync new period with all existing variants of this structure
+        const variants = await timeTableRepository.findVariantsByStructureId(timeTableNameId, { transaction });
+        if (variants && variants.length > 0) {
+            const variantPeriods = variants.map((v) => ({
+                timeTableStructureVariantId: v.timeTableStructureVariantId,
+                timeTableStructurePeriodsId: periodRow.timeTableCreationId,
+                startTime: periodRow.startTime,
+                endTime: periodRow.endTime,
+                isCourse: periodRow.isCourse ?? true,
+                universityId: v.universityId,
+                instituteId: v.instituteId,
+                academicYearId: v.academicYearId,
+                createdBy,
+                updatedBy,
+            }));
+            await timeTableRepository.bulkCreateVariantPeriods(variantPeriods, transaction);
+        }
 
         await timeTableRepository.incrementStructureMaximumPeriod(timeTableNameId, transaction);
 

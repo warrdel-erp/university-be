@@ -54,6 +54,9 @@ import libraryAuthorityModel from "./libraryAuthorityModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 import timeTableStructureCourseModel from "./timeTableStructureCourseModel.js";
 import timeTableStructurePeriodsModel from "./timeTableStructurePeriodsModel.js";
+import timeTableStructureVariantModel from "./timeTableStructureVariantModel.js";
+import timeTableStructureVariantPeriodsModel from "./timeTableStructureVariantPeriodsModel.js";
+import timeTableStructureVariantCourseMappingModel from "./timeTableStructureVariantCourseMappingModel.js";
 import faculityLoadModel from "./faculityLoadModel.js";
 import timeTableRoutineModel from "./timeTableRoutineModel.js";
 import classScheduleModel from "./classScheduleModel.js";
@@ -1354,6 +1357,52 @@ timeTableStructureModel.belongsTo(timeTableStructureModel, {
 timeTableStructureModel.hasMany(timeTableStructureModel, {
   foreignKey: "source_time_table_name_id",
   as: "clonedStructures",
+});
+
+// Timetable Structure Variants
+timeTableStructureModel.hasMany(timeTableStructureVariantModel, {
+  foreignKey: "time_table_structure_id",
+  as: "structureVariants",
+});
+timeTableStructureVariantModel.belongsTo(timeTableStructureModel, {
+  foreignKey: "time_table_structure_id",
+  as: "timeTableStructure",
+});
+
+timeTableStructureVariantModel.hasMany(timeTableStructureVariantPeriodsModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variantPeriods",
+});
+timeTableStructureVariantPeriodsModel.belongsTo(timeTableStructureVariantModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variant",
+});
+
+timeTableStructureVariantPeriodsModel.belongsTo(timeTableStructurePeriodsModel, {
+  foreignKey: "time_table_structure_periods_id",
+  as: "structurePeriod",
+});
+timeTableStructurePeriodsModel.hasMany(timeTableStructureVariantPeriodsModel, {
+  foreignKey: "time_table_structure_periods_id",
+  as: "variantPeriods",
+});
+
+timeTableStructureVariantModel.hasMany(timeTableStructureVariantCourseMappingModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variantCourseMappings",
+});
+timeTableStructureVariantCourseMappingModel.belongsTo(timeTableStructureVariantModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variant",
+});
+
+timeTableStructureVariantCourseMappingModel.belongsTo(timeTableStructureCourseModel, {
+  foreignKey: "timetable_structure_course_mapper_id",
+  as: "structureCourseMapping",
+});
+timeTableStructureCourseModel.hasMany(timeTableStructureVariantCourseMappingModel, {
+  foreignKey: "timetable_structure_course_mapper_id",
+  as: "variantCourseMappings",
 });
 
 timeTableStructureCourseModel.belongsTo(courseModel, {
@@ -4119,6 +4168,9 @@ export {
   timeTableStructureModel,
   timeTableStructureCourseModel,
   timeTableStructurePeriodsModel,
+  timeTableStructureVariantModel,
+  timeTableStructureVariantPeriodsModel,
+  timeTableStructureVariantCourseMappingModel,
   faculityLoadModel,
   timeTableRoutineModel,
   classScheduleModel,

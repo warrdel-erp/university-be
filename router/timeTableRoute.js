@@ -74,10 +74,18 @@ const addTimeTableSchema = z
 const addStructureCourseMappingSchema = z
   .object({
     timeTableNameId: positiveIntegerId,
-    courseId: positiveIntegerId,
+    courseId: optionalPositiveId,
+    academicGroupScopeId: optionalPositiveId,
+    timeTableStructureVariantId: optionalPositiveId,
     sessionId: positiveIntegerId,
     startingDate: z.string().min(1, "startingDate is required"),
     endingDate: z.string().min(1, "endingDate is required"),
+  })
+  .refine((data) => data.courseId != null || data.academicGroupScopeId != null, {
+    message: "Either courseId or academicGroupScopeId must be provided",
+  })
+  .refine((data) => !(data.courseId != null && data.academicGroupScopeId != null), {
+    message: "Provide either courseId or academicGroupScopeId, not both",
   })
   .refine((data) => new Date(data.endingDate) >= new Date(data.startingDate), {
     message: "endingDate cannot be before startingDate",
@@ -86,6 +94,7 @@ const addStructureCourseMappingSchema = z
 
 const updateTimeTableItemSchema = z.object({
   timeTableCreationId: positiveIntegerId,
+  timeTableStructureVariantId: optionalPositiveId,
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   periodName: z.string().optional(),
@@ -143,6 +152,7 @@ const updateStructureSchema = z
   .object({
     timetableStructureCourseMapperId: positiveIntegerId,
     timeTableNameId: positiveIntegerId.optional(),
+    timeTableStructureVariantId: optionalPositiveId,
     courseId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
     startingDate: z.string().min(1).optional(),
@@ -151,6 +161,7 @@ const updateStructureSchema = z
   .refine(
     (data) =>
       data.timeTableNameId ||
+      data.timeTableStructureVariantId ||
       data.courseId ||
       data.sessionId ||
       data.startingDate ||
@@ -250,6 +261,11 @@ router.delete(
   deleteStructureCourseMapping,
 );
 
+const getTimeTableDetailsQuerySchema = z.object({
+  courseId: optionalPositiveId,
+  sessionId: optionalPositiveId,
+});
+
 // ---------------------------------------------------------------------------
 // 3. Read / list — UI lists, dropdowns, print table
 // ---------------------------------------------------------------------------
@@ -257,6 +273,7 @@ router.get(
   "/",
   userAuth,
   checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
+  validate({ query: getTimeTableDetailsQuerySchema }),
   getTimeTableDetails,
 );
 router.get(

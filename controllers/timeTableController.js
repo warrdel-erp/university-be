@@ -43,7 +43,7 @@ export const addTimeTablePeriod = async (req, res) => {
 
 export const getTimeTableDetails = async (req, res) => {
   try {
-    const result = await timeTableServices.getTimeTableDetails();
+    const result = await timeTableServices.getTimeTableDetails(req.query);
     return SuccessResponse(res, 200, "Time table details fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
@@ -79,7 +79,9 @@ export const getStructureMappingPrintData = async (req, res) => {
 
 export const updateTimeTable = async (req, res) => {
   try {
-    const result = await timeTableServices.updateTimeTable(req.body);
+    const variantId = req.query?.timeTableStructureVariantId || req.body?.timeTableStructureVariantId;
+    const periods = Array.isArray(req.body) ? req.body : req.body?.periods;
+    const result = await timeTableServices.updateTimeTable(periods || req.body, variantId);
     return SuccessResponse(res, 200, "Time table updated successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
