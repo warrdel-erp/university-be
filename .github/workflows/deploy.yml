@@ -60,6 +60,7 @@ jobs:
             sudo docker run \
               --network host \
               --env-file /home/support/envs/.be.env \
+              -v university_erp_logs:/app/logs \
               -d \
               --name university-erp-be \
               --restart unless-stopped \
