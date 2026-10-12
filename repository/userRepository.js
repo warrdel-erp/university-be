@@ -17,6 +17,14 @@ export async function findEmailByEmail(email) {
     where: {
       email: { [Op.eq]: email },
     },
+    include: [
+      {
+        model: model.roleModel,
+        as: "defaultRoleRef",
+        attributes: ["roleId", "role"],
+        required: false,
+      },
+    ],
   });
 
   if (!result) {
@@ -28,6 +36,7 @@ export async function findEmailByEmail(email) {
   });
 
   result.dataValues.instituteName = institute?.instituteName || null;
+  result.dataValues.defaultRole = result.defaultRoleRef?.role || (result.isTeacher ? "Teacher" : null);
   return result;
 }
 
