@@ -208,6 +208,14 @@ export async function addSpecialization(data) {
 
 export async function addSubject(data) {
     try {
+        const existing = await scoped(model.subjectModel).findOne({
+            where: { subjectCode: data.subjectCode },
+            attributes: ['subjectId']
+        });
+        if (existing) {
+            throw new Error(`Course code ${data.subjectCode} already exists in this institute.`);
+        }
+
         if (!data.departmentId && data.courseId) {
             const course = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
             if (course?.departmentId) data.departmentId = course.departmentId;
@@ -221,6 +229,16 @@ export async function addSubject(data) {
 
 export async function updateSubject(subjectId, data) {
     try {
+        if (data.subjectCode) {
+            const existingCode = await scoped(model.subjectModel).findOne({
+                where: { subjectCode: data.subjectCode, subjectId: { [Op.ne]: subjectId } },
+                attributes: ['subjectId']
+            });
+            if (existingCode) {
+                throw new Error(`Course code ${data.subjectCode} already exists in this institute.`);
+            }
+        }
+
         const existing = await scoped(model.subjectModel).findOne({
             where: { subjectId },
             attributes: ['subjectId'],

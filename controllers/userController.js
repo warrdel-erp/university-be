@@ -7,6 +7,8 @@ import {
 } from "../repository/userRolePermissionRepository.js";
 import { getHeadDetailsByEmail } from "../repository/headRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
+import * as model from "../models/index.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
 import {
   requestContext,
@@ -357,20 +359,21 @@ export const getAllUsers = async (req, res) => {
 
 export const saveUserDefaults = async (req, res) => {
   try {
-    const userId = req.user.userId;
+    const userId = req.user.userId || req.user.dataValues?.userId;
+    const universityId = req.user.universityId || req.user.dataValues?.universityId;
     const { defaultInstituteId, defaultRole, defaultAcademicYearId } = req.body;
 
     if (defaultRole) {
       // Teachers use a static "Teacher" role that is not in user_role_permission_scope,
       // so skip role existence validation when isTeacher is true.
       if (!req.user.isTeacher) {
-        // Roles are per-institute (e.g. CLIENT_ADMIN can exist for institute 12 and 18).
-        // Resolve by role name + defaultInstituteId so we do not pick the wrong roleId.
+        // Roles can have the same name in separate universities (e.g. CLIENT_ADMIN).
+        // Resolve by role name or numeric ID strictly for the user's university.
         const roleWhere = isNaN(Number(defaultRole))
-          ? { role: defaultRole, instituteId: Number(defaultInstituteId) }
-          : { roleId: Number(defaultRole) };
+          ? { role: defaultRole, universityId }
+          : { roleId: Number(defaultRole), universityId };
 
-        const role = await sequelize.models.role.findOne({ where: roleWhere });
+        const role = await model.roleModel.findOne({ where: roleWhere });
 
         if (!role) {
           return res.status(400).json({
@@ -392,6 +395,30 @@ export const saveUserDefaults = async (req, res) => {
       }
     }
 
+    if (defaultInstituteId && universityId) {
+      const institute = await model.instituteModel.findOne({
+        where: { instituteId: defaultInstituteId, universityId },
+      });
+      if (!institute) {
+        return res.status(400).json({
+          success: false,
+          message: `Institute does not belong to user's university`
+        });
+      }
+    }
+
+    if (defaultAcademicYearId && universityId) {
+      const academicYear = await model.acedmicYearModel.findOne({
+        where: { academicYearId: defaultAcademicYearId, universityId },
+      });
+      if (!academicYear) {
+        return res.status(400).json({
+          success: false,
+          message: `Academic year does not belong to user's university`
+        });
+      }
+    }
+
     const result = await userService.saveUserDefaults(userId, req.body);
 
     const currentStore = getTenantStore();
@@ -399,6 +426,7 @@ export const saveUserDefaults = async (req, res) => {
       await buildRequestContextStore({
         userId,
         defaultInstituteId,
+        universityId,
         defaultRole,
         defaultAcademicYearId,
         bypass: currentStore?.bypass,

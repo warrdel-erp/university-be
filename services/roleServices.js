@@ -24,10 +24,10 @@ export async function updateRole(roleId, RoleData) {
 
 /**
  * Get all permission+scope mappings for a role template.
- * Returns array of { rolePermissionMappingId, roleId, permission, scope }
+ * Returns array of { rolePermissionsId, roleId, permission, scope }
  */
 export async function getRolePermissions(roleId) {
-  const mappings = await model.rolePermissionMappingModel.findAll({
+  const mappings = await model.rolePermissionsModel.findAll({
     where: { role_id: roleId },
   });
 
@@ -36,7 +36,7 @@ export async function getRolePermissions(roleId) {
     const key = `${m.permission}:${m.scope}`;
     if (!permissionMap[key]) {
       permissionMap[key] = {
-        rolePermissionMappingId: m.rolePermissionMappingId,
+        rolePermissionsId: m.rolePermissionsId,
         roleId: m.roleId,
         permission: m.permission,
         scope: m.scope,
@@ -62,14 +62,13 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
   const activeTransaction = transaction || internalTransaction;
 
   try {
-    // Fetch the role to get its default instituteId
+    // Fetch the role
     const roleRecord = await model.roleModel.findOne({
       where: { role_id: roleId },
       transaction: activeTransaction
     });
-    const roleInstituteId = roleRecord ? roleRecord.instituteId : null;
 
-    await model.rolePermissionMappingModel.destroy({
+    await model.rolePermissionsModel.destroy({
       where: { role_id: roleId },
       transaction: activeTransaction
     });
@@ -78,9 +77,9 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
     permissions.forEach(p => {
       let resourceIds = (p.resourceIds && p.resourceIds.length > 0) ? p.resourceIds : [null];
       
-      // Fallback: If scope is INSTITUTE and no specific resource was provided, use the role's institute
-      if (p.scope === 'INSTITUTE' && resourceIds[0] === null && roleInstituteId) {
-        resourceIds = [roleInstituteId];
+      // Default null for resourceIds if not provided
+      if (resourceIds[0] === null) {
+        // Now that roles aren't institute-wise, it remains null unless explicitly provided
       }
 
       resourceIds.forEach(resId => {
@@ -93,7 +92,7 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
       });
     });
 
-    const result = await model.rolePermissionMappingModel.bulkCreate(dataToInsert, {
+    const result = await model.rolePermissionsModel.bulkCreate(dataToInsert, {
       transaction: activeTransaction
     });
 

@@ -176,13 +176,6 @@ export async function getUserRolePermissionByUserId(userId) {
                                     attributes: ["courseName", 'courseId', 'courseCode', "capacity"],
                                 },
                                 {
-                                    model: model.classStudentMapperModel,
-                                    as: 'studentMapped',
-                                    distinct: true,
-                                    // attributes: ["classStudentMapperId", 'studentId'],
-                                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                                },
-                                {
                                     model: model.classSectionTermModel,
                                     as: 'studentClassSectionTerm',
                                     distinct: true,
@@ -255,13 +248,6 @@ export async function getUserRolePermissionByUserId(userId) {
                         //             model: model.studentInvoiceMapperModel,
                         //             as: 'invoicestudent',
                         //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] }
-                        //         },
-                        //         {
-                        //             model: model.classStudentMapperModel,
-                        //             as: 'studentMapped',
-                        //             distinct: true,
-                        //             // attributes: ["classStudentMapperId", 'studentId'],
-                        //             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
                         //         },
                         //         {
                         //             model: model.classSectionModel,

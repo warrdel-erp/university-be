@@ -138,7 +138,7 @@ export const addSubject = async (req, res) => {
   } catch (error) {
     console.error("Error in  Add SUbject:", error);
     const message = error?.message || "Internal Server Error";
-    const statusCode = /required|not found|inactive|scope|Invalid/i.test(
+    const statusCode = /required|not found|inactive|scope|Invalid|already exists/i.test(
       message,
     )
       ? 400
@@ -155,7 +155,7 @@ export const updateSubject = async (req, res) => {
   } catch (error) {
     console.error("Error in update SUbject:", error);
     const message = error?.message || "Internal Server Error";
-    const statusCode = /required|not found|inactive|Invalid/i.test(message)
+    const statusCode = /required|not found|inactive|Invalid|already exists/i.test(message)
       ? 400
       : 500;
     return res.status(statusCode).send(message);
@@ -315,7 +315,7 @@ export const subjectExcel = async (req, res) => {
   } catch (error) {
     console.error("Error in  Add Subject Excel:", error);
     const message = error?.message || "Internal Server Error";
-    const statusCode = /required|not found|inactive|scope/i.test(message)
+    const statusCode = /required|not found|inactive|scope|already exists/i.test(message)
       ? 400
       : 500;
     res.status(statusCode).send(message);

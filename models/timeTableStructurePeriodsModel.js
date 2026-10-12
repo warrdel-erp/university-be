@@ -9,7 +9,7 @@ import timeTableStructureModel from "./timeTableStructureModel.js";
 const timeTableStructurePeriodsModel = sequelize.define(
     'time_table_structure_periods',
     {
-                universityId: {
+        universityId: {
             type: DataTypes.INTEGER,
             allowNull: true,
             field: 'university_id',

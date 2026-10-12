@@ -705,9 +705,7 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
             }],
         });
 
-        const expectedSessionId = termRow?.classSection?.sessionId;
-
-        const [historyRows, allCurrentHistory, directStudentRows] = await Promise.all([
+        const [historyRows, directStudentRows] = await Promise.all([
             model.studentClassSectionsHistoryModel.findAll({
                 attributes: ['studentId'],
                 where: {
@@ -716,31 +714,22 @@ export async function getStudentsBatchAttendance(classSectionTermId, filters = [
                 },
                 raw: true,
             }),
-            model.studentClassSectionsHistoryModel.findAll({
-                attributes: ['studentId'],
-                where: { status: 'current' },
-                raw: true,
-            }),
             model.studentModel.findAll({
                 attributes: ['studentId'],
                 where: {
                     classSectionTermId: termId,
-                    ...(expectedSessionId != null && { sessionId: expectedSessionId }),
                     deletedAt: null,
                 },
                 raw: true,
             }),
         ]);
 
-        const historyStudentIds = historyRows.map(r => Number(r.studentId));
-        const studentsWithAnyCurrentHistory = new Set(allCurrentHistory.map(r => Number(r.studentId)));
-
-        const candidateIds = new Set(historyStudentIds);
+        const candidateIds = new Set();
+        for (const r of historyRows) {
+            candidateIds.add(Number(r.studentId));
+        }
         for (const r of directStudentRows) {
-            const sid = Number(r.studentId);
-            if (!studentsWithAnyCurrentHistory.has(sid) || historyStudentIds.includes(sid)) {
-                candidateIds.add(sid);
-            }
+            candidateIds.add(Number(r.studentId));
         }
 
         const placementStudentIds = Array.from(candidateIds);

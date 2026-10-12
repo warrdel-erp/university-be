@@ -25,7 +25,6 @@ import employeeCodeMasterType from "./employeeCodeMasterTypeModel.js";
 import classSectionModel from "./classSectionModel.js";
 import classSectionTermModel from "./classSectionTermModel.js";
 import classSubjectMapperModel from "./classSubjectMapperModel.js";
-import classStudentMapperModel from "./classSectionStudentMapperModel.js";
 import studentElectiveSubjectModel from "./studentElectiveSubjectModel.js";
 import studentMetaData from "./studentMetaData.js";
 import studentClassSectionsHistoryModel from "./studentClassSectionsHistoryModel.js";
@@ -80,7 +79,7 @@ import amcContractModel from "./amcContractModel.js";
 import amcServiceTicketModel from "./amcServiceTicketModel.js";
 import userStudentEmployeeModel from "./userStudentEmployeeModel.js";
 import roleModel from "./roleModel.js";
-import rolePermissionMappingModel from "./rolePermissionMappingModel.js";
+import rolePermissionsModel from "./rolePermissionsModel.js";
 import userRolePermissionModel from "./userRolePermissionModel.js";
 import roomTypeModel from "./roomTypeModel.js";
 import dormitoryListModel from "./dormitoryListModel.js";
@@ -723,25 +722,7 @@ subjectModel.hasMany(classSubjectMapperModel, {
   as: "subjects",
 });
 
-// class student mapper join to student
-classStudentMapperModel.belongsTo(studentModel, {
-  foreignKey: "student_id",
-  as: "studentMapped",
-});
-studentModel.hasMany(classStudentMapperModel, {
-  foreignKey: "student_id",
-  as: "studentMapped",
-});
 
-// class student mapper join to class section
-classStudentMapperModel.belongsTo(classSectionTermModel, {
-  foreignKey: "class_section_term_id",
-  as: "studentTermPlacement",
-});
-classSectionTermModel.hasMany(classStudentMapperModel, {
-  foreignKey: "class_section_term_id",
-  as: "studentTermPlacement",
-});
 
 subjectMapperModel.belongsTo(classSectionTermModel, {
   foreignKey: "class_section_term_id",
@@ -752,10 +733,7 @@ classSectionTermModel.hasMany(subjectMapperModel, {
   as: "subjectMappers",
 });
 
-classStudentMapperModel.belongsTo(sessionModel, {
-  foreignKey: "session_id",
-  as: "studentSessionPlacement",
-});
+
 
 //student join to there 2 more table
 studentsEntranceDetail.belongsTo(studentModel, {
@@ -1221,14 +1199,7 @@ studentModel.belongsTo(userModel, {
 });
 userModel.hasMany(studentModel, { foreignKey: "createdBy", as: "userStudent" });
 
-classStudentMapperModel.belongsTo(userModel, {
-  foreignKey: "createdBy",
-  as: "userClassStudentMapper",
-});
-userModel.hasMany(classStudentMapperModel, {
-  foreignKey: "createdBy",
-  as: "userClassStudentMapper",
-});
+
 
 classSectionModel.belongsTo(userModel, {
   foreignKey: "createdBy",
@@ -1810,12 +1781,12 @@ employeeModel.hasMany(timeTableCellTeachersDateWiseModel, {
   as: "timeTableCellTeachersDateWise",
 });
 
-feeTypeCategoryModel.belongsTo(instituteModel, {
-  foreignKey: "instituteId",
-  as: "instituteFeeTypeCategory",
+feeTypeCategoryModel.belongsTo(universityModel, {
+  foreignKey: "universityId",
+  as: "universityFeeTypeCategory",
 });
-instituteModel.hasMany(feeTypeCategoryModel, {
-  foreignKey: "instituteId",
+universityModel.hasMany(feeTypeCategoryModel, {
+  foreignKey: "universityId",
   as: "feeTypeCategories",
 });
 
@@ -2070,11 +2041,11 @@ employeeModel.hasMany(userStudentEmployeeModel, {
 });
 
 // role_permissions template: belongs to role only (permission/scope are strings)
-rolePermissionMappingModel.belongsTo(roleModel, {
+rolePermissionsModel.belongsTo(roleModel, {
   foreignKey: "role_id",
   as: "role",
 });
-roleModel.hasMany(rolePermissionMappingModel, {
+roleModel.hasMany(rolePermissionsModel, {
   foreignKey: "role_id",
   as: "rolePermissions",
 });
@@ -2106,6 +2077,15 @@ userModel.belongsTo(roleModel, {
 roleModel.hasMany(userModel, {
   foreignKey: "default_role_id",
   as: "defaultRoleUsers",
+});
+
+roleModel.belongsTo(universityModel, {
+  foreignKey: "university_id",
+  as: "university",
+});
+universityModel.hasMany(roleModel, {
+  foreignKey: "university_id",
+  as: "roles",
 });
 
 // HOD Departments mapping
@@ -4136,7 +4116,6 @@ export {
   classSectionModel,
   classSectionTermModel,
   classSubjectMapperModel,
-  classStudentMapperModel,
   subjectMapperModel,
   studentElectiveSubjectModel,
   studentMetaData,
@@ -4194,7 +4173,7 @@ export {
   amcServiceTicketModel,
   userStudentEmployeeModel,
   roleModel,
-  rolePermissionMappingModel,
+  rolePermissionsModel,
   userRolePermissionModel,
   roomTypeModel,
   dormitoryListModel,

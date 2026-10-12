@@ -17,6 +17,14 @@ export async function findEmailByEmail(email) {
     where: {
       email: { [Op.eq]: email },
     },
+    include: [
+      {
+        model: model.roleModel,
+        as: "defaultRoleRef",
+        attributes: ["roleId", "role"],
+        required: false,
+      },
+    ],
   });
 
   if (!result) {
@@ -28,6 +36,7 @@ export async function findEmailByEmail(email) {
   });
 
   result.dataValues.instituteName = institute?.instituteName || null;
+  result.dataValues.defaultRole = result.defaultRoleRef?.role || (result.isTeacher ? "Teacher" : null);
   return result;
 }
 
@@ -63,11 +72,6 @@ export async function getAdminRegisterStudent() {
               attributes: ["courseName", "courseId", "courseCode", "capacity"],
               where: buildScope(model.courseModel),
               required: false,
-            },
-            {
-              model: model.classStudentMapperModel,
-              as: "studentMapped",
-              attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "student_id", "class_sections_id"] },
             },
             studentClassSectionTermWithSectionInclude({
               sectionWhere: buildScope(model.classSectionModel),

@@ -645,13 +645,13 @@ async function seedLegacyRoleAndPermissions(
 ) {
   // 1. Find or create the CLIENT_ADMIN role
   let clientAdminRole = await model.roleModel.findOne({
-    where: { role: "CLIENT_ADMIN", instituteId },
+    where: { role: "CLIENT_ADMIN", universityId },
     transaction,
   });
 
   if (!clientAdminRole) {
     clientAdminRole = await model.roleModel.create(
-      { role: "CLIENT_ADMIN", instituteId: instituteId },
+      { role: "CLIENT_ADMIN", universityId },
       { transaction },
     );
   }
@@ -660,6 +660,7 @@ async function seedLegacyRoleAndPermissions(
   //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
   const rolePermissionRows = [];
   for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
+    if (!valueObj || !valueObj.value) continue;
     const isMasterSection =
       valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
       valueObj.parentPermission === "MASTER_SECTION";
@@ -671,12 +672,12 @@ async function seedLegacyRoleAndPermissions(
     });
   }
 
-  // 4. Sync role_permissions template
-  await model.rolePermissionMappingModel.destroy({
+  // 3. Sync role_permissions template
+  await model.rolePermissionsModel.destroy({
     where: { roleId: clientAdminRole.roleId },
     transaction,
   });
-  await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, {
+  await model.rolePermissionsModel.bulkCreate(rolePermissionRows, {
     transaction,
   });
 
@@ -888,8 +889,8 @@ async function buildGrantedAccessFromUserContext(user, userId) {
 
   const academicYears = instituteId
     ? await model.acedmicYearModel.findAll({
-        where: { instituteId, isActive: true },
-      })
+      where: { instituteId, isActive: true },
+    })
     : [];
 
   const university = await model.universityModel.findByPk(user.universityId);
@@ -966,15 +967,15 @@ async function buildGrantedAccessFromPermissions(user, userId, accessEntries) {
   const campuses =
     allowedCampusIds.size > 0
       ? await model.campusModel.findAll({
-          where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } },
-        })
+        where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } },
+      })
       : [];
 
   const institutes =
     allowedInstituteIds.size > 0
       ? await model.instituteModel.findAll({
-          where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } },
-        })
+        where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } },
+      })
       : [];
 
   let university = null;
@@ -998,11 +999,11 @@ async function buildGrantedAccessFromPermissions(user, userId, accessEntries) {
   const academicYears =
     allowedInstituteIds.size > 0
       ? await model.acedmicYearModel.findAll({
-          where: {
-            instituteId: { [Op.in]: Array.from(allowedInstituteIds) },
-            isActive: true,
-          },
-        })
+        where: {
+          instituteId: { [Op.in]: Array.from(allowedInstituteIds) },
+          isActive: true,
+        },
+      })
       : [];
 
   const roles = await fetchGrantedAccessRoles(userId);
@@ -1049,7 +1050,24 @@ export async function giveFullAccess(info) {
   }
 
   const universityId = user.universityId;
-  let instituteId = overrideInstituteId || user.defaultInstituteId;
+  let instituteId = null;
+
+  if (overrideInstituteId) {
+    const institute = await model.instituteModel.findOne({
+      where: { instituteId: overrideInstituteId, universityId },
+    });
+    if (!institute) {
+      throw new Error(`Institute ${overrideInstituteId} does not belong to user's university`);
+    }
+    instituteId = institute.instituteId;
+  } else if (user.defaultInstituteId) {
+    const institute = await model.instituteModel.findOne({
+      where: { instituteId: user.defaultInstituteId, universityId },
+    });
+    if (institute) {
+      instituteId = institute.instituteId;
+    }
+  }
 
   if (!instituteId) {
     const institute = await model.instituteModel.findOne({
@@ -1067,13 +1085,13 @@ export async function giveFullAccess(info) {
   try {
     // 1. Find or create the CLIENT_ADMIN role
     let clientAdminRole = await model.roleModel.findOne({
-      where: { role: "CLIENT_ADMIN", instituteId },
+      where: { role: "CLIENT_ADMIN", universityId },
       transaction,
     });
 
     if (!clientAdminRole) {
       clientAdminRole = await model.roleModel.create(
-        { role: "CLIENT_ADMIN", instituteId },
+        { role: "CLIENT_ADMIN", universityId },
         { transaction },
       );
     }
@@ -1083,6 +1101,7 @@ export async function giveFullAccess(info) {
     // 2. Build full permission template for CLIENT_ADMIN
     const rolePermissionRows = [];
     for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
+      if (!valueObj || !valueObj.value) continue;
       const isMasterSection =
         valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
         valueObj.parentPermission === "MASTER_SECTION";
@@ -1095,11 +1114,11 @@ export async function giveFullAccess(info) {
     }
 
     // 3. Sync role_permissions template
-    await model.rolePermissionMappingModel.destroy({
+    await model.rolePermissionsModel.destroy({
       where: { roleId },
       transaction,
     });
-    await model.rolePermissionMappingModel.bulkCreate(rolePermissionRows, {
+    await model.rolePermissionsModel.bulkCreate(rolePermissionRows, {
       transaction,
     });
 
@@ -1124,14 +1143,29 @@ export async function giveFullAccess(info) {
       { transaction },
     );
 
-    // 7. Update user defaultRoleId and defaultInstituteId
-    await user.update(
-      {
-        defaultRoleId: roleId,
-        defaultInstituteId: instituteId,
-      },
-      { transaction },
-    );
+    // 7. Update user defaultRoleId, defaultInstituteId, and defaultAcademicYearId if unset
+    const userUpdates = {
+      defaultRoleId: roleId,
+      defaultInstituteId: instituteId,
+    };
+
+    if (!user.defaultAcademicYearId) {
+      let activeAcademicYear = await model.acedmicYearModel.findOne({
+        where: { instituteId, universityId, isActive: true },
+        transaction,
+      });
+      if (!activeAcademicYear) {
+        activeAcademicYear = await model.acedmicYearModel.findOne({
+          where: { universityId, isActive: true },
+          transaction,
+        });
+      }
+      if (activeAcademicYear) {
+        userUpdates.defaultAcademicYearId = activeAcademicYear.academicYearId;
+      }
+    }
+
+    await user.update(userUpdates, { transaction });
 
     await transaction.commit();
 

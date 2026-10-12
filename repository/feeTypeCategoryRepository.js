@@ -4,7 +4,7 @@ import { scoped } from "../utility/scoped.js";
 export async function createFeeTypeCategory(data, options = {}) {  return scoped(model.feeTypeCategoryModel).create(data, { transaction: options.transaction });
 }
 
-export async function findFeeTypeCategoriesByInstitute(options = {}) {
+export async function findFeeTypeCategories(options = {}) {
   const { transaction } = options;
   return scoped(model.feeTypeCategoryModel).findAll({
     attributes: { exclude: ["createdAt", "updatedAt"] },
@@ -12,6 +12,8 @@ export async function findFeeTypeCategoriesByInstitute(options = {}) {
     transaction,
   });
 }
+
+export const findFeeTypeCategoriesByInstitute = findFeeTypeCategories;
 
 export async function findFeeTypeCategoryById(feeTypeCategoryId, options = {}) {
   const { transaction } = options;

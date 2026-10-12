@@ -2,10 +2,10 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from "sequelize";
 import role from "./roleModel.js";
 
-const rolePermissionMappingModel = sequelize.define(
+const rolePermissionsModel = sequelize.define(
   "role_permissions",
   {
-    rolePermissionMappingId: {
+    rolePermissionsId: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
@@ -62,6 +62,6 @@ const rolePermissionMappingModel = sequelize.define(
   },
 );
 
-rolePermissionMappingModel.scopeConfig = { university: false, institute: false, academicYear: false };
+rolePermissionsModel.scopeConfig = { university: false, institute: false, academicYear: false };
 
-export default rolePermissionMappingModel;
+export default rolePermissionsModel;
