@@ -1050,7 +1050,24 @@ export async function giveFullAccess(info) {
   }
 
   const universityId = user.universityId;
-  let instituteId = overrideInstituteId || user.defaultInstituteId;
+  let instituteId = null;
+
+  if (overrideInstituteId) {
+    const institute = await model.instituteModel.findOne({
+      where: { instituteId: overrideInstituteId, universityId },
+    });
+    if (!institute) {
+      throw new Error(`Institute ${overrideInstituteId} does not belong to user's university`);
+    }
+    instituteId = institute.instituteId;
+  } else if (user.defaultInstituteId) {
+    const institute = await model.instituteModel.findOne({
+      where: { instituteId: user.defaultInstituteId, universityId },
+    });
+    if (institute) {
+      instituteId = institute.instituteId;
+    }
+  }
 
   if (!instituteId) {
     const institute = await model.instituteModel.findOne({
@@ -1134,7 +1151,7 @@ export async function giveFullAccess(info) {
 
     if (!user.defaultAcademicYearId) {
       let activeAcademicYear = await model.acedmicYearModel.findOne({
-        where: { instituteId, isActive: true },
+        where: { instituteId, universityId, isActive: true },
         transaction,
       });
       if (!activeAcademicYear) {

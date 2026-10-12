@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as repository from "../repository/userRoleRepository.js";
 import * as permissionRepository from "../repository/userPermissionRepository.js";
 import { ROLES } from "../const/roles.js";
@@ -8,20 +9,36 @@ export async function assignRoleToUser(userId, roleId, permissions = [], transac
   const internalTransaction = !transaction ? await sequelize.transaction() : null;
   const activeTransaction = transaction || internalTransaction;
   try {
-    const roleData = await model.roleModel.findOne({ where: { roleId }, transaction: activeTransaction });
+    const user = await model.userModel.findByPk(userId, {
+      attributes: ["userId", "universityId"],
+      transaction: activeTransaction,
+    });
+    if (!user) {
+      throw new Error(`User not found: ${userId}`);
+    }
+    const universityId = user.universityId;
+
+    const roleWhere = isNaN(Number(roleId))
+      ? { role: roleId, universityId }
+      : { roleId: Number(roleId), universityId };
+
+    const roleData = await model.roleModel.findOne({
+      where: roleWhere,
+      transaction: activeTransaction,
+    });
+
     if (!roleData) {
       throw new Error(`Role not found: ${roleId}`);
     }
     const roleName = String(roleData.role).trim().toUpperCase();
 
-    const roleExists = await repository.checkUserRoleExists(userId, roleId, activeTransaction);
+    const roleExists = await repository.checkUserRoleExists(userId, roleData.roleId, activeTransaction);
     if (roleExists) {
       throw new Error(`User already has the role: ${roleName}`);
     }
 
-
     // Add role
-    const roleResult = await repository.addUserRole(userId, roleId, activeTransaction);
+    const roleResult = await repository.addUserRole(userId, roleData.roleId, activeTransaction);
 
     if (internalTransaction) await internalTransaction.commit();
     return roleResult;
@@ -36,19 +53,33 @@ export async function removeRoleFromUser(userId, roleId, transaction = null) {
   const internalTransaction = !transaction ? await sequelize.transaction() : null;
   const activeTransaction = transaction || internalTransaction;
   try {
-    const roleData = await model.roleModel.findOne({ where: { roleId }, transaction: activeTransaction });
+    const user = await model.userModel.findByPk(userId, {
+      attributes: ["userId", "universityId"],
+      transaction: activeTransaction,
+    });
+    const universityId = user?.universityId;
+
+    const roleWhere = isNaN(Number(roleId))
+      ? { role: roleId, universityId }
+      : { roleId: Number(roleId), universityId };
+
+    const roleData = await model.roleModel.findOne({
+      where: roleWhere,
+      transaction: activeTransaction,
+    });
+
     if (!roleData) {
       throw new Error(`Role not found: ${roleId}`);
     }
     const roleName = String(roleData.role).trim().toUpperCase();
 
-    const roleExists = await repository.checkUserRoleExists(userId, roleId, activeTransaction);
+    const roleExists = await repository.checkUserRoleExists(userId, roleData.roleId, activeTransaction);
     if (!roleExists) {
       throw new Error(`User does not have the role: ${roleName}`);
     }
 
     // Remove role
-    await repository.removeUserRole(userId, roleId, activeTransaction);
+    await repository.removeUserRole(userId, roleData.roleId, activeTransaction);
 
     // If removing ADMIN, also clear all permissions
     if (roleName === ROLES.ADMIN) {
