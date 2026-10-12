@@ -435,6 +435,18 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         throw new Error('sessionId is required');
     }
 
+    const sessionExists = await model.sessionModel.findByPk(targetSessionId);
+    if (!sessionExists) {
+        throw new Error(`Session with id ${targetSessionId} does not exist in the database`);
+    }
+
+    if (isCourseMapping) {
+        const courseExists = await model.courseModel.findByPk(targetCourseId);
+        if (!courseExists) {
+            throw new Error(`Course with id ${targetCourseId} does not exist in the database`);
+        }
+    }
+
     if (isScopeMapping) {
         const existingScopeMapping = await timeTableRepository.getStructureScopeMapping(
             data.timeTableNameId,
