@@ -29,6 +29,12 @@ RUN npm install
 # Copy the rest of the application code
 COPY . . 
 
+# Ensure persistent logs directory exists
+RUN mkdir -p /app/logs
+
+# Declare volume for logs persistence
+VOLUME ["/app/logs"]
+
 # Expose the port the app runs on
 EXPOSE 6002
 
