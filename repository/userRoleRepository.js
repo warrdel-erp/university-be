@@ -9,8 +9,8 @@ import sequelize from "../database/sequelizeConfig.js";
  */
 export async function addUserRole(userId, roleId, transaction = null) {
   try {
-    const user = await scoped(model.userModel).findOne({
-      attributes: ["userId"],
+    const user = await model.userModel.findOne({
+      attributes: ["userId", "universityId"],
       where: { userId },
       transaction,
     });
@@ -24,6 +24,10 @@ export async function addUserRole(userId, roleId, transaction = null) {
     });
     if (!role) {
       throw new Error(`Role not found: ${roleId}`);
+    }
+
+    if (role.universityId != null && role.universityId !== user.universityId) {
+      throw new Error(`Role does not belong to user's university`);
     }
 
     // Fetch the role template defaults
@@ -157,10 +161,24 @@ export async function findDistinctRolesByUserIds(userIds) {
  */
 export async function checkUserRoleExists(userId, roleId, transaction = null) {
   try {
-    const role = await model.roleModel.findOne({
-      where: isNaN(Number(roleId)) ? { role: roleId } : { roleId },
-      transaction,
-    });
+    let role;
+    if (isNaN(Number(roleId))) {
+      const user = await model.userModel.findOne({
+        attributes: ["userId", "universityId"],
+        where: { userId },
+        transaction,
+      });
+      const universityId = user?.universityId;
+      role = await model.roleModel.findOne({
+        where: { role: roleId, universityId },
+        transaction,
+      });
+    } else {
+      role = await model.roleModel.findOne({
+        where: { roleId: Number(roleId) },
+        transaction,
+      });
+    }
     if (!role) {
       return false;
     }
