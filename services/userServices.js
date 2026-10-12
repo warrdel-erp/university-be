@@ -651,7 +651,7 @@ async function seedLegacyRoleAndPermissions(
 
   if (!clientAdminRole) {
     clientAdminRole = await model.roleModel.create(
-      { role: "CLIENT_ADMIN" },
+      { role: "CLIENT_ADMIN", universityId },
       { transaction },
     );
   }
@@ -660,6 +660,7 @@ async function seedLegacyRoleAndPermissions(
   //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
   const rolePermissionRows = [];
   for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
+    if (!valueObj || !valueObj.value) continue;
     const isMasterSection =
       valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
       valueObj.parentPermission === "MASTER_SECTION";
@@ -671,7 +672,14 @@ async function seedLegacyRoleAndPermissions(
     });
   }
 
-  // 4. Removed role_permissions sync logic since we only use userRolePermissionModel now.
+  // 3. Sync role_permissions template
+  await model.rolePermissionsModel.destroy({
+    where: { roleId: clientAdminRole.roleId },
+    transaction,
+  });
+  await model.rolePermissionsModel.bulkCreate(rolePermissionRows, {
+    transaction,
+  });
 
   // 5. Assign the CLIENT_ADMIN role to the user (copies all non-perm_access_inst rows)
   await userRoleService.assignRoleToUser(
@@ -881,8 +889,8 @@ async function buildGrantedAccessFromUserContext(user, userId) {
 
   const academicYears = instituteId
     ? await model.acedmicYearModel.findAll({
-        where: { instituteId, isActive: true },
-      })
+      where: { instituteId, isActive: true },
+    })
     : [];
 
   const university = await model.universityModel.findByPk(user.universityId);
@@ -959,15 +967,15 @@ async function buildGrantedAccessFromPermissions(user, userId, accessEntries) {
   const campuses =
     allowedCampusIds.size > 0
       ? await model.campusModel.findAll({
-          where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } },
-        })
+        where: { campusId: { [Op.in]: Array.from(allowedCampusIds) } },
+      })
       : [];
 
   const institutes =
     allowedInstituteIds.size > 0
       ? await model.instituteModel.findAll({
-          where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } },
-        })
+        where: { instituteId: { [Op.in]: Array.from(allowedInstituteIds) } },
+      })
       : [];
 
   let university = null;
@@ -991,11 +999,11 @@ async function buildGrantedAccessFromPermissions(user, userId, accessEntries) {
   const academicYears =
     allowedInstituteIds.size > 0
       ? await model.acedmicYearModel.findAll({
-          where: {
-            instituteId: { [Op.in]: Array.from(allowedInstituteIds) },
-            isActive: true,
-          },
-        })
+        where: {
+          instituteId: { [Op.in]: Array.from(allowedInstituteIds) },
+          isActive: true,
+        },
+      })
       : [];
 
   const roles = await fetchGrantedAccessRoles(userId);
@@ -1076,6 +1084,7 @@ export async function giveFullAccess(info) {
     // 2. Build full permission template for CLIENT_ADMIN
     const rolePermissionRows = [];
     for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
+      if (!valueObj || !valueObj.value) continue;
       const isMasterSection =
         valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
         valueObj.parentPermission === "MASTER_SECTION";
@@ -1087,7 +1096,14 @@ export async function giveFullAccess(info) {
       });
     }
 
-    // 3. Removed role_permissions sync logic since we only use userRolePermissionModel now.
+    // 3. Sync role_permissions template
+    await model.rolePermissionsModel.destroy({
+      where: { roleId },
+      transaction,
+    });
+    await model.rolePermissionsModel.bulkCreate(rolePermissionRows, {
+      transaction,
+    });
 
     // 4. Clear existing user permissions in user_role_permission_scope for this user
     await model.userRolePermissionModel.destroy({
@@ -1110,14 +1126,29 @@ export async function giveFullAccess(info) {
       { transaction },
     );
 
-    // 7. Update user defaultRoleId and defaultInstituteId
-    await user.update(
-      {
-        defaultRoleId: roleId,
-        defaultInstituteId: instituteId,
-      },
-      { transaction },
-    );
+    // 7. Update user defaultRoleId, defaultInstituteId, and defaultAcademicYearId if unset
+    const userUpdates = {
+      defaultRoleId: roleId,
+      defaultInstituteId: instituteId,
+    };
+
+    if (!user.defaultAcademicYearId) {
+      let activeAcademicYear = await model.acedmicYearModel.findOne({
+        where: { instituteId, isActive: true },
+        transaction,
+      });
+      if (!activeAcademicYear) {
+        activeAcademicYear = await model.acedmicYearModel.findOne({
+          where: { universityId, isActive: true },
+          transaction,
+        });
+      }
+      if (activeAcademicYear) {
+        userUpdates.defaultAcademicYearId = activeAcademicYear.academicYearId;
+      }
+    }
+
+    await user.update(userUpdates, { transaction });
 
     await transaction.commit();
 
