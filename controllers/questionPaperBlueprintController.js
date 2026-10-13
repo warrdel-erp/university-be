@@ -87,9 +87,9 @@ export async function getMyBlueprints(req, res) {
             return ErrorResponse(res, validation.status, validation.message);
         }
         const { userId } = validation;
-        const { subjectId } = req.query;
+        const { courseId,subjectId } = req.query;
 
-        const result = await questionPaperBlueprintServices.getBlueprints({ subjectId, ownerId: userId });
+        const result = await questionPaperBlueprintServices.getBlueprints({ courseId,subjectId, ownerId: userId });
         return SuccessResponse(res, 200, "Question paper blueprints fetched successfully", result);
     } catch (error) {
         return ErrorResponse(res, 500, error.message);
