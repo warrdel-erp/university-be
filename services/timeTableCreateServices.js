@@ -89,6 +89,173 @@ function assertRoutineDatesWithinStructure(
   }
 }
 
+export async function buildRoutineVariantSchedules(
+  mapping = null,
+  routineDates = {},
+  basePeriods = [],
+) {
+  if (!Array.isArray(basePeriods) || basePeriods.length === 0) {
+    return [];
+  }
+
+  const plainMapping = mapping?.get ? mapping.get({ plain: true }) : mapping;
+  if (!plainMapping) return [];
+
+  const variantMappings = plainMapping?.variantCourseMappings || [];
+  const routineStart = routineDates?.startDate
+    ? toDateOnlyString(routineDates.startDate)
+    : "";
+  const routineEnd = routineDates?.endDate
+    ? toDateOnlyString(routineDates.endDate)
+    : "";
+
+  // Sort mappings chronologically by startingDate
+  const sortedMappings = [...variantMappings].sort((a, b) => {
+    const sA = toDateOnlyString(a?.startingDate) || "";
+    const sB = toDateOnlyString(b?.startingDate) || "";
+    return sA.localeCompare(sB);
+  });
+
+  // Filter overlapping mappings with the routine date range (if dates provided)
+  const applicableMappings = sortedMappings.filter((vm) => {
+    const vmStart = toDateOnlyString(vm.startingDate);
+    const vmEnd = toDateOnlyString(vm.endingDate);
+    if (!vmStart || !vmEnd) return false;
+    if (routineStart && routineEnd) {
+      return vmStart <= routineEnd && vmEnd >= routineStart;
+    }
+    if (routineStart) {
+      return vmEnd >= routineStart;
+    }
+    if (routineEnd) {
+      return vmStart <= routineEnd;
+    }
+    return true;
+  });
+
+  if (applicableMappings.length === 0) {
+    const structure = plainMapping?.timeTableStructure;
+    const structureVariants = structure?.structureVariants || [];
+    const defaultVariant =
+      structureVariants.find((v) => v.isDefault) || structureVariants[0];
+    let defVariantObj = defaultVariant?.get
+      ? defaultVariant.get({ plain: true })
+      : defaultVariant;
+    let defPeriods = defVariantObj?.variantPeriods;
+
+    if (!defPeriods?.length && plainMapping?.timeTableNameId) {
+      const dbDef = await findDefaultVariantByStructureId(
+        plainMapping.timeTableNameId,
+      );
+      if (dbDef?.timeTableStructureVariantId) {
+        const loaded = await findVariantById(
+          dbDef.timeTableStructureVariantId,
+        );
+        if (loaded) {
+          defVariantObj = loaded?.get ? loaded.get({ plain: true }) : loaded;
+          defPeriods = defVariantObj?.variantPeriods;
+        }
+      }
+    }
+
+    const vpMap = new Map();
+    for (const vp of defPeriods || []) {
+      const plainVp = vp?.get ? vp.get({ plain: true }) : vp;
+      if (plainVp?.timeTableStructurePeriodsId != null) {
+        vpMap.set(Number(plainVp.timeTableStructurePeriodsId), plainVp);
+      }
+    }
+
+    const periodsForDef = basePeriods.map((bp) => {
+      const plainBp = bp?.get ? bp.get({ plain: true }) : bp;
+      const periodId = Number(plainBp.timeTableCreationId);
+      const vp = vpMap.get(periodId);
+      return {
+        timeTableCreationId: periodId,
+        name: plainBp.periodName,
+        startTime:
+          vp && vp.startTime != null && vp.startTime !== ""
+            ? vp.startTime
+            : plainBp.startTime,
+        endTime:
+          vp && vp.endTime != null && vp.endTime !== ""
+            ? vp.endTime
+            : plainBp.endTime,
+        isBreak: plainBp.isBreak ?? false,
+        isCourse: vp?.isCourse ?? plainBp.isCourse ?? true,
+      };
+    });
+
+    return [
+      {
+        id: null,
+        timeTableStructureVariantId:
+          defVariantObj?.timeTableStructureVariantId || null,
+        name: defVariantObj?.name || "Regular",
+        startingDate: routineStart || toDateOnlyString(plainMapping.startingDate),
+        endingDate: routineEnd || toDateOnlyString(plainMapping.endingDate),
+        periods: periodsForDef,
+      },
+    ];
+  }
+
+  const result = [];
+  for (const vm of applicableMappings) {
+    const plainVm = vm.get ? vm.get({ plain: true }) : vm;
+    let variant = plainVm.variant;
+    let variantPeriods = variant?.variantPeriods;
+
+    if (!variantPeriods?.length && plainVm.timeTableStructureVariantId) {
+      const loaded = await findVariantById(
+        plainVm.timeTableStructureVariantId,
+      );
+      if (loaded) {
+        variant = loaded.get ? loaded.get({ plain: true }) : loaded;
+        variantPeriods = variant?.variantPeriods;
+      }
+    }
+
+    const vpMap = new Map();
+    for (const vp of variantPeriods || []) {
+      const plainVp = vp?.get ? vp.get({ plain: true }) : vp;
+      if (plainVp && plainVp.timeTableStructurePeriodsId != null) {
+        vpMap.set(Number(plainVp.timeTableStructurePeriodsId), plainVp);
+      }
+    }
+
+    const periodsForVariant = basePeriods.map((bp) => {
+      const plainBp = bp?.get ? bp.get({ plain: true }) : bp;
+      const periodId = Number(plainBp.timeTableCreationId);
+      const vp = vpMap.get(periodId);
+      return {
+        timeTableCreationId: periodId,
+        name: plainBp.periodName,
+        startTime:
+          vp && vp.startTime != null && vp.startTime !== ""
+            ? vp.startTime
+            : plainBp.startTime,
+        endTime:
+          vp && vp.endTime != null && vp.endTime !== ""
+            ? vp.endTime
+            : plainBp.endTime,
+        isBreak: plainBp.isBreak ?? false,
+        isCourse: vp?.isCourse ?? plainBp.isCourse ?? true,
+      };
+    });
+
+    result.push({
+      id: plainVm.id,
+      timeTableStructureVariantId: plainVm.timeTableStructureVariantId,
+      name: plainVm.name || variant?.name || "Regular",
+      startingDate: toDateOnlyString(plainVm.startingDate),
+      endingDate: toDateOnlyString(plainVm.endingDate),
+      periods: periodsForVariant,
+    });
+  }
+
+  return result;
+}
+
 export async function resolvePeriodsWithVariantTimings(
   basePeriods = [],
   mapping = null,
@@ -106,31 +273,61 @@ export async function resolvePeriodsWithVariantTimings(
 
   if (variantMappings.length > 0) {
     let matchedMapping = null;
-    if (variantMappings.length === 1) {
-      matchedMapping = variantMappings[0];
-    } else if (dateContext?.startDate || dateContext?.endDate) {
-      const routineStart = dateContext.startDate
-        ? toDateOnlyString(dateContext.startDate)
-        : "";
-      const routineEnd = dateContext.endDate
-        ? toDateOnlyString(dateContext.endDate)
-        : "";
+    const targetDate = dateContext?.date || dateContext?.targetDate;
+    if (targetDate) {
+      const targetStr = toDateOnlyString(targetDate);
+      matchedMapping = variantMappings.find((vm) => {
+        const vmStart = toDateOnlyString(vm.startingDate);
+        const vmEnd = toDateOnlyString(vm.endingDate);
+        if (!vmStart || !vmEnd) return false;
+        return targetStr >= vmStart && targetStr <= vmEnd;
+      });
+    }
 
-      matchedMapping =
-        variantMappings.find((vm) => {
-          const vmStart = toDateOnlyString(vm.startingDate);
-          const vmEnd = toDateOnlyString(vm.endingDate);
-          if (!vmStart || !vmEnd) return false;
-          if (routineStart && routineEnd) {
-            return vmStart <= routineEnd && vmEnd >= routineStart;
-          }
-          if (routineStart) {
-            return routineStart >= vmStart && routineStart <= vmEnd;
-          }
-          return false;
-        }) || variantMappings[0];
-    } else {
-      matchedMapping = variantMappings[0];
+    if (!matchedMapping) {
+      if (variantMappings.length === 1) {
+        matchedMapping = variantMappings[0];
+      } else if (dateContext?.startDate || dateContext?.endDate) {
+        const routineStart = dateContext.startDate
+          ? toDateOnlyString(dateContext.startDate)
+          : "";
+        const routineEnd = dateContext.endDate
+          ? toDateOnlyString(dateContext.endDate)
+          : "";
+
+        const todayStr = toDateOnlyString(new Date());
+        if (
+          todayStr &&
+          routineStart &&
+          routineEnd &&
+          todayStr >= routineStart &&
+          todayStr <= routineEnd
+        ) {
+          matchedMapping = variantMappings.find((vm) => {
+            const vmStart = toDateOnlyString(vm.startingDate);
+            const vmEnd = toDateOnlyString(vm.endingDate);
+            return vmStart && vmEnd && todayStr >= vmStart && todayStr <= vmEnd;
+          });
+        }
+
+        if (!matchedMapping) {
+          matchedMapping =
+            variantMappings.find((vm) => {
+              const vmStart = toDateOnlyString(vm.startingDate);
+              const vmEnd = toDateOnlyString(vm.endingDate);
+              if (!vmStart || !vmEnd) return false;
+              if (routineStart && routineEnd) {
+                return vmStart <= routineEnd && vmEnd >= routineStart;
+              }
+              if (routineStart) {
+                return routineStart >= vmStart && routineStart <= vmEnd;
+              }
+              return false;
+            }) || variantMappings[0];
+        }
+      } else {
+        matchedMapping = variantMappings[0];
+      }
     }
 
     const plainVm = matchedMapping?.get
@@ -3937,7 +4134,11 @@ export async function getSubjectWithCount(classSectionTermId) {
   return result;
 }
 
-export async function getRoutineByClassSectionId(classSectionTermId) {
+export async function getRoutineByClassSectionId(
+  classSectionTermId,
+  options = {},
+) {
+  const targetDate = options.date ? toDateOnlyString(options.date) : null;
   const placement = await resolveRoutinePlacement({ classSectionTermId });
   const scope = routineScopeWhere(placement.classSectionTermId);
 
@@ -4025,10 +4226,20 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
     const routineStart = toDateStr(routine.startingDate);
     const routineEnd = toDateStr(routine.endingDate);
 
+    const variantSchedules = await buildRoutineVariantSchedules(
+      mapping,
+      { startDate: routine.startingDate, endDate: routine.endingDate },
+      periods,
+    );
+
     const resolvedPeriods = await resolvePeriodsWithVariantTimings(
       periods,
       mapping,
-      { startDate: routine.startingDate, endDate: routine.endingDate },
+      {
+        startDate: routine.startingDate,
+        endDate: routine.endingDate,
+        date: targetDate,
+      },
     );
 
     const matchingElectives = [];
@@ -4068,6 +4279,7 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
           mapping.sessionId != null ? Number(mapping.sessionId) : sessionId,
         startingDate: mapping.startingDate ?? null,
         endingDate: mapping.endingDate ?? null,
+        variants: variantSchedules,
         routines: [],
       });
     }
@@ -4133,14 +4345,40 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
         });
       }
 
+      const variantTimings = variantSchedules.map((vs) => {
+        const vp = (vs.periods || []).find(
+          (p) =>
+            Number(p.timeTableCreationId) ===
+            Number(period.timeTableCreationId),
+        );
+        return {
+          variantCourseMappingId: vs.id,
+          timeTableStructureVariantId: vs.timeTableStructureVariantId,
+          variantName: vs.name,
+          startingDate: vs.startingDate,
+          endingDate: vs.endingDate,
+          startTime: vp?.startTime ?? period.startTime,
+          endTime: vp?.endTime ?? period.endTime,
+        };
+      });
+
       formattedPeriods.push({
         timeTableCreationId: period.timeTableCreationId,
         name: period.periodName,
         startTime: period.startTime,
         endTime: period.endTime,
+        variantTimings,
         days: formattedDays,
       });
     }
+
+    const activeDate = targetDate || toDateOnlyString(new Date());
+    const matchedActiveVariant =
+      variantSchedules.find(
+        (vs) => activeDate >= vs.startingDate && activeDate <= vs.endingDate,
+      ) ||
+      variantSchedules[0] ||
+      null;
 
     structuresById.get(timeTableNameId).routines.push({
       timeTableRoutineId: routine.timeTableRoutineId,
@@ -4150,6 +4388,16 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
       startDate: routine.startingDate,
       endDate: routine.endingDate,
       year: classSection?.year != null ? Number(classSection.year) : null,
+      activeVariant: matchedActiveVariant
+        ? {
+            timeTableStructureVariantId:
+              matchedActiveVariant.timeTableStructureVariantId,
+            name: matchedActiveVariant.name,
+            startingDate: matchedActiveVariant.startingDate,
+            endingDate: matchedActiveVariant.endingDate,
+          }
+        : null,
+      variants: variantSchedules,
       periods: formattedPeriods,
     });
   }
@@ -4176,7 +4424,11 @@ export async function getRoutineByClassSectionId(classSectionTermId) {
   return { ...placementMeta, structures, classSection };
 }
 
-export async function getRoutineByAcademicGroupId(academicGroupId) {
+export async function getRoutineByAcademicGroupId(
+  academicGroupId,
+  options = {},
+) {
+  const targetDate = options.date ? toDateOnlyString(options.date) : null;
   const groupRow =
     await academicGroupRepository.getGroupWithScope(academicGroupId);
   const plainGroup = groupRow
@@ -4262,10 +4514,20 @@ export async function getRoutineByAcademicGroupId(academicGroupId) {
     const routineStart = toDateStr(routine.startingDate);
     const routineEnd = toDateStr(routine.endingDate);
 
+    const variantSchedules = await buildRoutineVariantSchedules(
+      mapping,
+      { startDate: routine.startingDate, endDate: routine.endingDate },
+      periods,
+    );
+
     const resolvedPeriods = await resolvePeriodsWithVariantTimings(
       periods,
       mapping,
-      { startDate: routine.startingDate, endDate: routine.endingDate },
+      {
+        startDate: routine.startingDate,
+        endDate: routine.endingDate,
+        date: targetDate,
+      },
     );
 
     const matchingElectives = [];
@@ -4305,6 +4567,7 @@ export async function getRoutineByAcademicGroupId(academicGroupId) {
           mapping.sessionId != null ? Number(mapping.sessionId) : sessionId,
         startingDate: mapping.startingDate ?? null,
         endingDate: mapping.endingDate ?? null,
+        variants: variantSchedules,
         routines: [],
       });
     }
@@ -4369,14 +4632,40 @@ export async function getRoutineByAcademicGroupId(academicGroupId) {
         });
       }
 
+      const variantTimings = variantSchedules.map((vs) => {
+        const vp = (vs.periods || []).find(
+          (p) =>
+            Number(p.timeTableCreationId) ===
+            Number(period.timeTableCreationId),
+        );
+        return {
+          variantCourseMappingId: vs.id,
+          timeTableStructureVariantId: vs.timeTableStructureVariantId,
+          variantName: vs.name,
+          startingDate: vs.startingDate,
+          endingDate: vs.endingDate,
+          startTime: vp?.startTime ?? period.startTime,
+          endTime: vp?.endTime ?? period.endTime,
+        };
+      });
+
       formattedPeriods.push({
         timeTableCreationId: period.timeTableCreationId,
         name: period.periodName,
         startTime: period.startTime,
         endTime: period.endTime,
+        variantTimings,
         days: formattedDays,
       });
     }
+
+    const activeDate = targetDate || toDateOnlyString(new Date());
+    const matchedActiveVariant =
+      variantSchedules.find(
+        (vs) => activeDate >= vs.startingDate && activeDate <= vs.endingDate,
+      ) ||
+      variantSchedules[0] ||
+      null;
 
     structuresById.get(timeTableNameId).routines.push({
       timeTableRoutineId: routine.timeTableRoutineId,
@@ -4386,6 +4675,16 @@ export async function getRoutineByAcademicGroupId(academicGroupId) {
       startDate: routine.startingDate,
       endDate: routine.endingDate,
       year: null,
+      activeVariant: matchedActiveVariant
+        ? {
+            timeTableStructureVariantId:
+              matchedActiveVariant.timeTableStructureVariantId,
+            name: matchedActiveVariant.name,
+            startingDate: matchedActiveVariant.startingDate,
+            endingDate: matchedActiveVariant.endingDate,
+          }
+        : null,
+      variants: variantSchedules,
       periods: formattedPeriods,
     });
   }
@@ -4475,6 +4774,7 @@ function buildEmptyPeriodGrid(periods, weekOffList) {
       name: period.periodName,
       startTime: period.startTime,
       endTime: period.endTime,
+      ...(period.variantTimings && { variantTimings: period.variantTimings }),
       days: formattedDays,
     });
   }
@@ -4815,11 +5115,40 @@ async function buildMappedStructuresWithoutRoutines(
     const weekOffList = parseWeekOffList(structure.weekOff);
     const periodRows = structure.timeTableName || [];
 
+    const variantSchedules = await buildRoutineVariantSchedules(
+      plain,
+      { startDate: plain.startingDate, endDate: plain.endingDate },
+      periodRows,
+    );
+
     const resolvedPeriods = await resolvePeriodsWithVariantTimings(
       periodRows,
       plain,
       { startDate: plain.startingDate, endDate: plain.endingDate },
     );
+
+    const resolvedWithVariantTimings = resolvedPeriods.map((rp) => {
+      const vTimings = variantSchedules.map((vs) => {
+        const vp = (vs.periods || []).find(
+          (p) =>
+            Number(p.timeTableCreationId) ===
+            Number(rp.timeTableCreationId),
+        );
+        return {
+          variantCourseMappingId: vs.id,
+          timeTableStructureVariantId: vs.timeTableStructureVariantId,
+          variantName: vs.name,
+          startingDate: vs.startingDate,
+          endingDate: vs.endingDate,
+          startTime: vp?.startTime ?? rp.startTime,
+          endTime: vp?.endTime ?? rp.endTime,
+        };
+      });
+      return {
+        ...rp,
+        variantTimings: vTimings,
+      };
+    });
 
     structures.push({
       timeTableNameId: plain.timeTableNameId,
@@ -4834,8 +5163,9 @@ async function buildMappedStructuresWithoutRoutines(
       startingDate: plain.startingDate,
       endingDate: plain.endingDate,
       year: classSection?.year != null ? Number(classSection.year) : null,
+      variants: variantSchedules,
       routines: [],
-      periods: buildEmptyPeriodGrid(resolvedPeriods, weekOffList),
+      periods: buildEmptyPeriodGrid(resolvedWithVariantTimings, weekOffList),
     });
   }
 
