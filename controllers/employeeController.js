@@ -20,7 +20,11 @@ export const addEmployee = async (req, res) => {
     res.status(200).send(result);
   } catch (error) {
     console.error("Error in adding employee:", error);
-    res.status(500).send("Internal Server Error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal Server Error"
+    );
   }
 };
 
