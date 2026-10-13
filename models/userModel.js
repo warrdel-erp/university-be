@@ -1,5 +1,5 @@
 import sequelize from "../database/sequelizeConfig.js";
-import { DataTypes } from 'sequelize';
+import { DataTypes, Op } from 'sequelize';
 import university from "./universityModel.js";
 import institute from "./instituteModel.js";
 import role from "./roleModel.js";
@@ -71,7 +71,12 @@ const userModel = sequelize.define(
         },
         email: {
             type: DataTypes.STRING,
-            allowNull: false
+            allowNull: false,
+            unique: true,
+            validate: {
+                notEmpty: { msg: "Email is required" },
+                notNull: { msg: "Email is required" }
+            }
         },
         isTeacher: {
             type: DataTypes.BOOLEAN,
@@ -104,6 +109,50 @@ const userModel = sequelize.define(
         paranoid: true
     }
 );
+
+userModel.addHook('beforeValidate', (user) => {
+    if (typeof user.email === 'string') {
+        user.email = user.email.trim().toLowerCase();
+        if (!user.email) {
+            user.email = null;
+        }
+    }
+});
+
+userModel.addHook('beforeCreate', async (user, options) => {
+    if (!user.email) return;
+
+    const existing = await userModel.findOne({
+        where: { email: user.email },
+        paranoid: false,
+        transaction: options?.transaction
+    });
+
+    if (existing) {
+        const err = new Error(`Email "${user.email}" already exists`);
+        err.statusCode = 409;
+        throw err;
+    }
+});
+
+userModel.addHook('beforeUpdate', async (user, options) => {
+    if (!user.email || !user.changed('email')) return;
+
+    const existing = await userModel.findOne({
+        where: {
+            email: user.email,
+            userId: { [Op.ne]: user.userId }
+        },
+        paranoid: false,
+        transaction: options?.transaction
+    });
+
+    if (existing) {
+        const err = new Error(`Email "${user.email}" already exists`);
+        err.statusCode = 409;
+        throw err;
+    }
+});
 
 userModel.scopeConfig = { university: false, institute: false, academicYear: false };
 
