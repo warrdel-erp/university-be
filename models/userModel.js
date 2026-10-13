@@ -72,7 +72,11 @@ const userModel = sequelize.define(
         email: {
             type: DataTypes.STRING,
             allowNull: false,
-            unique: true
+            unique: true,
+            validate: {
+                notEmpty: { msg: "Email is required" },
+                notNull: { msg: "Email is required" }
+            }
         },
         isTeacher: {
             type: DataTypes.BOOLEAN,
@@ -107,8 +111,11 @@ const userModel = sequelize.define(
 );
 
 userModel.addHook('beforeValidate', (user) => {
-    if (user.email && typeof user.email === 'string') {
+    if (typeof user.email === 'string') {
         user.email = user.email.trim().toLowerCase();
+        if (!user.email) {
+            user.email = null;
+        }
     }
 });
 

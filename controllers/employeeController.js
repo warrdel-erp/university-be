@@ -10,6 +10,20 @@ import {
 } from "../utility/requestContext.js";
 import { formatQueryDate } from "../utility/helper.js";
 
+function getErrorMessageAndStatus(error) {
+  if (error.statusCode) {
+    return { status: error.statusCode, message: error.message };
+  }
+  if (error.name === "SequelizeUniqueConstraintError") {
+    const email = error.fields?.email;
+    return { status: 409, message: email ? `Email "${email}" already exists` : "Record already exists" };
+  }
+  if (error.name === "SequelizeValidationError") {
+    return { status: 400, message: error.errors?.[0]?.message || "Validation error" };
+  }
+  return { status: 500, message: error.message || "Internal Server Error" };
+}
+
 export const addEmployee = async (req, res) => {
   try {
     const data = req.body;
@@ -20,11 +34,8 @@ export const addEmployee = async (req, res) => {
     res.status(200).send(result);
   } catch (error) {
     console.error("Error in adding employee:", error);
-    return ErrorResponse(
-      res,
-      error.statusCode || 500,
-      error.message || "Internal Server Error"
-    );
+    const { status, message } = getErrorMessageAndStatus(error);
+    return ErrorResponse(res, status, message);
   }
 };
 
@@ -124,7 +135,8 @@ export const updateEmployee = async (req, res) => {
     res.status(200).send(result);
   } catch (error) {
     console.error("Error in updating employee:", error);
-    res.status(500).send("Internal Server Error");
+    const { status, message } = getErrorMessageAndStatus(error);
+    return ErrorResponse(res, status, message);
   }
 };
 
