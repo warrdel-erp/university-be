@@ -413,8 +413,10 @@ export async function getAllStructureScopeMappings(filters = {}) {
 export async function updateTimeTable(info, variantId = null) {
     const results = [];
     for (const item of info) {
-        const result = await timeTableRepository.updateTimeTable(item.timeTableCreationId, item);
-        results.push(result);
+        if (!variantId) {
+            const result = await timeTableRepository.updateTimeTable(item.timeTableCreationId, item);
+            results.push(result);
+        }
 
         const periodUpdates = {};
         if (item.startTime !== undefined) periodUpdates.startTime = item.startTime;
@@ -423,11 +425,12 @@ export async function updateTimeTable(info, variantId = null) {
 
         if (Object.keys(periodUpdates).length > 0) {
             if (variantId) {
-                await timeTableRepository.updateVariantPeriodRow(
+                const res = await timeTableRepository.updateVariantPeriodRow(
                     variantId,
                     item.timeTableCreationId,
                     periodUpdates,
                 );
+                results.push(res);
             } else {
                 await model.timeTableStructureVariantPeriodsModel.update(periodUpdates, {
                     where: { timeTableStructurePeriodsId: item.timeTableCreationId },
@@ -471,6 +474,7 @@ export async function updateStructure(body, updatedBy) {
 
     const { start, end } = await assertNoOverlappingCourseSessionDates({
         courseId: updates.courseId,
+        academicGroupScopeId: mapping.academicGroupScopeId,
         sessionId: updates.sessionId,
         startingDate: updates.startingDate,
         endingDate: updates.endingDate,
@@ -1001,16 +1005,54 @@ export async function addTimeTableVariant(data, createdBy, updatedBy) {
     }
 }
 
+export async function deleteTimeTableVariant(timeTableStructureVariantId) {
+    const variantId = Number(timeTableStructureVariantId);
+    if (!variantId || isNaN(variantId)) {
+        throw new Error('Valid timeTableStructureVariantId is required');
+    }
+
+    const variant = await timeTableRepository.findVariantById(variantId);
+    if (!variant) {
+        throw new Error('Time table structure variant not found for this institute and academic year');
+    }
+
+    const plain = variant.get ? variant.get({ plain: true }) : variant;
+    if (plain.isDefault) {
+        throw new Error('Default variant cannot be deleted. Every structure must have at least one default variant.');
+    }
+
+    const mappedCourse = await timeTableRepository.findVariantCourseMappingByVariantId(variantId);
+    if (mappedCourse) {
+        throw new Error('Variant is mapped to a course or academic group schedule and cannot be deleted');
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+        await timeTableRepository.deleteVariantById(variantId, transaction);
+        await transaction.commit();
+
+        return {
+            message: `Time table variant deleted successfully for variant ID ${variantId}`,
+            timeTableStructureVariantId: variantId,
+        };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+}
+
 export async function cloneTimeTableStructure(sourceTimeTableNameId, name, createdBy, updatedBy) {
     const transaction = await sequelize.transaction();
 
     try {
-        const source = await timeTableRepository.getTimeTableStructureDetailsById(sourceTimeTableNameId);
+        const source = await timeTableRepository.getTimeTableStructureDetailsById(sourceTimeTableNameId, {
+            transaction,
+        });
         if (!source) {
             throw new Error('Structure not found');
         }
 
-        const plain = source.get({ plain: true });
+        const plain = source.get ? source.get({ plain: true }) : source;
         const sourcePeriods = plain.timeTableName || [];
         const newName = name && name.trim() ? name.trim() : `Copy of ${plain.name}`;
 
@@ -1022,7 +1064,7 @@ export async function cloneTimeTableStructure(sourceTimeTableNameId, name, creat
                 periodGap: plain.periodGap,
                 startingTime: plain.startingTime,
                 weekOff: plain.weekOff,
-                sourceTimeTableNameId: Number(sourceTimeTableNameId),
+                sourceTimeTableNameId: null,
                 createdBy,
                 updatedBy,
             },
@@ -1030,8 +1072,11 @@ export async function cloneTimeTableStructure(sourceTimeTableNameId, name, creat
         );
 
         const newTimeTableNameId = newStructure.timeTableNameId;
-        const timeSlots = [];
+        const universityId = newStructure.universityId || newStructure.dataValues?.universityId;
+        const instituteId = newStructure.instituteId || newStructure.dataValues?.instituteId;
+        const academicYearId = newStructure.academicYearId || newStructure.dataValues?.academicYearId;
 
+        const timeSlots = [];
         for (const period of sourcePeriods) {
             timeSlots.push({
                 timeTableNameId: newTimeTableNameId,
@@ -1046,17 +1091,162 @@ export async function cloneTimeTableStructure(sourceTimeTableNameId, name, creat
             });
         }
 
-        let periods = [];
+        let newPeriods = [];
         if (timeSlots.length) {
-            periods = await timeTableRepository.addTimeTable({ timeSlots }, transaction);
+            newPeriods = await timeTableRepository.addTimeTable({ timeSlots }, transaction);
+        }
+
+        const periodIdMap = new Map();
+        for (let i = 0; i < sourcePeriods.length; i++) {
+            const oldId = sourcePeriods[i].timeTableCreationId;
+            const newPeriodInstance = newPeriods[i];
+            const newId = newPeriodInstance?.timeTableCreationId || newPeriodInstance?.dataValues?.timeTableCreationId;
+            if (oldId && newId) {
+                periodIdMap.set(oldId, newId);
+            }
+        }
+
+        const sourceVariants = await timeTableRepository.findVariantsByStructureId(sourceTimeTableNameId, {
+            transaction,
+        });
+
+        const clonedVariants = [];
+
+        if (sourceVariants && sourceVariants.length > 0) {
+            for (const sv of sourceVariants) {
+                const svPlain = sv.get ? sv.get({ plain: true }) : sv;
+                const newVariant = await timeTableRepository.createStructureVariant(
+                    {
+                        name: svPlain.name,
+                        timeTableStructureId: newTimeTableNameId,
+                        isDefault: Boolean(svPlain.isDefault),
+                        universityId,
+                        instituteId,
+                        academicYearId,
+                        createdBy,
+                        updatedBy,
+                    },
+                    transaction,
+                );
+
+                const newVariantId = newVariant.timeTableStructureVariantId || newVariant.dataValues?.timeTableStructureVariantId;
+
+                const svPeriods = svPlain.variantPeriods || [];
+                const variantPeriodsToCreate = [];
+
+                if (svPeriods.length > 0) {
+                    for (const vp of svPeriods) {
+                        const vpPlain = vp.get ? vp.get({ plain: true }) : vp;
+                        const mappedNewPeriodId = periodIdMap.get(vpPlain.timeTableStructurePeriodsId);
+                        if (mappedNewPeriodId) {
+                            variantPeriodsToCreate.push({
+                                timeTableStructureVariantId: newVariantId,
+                                timeTableStructurePeriodsId: mappedNewPeriodId,
+                                startTime: vpPlain.startTime,
+                                endTime: vpPlain.endTime,
+                                isCourse: vpPlain.isCourse ?? true,
+                                universityId,
+                                instituteId,
+                                academicYearId,
+                                createdBy,
+                                updatedBy,
+                            });
+                        }
+                    }
+                }
+
+                if (variantPeriodsToCreate.length === 0 && newPeriods.length > 0) {
+                    for (const np of newPeriods) {
+                        const npVal = np.dataValues || np;
+                        variantPeriodsToCreate.push({
+                            timeTableStructureVariantId: newVariantId,
+                            timeTableStructurePeriodsId: npVal.timeTableCreationId,
+                            startTime: npVal.startTime,
+                            endTime: npVal.endTime,
+                            isCourse: npVal.isCourse ?? true,
+                            universityId,
+                            instituteId,
+                            academicYearId,
+                            createdBy,
+                            updatedBy,
+                        });
+                    }
+                }
+
+                let createdVPeriods = [];
+                if (variantPeriodsToCreate.length > 0) {
+                    createdVPeriods = await timeTableRepository.bulkCreateVariantPeriods(
+                        variantPeriodsToCreate,
+                        transaction,
+                    );
+                }
+
+                clonedVariants.push({
+                    timeTableStructureVariantId: newVariantId,
+                    name: svPlain.name,
+                    isDefault: Boolean(svPlain.isDefault),
+                    variantPeriods: createdVPeriods,
+                });
+            }
+        } else {
+            const defaultVariant = await timeTableRepository.createStructureVariant(
+                {
+                    name: 'Regular',
+                    timeTableStructureId: newTimeTableNameId,
+                    isDefault: true,
+                    universityId,
+                    instituteId,
+                    academicYearId,
+                    createdBy,
+                    updatedBy,
+                },
+                transaction,
+            );
+
+            const defaultVariantId = defaultVariant.timeTableStructureVariantId || defaultVariant.dataValues?.timeTableStructureVariantId;
+
+            const defaultVariantPeriods = newPeriods.map((p) => {
+                const pVal = p.dataValues || p;
+                return {
+                    timeTableStructureVariantId: defaultVariantId,
+                    timeTableStructurePeriodsId: pVal.timeTableCreationId,
+                    startTime: pVal.startTime,
+                    endTime: pVal.endTime,
+                    isCourse: pVal.isCourse ?? true,
+                    universityId,
+                    instituteId,
+                    academicYearId,
+                    createdBy,
+                    updatedBy,
+                };
+            });
+
+            let createdDefPeriods = [];
+            if (defaultVariantPeriods.length > 0) {
+                createdDefPeriods = await timeTableRepository.bulkCreateVariantPeriods(
+                    defaultVariantPeriods,
+                    transaction,
+                );
+            }
+
+            clonedVariants.push({
+                timeTableStructureVariantId: defaultVariantId,
+                name: 'Regular',
+                isDefault: true,
+                variantPeriods: createdDefPeriods,
+            });
         }
 
         const result = {
             timeTableNameId: newTimeTableNameId,
             name: newName,
-            sourceTimeTableNameId: Number(sourceTimeTableNameId),
             maximumPeriod: plain.maximumPeriod,
-            periods,
+            periodLength: plain.periodLength,
+            periodGap: plain.periodGap,
+            startingTime: plain.startingTime,
+            weekOff: plain.weekOff,
+            periods: newPeriods,
+            variants: clonedVariants,
         };
 
         await transaction.commit();
@@ -1128,7 +1318,77 @@ export async function copyTimeTableStructure(data, createdBy, updatedBy) {
             periods = await timeTableRepository.addTimeTable({ timeSlots }, transaction);
         }
 
-        // 3. If copying a parent structure, clone all its child variants and link them to newTimeTableNameId
+        // Modern variants clone (time_table_structure_variant)
+        const modernVariants = await timeTableRepository.findVariantsByStructureId(timeTableNameId, {
+            transaction,
+        });
+        if (modernVariants && modernVariants.length > 0) {
+            for (const mv of modernVariants) {
+                const mvPlain = mv.get ? mv.get({ plain: true }) : mv;
+                const newV = await timeTableRepository.createStructureVariant({
+                    name: mvPlain.name,
+                    timeTableStructureId: newTimeTableNameId,
+                    isDefault: Boolean(mvPlain.isDefault),
+                    universityId: newStructure.universityId,
+                    instituteId: newStructure.instituteId,
+                    academicYearId: newStructure.academicYearId,
+                    createdBy,
+                    updatedBy,
+                }, transaction);
+                const newVId = newV.timeTableStructureVariantId || newV.dataValues?.timeTableStructureVariantId;
+                const vPeriods = mvPlain.variantPeriods || [];
+                const toCreate = [];
+                for (let i = 0; i < periods.length; i++) {
+                    const oldPeriodId = sourcePeriods[i]?.timeTableCreationId;
+                    const newPeriodId = periods[i]?.timeTableCreationId || periods[i]?.dataValues?.timeTableCreationId;
+                    const matchingVP = vPeriods.find((vp) => vp.timeTableStructurePeriodsId === oldPeriodId);
+                    toCreate.push({
+                        timeTableStructureVariantId: newVId,
+                        timeTableStructurePeriodsId: newPeriodId,
+                        startTime: matchingVP ? matchingVP.startTime : periods[i].startTime,
+                        endTime: matchingVP ? matchingVP.endTime : periods[i].endTime,
+                        isCourse: matchingVP ? matchingVP.isCourse : (periods[i].isCourse ?? true),
+                        universityId: newStructure.universityId,
+                        instituteId: newStructure.instituteId,
+                        academicYearId: newStructure.academicYearId,
+                        createdBy,
+                        updatedBy,
+                    });
+                }
+                if (toCreate.length > 0) {
+                    await timeTableRepository.bulkCreateVariantPeriods(toCreate, transaction);
+                }
+            }
+        } else if (periods.length > 0) {
+            const defV = await timeTableRepository.createStructureVariant({
+                name: 'Regular',
+                timeTableStructureId: newTimeTableNameId,
+                isDefault: true,
+                universityId: newStructure.universityId,
+                instituteId: newStructure.instituteId,
+                academicYearId: newStructure.academicYearId,
+                createdBy,
+                updatedBy,
+            }, transaction);
+            const defVId = defV.timeTableStructureVariantId || defV.dataValues?.timeTableStructureVariantId;
+            const defVPeriods = periods.map((p) => ({
+                timeTableStructureVariantId: defVId,
+                timeTableStructurePeriodsId: p.timeTableCreationId || p.dataValues?.timeTableCreationId,
+                startTime: p.startTime,
+                endTime: p.endTime,
+                isCourse: p.isCourse ?? true,
+                universityId: newStructure.universityId,
+                instituteId: newStructure.instituteId,
+                academicYearId: newStructure.academicYearId,
+                createdBy,
+                updatedBy,
+            }));
+            if (defVPeriods.length > 0) {
+                await timeTableRepository.bulkCreateVariantPeriods(defVPeriods, transaction);
+            }
+        }
+
+        // 3. If copying a parent structure, clone all its child structures (for backward compatibility)
         const sourceVariants = !isChild
             ? await timeTableRepository.getStructureVariantsBySourceId(timeTableNameId, {
                 transaction,

@@ -189,7 +189,48 @@ export function routineStructureInclude({
                 as: 'timeTableName',
                 attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
             },
+            {
+                model: model.timeTableStructureVariantModel,
+                as: 'structureVariants',
+                required: false,
+                attributes: ['timeTableStructureVariantId', 'name', 'isDefault'],
+                include: [
+                    {
+                        model: model.timeTableStructureVariantPeriodsModel,
+                        as: 'variantPeriods',
+                        required: false,
+                        attributes: ['id', 'timeTableStructurePeriodsId', 'startTime', 'endTime', 'isCourse'],
+                    },
+                ],
+            },
         ];
+    }
+
+    const mappingIncludes = [structureInclude];
+
+    if (withPeriods) {
+        mappingIncludes.push({
+            model: model.timeTableStructureVariantCourseMappingModel,
+            as: 'variantCourseMappings',
+            required: false,
+            attributes: ['id', 'timeTableStructureVariantId', 'name', 'startingDate', 'endingDate'],
+            include: [
+                {
+                    model: model.timeTableStructureVariantModel,
+                    as: 'variant',
+                    required: false,
+                    attributes: ['timeTableStructureVariantId', 'name', 'isDefault'],
+                    include: [
+                        {
+                            model: model.timeTableStructureVariantPeriodsModel,
+                            as: 'variantPeriods',
+                            required: false,
+                            attributes: ['id', 'timeTableStructurePeriodsId', 'startTime', 'endTime', 'isCourse'],
+                        },
+                    ],
+                },
+            ],
+        });
     }
 
     return {
@@ -204,7 +245,7 @@ export function routineStructureInclude({
             'startingDate',
             'endingDate',
         ],
-        include: [structureInclude],
+        include: mappingIncludes,
     };
 }
 

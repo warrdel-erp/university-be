@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "univ-v2-timetable-variants-v1",
+    "_postman_id": "univ-v2-timetable-variants-v2",
     "name": "Timetable Structure & Variants API",
-    "description": "Postman Collection for Timetable Structure & Variant Lifecycle APIs, including Structure Creation (with auto default variant), Variant-aware Listing, Single View, Period Additions, Timings Update, and Variant Course Mappings.",
+    "description": "Comprehensive Postman Collection for Timetable Structure & Variant Lifecycle APIs, including Base Structure Creation (with auto default variant), Variant-aware Listing, Single View, Period Additions, Timings Update, Multi-Variant Course & Academic Group Slicing, and Cloning/Copying.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -35,435 +35,910 @@
       "value": "1"
     },
     {
+      "key": "academicGroupScopeId",
+      "value": "1"
+    },
+    {
       "key": "timetableStructureCourseMapperId",
+      "value": "1"
+    },
+    {
+      "key": "clonedTimeTableNameId",
       "value": "1"
     }
   ],
   "item": [
     {
-      "name": "1. GET All Timetable Structures (with Variants & Filters)",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseurl}}/timeTable/?courseId={{courseId}}&sessionId={{sessionId}}",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            ""
-          ],
-          "query": [
+      "name": "1. Timetable Structure (Base)",
+      "description": "APIs for creating, updating, cloning, copying, and deleting base timetable structures and period templates.",
+      "item": [
+        {
+          "name": "1.1 Create Timetable Structure (Auto creates 'Regular' Default Variant)",
+          "event": [
             {
-              "key": "courseId",
-              "value": "{{courseId}}",
-              "description": "Optional course filter"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data) {",
+                  "    if (Array.isArray(res.data) && res.data.length > 0) {",
+                  "        pm.collectionVariables.set('timeTableNameId', String(res.data[0].timeTableNameId));",
+                  "        pm.collectionVariables.set('timeTableCreationId', String(res.data[0].timeTableCreationId));",
+                  "        console.log('Saved timeTableNameId:', res.data[0].timeTableNameId);",
+                  "        console.log('Saved timeTableCreationId:', res.data[0].timeTableCreationId);",
+                  "    } else if (res.data.timeTableNameId) {",
+                  "        pm.collectionVariables.set('timeTableNameId', String(res.data.timeTableNameId));",
+                  "        console.log('Saved timeTableNameId:', res.data.timeTableNameId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"B.Tech Routine 2026\",\n  \"maximumPeriod\": 6,\n  \"periodLength\": 50,\n  \"periodGap\": 10,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"weekOff\": [\n    \"Sunday\"\n  ],\n  \"isCourse\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
             },
+            "url": {
+              "raw": "{{baseurl}}/timeTable",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable"
+              ]
+            },
+            "description": "Creates a timetable structure and automatically generates base period slots. In the exact same transaction, it generates the default 'Regular' variant (isDefault: true) and links the periods."
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Add Period to Structure (Auto-syncs across All Variants)",
+          "event": [
             {
-              "key": "sessionId",
-              "value": "{{sessionId}}",
-              "description": "Optional session filter"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.timeTableCreationId) {",
+                  "    pm.collectionVariables.set('timeTableCreationId', String(res.data.timeTableCreationId));",
+                  "    console.log('Saved newly added timeTableCreationId:', res.data.timeTableCreationId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
             }
-          ]
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"periodName\": \"Period 7\",\n  \"startTime\": \"03:00 PM\",\n  \"endTime\": \"03:50 PM\",\n  \"type\": \"Manual\",\n  \"isCourse\": true,\n  \"isBreak\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/period",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "period"
+              ]
+            },
+            "description": "Adds a new period to a structure. Automatically inserts corresponding period rows for all existing variants of that structure in time_table_structure_variant_periods."
+          },
+          "response": []
         },
-        "description": "Fetches all timetable structures along with their structureVariants, variantPeriods, and course mappings. Query parameters courseId and sessionId are optional."
-      },
-      "response": []
-    },
-    {
-      "name": "2. GET Single Timetable Structure Details (with Variants)",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseurl}}/timeTable/single?timeTableNameId={{timeTableNameId}}",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            "single"
-          ],
-          "query": [
+        {
+          "name": "1.3 PATCH Update Base Periods (Syncs Variant Timings)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"timeTableCreationId\": {{timeTableCreationId}},\n    \"startTime\": \"09:00 AM\",\n    \"endTime\": \"09:50 AM\",\n    \"periodName\": \"Period 1 (Updated)\",\n    \"isCourse\": true,\n    \"isBreak\": false,\n    \"type\": \"Automatic\"\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable"
+              ]
+            },
+            "description": "Updates period timings for base structure and synchronizes default variant timings across time_table_structure_variant_periods."
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 POST Clone Structure (Structure Clone)",
+          "event": [
             {
-              "key": "timeTableNameId",
-              "value": "{{timeTableNameId}}",
-              "description": "Required structure ID"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.timeTableNameId) {",
+                  "    pm.collectionVariables.set('clonedTimeTableNameId', String(res.data.timeTableNameId));",
+                  "    console.log('Saved clonedTimeTableNameId:', res.data.timeTableNameId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
             }
-          ]
-        },
-        "description": "Fetches single structure details with all its variants, variant period timings, and course mappings."
-      },
-      "response": []
-    },
-    {
-      "name": "3. POST Create Timetable Structure (Auto creates 'Regular' Default Variant)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"name\": \"B.Tech Routine 2026 (Cloned)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/structure/clone",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "structure",
+                "clone"
+              ]
+            },
+            "description": "Clones a structure and its periods into a newly created structure."
           },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"name\": \"B.Tech Routine 2026\",\n  \"maximumPeriod\": 6,\n  \"periodLength\": 50,\n  \"periodGap\": 10,\n  \"startingTime\": \"09:00 AM\",\n  \"type\": \"Automatic\",\n  \"weekOff\": [\n    \"Sunday\"\n  ],\n  \"isCourse\": true\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
+          "response": []
         },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            ""
-          ]
-        },
-        "description": "Creates a timetable structure and periods. In the exact same transaction, automatically creates a default 'Regular' variant (isDefault: true) and links all newly generated periods in time_table_structure_variant_periods."
-      },
-      "response": []
-    },
-    {
-      "name": "4. POST Add Period to Structure (Auto-syncs across All Variants)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"timeTableNameId\": 1,\n  \"periodName\": \"Period 7\",\n  \"startTime\": \"03:00 PM\",\n  \"endTime\": \"03:50 PM\",\n  \"type\": \"Manual\",\n  \"isCourse\": true,\n  \"isBreak\": false\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/period",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            "period"
-          ]
-        },
-        "description": "Adds a new period to a structure. Automatically inserts corresponding period rows for all existing variants of that structure in time_table_structure_variant_periods."
-      },
-      "response": []
-    },
-    {
-      "name": "5. PATCH Update Base Periods (Syncs Variant Timings)",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "[\n  {\n    \"timeTableCreationId\": 1,\n    \"startTime\": \"09:00 AM\",\n    \"endTime\": \"09:50 AM\",\n    \"periodName\": \"Period 1\",\n    \"isCourse\": true,\n    \"isBreak\": false,\n    \"type\": \"Automatic\"\n  },\n  {\n    \"timeTableCreationId\": 2,\n    \"startTime\": \"10:00 AM\",\n    \"endTime\": \"10:50 AM\",\n    \"periodName\": \"Period 2\",\n    \"isCourse\": true,\n    \"isBreak\": false,\n    \"type\": \"Automatic\"\n  }\n]",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            ""
-          ]
-        },
-        "description": "Updates period timings for base structure and automatically syncs the timings in time_table_structure_variant_periods."
-      },
-      "response": []
-    },
-    {
-      "name": "6. PATCH Update Specific Variant Periods",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "[\n  {\n    \"timeTableCreationId\": 1,\n    \"timeTableStructureVariantId\": 1,\n    \"startTime\": \"09:30 AM\",\n    \"endTime\": \"10:20 AM\",\n    \"periodName\": \"Period 1\",\n    \"isCourse\": true,\n    \"isBreak\": false\n  }\n]",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/?timeTableStructureVariantId={{timeTableStructureVariantId}}",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            ""
-          ],
-          "query": [
+        {
+          "name": "1.5 POST Copy Structure (Deep Copy with Variants)",
+          "event": [
             {
-              "key": "timeTableStructureVariantId",
-              "value": "{{timeTableStructureVariantId}}",
-              "description": "Target variant ID to update"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.timeTableNameId) {",
+                  "    pm.collectionVariables.set('clonedTimeTableNameId', String(res.data.timeTableNameId));",
+                  "    console.log('Saved deep copied timeTableNameId:', res.data.timeTableNameId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
             }
-          ]
-        },
-        "description": "Updates period timings exclusively for the specified variant (e.g. Winter timings) without altering other variants."
-      },
-      "response": []
-    },
-    {
-      "name": "7. POST Add Course Mapping (Links to Default or Specific Variant)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"name\": \"B.Tech Routine 2026 (Deep Copy)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/copy",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "copy"
+              ]
+            },
+            "description": "Performs a complete deep copy of the structure, including all child variants and their custom period slots."
           },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"timeTableNameId\": 1,\n  \"courseId\": 1,\n  \"sessionId\": 1,\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\",\n  \"variants\": [\n    {\n      \"timeTableStructureVariantId\": 1,\n      \"startingDate\": \"2026-08-01\",\n      \"endingDate\": \"2026-09-30\"\n    },\n    {\n      \"timeTableStructureVariantId\": 2,\n      \"startingDate\": \"2026-10-01\",\n      \"endingDate\": \"2026-11-15\"\n    },\n    {\n      \"timeTableStructureVariantId\": 1,\n      \"startingDate\": \"2026-11-16\",\n      \"endingDate\": \"2026-12-31\"\n    }\n  ]\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
+          "response": []
         },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/courseMapping",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            "courseMapping"
-          ]
-        },
-        "description": "Maps a course/session to a structure with one or multiple variants covering the exact date range. Validates that variant date ranges cover the entire course date range with no gaps and no overlaps. Single variant fallback with timeTableStructureVariantId is also supported."
-      },
-      "response": []
-    },
-    {
-      "name": "8. PATCH Update Course Mapping Dates (Syncs Variant Mapping Dates)",
-      "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
+        {
+          "name": "1.6 DELETE Delete Single Period from Structure",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable?timeTableCreationId={{timeTableCreationId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable"
+              ],
+              "query": [
+                {
+                  "key": "timeTableCreationId",
+                  "value": "{{timeTableCreationId}}",
+                  "description": "Period slot ID to delete"
+                }
+              ]
+            },
+            "description": "Deletes an individual period slot from the timetable structure if not used in an active/published routine."
           },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"timetableStructureCourseMapperId\": 1,\n  \"startingDate\": \"2026-08-10\",\n  \"endingDate\": \"2026-12-31\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
+          "response": []
         },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/structure",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            "structure"
-          ]
-        },
-        "description": "Updates course mapping starting/ending dates and automatically keeps time_table_structure_variant_course_mapping dates in sync."
-      },
-      "response": []
+        {
+          "name": "1.7 DELETE Delete Timetable Structure",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable/structure?timeTableNameId={{clonedTimeTableNameId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "structure"
+              ],
+              "query": [
+                {
+                  "key": "timeTableNameId",
+                  "value": "{{clonedTimeTableNameId}}",
+                  "description": "Structure ID to delete (e.g. cloned or unmapped structure)"
+                }
+              ]
+            },
+            "description": "Deletes a timetable structure. Will block if a program/course is actively mapped to it."
+          },
+          "response": []
+        }
+      ]
     },
     {
-      "name": "9. GET Structure Mappings Print / Table Data",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseurl}}/timeTable/structureMappings?timeTableNameId={{timeTableNameId}}",
-          "host": [
-            "{{baseurl}}"
-          ],
-          "path": [
-            "timeTable",
-            "structureMappings"
-          ],
-          "query": [
+      "name": "2. Structure Variants Lifecycle",
+      "description": "APIs to create custom seasonal/exam variants (e.g. Winter, Summer, Ramadan, Exam) and customize variant-specific period timings without altering the base structure.",
+      "item": [
+        {
+          "name": "2.1 Create Single Variant (Quick Copy Base Periods)",
+          "event": [
             {
-              "key": "timeTableNameId",
-              "value": "{{timeTableNameId}}",
-              "description": "Filter by structure ID"
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.timeTableStructureVariantId) {",
+                  "    pm.collectionVariables.set('timeTableStructureVariantId', String(res.data.timeTableStructureVariantId));",
+                  "    console.log('Saved timeTableStructureVariantId:', res.data.timeTableStructureVariantId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
             }
-          ]
-        },
-        "description": "Fetches tabular print data of course mappings including course, session, academic group scope, and variant associations."
-      },
-      "response": []
-    },
-    {
-      "name": "10. GET All Structure Names (Dropdowns)",
-      "request": {
-        "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
-        "url": {
-          "raw": "{{baseurl}}/timeTable/all_name",
-          "host": [
-            "{{baseurl}}"
           ],
-          "path": [
-            "timeTable",
-            "all_name"
-          ]
-        },
-        "description": "Fetches structures with their variants for select dropdowns in routine creation."
-      },
-      "response": []
-    },
-    {
-      "name": "11. POST Create Single Variant (Quick Copy Base Periods)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"name\": \"Winter Timings\",\n  \"isDefault\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/variant",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "variant"
+              ]
+            },
+            "description": "Creates a new single variant under an existing structure. Because periods array is omitted, it automatically inherits and copies all periods from the base structure into time_table_structure_variant_periods."
           },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"timeTableNameId\": 1,\n  \"name\": \"Winter Timings\",\n  \"isDefault\": false\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+          "response": []
+        },
+        {
+          "name": "2.2 Create Single Variant (With Custom Period Timings)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.timeTableStructureVariantId) {",
+                  "    pm.collectionVariables.set('timeTableStructureVariantId', String(res.data.timeTableStructureVariantId));",
+                  "    console.log('Saved custom variant timeTableStructureVariantId:', res.data.timeTableStructureVariantId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/variant",
-          "host": [
-            "{{baseurl}}"
           ],
-          "path": [
-            "timeTable",
-            "variant"
-          ]
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"name\": \"Exam Hours Routine\",\n  \"isDefault\": false,\n  \"periods\": [\n    {\n      \"timeTableStructurePeriodsId\": {{timeTableCreationId}},\n      \"startTime\": \"10:00 AM\",\n      \"endTime\": \"11:00 AM\",\n      \"isCourse\": true\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/variant",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "variant"
+              ]
+            },
+            "description": "Creates a new variant with explicit custom starting and ending times for periods."
+          },
+          "response": []
         },
-        "description": "Creates a new single variant under an existing structure. If periods are omitted, it automatically copies all periods from the base structure into time_table_structure_variant_periods."
-      },
-      "response": []
+        {
+          "name": "2.3 PATCH Update Specific Variant Periods Timings",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "[\n  {\n    \"timeTableCreationId\": {{timeTableCreationId}},\n    \"timeTableStructureVariantId\": {{timeTableStructureVariantId}},\n    \"startTime\": \"09:30 AM\",\n    \"endTime\": \"10:20 AM\",\n    \"periodName\": \"Period 1 (Winter Shift)\",\n    \"isCourse\": true,\n    \"isBreak\": false\n  }\n]",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable?timeTableStructureVariantId={{timeTableStructureVariantId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable"
+              ],
+              "query": [
+                {
+                  "key": "timeTableStructureVariantId",
+                  "value": "{{timeTableStructureVariantId}}",
+                  "description": "Target variant ID whose timings are being updated exclusively"
+                }
+              ]
+            },
+            "description": "Updates period timings exclusively for the specified variant (e.g. Winter timings) without altering other variants or base structure periods."
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 DELETE Delete Structure Variant",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable/variant?timeTableStructureVariantId={{timeTableStructureVariantId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "variant"
+              ],
+              "query": [
+                {
+                  "key": "timeTableStructureVariantId",
+                  "value": "{{timeTableStructureVariantId}}",
+                  "description": "Variant ID to delete (Default variants and actively mapped variants cannot be deleted)"
+                }
+              ]
+            },
+            "description": "Deletes a timetable structure variant and its associated period timings from time_table_structure_variant_periods. Default variants and variants mapped to a course/scope are protected from deletion."
+          },
+          "response": []
+        }
+      ]
     },
     {
-      "name": "12. POST Create Single Variant (With Custom Period Timings)",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          },
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"timeTableNameId\": 1,\n  \"name\": \"Winter Timings\",\n  \"isDefault\": false,\n  \"periods\": [\n    {\n      \"timeTableStructurePeriodsId\": 1,\n      \"startTime\": \"09:30 AM\",\n      \"endTime\": \"10:20 AM\",\n      \"isCourse\": true\n    },\n    {\n      \"timeTableStructurePeriodsId\": 2,\n      \"startTime\": \"10:25 AM\",\n      \"endTime\": \"11:15 AM\",\n      \"isCourse\": true\n    }\n  ]\n}",
-          "options": {
-            "raw": {
-              "language": "json"
+      "name": "3. Course & Academic Group Mappings",
+      "description": "APIs to map structures to courses or academic groups with multi-variant date slicing (consecutive dates, no overlaps, complete date coverage).",
+      "item": [
+        {
+          "name": "3.1 POST Add Course Mapping (Multi-Variant Date Slicing)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.timetableStructureCourseMapperId) {",
+                  "    pm.collectionVariables.set('timetableStructureCourseMapperId', String(res.data.timetableStructureCourseMapperId));",
+                  "    console.log('Saved timetableStructureCourseMapperId:', res.data.timetableStructureCourseMapperId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
             }
-          }
-        },
-        "url": {
-          "raw": "{{baseurl}}/timeTable/variant",
-          "host": [
-            "{{baseurl}}"
           ],
-          "path": [
-            "timeTable",
-            "variant"
-          ]
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"courseId\": {{courseId}},\n  \"sessionId\": {{sessionId}},\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\",\n  \"variants\": [\n    {\n      \"timeTableStructureVariantId\": {{timeTableStructureVariantId}},\n      \"startingDate\": \"2026-08-01\",\n      \"endingDate\": \"2026-12-31\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/courseMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "courseMapping"
+              ]
+            },
+            "description": "Maps a course/session to a structure with one or multiple variants covering the exact date range. Validates that variant date ranges cover the entire course date range with no gaps and no overlaps."
+          },
+          "response": []
         },
-        "description": "Creates a new single variant under an existing structure with custom starting and ending times for periods."
-      },
-      "response": []
+        {
+          "name": "3.2 POST Add Academic Group Scope Mapping",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data && res.data.timetableStructureCourseMapperId) {",
+                  "    pm.collectionVariables.set('timetableStructureCourseMapperId', String(res.data.timetableStructureCourseMapperId));",
+                  "    console.log('Saved scope timetableStructureCourseMapperId:', res.data.timetableStructureCourseMapperId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timeTableNameId\": {{timeTableNameId}},\n  \"academicGroupScopeId\": {{academicGroupScopeId}},\n  \"sessionId\": {{sessionId}},\n  \"startingDate\": \"2026-08-01\",\n  \"endingDate\": \"2026-12-31\",\n  \"variants\": [\n    {\n      \"timeTableStructureVariantId\": {{timeTableStructureVariantId}},\n      \"startingDate\": \"2026-08-01\",\n      \"endingDate\": \"2026-12-31\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/courseMapping",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "courseMapping"
+              ]
+            },
+            "description": "Binds a timetable structure to an Academic Group Scope instead of a direct courseId."
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 PATCH Update Course Mapping Dates & Variants",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"timetableStructureCourseMapperId\": {{timetableStructureCourseMapperId}},\n  \"startingDate\": \"2026-08-10\",\n  \"endingDate\": \"2026-12-31\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/timeTable/structure",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "structure"
+              ]
+            },
+            "description": "Updates course mapping starting/ending dates and automatically keeps time_table_structure_variant_course_mapping dates in sync."
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 DELETE Delete Course Mapping",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable/courseMapping?timetableStructureCourseMapperId={{timetableStructureCourseMapperId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "courseMapping"
+              ],
+              "query": [
+                {
+                  "key": "timetableStructureCourseMapperId",
+                  "value": "{{timetableStructureCourseMapperId}}",
+                  "description": "Mapper ID to delete"
+                }
+              ]
+            },
+            "description": "Deletes the course/structure mapping if not bound to an active routine."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Read & Retrieval APIs",
+      "description": "APIs to fetch structures, variants, period timings, print formats, and dropdown data.",
+      "item": [
+        {
+          "name": "4.1 GET All Timetable Structures (with Variants & Filters)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && Array.isArray(res.data) && res.data.length > 0) {",
+                  "    const first = res.data[0];",
+                  "    if (first.timeTableNameId) {",
+                  "        pm.collectionVariables.set('timeTableNameId', String(first.timeTableNameId));",
+                  "    }",
+                  "    if (Array.isArray(first.timeTableName) && first.timeTableName.length > 0) {",
+                  "        pm.collectionVariables.set('timeTableCreationId', String(first.timeTableName[0].timeTableCreationId));",
+                  "    }",
+                  "    if (Array.isArray(first.structureVariants) && first.structureVariants.length > 0) {",
+                  "        pm.collectionVariables.set('timeTableStructureVariantId', String(first.structureVariants[0].timeTableStructureVariantId));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable?courseId={{courseId}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}",
+                  "description": "Optional course filter"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "description": "Optional session filter"
+                }
+              ]
+            },
+            "description": "Fetches all timetable structures along with their structureVariants, variantPeriods, and course mappings. Query parameters courseId and sessionId are optional."
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 GET Single Timetable Structure Details (with Variants & Periods)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res && res.data) {",
+                  "    if (Array.isArray(res.data.timeTableName) && res.data.timeTableName.length > 0) {",
+                  "        pm.collectionVariables.set('timeTableCreationId', String(res.data.timeTableName[0].timeTableCreationId));",
+                  "    }",
+                  "    if (Array.isArray(res.data.structureVariants) && res.data.structureVariants.length > 0) {",
+                  "        pm.collectionVariables.set('timeTableStructureVariantId', String(res.data.structureVariants[0].timeTableStructureVariantId));",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable/single?timeTableNameId={{timeTableNameId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "timeTableNameId",
+                  "value": "{{timeTableNameId}}",
+                  "description": "Required structure ID"
+                }
+              ]
+            },
+            "description": "Fetches single structure details with all its variants, variant period timings, and course mappings."
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 GET All Structure Names (Dropdowns)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable/all_name?courseId={{courseId}}&sessionId={{sessionId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "all_name"
+              ],
+              "query": [
+                {
+                  "key": "courseId",
+                  "value": "{{courseId}}",
+                  "description": "Optional course filter"
+                },
+                {
+                  "key": "sessionId",
+                  "value": "{{sessionId}}",
+                  "description": "Optional session filter"
+                }
+              ]
+            },
+            "description": "Fetches structures with their variants for select dropdowns in routine creation."
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 GET Structure Mappings Print / Table Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTable/structureMappings?timeTableNameId={{timeTableNameId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTable",
+                "structureMappings"
+              ],
+              "query": [
+                {
+                  "key": "timeTableNameId",
+                  "value": "{{timeTableNameId}}",
+                  "description": "Filter by structure ID"
+                }
+              ]
+            },
+            "description": "Fetches tabular print data of course mappings including course, session, academic group scope, and variant associations."
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 GET Routine by Section Term (with Variant Timings)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/timeTableCreate/getRoutine?classSectionTermId={{classSectionTermId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "timeTableCreate",
+                "getRoutine"
+              ],
+              "query": [
+                {
+                  "key": "classSectionTermId",
+                  "value": "{{classSectionTermId}}",
+                  "description": "Required - class section term ID"
+                }
+              ]
+            },
+            "description": "Fetches weekly timetable routine grid for a class section term with mapped variant period timings."
+          },
+          "response": []
+        }
+      ]
     }
   ]
 }

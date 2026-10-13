@@ -602,6 +602,42 @@ export async function getMappedStructuresForCourseSession(courseId, sessionId, a
                             'isBreak',
                         ],
                     },
+                    {
+                        model: model.timeTableStructureVariantModel,
+                        as: 'structureVariants',
+                        required: false,
+                        attributes: ['timeTableStructureVariantId', 'name', 'isDefault'],
+                        include: [
+                            {
+                                model: model.timeTableStructureVariantPeriodsModel,
+                                as: 'variantPeriods',
+                                required: false,
+                                attributes: ['id', 'timeTableStructurePeriodsId', 'startTime', 'endTime', 'isCourse'],
+                            },
+                        ],
+                    },
+                ],
+            },
+            {
+                model: model.timeTableStructureVariantCourseMappingModel,
+                as: 'variantCourseMappings',
+                required: false,
+                attributes: ['id', 'timeTableStructureVariantId', 'name', 'startingDate', 'endingDate'],
+                include: [
+                    {
+                        model: model.timeTableStructureVariantModel,
+                        as: 'variant',
+                        required: false,
+                        attributes: ['timeTableStructureVariantId', 'name', 'isDefault'],
+                        include: [
+                            {
+                                model: model.timeTableStructureVariantPeriodsModel,
+                                as: 'variantPeriods',
+                                required: false,
+                                attributes: ['id', 'timeTableStructurePeriodsId', 'startTime', 'endTime', 'isCourse'],
+                            },
+                        ],
+                    },
                 ],
             },
             {
@@ -727,6 +763,23 @@ export async function deleteTimeTableName(timeTableNameId) {
             individualHooks: true,
             transaction,
         });
+
+        const variants = await model.timeTableStructureVariantModel.findAll({
+            where: { timeTableStructureId: Number(timeTableNameId) },
+            attributes: ['timeTableStructureVariantId'],
+            transaction,
+        });
+        const variantIds = variants.map((v) => v.timeTableStructureVariantId);
+        if (variantIds.length > 0) {
+            await model.timeTableStructureVariantPeriodsModel.destroy({
+                where: { timeTableStructureVariantId: variantIds },
+                transaction,
+            });
+            await model.timeTableStructureVariantModel.destroy({
+                where: { timeTableStructureVariantId: variantIds },
+                transaction,
+            });
+        }
 
         await scoped(model.timeTableStructureModel).destroy({
             where: { timeTableNameId: Number(timeTableNameId) },
@@ -1221,6 +1274,31 @@ export async function findVariantCourseMappingsByMapperId(timetableStructureCour
         },
         order: [['startingDate', 'ASC']],
         transaction: options.transaction,
+    });
+}
+
+export async function findVariantCourseMappingByVariantId(timeTableStructureVariantId, options = {}) {
+    return await scoped(model.timeTableStructureVariantCourseMappingModel).findOne({
+        where: {
+            timeTableStructureVariantId: Number(timeTableStructureVariantId),
+        },
+        transaction: options.transaction,
+    });
+}
+
+export async function deleteVariantById(timeTableStructureVariantId, transaction) {
+    await model.timeTableStructureVariantPeriodsModel.destroy({
+        where: {
+            timeTableStructureVariantId: Number(timeTableStructureVariantId),
+        },
+        transaction,
+    });
+
+    return await scoped(model.timeTableStructureVariantModel).destroy({
+        where: {
+            timeTableStructureVariantId: Number(timeTableStructureVariantId),
+        },
+        transaction,
     });
 }
 

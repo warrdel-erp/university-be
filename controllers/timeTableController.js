@@ -192,5 +192,15 @@ export const addTimeTableVariant = async (req, res) => {
   }
 };
 
+export const deleteTimeTableVariant = async (req, res) => {
+  try {
+    const { timeTableStructureVariantId } = req.query;
+    const result = await timeTableServices.deleteTimeTableVariant(timeTableStructureVariantId);
+    return SuccessResponse(res, 200, "Time table variant deleted successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
+
 
 

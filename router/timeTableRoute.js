@@ -16,6 +16,7 @@ import {
   cloneTimeTableStructure,
   copyTimeTableStructure,
   addTimeTableVariant,
+  deleteTimeTableVariant,
 } from "../controllers/timeTableController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -214,6 +215,10 @@ const deleteStructureCourseMappingQuerySchema = z.object({
   timetableStructureCourseMapperId: positiveIntegerId,
 });
 
+const deleteTimeTableVariantQuerySchema = z.object({
+  timeTableStructureVariantId: positiveIntegerId,
+});
+
 // ---------------------------------------------------------------------------
 // 1. Structure template — create / edit periods
 // ---------------------------------------------------------------------------
@@ -239,6 +244,14 @@ router.post(
   checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null),
   validate({ body: addTimeTableVariantSchema }),
   addTimeTableVariant,
+);
+
+router.delete(
+  "/variant",
+  userAuth,
+  checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null),
+  validate({ query: deleteTimeTableVariantQuerySchema }),
+  deleteTimeTableVariant,
 );
 
 router.post(
