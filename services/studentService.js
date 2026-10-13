@@ -433,12 +433,14 @@ async function assertStudentEnrollNumberAvailable(enrollNumber) {
 
 async function assertStudentEmailAvailable(email) {
   if (!email) return;
-  const existing = await studentRepository.findStudentByEmail(email);
-  if (
-    existing &&
-    email.toLowerCase() === existing.dataValues.email.toLowerCase()
-  ) {
-    throw new Error("Email is already existing");
+  const existing = await model.userModel.findOne({
+    where: { email: email.trim().toLowerCase() },
+    paranoid: false,
+  });
+  if (existing) {
+    const err = new Error(`Email "${email}" already exists`);
+    err.statusCode = 409;
+    throw err;
   }
 }
 

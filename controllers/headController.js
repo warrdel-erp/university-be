@@ -7,7 +7,7 @@ export async function addHead(req, res) {
     const headDetails = await headCreation.addHead(req.body, createdBy, updatedBy);
     res.status(201).json({ message: "Data added successfully", headDetails });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(error.statusCode || 500).json({ error: error.message, message: error.message });
   }
 }
 

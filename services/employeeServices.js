@@ -266,24 +266,24 @@ function safeParseJsonField(val, fallback = null) {
 }
 
 export async function addEmployee(data, files, createdBy, roleId) {
-  const {
-    universityId,
-    instituteId,
-    campusId: contextCampusId,
-  } = getTenantStore();
-  let campusId = contextCampusId;
+  const store = getTenantStore();
+  let instituteId = data.instituteId || store.instituteId;
+  let campusId = data.campusId || store.campusId;
+  let universityId = data.universityId || store.universityId;
 
-  if (!campusId && instituteId) {
+  if ((!campusId || !universityId) && instituteId) {
     const instRecord = await model.instituteModel.findByPk(instituteId, {
-      attributes: ["campusId"],
+      attributes: ["campusId", "universityId"],
     });
     if (instRecord) {
-      campusId = instRecord.campusId ?? instRecord.get?.("campusId");
+      campusId = campusId || (instRecord.campusId ?? instRecord.get?.("campusId"));
+      universityId = universityId || (instRecord.universityId ?? instRecord.get?.("universityId"));
     }
   }
 
   data.instituteId = instituteId;
   data.campusId = campusId;
+  data.universityId = universityId;
 
   const transaction = await sequelize.transaction();
   try {
@@ -689,7 +689,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
     // Rollback transaction in case of error
     await transaction.rollback();
     console.error("Error adding employee data:", error);
-    throw new Error("Failed to add employee data");
+    throw error;
   }
 }
 
@@ -1196,7 +1196,7 @@ export async function updateEmployee(
   } catch (error) {
     await transaction.rollback();
     console.error("Error updating employee data:", error);
-    throw new Error("Failed to update employee data");
+    throw error;
   }
 }
 // addEmployee(data,1)
