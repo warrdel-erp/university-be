@@ -758,7 +758,7 @@ export async function getPastClassSchedulesForEmployee(
   const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
   const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
   result.sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
-  return { rows: result, total };
+  return { rows: result, total: page && limit ? total : result.length };
 }
 
 export async function getUpcomingClassSchedulesForEmployee(
@@ -831,7 +831,7 @@ export async function getUpcomingClassSchedulesForEmployee(
   const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
   const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
   result.sort((a, b) => (new Date(a.date) - new Date(b.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
-  return { rows: result, total };
+  return { rows: result, total: page && limit ? total : result.length };
 }
 
 export async function getUniqueClassSectionSubjectsForEmployee(

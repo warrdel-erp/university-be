@@ -311,7 +311,7 @@ export const getPastClassSchedules = async (req, res) => {
     const formattedDate = formatQueryDate(date);
 
     let groupingType = false;
-    if (groupPeriods === "consecutive") {
+    if (groupPeriods === "consecutive" || groupPeriods === "true") {
       groupingType = "consecutive";
     } else if (groupPeriods === "sessional") {
       groupingType = "sessional";
@@ -566,7 +566,7 @@ export const getMyPastClassSchedules = async (req, res) => {
     const formattedDate = formatQueryDate(date);
 
     let groupingType = false;
-    if (groupPeriods === "consecutive") {
+    if (groupPeriods === "consecutive" || groupPeriods === "true") {
       groupingType = "consecutive";
     } else if (groupPeriods === "sessional") {
       groupingType = "sessional";
