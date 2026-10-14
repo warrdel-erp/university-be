@@ -33,7 +33,13 @@ const feePlanPublishHistoryModel = sequelize.define(
     },
     year: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
+    },
+    term: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "term",
+      comment: "Programme term / semester (1, 2, 3...)",
     },
     action: {
       type: DataTypes.ENUM("publish", "unpublish"),

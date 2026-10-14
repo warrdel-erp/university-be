@@ -42,6 +42,12 @@ const feePlanItemModel = sequelize.define(
       field: "year",
       comment: "Programme year level (1, 2, 3...)",
     },
+    term: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "term",
+      comment: "Programme term / semester (1, 2, 3...)",
+    },
     name: {
       type: DataTypes.STRING(255),
       allowNull: true,
