@@ -5399,6 +5399,15 @@ export async function getRoutineByTeacherAndAcademicYear(
         weekOffLower.push(String(day).toLowerCase());
       }
 
+      const variantSchedules = await buildRoutineVariantSchedules(
+        mapping,
+        {
+          startDate: routine.startingDate || seg.startDate,
+          endDate: routine.endingDate || seg.endDate,
+        },
+        periods,
+      );
+
       const resolvedPeriods = await resolvePeriodsWithVariantTimings(
         periods,
         mapping,
@@ -5468,14 +5477,42 @@ export async function getRoutineByTeacherAndAcademicYear(
           });
         }
 
+        const variantTimings = variantSchedules.map((vs) => {
+          const vp = (vs.periods || []).find(
+            (p) =>
+              Number(p.timeTableCreationId) ===
+              Number(period.timeTableCreationId),
+          );
+          return {
+            variantCourseMappingId: vs.id,
+            timeTableStructureVariantId: vs.timeTableStructureVariantId,
+            variantName: vs.name,
+            startingDate: vs.startingDate,
+            endingDate: vs.endingDate,
+            startTime: vp?.startTime ?? period.startTime,
+            endTime: vp?.endTime ?? period.endTime,
+          };
+        });
+
         formattedPeriods.push({
           timeTableCreationId: period.timeTableCreationId,
           name: period.periodName,
           startTime: period.startTime,
           endTime: period.endTime,
+          isBreak: period.isBreak || false,
+          isCourse: period.isCourse ?? true,
+          variantTimings,
           days: formattedDays,
         });
       }
+
+      const activeDate = toDateOnlyString(new Date());
+      const matchedActiveVariant =
+        variantSchedules.find(
+          (vs) => activeDate >= vs.startingDate && activeDate <= vs.endingDate,
+        ) ||
+        variantSchedules[0] ||
+        null;
 
       let academicGroup = null;
       if (routine.academicGroup) {
@@ -5503,6 +5540,16 @@ export async function getRoutineByTeacherAndAcademicYear(
         endDate: seg.endDate,
         classSection,
         academicGroup,
+        activeVariant: matchedActiveVariant
+          ? {
+              timeTableStructureVariantId:
+                matchedActiveVariant.timeTableStructureVariantId,
+              name: matchedActiveVariant.name,
+              startingDate: matchedActiveVariant.startingDate,
+              endingDate: matchedActiveVariant.endingDate,
+            }
+          : null,
+        variants: variantSchedules,
         periods: formattedPeriods,
       });
     }
