@@ -225,12 +225,7 @@ export async function changeStatus(userId, data) {
 }
 
 export async function headRegister(data, transaction) {
-  try {
-    return scoped(model.userModel).create(data, { transaction });
-  } catch (error) {
-    console.error("Error in userRepository.register:", error);
-    throw new Error("Failed to create user");
-  }
+  return scoped(model.userModel).create(data, { transaction });
 }
 
 export async function updateUser(userId, data, transaction) {

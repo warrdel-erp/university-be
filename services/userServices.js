@@ -31,7 +31,7 @@ export async function register(info) {
     universityId: universityId,
     password,
     phone,
-    email: email.toLowerCase(),
+    email: email.toLowerCase().trim(),
     uniqueId: uuidv4(),
   };
 
@@ -264,7 +264,7 @@ export async function adminRegisterStudentAndEmployee(info) {
   } catch (error) {
     await transaction.rollback();
     console.error("Error during registration:", error);
-    throw new Error("Registration failed");
+    throw error;
   }
 }
 
@@ -398,7 +398,7 @@ export const studentRegister = async (registerStudentData, transaction) => {
     return userId;
   } catch (error) {
     console.error("Error in student registration:", error);
-    throw new Error("Failed to register student");
+    throw error;
   }
 };
 
@@ -448,7 +448,7 @@ export const employeeRegister = async (
     return userId;
   } catch (error) {
     console.error("Error in employee registration:", error);
-    throw new Error("Failed to register employee");
+    throw error;
   }
 };
 

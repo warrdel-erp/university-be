@@ -15,6 +15,7 @@ import {
   buildRequestContextStore,
   getTenantStore,
 } from "../utility/requestContext.js";
+import { ErrorResponse } from "../utility/response.js";
 
 // register
 export const register = async (req, res) => {
@@ -39,7 +40,11 @@ export const register = async (req, res) => {
     }
   } catch (error) {
     console.error("Error during registration:", error);
-    res.status(500).send("Internal server error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal server error"
+    );
   }
 };
 
@@ -101,7 +106,11 @@ export const adminRegisterStudentAndEmployee = async (req, res) => {
     }
   } catch (error) {
     console.error("Error during registration:", error);
-    res.status(500).send("Internal server error");
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Internal server error"
+    );
   }
 };
 
