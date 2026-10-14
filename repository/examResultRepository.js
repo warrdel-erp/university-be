@@ -491,7 +491,6 @@ export async function findStudentResult(where, transaction) {
       "resultStatus",
       "publishedAt",
       "publishBatchId",
-      "academicYearId",
       "createdAt",
       "updatedAt",
     ],
