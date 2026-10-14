@@ -367,6 +367,22 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
       required: false,
     },
     {
+      model: model.subjectModel,
+      as: "timeTableSubject",
+      attributes: ["subjectId", "subjectName", "subjectCode"],
+      required: false,
+    },
+    {
+      model: model.electiveSubjectModel,
+      as: "timeTableElective",
+      attributes: [
+        "electiveSubjectId",
+        "electiveSubjectName",
+        "electiveSubjectCode",
+      ],
+      required: false,
+    },
+    {
       model: model.timeTableCellModel,
       as: "timeTableCell",
       required: true,
@@ -626,6 +642,11 @@ export async function getTodayClassScheduleForEmployee(
   const baseWhere = { date: currentDate, ...teacherWhere };
   const { page, limit } = pagination;
 
+  const total = await model.timeTableCellDateWiseModel.count({
+    where: baseWhere,
+  });
+  if (total === 0) return { rows: [], total: 0 };
+
   const findOptions = {
     where: baseWhere,
     attributes: [
@@ -638,19 +659,26 @@ export async function getTodayClassScheduleForEmployee(
     ],
     include: includes,
     order: [["date", "ASC"]],
-    subQuery: false,
   };
   if (page && limit) {
-    findOptions.limit = limit;
-    findOptions.offset = (page - 1) * limit;
+    const idRows = await model.timeTableCellDateWiseModel.findAll({
+      where: baseWhere,
+      attributes: ["timeTableCellDateWiseId"],
+      order: [["date", "ASC"]],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+    if (!idRows.length) return { rows: [], total };
+    findOptions.where = {
+      timeTableCellDateWiseId: {
+        [Op.in]: idRows.map((r) => r.timeTableCellDateWiseId),
+      },
+    };
   }
 
-  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
-    ...findOptions,
-    distinct: true,
-  });
-
-  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
+  const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
+  const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
   result.sort((a, b) => ((Number(a.period) || 0) - (Number(b.period) || 0)));
   return { rows: result, total };
 }
@@ -692,6 +720,11 @@ export async function getPastClassSchedulesForEmployee(
   const baseWhere = { date: { [Op.lt]: currentDate }, ...teacherWhere };
   const { page, limit } = pagination;
 
+  const total = await model.timeTableCellDateWiseModel.count({
+    where: baseWhere,
+  });
+  if (total === 0) return { rows: [], total: 0 };
+
   const findOptions = {
     where: baseWhere,
     attributes: [
@@ -704,19 +737,26 @@ export async function getPastClassSchedulesForEmployee(
     ],
     include: dateWiseScheduleIncludes({ sessionId, academicYearId }),
     order: [["date", "DESC"]],
-    subQuery: false,
   };
   if (page && limit) {
-    findOptions.limit = limit;
-    findOptions.offset = (page - 1) * limit;
+    const idRows = await model.timeTableCellDateWiseModel.findAll({
+      where: baseWhere,
+      attributes: ["timeTableCellDateWiseId"],
+      order: [["date", "DESC"]],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+    if (!idRows.length) return { rows: [], total };
+    findOptions.where = {
+      timeTableCellDateWiseId: {
+        [Op.in]: idRows.map((r) => r.timeTableCellDateWiseId),
+      },
+    };
   }
 
-  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
-    ...findOptions,
-    distinct: true,
-  });
-
-  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
+  const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
+  const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
   result.sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
   return { rows: result, total };
 }
@@ -753,6 +793,11 @@ export async function getUpcomingClassSchedulesForEmployee(
   const baseWhere = { date: { [Op.gte]: currentDate }, ...teacherWhere };
   const { page, limit } = pagination;
 
+  const total = await model.timeTableCellDateWiseModel.count({
+    where: baseWhere,
+  });
+  if (total === 0) return { rows: [], total: 0 };
+
   const findOptions = {
     where: baseWhere,
     attributes: [
@@ -765,19 +810,26 @@ export async function getUpcomingClassSchedulesForEmployee(
     ],
     include: dateWiseScheduleIncludes({ academicYearId }),
     order: [["date", "ASC"]],
-    subQuery: false,
   };
   if (page && limit) {
-    findOptions.limit = limit;
-    findOptions.offset = (page - 1) * limit;
+    const idRows = await model.timeTableCellDateWiseModel.findAll({
+      where: baseWhere,
+      attributes: ["timeTableCellDateWiseId"],
+      order: [["date", "ASC"]],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+    if (!idRows.length) return { rows: [], total };
+    findOptions.where = {
+      timeTableCellDateWiseId: {
+        [Op.in]: idRows.map((r) => r.timeTableCellDateWiseId),
+      },
+    };
   }
 
-  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
-    ...findOptions,
-    distinct: true,
-  });
-
-  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
+  const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
+  const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
   result.sort((a, b) => (new Date(a.date) - new Date(b.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
   return { rows: result, total };
 }

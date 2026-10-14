@@ -299,7 +299,7 @@ export const getMyTeacherSubjectsFromSchedule = async (req, res) => {
 
 export const getPastClassSchedules = async (req, res) => {
   try {
-    const { userId, date, sessionId, groupPeriods } = req.query;
+    const { userId, date, sessionId, groupPeriods, search } = req.query;
     const hasPagination =
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
@@ -317,10 +317,13 @@ export const getPastClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
     const { teacher, schedules, total } = await employee.getPastClassSchedules(userId, formattedDate,
       groupingType,
       sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
-      hasPagination ? { page, limit } : {},
+      paginationOpts,
     );
 
     return SuccessResponse(
@@ -554,7 +557,7 @@ export const getMyPastClassSchedules = async (req, res) => {
       return ErrorResponse(res, validation.status, validation.message);
     }
     const { userId } = validation;
-    const { date, sessionId, groupPeriods } = req.query;
+    const { date, sessionId, groupPeriods, search } = req.query;
     const hasPagination =
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
@@ -569,10 +572,13 @@ export const getMyPastClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
     const { teacher, schedules, total } = await employee.getPastClassSchedules(userId, formattedDate,
       groupingType,
       sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
-      hasPagination ? { page, limit } : {},
+      paginationOpts,
     );
 
     return SuccessResponse(

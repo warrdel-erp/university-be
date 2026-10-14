@@ -2229,9 +2229,10 @@ export async function getPastClassSchedules(
 
   const { page, limit } = pagination;
   const hasPagination = Boolean(page && limit);
+  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
 
-  // No grouping: DB page/limit matches response entries directly
-  if (!groupPeriods && hasPagination) {
+  // No grouping and no search: DB page/limit matches response entries directly
+  if (!groupPeriods && hasPagination && !search) {
     const { rows: rawSchedules, total } =
       await employeeScheduleRepository.getPastClassSchedulesForEmployee(
         userId,
@@ -2239,14 +2240,29 @@ export async function getPastClassSchedules(
         sessionId,
         { page, limit },
       );
-    const teacher = getTeacherDetails(rawSchedules);
+    let teacher = getTeacherDetails(rawSchedules);
+    if (!teacher && userId != null) {
+      const emp = await model.employeeModel.findOne({
+        where: { userId: Number(userId) },
+        attributes: ["userId", "employeeId", "employeeName", "employeeCode", "pickColor"],
+      });
+      if (emp) {
+        teacher = {
+          userId: emp.userId,
+          employeeId: emp.employeeId,
+          employeeName: emp.employeeName,
+          employeeCode: emp.employeeCode,
+          pickColor: emp.pickColor,
+        };
+      }
+    }
     const schedules = await enrichSchedulesWithAttendance(
       rawSchedules.map(stripTeacherFieldsFromSchedule),
     );
     return { teacher, schedules, total };
   }
 
-  // Grouping (or no pagination): batch-fetch until response page is filled, then stop
+  // Grouping, search (or no pagination): batch-fetch until response page is filled, then stop
   const needed = hasPagination ? page * limit : Infinity;
   const batchSize = hasPagination ? Math.max(limit * 3, 30) : undefined;
   let allRaw = [];
@@ -2281,6 +2297,24 @@ export async function getPastClassSchedules(
     }
 
     schedules = allRaw.map(stripTeacherFieldsFromSchedule);
+    if (search) {
+      schedules = schedules.filter((s) => {
+        const subj =
+          s.timeTableSubject?.subjectName ||
+          s.timeTableElective?.electiveSubjectName ||
+          "";
+        const course = s.course?.courseName || "";
+        const room = s.classRoom?.roomNumber || "";
+        const section = s.section ? String(s.section) : "";
+        return (
+          subj.toLowerCase().includes(search) ||
+          course.toLowerCase().includes(search) ||
+          room.toLowerCase().includes(search) ||
+          section.toLowerCase().includes(search)
+        );
+      });
+    }
+
     if (groupPeriods) {
       schedules = await groupConsecutivePeriods(
         schedules,
@@ -2315,6 +2349,22 @@ export async function getPastClassSchedules(
   pageSchedules = await enrichSchedulesWithAttendance(pageSchedules);
   if (groupPeriods) {
     pageSchedules = await applyGroupAttendanceStatus(pageSchedules);
+  }
+
+  if (!teacher && userId != null) {
+    const emp = await model.employeeModel.findOne({
+      where: { userId: Number(userId) },
+      attributes: ["userId", "employeeId", "employeeName", "employeeCode", "pickColor"],
+    });
+    if (emp) {
+      teacher = {
+        userId: emp.userId,
+        employeeId: emp.employeeId,
+        employeeName: emp.employeeName,
+        employeeCode: emp.employeeCode,
+        pickColor: emp.pickColor,
+      };
+    }
   }
 
   return { teacher, schedules: pageSchedules, total };
