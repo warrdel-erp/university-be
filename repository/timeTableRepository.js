@@ -2,6 +2,7 @@ import { Op, fn, col } from 'sequelize';
 import * as model from '../models/index.js'
 import { buildScope, scoped } from '../utility/scoped.js';
 import sequelize from '../database/sequelizeConfig.js';
+import { formatQueryDate } from '../utility/helper.js';
 
 const excludeMeta = ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"];
 
@@ -1340,5 +1341,50 @@ export async function deleteVariantById(timeTableStructureVariantId, transaction
         },
         transaction,
     });
+}
+
+export async function findActiveOrPastPublishedRoutineForVariant(timeTableStructureVariantId, options = {}) {
+    const today = (typeof options === 'string' ? options : options.today) || formatQueryDate();
+    const transaction = options.transaction;
+
+    const mappings = await model.timeTableStructureVariantCourseMappingModel.findAll({
+        where: {
+            timeTableStructureVariantId: Number(timeTableStructureVariantId),
+            startingDate: {
+                [Op.lte]: today,
+            },
+        },
+        attributes: ['id', 'timetableStructureCourseMapperId', 'startingDate', 'endingDate', 'name'],
+        transaction,
+    });
+
+    if (!mappings || mappings.length === 0) {
+        return null;
+    }
+
+    const mapperIds = mappings.map((m) => m.timetableStructureCourseMapperId);
+
+    const publishedRoutine = await model.timeTableRoutineModel.findOne({
+        where: {
+            timetableStructureCourseMapperId: {
+                [Op.in]: mapperIds,
+            },
+            isPublish: true,
+        },
+        attributes: ['timeTableRoutineId', 'timetableStructureCourseMapperId', 'isPublish'],
+        transaction,
+    });
+
+    if (publishedRoutine) {
+        const matchedMapping = mappings.find(
+            (m) => m.timetableStructureCourseMapperId === publishedRoutine.timetableStructureCourseMapperId,
+        );
+        return {
+            routine: publishedRoutine,
+            mapping: matchedMapping,
+        };
+    }
+
+    return null;
 }
 

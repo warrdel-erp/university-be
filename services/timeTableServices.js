@@ -411,8 +411,33 @@ export async function getAllStructureScopeMappings(filters = {}) {
 
 
 export async function updateTimeTable(info, variantId = null) {
+    const rawItems = Array.isArray(info) ? info : (info ? [info] : []);
+    const items = rawItems.filter(Boolean);
+
+    const variantIdsToCheck = new Set();
+    if (variantId) {
+        variantIdsToCheck.add(Number(variantId));
+    }
+    for (const item of items) {
+        const targetVariantId = item.timeTableStructureVariantId || variantId;
+        if (targetVariantId) {
+            const hasPeriodUpdates = item.startTime !== undefined || item.endTime !== undefined || item.isCourse !== undefined;
+            if (hasPeriodUpdates) {
+                variantIdsToCheck.add(Number(targetVariantId));
+            }
+        }
+    }
+
+    for (const vid of variantIdsToCheck) {
+        const lockInfo = await timeTableRepository.findActiveOrPastPublishedRoutineForVariant(vid);
+        if (lockInfo) {
+            const startDateMsg = lockInfo.mapping?.startingDate ? ` (Starting Date: ${lockInfo.mapping.startingDate})` : '';
+            throw new Error(`Cannot update period timings for this variant because it is mapped to a course with an active or past published routine${startDateMsg}.`);
+        }
+    }
+
     const results = [];
-    for (const item of info) {
+    for (const item of items) {
         const targetVariantId = item.timeTableStructureVariantId || variantId;
 
         if (!targetVariantId) {
