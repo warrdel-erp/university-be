@@ -29,6 +29,7 @@ import studentElectiveSubjectModel from "./studentElectiveSubjectModel.js";
 import studentMetaData from "./studentMetaData.js";
 import studentClassSectionsHistoryModel from "./studentClassSectionsHistoryModel.js";
 import userModel from "./userModel.js";
+import refreshTokenModel from "./refreshTokenModel.js";
 import employeeModel from "./employeeModel.js";
 import employeeAddressModel from "./employeeAddressModel.js";
 import employeeCorAddressModel from "./employeeCorAddressModel.js";
@@ -4237,6 +4238,7 @@ export {
   billingScheduleItemsModel,
   billingScheduleSubItemsModel,
   billingSchedulePaymentTermsModel,
+  refreshTokenModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";
@@ -4299,6 +4301,10 @@ feePlanSubItemsModel.hasMany(billingScheduleSubItemsModel, { foreignKey: 'feePla
 
 billingScheduleItemsModel.hasMany(billingSchedulePaymentTermsModel, { foreignKey: 'billingScheduleItemId', as: 'paymentTerms' });
 billingSchedulePaymentTermsModel.belongsTo(billingScheduleItemsModel, { foreignKey: 'billingScheduleItemId', as: 'billingScheduleItem' });
+
+// Refresh Token Associations
+userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });
+refreshTokenModel.belongsTo(userModel, { foreignKey: 'user_id', as: 'user' });
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 

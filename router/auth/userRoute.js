@@ -1,7 +1,28 @@
 import { Router } from "express";
 const router = Router();
 
-import { login, register, adminRegisterStudentAndEmployee, getAdminRegisterStudentAndEmployee, changePassword, changeStatus, sendLink, forgotPassword, forgotChangePassword, getAllUsers, getMyDetails, saveUserDefaults, initialSetup, getGrantedAccess, giveFullAccess } from "../../controllers/userController.js";
+import {
+    login,
+    refreshToken,
+    logout,
+    logoutAll,
+    getActiveSessions,
+    revokeSession,
+    register,
+    adminRegisterStudentAndEmployee,
+    getAdminRegisterStudentAndEmployee,
+    changePassword,
+    changeStatus,
+    sendLink,
+    forgotPassword,
+    forgotChangePassword,
+    getAllUsers,
+    getMyDetails,
+    saveUserDefaults,
+    initialSetup,
+    getGrantedAccess,
+    giveFullAccess
+} from "../../controllers/userController.js";
 import useAuth from "../../middleware/authUser.js";
 import { z } from "zod";
 import { validate } from "../../utility/validation.js";
@@ -60,6 +81,21 @@ router.post('/giveFullAccess', validate({ body: giveFullAccessSchema }), giveFul
 
 // for login
 router.post("/login", login);
+
+// for token refresh (with rotation and reuse detection)
+router.post("/refresh-token", refreshToken);
+
+// for logging out current sessio˝n
+router.post("/logout", logout);
+
+// for logging out all sessions / devices
+router.post("/logout-all", useAuth, logoutAll);
+
+// for viewing active sessions/devices
+router.get("/sessions", useAuth, getActiveSessions);
+
+// for revoking a specific session
+router.delete("/sessions/:sessionId", useAuth, revokeSession);
 
 //admin sign up to student and employee
 

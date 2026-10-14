@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express, { json, urlencoded } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import fileUpload from "express-fileupload";
 import { setupLogging } from "./middleware/morganLogger.js";
 import httpAuditLogger from "./middleware/httpAuditLogger.js";
@@ -135,7 +136,15 @@ app.use((err, req, res, next) => {
   }
   next(err);
 });
-app.use(cors());
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL
+      ? [process.env.FRONTEND_URL, "http://localhost:3000", "http://localhost:5173"]
+      : true,
+    credentials: true,
+  })
+);
 app.use(urlencoded({ extended: true }));
 app.use(httpAuditLogger);
 

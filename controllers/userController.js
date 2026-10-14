@@ -1,5 +1,8 @@
 import * as userService from "../services/userServices.js";
+import * as authService from "../services/authService.js";
+import * as tokenService from "../utility/tokenService.js";
 import * as userRepository from "../repository/userRepository.js";
+import * as refreshTokenRepository from "../repository/refreshTokenRepository.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import {
@@ -51,45 +54,194 @@ export const register = async (req, res) => {
 // login
 export const login = async (req, res) => {
   try {
-    let userData;
-    let { email, password } = req.body;
-    const existingEmail = await userRepository.findEmailByEmail(email);
+    const { email, password } = req.body;
+    const clientInfo = tokenService.getClientInfo(req);
 
-    if (!existingEmail) {
-      return res.status(400).send("Email does not exist");
-    }
+    const result = await authService.loginUser({ email, password }, clientInfo);
 
-    if (existingEmail.dataValues.status === "InActive") {
-      return res.status(400).send("Please Contact To The Admin");
-    }
-
-    const isPasswordCorrect = await bcrypt.compare(password, existingEmail.password);
-
-    if (!isPasswordCorrect) {
-      return res.status(400).send("Incorrect password");
-    }
-
-    const {
-      password: _password,
-      dummyPassword: _dummyPassword,
-      ...tokenPayload
-    } = existingEmail.dataValues;
-
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-      expiresIn: process.env.TOKEN_TIME || undefined,
+    // Set HTTP-only secure cookies for tokens
+    tokenService.setAuthCookies(res, {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     });
 
-    res.cookie("token", token);
-
-    res.status(200).json({
+    return res.status(200).json({
       status: true,
       message: "User logged in successfully",
-      token,
-      existingEmail: { dummyPassword: Boolean(existingEmail.dataValues?.dummyPassword) },
+      token: result.accessToken,
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      existingEmail: { dummyPassword: Boolean(result.user.dummyPassword) },
+      user: result.user,
     });
   } catch (error) {
     console.error("Error during login:", error);
-    res.status(500).send("Internal server error");
+    if (error.name === "AuthError") {
+      return res.status(error.statusCode || 400).json({
+        status: false,
+        message: error.message,
+        code: error.code || "AUTH_ERROR",
+      });
+    }
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+      code: "INTERNAL_SERVER_ERROR",
+    });
+  }
+};
+
+// refresh token rotation
+export const refreshToken = async (req, res) => {
+  try {
+    const rawRefreshToken =
+      req.body?.refreshToken ||
+      req.cookies?.refreshToken ||
+      req.headers["x-refresh-token"];
+
+    if (!rawRefreshToken) {
+      return res.status(400).json({
+        status: false,
+        message: "Refresh token is required",
+        code: "REFRESH_TOKEN_REQUIRED",
+      });
+    }
+
+    const clientInfo = tokenService.getClientInfo(req);
+    const result = await authService.rotateRefreshToken(rawRefreshToken, clientInfo);
+
+    // Update HTTP-only cookies with new rotated tokens
+    tokenService.setAuthCookies(res, {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "Token refreshed successfully",
+      token: result.accessToken,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      expiresIn: result.expiresIn,
+      user: result.user,
+    });
+  } catch (error) {
+    console.error("Error during token refresh:", error);
+
+    // If reuse was detected, ensure any stale cookies are wiped from client
+    if (error.code === "TOKEN_REUSE_DETECTED") {
+      tokenService.clearAuthCookies(res);
+    }
+
+    const statusCode = error.statusCode || 401;
+    return res.status(statusCode).json({
+      status: false,
+      message: error.message || "Failed to refresh token",
+      code: error.code || "REFRESH_FAILED",
+    });
+  }
+};
+
+// logout current session
+export const logout = async (req, res) => {
+  try {
+    const rawRefreshToken =
+      req.body?.refreshToken ||
+      req.cookies?.refreshToken ||
+      req.headers["x-refresh-token"];
+
+    if (rawRefreshToken) {
+      await authService.logoutUser(rawRefreshToken);
+    }
+
+    tokenService.clearAuthCookies(res);
+
+    return res.status(200).json({
+      status: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    console.error("Error during logout:", error);
+    tokenService.clearAuthCookies(res);
+    return res.status(500).json({
+      status: false,
+      message: "Error during logout",
+    });
+  }
+};
+
+// logout all sessions / devices
+export const logoutAll = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.dataValues?.userId;
+    await authService.logoutAllUserSessions(userId);
+
+    tokenService.clearAuthCookies(res);
+
+    return res.status(200).json({
+      status: true,
+      message: "Logged out from all devices successfully",
+    });
+  } catch (error) {
+    console.error("Error during logout-all:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Error during logout from all devices",
+    });
+  }
+};
+
+// get active sessions for logged in user
+export const getActiveSessions = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.dataValues?.userId;
+    const currentRefreshToken =
+      req.body?.refreshToken ||
+      req.cookies?.refreshToken ||
+      req.headers["x-refresh-token"];
+
+    const sessions = await authService.getUserSessions(userId, currentRefreshToken);
+
+    return res.status(200).json({
+      status: true,
+      message: "Active sessions retrieved successfully",
+      data: sessions,
+    });
+  } catch (error) {
+    console.error("Error fetching active sessions:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Failed to fetch active sessions",
+    });
+  }
+};
+
+// revoke a specific session
+export const revokeSession = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.dataValues?.userId;
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        status: false,
+        message: "Session ID is required",
+      });
+    }
+
+    await authService.revokeUserSession(userId, sessionId);
+
+    return res.status(200).json({
+      status: true,
+      message: "Session revoked successfully",
+    });
+  } catch (error) {
+    console.error("Error revoking session:", error);
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      status: false,
+      message: error.message || "Failed to revoke session",
+    });
   }
 };
 
@@ -197,6 +349,12 @@ export const changePassword = async (req, res) => {
     const updatedUser = await userService.changePassword({ email, password }, transaction);
 
     await userService.emptyPassword(existingUser.dataValues?.email, transaction);
+
+    await refreshTokenRepository.revokeAllUserTokens(
+      existingUser.userId || existingUser.dataValues?.userId,
+      "PASSWORD_CHANGED",
+      transaction
+    );
 
     await transaction.commit();
 
@@ -314,6 +472,11 @@ export const forgotChangePassword = async (req, res) => {
     }
 
     const updatedUser = await userService.changePassword({ email, password });
+
+    await refreshTokenRepository.revokeAllUserTokens(
+      existingUser.userId || existingUser.dataValues?.userId,
+      "PASSWORD_CHANGED"
+    );
 
     return res.status(200).json({
       message: "Password changed successfully",
