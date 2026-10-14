@@ -3291,6 +3291,18 @@ export async function getPublishedDateWiseCellsForRoutineInWeekRepository(
         required: false,
       },
       {
+        model: model.subjectModel,
+        as: "timeTableSubject",
+        attributes: ["subjectId", "subjectName"],
+        required: false,
+      },
+      {
+        model: model.electiveSubjectModel,
+        as: "timeTableElective",
+        attributes: ["electiveSubjectId", "electiveSubjectName"],
+        required: false,
+      },
+      {
         model: model.timeTableCellModel,
         as: "timeTableCell",
         required: true,

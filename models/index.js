@@ -1752,6 +1752,24 @@ classRoomModel.hasMany(timeTableCellDateWiseModel, {
   as: "timeTableCellDateWise",
 });
 
+timeTableCellDateWiseModel.belongsTo(subjectModel, {
+  foreignKey: "subjectId",
+  as: "timeTableSubject",
+});
+subjectModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "subjectId",
+  as: "timeTableCellDateWise",
+});
+
+timeTableCellDateWiseModel.belongsTo(electiveSubjectModel, {
+  foreignKey: "electiveSubjectId",
+  as: "timeTableElective",
+});
+electiveSubjectModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "electiveSubjectId",
+  as: "timeTableCellDateWise",
+});
+
 timeTableCellTeachersDateWiseModel.belongsTo(timeTableCellDateWiseModel, {
   foreignKey: "timeTableCellDateWiseId",
   as: "timeTableCellDateWise",

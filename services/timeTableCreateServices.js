@@ -407,6 +407,7 @@ export async function resolvePeriodsWithVariantTimings(
       ...plainBp,
       startTime,
       endTime,
+      isCourse: vp?.isCourse ?? plainBp.isCourse ?? true,
       timeTableStructureVariantId:
         matchedVariant?.timeTableStructureVariantId ||
         plainBp.timeTableStructureVariantId ||
@@ -5726,6 +5727,7 @@ async function buildRoutinePeriodGrid(
   electiveCells,
   classSection,
   employeeByUserId,
+  dateContext = null,
 ) {
   const plainRoutine = routine.get ? routine.get({ plain: true }) : routine;
   const mapping = plainRoutine.structureCourseMapping;
@@ -5734,7 +5736,12 @@ async function buildRoutinePeriodGrid(
   const resolvedPeriods = await resolvePeriodsWithVariantTimings(
     periods,
     mapping,
-    { startDate: plainRoutine.startingDate, endDate: plainRoutine.endingDate },
+    {
+      startDate: plainRoutine.startingDate,
+      endDate: plainRoutine.endingDate,
+      date: dateContext?.date || dateContext?.targetDate,
+      targetDate: dateContext?.date || dateContext?.targetDate,
+    },
   );
   const normalCells = plainRoutine.timeTableCells || [];
   const daysList = [
@@ -5810,6 +5817,10 @@ async function buildRoutinePeriodGrid(
       name: period.periodName,
       startTime: period.startTime,
       endTime: period.endTime,
+      isBreak: period.isBreak ?? false,
+      isCourse: period.isCourse ?? true,
+      timeTableStructureVariantId: period.timeTableStructureVariantId ?? null,
+      variantName: period.variantName ?? null,
       days: formattedDays,
     });
   }
@@ -5926,6 +5937,17 @@ function enrichRoutineScheduleWithDateWise(
                 matched.classRoom.classRoomSectionId ??
                 null,
               name: matched.classRoom.roomNumber ?? null,
+            };
+          }
+          if (matched.timeTableSubject) {
+            item.subject = {
+              subjectId: matched.timeTableSubject.subjectId,
+              name: matched.timeTableSubject.subjectName,
+            };
+          } else if (matched.timeTableElective) {
+            item.subject = {
+              electiveSubjectId: matched.timeTableElective.electiveSubjectId,
+              name: matched.timeTableElective.electiveSubjectName,
             };
           }
         }
@@ -6061,7 +6083,18 @@ export async function getDateWiseCellsBySection(
     electiveCells,
     classSection,
     employeeByUserId,
+    { date: anchorDate, targetDate: anchorDate },
   );
+
+  const variantSchedules = await buildRoutineVariantSchedules(
+    mapping,
+    {
+      startDate: selectedRoutine.startingDate,
+      endDate: selectedRoutine.endingDate,
+    },
+    mapping?.timeTableStructure?.timeTableName || [],
+  );
+  routine.variantSchedules = variantSchedules;
 
   if (routine.isPublished) {
     const dateRange = getOverlappingDateRange(
