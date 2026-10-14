@@ -413,7 +413,9 @@ export async function getAllStructureScopeMappings(filters = {}) {
 export async function updateTimeTable(info, variantId = null) {
     const results = [];
     for (const item of info) {
-        if (!variantId) {
+        const targetVariantId = item.timeTableStructureVariantId || variantId;
+
+        if (!targetVariantId) {
             const result = await timeTableRepository.updateTimeTable(item.timeTableCreationId, item);
             results.push(result);
         }
@@ -424,9 +426,9 @@ export async function updateTimeTable(info, variantId = null) {
         if (item.isCourse !== undefined) periodUpdates.isCourse = item.isCourse;
 
         if (Object.keys(periodUpdates).length > 0) {
-            if (variantId) {
+            if (targetVariantId) {
                 const res = await timeTableRepository.updateVariantPeriodRow(
-                    variantId,
+                    targetVariantId,
                     item.timeTableCreationId,
                     periodUpdates,
                 );

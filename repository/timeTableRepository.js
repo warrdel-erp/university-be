@@ -325,6 +325,14 @@ const variantListInclude = {
             as: "variantPeriods",
             attributes: { exclude: ["createdAt", "updatedAt", "createdBy", "updatedBy"] },
             required: false,
+            include: [
+                {
+                    model: model.timeTableStructurePeriodsModel,
+                    as: "structurePeriod",
+                    attributes: ["timeTableCreationId", "periodName", "isBreak", "type"],
+                    required: false,
+                },
+            ],
         },
         {
             model: model.timeTableStructureVariantCourseMappingModel,
@@ -613,6 +621,14 @@ export async function getMappedStructuresForCourseSession(courseId, sessionId, a
                                 as: 'variantPeriods',
                                 required: false,
                                 attributes: ['id', 'timeTableStructurePeriodsId', 'startTime', 'endTime', 'isCourse'],
+                                include: [
+                                    {
+                                        model: model.timeTableStructurePeriodsModel,
+                                        as: 'structurePeriod',
+                                        attributes: ['timeTableCreationId', 'periodName', 'isBreak', 'type'],
+                                        required: false,
+                                    },
+                                ],
                             },
                         ],
                     },
@@ -635,6 +651,14 @@ export async function getMappedStructuresForCourseSession(courseId, sessionId, a
                                 as: 'variantPeriods',
                                 required: false,
                                 attributes: ['id', 'timeTableStructurePeriodsId', 'startTime', 'endTime', 'isCourse'],
+                                include: [
+                                    {
+                                        model: model.timeTableStructurePeriodsModel,
+                                        as: 'structurePeriod',
+                                        attributes: ['timeTableCreationId', 'periodName', 'isBreak', 'type'],
+                                        required: false,
+                                    },
+                                ],
                             },
                         ],
                     },
@@ -1207,6 +1231,14 @@ export async function findVariantsByStructureId(timeTableStructureId, options = 
                 model: model.timeTableStructureVariantPeriodsModel,
                 as: 'variantPeriods',
                 required: false,
+                include: [
+                    {
+                        model: model.timeTableStructurePeriodsModel,
+                        as: 'structurePeriod',
+                        attributes: ['timeTableCreationId', 'periodName', 'isBreak', 'type'],
+                        required: false,
+                    },
+                ],
             },
             {
                 model: model.timeTableStructureVariantCourseMappingModel,
@@ -1227,6 +1259,14 @@ export async function findVariantById(timeTableStructureVariantId, options = {})
                     model: model.timeTableStructureVariantPeriodsModel,
                     as: 'variantPeriods',
                     required: false,
+                    include: [
+                        {
+                            model: model.timeTableStructurePeriodsModel,
+                            as: 'structurePeriod',
+                            attributes: ['timeTableCreationId', 'periodName', 'isBreak', 'type'],
+                            required: false,
+                        },
+                    ],
                 },
             ],
             transaction: options.transaction,

@@ -297,7 +297,12 @@ router.get(
   getMyPastClassSchedules,
 );
 
-router.get("/my/upcomingSchedule", userAuth, getMyUpcomingClassSchedules);
+router.get(
+  "/my/upcomingSchedule",
+  userAuth,
+  validate({ query: scheduleQuerySchemaWithoutUserId }),
+  getMyUpcomingClassSchedules,
+);
 
 router.get("/my/sectionCounts", userAuth, getMySectionCounts);
 

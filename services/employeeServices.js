@@ -2366,6 +2366,25 @@ export async function getUpcomingClassSchedules(
 
   let schedules = upcomingClasses.map(stripTeacherFieldsFromSchedule);
 
+  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
+  if (search) {
+    schedules = schedules.filter((s) => {
+      const subj =
+        s.timeTableSubject?.subjectName ||
+        s.timeTableElective?.electiveSubjectName ||
+        "";
+      const course = s.course?.courseName || "";
+      const room = s.classRoom?.roomNumber || "";
+      const section = s.section ? String(s.section) : "";
+      return (
+        subj.toLowerCase().includes(search) ||
+        course.toLowerCase().includes(search) ||
+        room.toLowerCase().includes(search) ||
+        section.toLowerCase().includes(search)
+      );
+    });
+  }
+
   if (groupPeriods) {
     schedules = await groupConsecutivePeriods(
       schedules,

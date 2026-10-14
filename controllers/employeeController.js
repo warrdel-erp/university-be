@@ -326,7 +326,7 @@ export const getPastClassSchedules = async (req, res) => {
 
 export const getUpcomingClassSchedules = async (req, res) => {
   try {
-    const { userId, date, groupPeriods } = req.query;
+    const { userId, date, groupPeriods, search } = req.query;
     const hasPagination =
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
@@ -345,9 +345,12 @@ export const getUpcomingClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
     const { schedules, total } = await employee.getUpcomingClassSchedules(userId, formattedDate,
       groupingType,
-      hasPagination ? { page, limit } : {},
+      paginationOpts,
     );
 
     return SuccessResponse(
@@ -363,7 +366,7 @@ export const getUpcomingClassSchedules = async (req, res) => {
     );
   } catch (error) {
     console.error("Error in getUpcomingClassSchedules:", error);
-    res.status(500).send({ message: "Internal Server Error", success: false });
+    return ErrorResponse(res, 500, "Internal Server Error");
   }
 };
 
@@ -580,7 +583,7 @@ export const getMyUpcomingClassSchedules = async (req, res) => {
       return ErrorResponse(res, validation.status, validation.message);
     }
     const { userId } = validation;
-    const { date, groupPeriods } = req.query;
+    const { date, groupPeriods, search } = req.query;
     const hasPagination =
       req.query.page !== undefined || req.query.limit !== undefined;
     const page = hasPagination ? Number(req.query.page) || 1 : undefined;
@@ -595,9 +598,12 @@ export const getMyUpcomingClassSchedules = async (req, res) => {
       groupingType = "sessional";
     }
 
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
     const { schedules, total } = await employee.getUpcomingClassSchedules(userId, formattedDate,
       groupingType,
-      hasPagination ? { page, limit } : {},
+      paginationOpts,
     );
 
     return SuccessResponse(
@@ -613,7 +619,7 @@ export const getMyUpcomingClassSchedules = async (req, res) => {
     );
   } catch (error) {
     console.error("Error in getMyUpcomingClassSchedules:", error);
-    res.status(500).send({ message: "Internal Server Error", success: false });
+    return ErrorResponse(res, 500, "Internal Server Error");
   }
 };
 
