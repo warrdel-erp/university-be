@@ -30,6 +30,7 @@ const createBlueprintSchema = z.object({
 // Validation for fetching blueprints (optional filter)
 const getAllBlueprintsQuerySchema = z.object({
     subjectId: z.coerce.number().optional(),
+    courseId: z.coerce.number().optional(),
 });
 
 import { checkAccess } from "../middleware/checkAccess.js";

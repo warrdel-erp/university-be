@@ -316,7 +316,6 @@ export async function getStudentById(studentId, query) {
   const row = await examResultRepository.findOneStudent({
     studentId,
     terms: context.terms,
-    academicYearId: context.examinationSession.academicYearId,
     classSectionOr: context.classSectionOr,
   });
   if (!row) {
@@ -566,7 +565,6 @@ export async function createExaminationSessionResult(body) {
     throw err;
   }
 
-  const academicYearId = context.examinationSession.academicYearId;
   const createdResults = [];
 
   const transaction = await sequelize.transaction();
@@ -576,7 +574,6 @@ export async function createExaminationSessionResult(body) {
       const row = await examResultRepository.findOneStudent({
         studentId,
         terms: context.terms,
-        academicYearId,
         classSectionOr: context.classSectionOr,
       });
       if (!row) {
@@ -686,7 +683,6 @@ export async function createExaminationSessionResult(body) {
           obtainedMarks,
           percentage,
           resultStatus: "Generated",
-          academicYearId,
         },
         transaction,
       );
@@ -811,7 +807,6 @@ export async function getStudentResultDetails(query) {
     examinationSession: {
       examinationSessionId: examSession.examinationSessionId,
       sessionName: examSession.sessionName,
-      academicYearId: examSession.academicYearId,
       assessmentTypeId: examSession.assessmentTypeId,
       status: examSession.status,
     },
