@@ -10,9 +10,7 @@ const BASE_SECRET = process.env.JWT_SECRET || "warrdelUniversityERPWarrdelUniver
 export const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || BASE_SECRET;
 export const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || `${BASE_SECRET}_refresh_v1`;
 
-/**
- * Converts human readable duration (e.g., '15m', '7d', '24h', '300s') to seconds.
- */
+
 export function parseDurationToSeconds(duration) {
   if (typeof duration === "number") return duration;
   const match = String(duration).trim().match(/^(\d+)\s*([smhdw])?$/i);
@@ -37,18 +35,12 @@ export function parseDurationToSeconds(duration) {
   }
 }
 
-/**
- * Calculates a future Date based on human duration.
- */
 export function getExpirationDate(duration) {
   const seconds = parseDurationToSeconds(duration);
   return new Date(Date.now() + seconds * 1000);
 }
 
-/**
- * Computes a secure SHA-256 hash of a token.
- * Raw refresh tokens should NEVER be stored plaintext in the DB.
- */
+
 export function hashToken(token) {
   if (!token || typeof token !== "string") {
     throw new Error("Invalid token supplied for hashing");
@@ -56,20 +48,17 @@ export function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-/**
- * Generates a short-lived Access Token.
- */
+ 
 export function generateAccessToken(user) {
   const payload = {
-    userId: user.userId || user.user_id,
+    userId: user.userId,
     email: user.email,
-    userName: user.userName || user.user_name,
-    defaultInstituteId: user.defaultInstituteId || user.default_institute_id || null,
-    defaultAcademicYearId: user.defaultAcademicYearId || user.default_academic_year_id || null,
-    universityId: user.universityId || user.university_id || null,
-    defaultRole: user.defaultRole || null,
-    isTeacher: Boolean(user.isTeacher || user.is_teacher),
-    status: user.status || "active",
+    userName: user.userName,
+    defaultInstituteId: user.defaultInstituteId,
+    defaultAcademicYearId: user.defaultAcademicYearId,
+    universityId: user.universityId,
+    defaultRole: user.defaultRole,
+    status: user.status,
     tokenType: "access",
   };
 
@@ -78,9 +67,6 @@ export function generateAccessToken(user) {
   });
 }
 
-/**
- * Generates a long-lived cryptographically signed Refresh Token.
- */
 export function generateRefreshToken(userId, existingFamilyId = null) {
   const familyId = existingFamilyId || uuidv4();
   const jti = crypto.randomBytes(32).toString("hex");
@@ -99,23 +85,15 @@ export function generateRefreshToken(userId, existingFamilyId = null) {
   return { token, familyId };
 }
 
-/**
- * Verifies and decodes an access token.
- */
 export function verifyAccessToken(token) {
   return jwt.verify(token, ACCESS_SECRET);
 }
 
-/**
- * Verifies and decodes a refresh token.
- */
+ 
 export function verifyRefreshToken(token) {
   return jwt.verify(token, REFRESH_SECRET);
 }
 
-/**
- * Extracts client metadata (IP, User Agent, device summary).
- */
 export function getClientInfo(req) {
   const forwarded = req.headers["x-forwarded-for"];
   const rawIp = forwarded ? forwarded.split(",")[0].trim() : req.socket?.remoteAddress || req.ip || "unknown";
@@ -142,9 +120,6 @@ export function getClientInfo(req) {
   return { ipAddress, userAgent, deviceInfo };
 }
 
-/**
- * Sets secure HTTP-only cookies for access and refresh tokens.
- */
 export function setAuthCookies(res, { accessToken, refreshToken }) {
   const isProduction = process.env.NODE_ENV === "production";
   const accessMaxAge = parseDurationToSeconds(ACCESS_TOKEN_TIME) * 1000;
@@ -162,13 +137,7 @@ export function setAuthCookies(res, { accessToken, refreshToken }) {
       ...baseCookieOptions,
       maxAge: accessMaxAge,
     });
-    // Backward compatibility with legacy 'token' cookie name
-    res.cookie("token", accessToken, {
-      ...baseCookieOptions,
-      maxAge: accessMaxAge,
-    });
   }
-
   if (refreshToken) {
     res.cookie("refreshToken", refreshToken, {
       ...baseCookieOptions,
@@ -177,9 +146,6 @@ export function setAuthCookies(res, { accessToken, refreshToken }) {
   }
 }
 
-/**
- * Clears authentication cookies upon logout or session termination.
- */
 export function clearAuthCookies(res) {
   const isProduction = process.env.NODE_ENV === "production";
   const clearOptions = {

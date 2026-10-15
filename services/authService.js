@@ -36,12 +36,8 @@ export async function loginUser({ email, password }, clientInfo = {}) {
     throw new AuthError("Incorrect password", 400, "INVALID_PASSWORD");
   }
 
-  const defaultRole = user.defaultRole || user.defaultRoleRef?.role || (user.isTeacher ? "Teacher" : null);
-  const userPayload = {
-    ...user.dataValues,
-    defaultRole,
-  };
- 
+  const userPayload = user.dataValues;
+
   const accessToken = tokenService.generateAccessToken(userPayload);
  
   const { token: refreshToken, familyId } = tokenService.generateRefreshToken(user.userId);
@@ -62,36 +58,20 @@ export async function loginUser({ email, password }, clientInfo = {}) {
   return {
     accessToken,
     refreshToken,
-    expiresIn: tokenService.parseDurationToSeconds(tokenService.ACCESS_TOKEN_TIME),
-    user: {
-      userId: user.userId,
-      email: user.email,
-      userName: user.userName,
-      defaultInstituteId: user.defaultInstituteId,
-      defaultAcademicYearId: user.defaultAcademicYearId,
-      universityId: user.universityId,
-      defaultRole,
-      isTeacher: Boolean(user.isTeacher),
-      dummyPassword: Boolean(user.dataValues?.dummyPassword),
-    },
+    dummyPassword: Boolean(userPayload?.dummyPassword),
   };
 }
 
-/**
- * Performs Refresh Token Rotation (RTR) with automated token reuse / theft detection.
- */
 export async function rotateRefreshToken(rawRefreshToken, clientInfo = {}) {
   if (!rawRefreshToken || typeof rawRefreshToken !== "string") {
     throw new AuthError("Refresh token is required", 400, "REFRESH_TOKEN_REQUIRED");
   }
 
-  // 1. Verify token cryptographic signature
   let decoded;
   try {
     decoded = tokenService.verifyRefreshToken(rawRefreshToken);
   } catch (err) {
     if (err.name === "TokenExpiredError") {
-      // Try to find in DB to mark as expired
       try {
         const hash = tokenService.hashToken(rawRefreshToken);
         const record = await refreshTokenRepository.findRefreshTokenByHash(hash);
@@ -112,8 +92,6 @@ export async function rotateRefreshToken(rawRefreshToken, clientInfo = {}) {
     throw new AuthError("Refresh token not found or invalidated", 401, "TOKEN_NOT_FOUND");
   }
 
-  // 3. Security Breach / Token Reuse Detection
-  // If an already revoked / rotated token is presented, an attacker or compromised client is reusing it!
   if (tokenRecord.isRevoked) {
     console.warn(`[SECURITY ALERT] Refresh token reuse detected for familyId: ${tokenRecord.familyId}, userId: ${tokenRecord.userId}. Revoking entire lineage.`);
     await refreshTokenRepository.revokeFamily(tokenRecord.familyId, "REUSE_DETECTED");
@@ -124,23 +102,22 @@ export async function rotateRefreshToken(rawRefreshToken, clientInfo = {}) {
     );
   }
 
-  // 4. Check if token has passed DB expiration timestamp
   if (new Date(tokenRecord.expiresAt) <= new Date()) {
     await refreshTokenRepository.revokeToken(tokenRecord.refreshTokenId, "EXPIRED");
     throw new AuthError("Refresh token has expired, please log in again", 401, "REFRESH_TOKEN_EXPIRED");
   }
 
-  // 5. Validate user status
+
   const user = tokenRecord.user;
   if (!user || user.status === "InActive") {
     await refreshTokenRepository.revokeToken(tokenRecord.refreshTokenId, "USER_INACTIVE");
     throw new AuthError("User account is inactive or disabled", 403, "USER_INACTIVE");
   }
 
-  // 6. Perform atomic token rotation inside a database transaction
+
   const transaction = await sequelize.transaction();
   try {
-    // Generate new refresh token within the same family
+   
     const { token: newRefreshToken } = tokenService.generateRefreshToken(user.userId, tokenRecord.familyId);
     const newTokenHash = tokenService.hashToken(newRefreshToken);
     const newExpiresAt = tokenService.getExpirationDate(tokenService.REFRESH_TOKEN_TIME);
@@ -173,26 +150,13 @@ export async function rotateRefreshToken(rawRefreshToken, clientInfo = {}) {
 
     await transaction.commit();
 
-    // Generate new access token
-    const defaultRole = user.defaultRole || user.defaultRoleRef?.role || (user.isTeacher ? "Teacher" : null);
-    const newAccessToken = tokenService.generateAccessToken({
-      ...user.dataValues,
-      defaultRole,
-    });
+ 
+   const userPayload = user.dataValues;
+    const newAccessToken = tokenService.generateAccessToken(userPayload);
 
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-      expiresIn: tokenService.parseDurationToSeconds(tokenService.ACCESS_TOKEN_TIME),
-      user: {
-        userId: user.userId,
-        email: user.email,
-        userName: user.userName,
-        defaultInstituteId: user.defaultInstituteId,
-        defaultAcademicYearId: user.defaultAcademicYearId,
-        universityId: user.universityId,
-        defaultRole,
-      },
+      refreshToken: newRefreshToken
     };
   } catch (error) {
     await transaction.rollback();
@@ -201,9 +165,6 @@ export async function rotateRefreshToken(rawRefreshToken, clientInfo = {}) {
   }
 }
 
-/**
- * Revokes a session on user logout.
- */
 export async function logoutUser(rawRefreshToken) {
   if (!rawRefreshToken || typeof rawRefreshToken !== "string") {
     return false;
@@ -222,9 +183,6 @@ export async function logoutUser(rawRefreshToken) {
   return false;
 }
 
-/**
- * Revokes all active refresh tokens/sessions for a user.
- */
 export async function logoutAllUserSessions(userId) {
   if (!userId) {
     throw new AuthError("User ID is required for logging out all sessions", 400);
@@ -232,9 +190,6 @@ export async function logoutAllUserSessions(userId) {
   return refreshTokenRepository.revokeAllUserTokens(userId, "LOGOUT_ALL");
 }
 
-/**
- * Returns all active sessions for a user, highlighting the current session.
- */
 export async function getUserSessions(userId, currentRefreshToken = null) {
   let currentTokenId = null;
   if (currentRefreshToken) {
@@ -257,9 +212,6 @@ export async function getUserSessions(userId, currentRefreshToken = null) {
   }));
 }
 
-/**
- * Revokes a specific session belonging to a user.
- */
 export async function revokeUserSession(userId, sessionId) {
   const session = await refreshTokenRepository.findSessionByIdAndUser(sessionId, userId);
   if (!session) {

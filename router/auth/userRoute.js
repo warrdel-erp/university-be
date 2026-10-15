@@ -1,4 +1,5 @@
 import { Router } from "express";
+import rateLimit from 'express-rate-limit'
 const router = Router();
 
 import {
@@ -68,6 +69,16 @@ const giveFullAccessSchema = z.object({
     instituteId: z.coerce.number().optional()
 });
 
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 5,
+    message: {
+        message: "Too many attempts. Try again later."
+    },
+    standardHeaders: "draft-8",
+    legacyHeaders: false
+});
+
 // Endpoints -------------------------------
 
 // for first time register
@@ -80,7 +91,7 @@ router.post('/setup', validate({ body: initialSetupSchema }), initialSetup);
 router.post('/giveFullAccess', validate({ body: giveFullAccessSchema }), giveFullAccess);
 
 // for login
-router.post("/login", login);
+router.post("/login",limiter, login);
 
 // for token refresh (with rotation and reuse detection)
 router.post("/refresh-token", refreshToken);
@@ -107,17 +118,17 @@ router.get("/adminSignUp", useAuth, getAdminRegisterStudentAndEmployee);
 
 // student or employee change password
 
-router.post("/changePassword", changePassword);
+router.post("/changePassword", useAuth,limiter, changePassword);
 
-router.patch("/changeStatus", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT_CHANGE_STATUS.value, 'user'), changeStatus);
+router.patch("/changeStatus", useAuth,limiter, checkAccess(PERMISSIONS.USER_MANAGEMENT_CHANGE_STATUS.value, 'user'), changeStatus);
 
-router.patch("/sendLink", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT_RESET_PASSWORD.value, 'user'), sendLink);
+router.patch("/sendLink", useAuth,limiter, checkAccess(PERMISSIONS.USER_MANAGEMENT_RESET_PASSWORD.value, 'user'), sendLink);
 
 // forgot 
 
-router.post("/forgotPassword", forgotPassword);
+router.post("/forgotPassword",limiter,limiter, forgotPassword);
 
-router.patch("/forgotPassword", useAuth, forgotChangePassword);
+router.patch("/forgotPassword", useAuth,limiter, forgotChangePassword);
 
 router.get("/", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT.value, 'user'), validate({ query: getAllUsersSchema }), getAllUsers);
 

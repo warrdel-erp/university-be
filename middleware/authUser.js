@@ -9,7 +9,6 @@ import { ACCESS_SECRET } from "../utility/tokenService.js";
 export default async function useAuth(req, res, next) {
   let token = null;
 
-  // 1. Check Authorization header
   const authHeader = req.headers.authorization;
   if (authHeader) {
     if (authHeader.startsWith("Bearer ")) {

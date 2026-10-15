@@ -42,9 +42,6 @@ export async function findRefreshTokenByHash(tokenHash) {
   });
 }
 
-/**
- * Revokes a specific refresh token.
- */
 export async function revokeToken(refreshTokenId, reason = "REVOKED", replacedByTokenId = null, transaction = null) {
   return model.refreshTokenModel.update(
     {
@@ -60,9 +57,6 @@ export async function revokeToken(refreshTokenId, reason = "REVOKED", replacedBy
   );
 }
 
-/**
- * Revokes all tokens in a family lineage (used for token reuse/theft detection).
- */
 export async function revokeFamily(familyId, reason = "REUSE_DETECTED", transaction = null) {
   return model.refreshTokenModel.update(
     {
@@ -80,9 +74,6 @@ export async function revokeFamily(familyId, reason = "REUSE_DETECTED", transact
   );
 }
 
-/**
- * Revokes all active refresh tokens for a given user (used for logout-all / password change / security reset).
- */
 export async function revokeAllUserTokens(userId, reason = "LOGOUT_ALL", transaction = null) {
   return model.refreshTokenModel.update(
     {
@@ -100,9 +91,6 @@ export async function revokeAllUserTokens(userId, reason = "LOGOUT_ALL", transac
   );
 }
 
-/**
- * Retrieves all active non-expired sessions for a user.
- */
 export async function getActiveSessionsByUserId(userId) {
   return model.refreshTokenModel.findAll({
     where: {

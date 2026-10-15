@@ -4,15 +4,10 @@ import * as tokenService from "../utility/tokenService.js";
 import * as userRepository from "../repository/userRepository.js";
 import * as refreshTokenRepository from "../repository/refreshTokenRepository.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import {
-  getUserRolePermissionByUserId,
-} from "../repository/userRolePermissionRepository.js";
-import { getHeadDetailsByEmail } from "../repository/headRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
-import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
+import jwt from "jsonwebtoken";
 import {
   requestContext,
   buildRequestContextStore,
@@ -51,7 +46,6 @@ export const register = async (req, res) => {
   }
 };
 
-// login
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -59,7 +53,6 @@ export const login = async (req, res) => {
 
     const result = await authService.loginUser({ email, password }, clientInfo);
 
-    // Set HTTP-only secure cookies for tokens
     tokenService.setAuthCookies(res, {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
@@ -68,11 +61,7 @@ export const login = async (req, res) => {
     return res.status(200).json({
       status: true,
       message: "User logged in successfully",
-      token: result.accessToken,
-      accessToken: result.accessToken,
-      expiresIn: result.expiresIn,
-      existingEmail: { dummyPassword: Boolean(result.user.dummyPassword) },
-      user: result.user,
+      existingEmail: { dummyPassword: Boolean(result.dummyPassword) },
     });
   } catch (error) {
     console.error("Error during login:", error);
@@ -91,13 +80,9 @@ export const login = async (req, res) => {
   }
 };
 
-// refresh token rotation
 export const refreshToken = async (req, res) => {
   try {
-    const rawRefreshToken =
-      req.body?.refreshToken ||
-      req.cookies?.refreshToken ||
-      req.headers["x-refresh-token"];
+    const rawRefreshToken = req.cookies?.refreshToken ||req.body?.refreshToken
 
     if (!rawRefreshToken) {
       return res.status(400).json({
@@ -119,11 +104,6 @@ export const refreshToken = async (req, res) => {
     return res.status(200).json({
       status: true,
       message: "Token refreshed successfully",
-      token: result.accessToken,
-      accessToken: result.accessToken,
-      refreshToken: result.refreshToken,
-      expiresIn: result.expiresIn,
-      user: result.user,
     });
   } catch (error) {
     console.error("Error during token refresh:", error);
@@ -142,13 +122,9 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-// logout current session
 export const logout = async (req, res) => {
   try {
-    const rawRefreshToken =
-      req.body?.refreshToken ||
-      req.cookies?.refreshToken ||
-      req.headers["x-refresh-token"];
+    const rawRefreshToken = req.cookies?.refreshToken ||req.body?.refreshToken;
 
     if (rawRefreshToken) {
       await authService.logoutUser(rawRefreshToken);
@@ -169,8 +145,7 @@ export const logout = async (req, res) => {
     });
   }
 };
-
-// logout all sessions / devices
+ 
 export const logoutAll = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.dataValues?.userId;
@@ -191,7 +166,6 @@ export const logoutAll = async (req, res) => {
   }
 };
 
-// get active sessions for logged in user
 export const getActiveSessions = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.dataValues?.userId;
@@ -216,7 +190,6 @@ export const getActiveSessions = async (req, res) => {
   }
 };
 
-// revoke a specific session
 export const revokeSession = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.dataValues?.userId;
@@ -245,7 +218,6 @@ export const revokeSession = async (req, res) => {
   }
 };
 
-// admin register student and employee
 export const adminRegisterStudentAndEmployee = async (req, res) => {
   try {
     const { role, courseId, classSectionId, userId } = req.body;
@@ -318,9 +290,9 @@ export const changePassword = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { email, oldPassword, password, confirmPassword } = req.body;
+    const {oldPassword, password, confirmPassword } = req.body;
 
-    if (!email || !oldPassword || !password || !confirmPassword) {
+    if (!oldPassword || !password || !confirmPassword) {
       return res.status(400).json({ message: "All input fields are required" });
     }
 
@@ -328,9 +300,9 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "New password and confirm password do not match" });
     }
 
-    const existingUser = await userRepository.findEmailByEmail(email);
+    const existingUser = await userRepository.getUserByUserId(req.user.userId);
     if (!existingUser) {
-      return res.status(404).json({ message: "Email does not exist" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     let isOldPasswordCorrect = false;
@@ -346,15 +318,11 @@ export const changePassword = async (req, res) => {
     }
 
 
-    const updatedUser = await userService.changePassword({ email, password }, transaction);
+    const updatedUser = await userService.changePassword({ email:existingUser?.email, password }, transaction);
 
-    await userService.emptyPassword(existingUser.dataValues?.email, transaction);
+    // await userRepository.emptyPassword(existingUser?.email, transaction);
 
-    await refreshTokenRepository.revokeAllUserTokens(
-      existingUser.userId || existingUser.dataValues?.userId,
-      "PASSWORD_CHANGED",
-      transaction
-    );
+    await refreshTokenRepository.revokeAllUserTokens( existingUser?.userId, "PASSWORD_CHANGED", transaction);
 
     await transaction.commit();
 
@@ -395,7 +363,7 @@ export const sendLink = async (req, res) => {
       });
     }
 
-    const result = await userService.sendLink(email.trim());
+    const result = await userService.forgotSendLink(email.trim());
 
     if (result && result.email && result.messageId) {
       return res.status(200).json({
@@ -456,9 +424,9 @@ export const forgotPassword = async (req, res) => {
 
 export const forgotChangePassword = async (req, res) => {
   try {
-    const { email, password, confirmPassword } = req.body;
+    const { password, confirmPassword } = req.body;
 
-    if (!email || !password || !confirmPassword) {
+    if (!password || !confirmPassword) {
       return res.status(400).json({ message: "All input fields are required" });
     }
 
@@ -466,17 +434,23 @@ export const forgotChangePassword = async (req, res) => {
       return res.status(400).json({ message: "New password and confirm password do not match" });
     }
 
-    const existingUser = await userRepository.findEmailByEmail(email);
-    if (!existingUser) {
-      return res.status(404).json({ message: "Email does not exist" });
+      let token = null;
+
+   const authHeader = req.headers.authorization;
+     if (authHeader) {
+    if (authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice(7).trim();
+    } else {
+      token = authHeader.trim();
     }
+  }
+
+   const decoded = jwt.verify(token, tokenService.ACCESS_SECRET);
+      const { email } = decoded;
 
     const updatedUser = await userService.changePassword({ email, password });
 
-    await refreshTokenRepository.revokeAllUserTokens(
-      existingUser.userId || existingUser.dataValues?.userId,
-      "PASSWORD_CHANGED"
-    );
+    await refreshTokenRepository.revokeAllUserTokens(req.user.userId, "PASSWORD_CHANGED");
 
     return res.status(200).json({
       message: "Password changed successfully",
