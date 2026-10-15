@@ -162,6 +162,13 @@ router.get(
 );
 
 router.get(
+  "/my/courses/all",
+  userAuth,
+  validate({ query: coursesQuerySchema }),
+  optionsController.getCourseOptions,
+);
+
+router.get(
   "/courseTerms",
   userAuth,
   validate({ query: courseTermsQuerySchema }),
@@ -201,6 +208,13 @@ router.get(
   userAuth,
   validate({ query: getMySubjectsQuerySchema }),
   optionsController.getMySubjectOptions,
+);
+
+router.get(
+  "/my/subjects/all",
+  userAuth,
+  validate({ query: subjectsQuerySchema }),
+  optionsController.getSubjectOptions,
 );
 
 router.get(

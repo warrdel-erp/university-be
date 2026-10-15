@@ -3836,10 +3836,6 @@ studentResultModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "institute",
 });
-studentResultModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "academicYear",
-});
 studentResultModel.belongsTo(assessmentPlanComponentModel, {
   foreignKey: "assessmentPlanComponentId",
   as: "assessmentPlanComponent",
