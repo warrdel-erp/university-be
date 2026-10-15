@@ -140,6 +140,7 @@ const batchReviewQuerySchema = z
   .object({
     batchId: positiveIntegerId,
     year: positiveIntegerId,
+    term: positiveIntegerId.optional(),
   })
   .passthrough();
 

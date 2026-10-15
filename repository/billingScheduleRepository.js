@@ -300,8 +300,13 @@ export async function findBillingScheduleBatchesOverview(filters = {}) {
   });
 }
 
-export async function findBatchReviewData(batchId, year) {
-  const [batch, feePlanItem] = await Promise.all([
+export async function findBatchReviewData(batchId, year, term) {
+  const feePlanWhere = { batchId: Number(batchId), year: Number(year) };
+  if (term != null && term !== "") {
+    feePlanWhere.term = Number(term);
+  }
+
+  const [batch, feePlanItems] = await Promise.all([
     model.batchModel.findByPk(Number(batchId), {
       attributes: ["batchId", "batch"],
       include: [
@@ -319,8 +324,8 @@ export async function findBatchReviewData(batchId, year) {
         },
       ],
     }),
-    scoped(model.feePlanItemModel).findOne({
-      where: { batchId: Number(batchId), year: Number(year) },
+    scoped(model.feePlanItemModel).findAll({
+      where: feePlanWhere,
       include: [
         {
           model: model.billingScheduleItemsModel,
@@ -357,12 +362,14 @@ export async function findBatchReviewData(batchId, year) {
         },
       ],
       order: [
+        ["term", "ASC"],
+        ["feePlanItemId", "ASC"],
         [{ model: model.billingScheduleItemsModel, as: "billingScheduleItems" }, "billingScheduleItemId", "ASC"],
       ],
     }),
   ]);
 
-  return { batch, feePlanItem };
+  return { batch, feePlanItems };
 }
 
 export async function findBillingScheduleReviewData(
