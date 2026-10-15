@@ -195,11 +195,13 @@ const mapStudentFeePolicySchema = z
     studentIds: z.array(positiveIntegerId).optional(),
     feePolicyId: positiveIntegerId.optional(),
     feePolicyIds: z.array(positiveIntegerId).optional(),
+    effect: effectEnum.optional(),
     mappings: z
       .array(
         z.object({
           studentId: positiveIntegerId,
           feePolicyId: positiveIntegerId,
+          effect: effectEnum.optional(),
         }),
       )
       .optional(),
@@ -223,6 +225,7 @@ const deleteStudentFeePolicyQuerySchema = z
   .object({
     studentId: positiveIntegerId.optional(),
     feePolicyId: positiveIntegerId.optional(),
+    effect: effectEnum.optional(),
   })
   .refine((data) => data.studentId || data.feePolicyId, {
     message: "Either studentId or feePolicyId is required",
@@ -231,6 +234,7 @@ const deleteStudentFeePolicyQuerySchema = z
 const getStudentFeePolicyQuerySchema = z.object({
   studentId: positiveIntegerId.optional(),
   feePolicyId: positiveIntegerId.optional(),
+  effect: effectEnum.optional(),
 });
 
 router.post(

@@ -237,10 +237,11 @@ export async function bulkCreateFeePolicyStudents(rows, options = {}) {
   });
 }
 
-export async function findFeePolicyStudents({ feePolicyId, studentId, instituteId, universityId } = {}, options = {}) {
+export async function findFeePolicyStudents({ feePolicyId, studentId, effect, instituteId, universityId } = {}, options = {}) {
   const where = {};
   if (feePolicyId) where.feePolicyId = Number(feePolicyId);
   if (studentId) where.studentId = Number(studentId);
+  if (effect) where.effect = effect;
   if (instituteId) where.instituteId = Number(instituteId);
   if (universityId) where.universityId = Number(universityId);
 
@@ -276,10 +277,11 @@ export async function findFeePolicyStudents({ feePolicyId, studentId, instituteI
   });
 }
 
-export async function deleteFeePolicyStudents({ feePolicyId, studentId } = {}, options = {}) {
+export async function deleteFeePolicyStudents({ feePolicyId, studentId, effect } = {}, options = {}) {
   const where = {};
   if (feePolicyId) where.feePolicyId = Number(feePolicyId);
   if (studentId) where.studentId = Number(studentId);
+  if (effect) where.effect = effect;
   if (!Object.keys(where).length) return 0;
 
   return model.feePolicyStudentsModel.destroy({

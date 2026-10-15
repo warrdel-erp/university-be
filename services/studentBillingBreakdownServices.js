@@ -69,12 +69,14 @@ export function calculateTreatmentsForStudent(
 
     for (const p of batchPolicies) {
       if (p && p.feePolicyId) {
-        policyMap.set(Number(p.feePolicyId), p);
+        const key = `${p.feePolicyId}_${p.effect || ""}`;
+        policyMap.set(key, p);
       }
     }
     for (const p of studentPolicies) {
       if (p && p.feePolicyId) {
-        policyMap.set(Number(p.feePolicyId), p);
+        const key = `${p.feePolicyId}_${p.effect || ""}`;
+        policyMap.set(key, p);
       }
     }
 
@@ -370,7 +372,8 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
       studentPoliciesMap.set(sid, []);
     }
     if (item.policy) {
-      studentPoliciesMap.get(sid).push(item.policy);
+      const policyObj = item.effect ? { ...item.policy, effect: item.effect } : item.policy;
+      studentPoliciesMap.get(sid).push(policyObj);
     }
   }
 
