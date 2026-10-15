@@ -182,9 +182,20 @@ function resolveBillingStatus({
 }
 
 async function assertFeeTypeCatalogsExist(feeTypeCatalogIds, transaction) {
-  const rows = await repo.findFeeTypeCatalogsByIds(feeTypeCatalogIds, { transaction });
-  if (rows.length !== feeTypeCatalogIds.length) {
-    httpError('One or more feeTypeCatalogId values were not found', 400);
+  const uniqueIds = Array.from(
+    new Set((feeTypeCatalogIds || []).map((id) => Number(id)).filter((id) => !Number.isNaN(id) && id > 0))
+  );
+  if (!uniqueIds.length) {
+    return;
+  }
+  const rows = await repo.findFeeTypeCatalogsByIds(uniqueIds, { transaction });
+  if (rows.length !== uniqueIds.length) {
+    const foundIds = new Set(rows.map((r) => Number(r.feeTypeCatalogId)));
+    const missingIds = uniqueIds.filter((id) => !foundIds.has(id));
+    httpError(
+      `One or more feeTypeCatalogId values were not found: [${missingIds.join(', ')}]`,
+      400,
+    );
   }
 }
 
