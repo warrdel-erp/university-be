@@ -7,7 +7,6 @@ import courseModel from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
 
 const studentResultModel = sequelize.define(
   "student_result",
@@ -134,15 +133,6 @@ const studentResultModel = sequelize.define(
       references: {
         model: instituteModel,
         key: "institute_id",
-      },
-    },
-    academicYearId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "acedmic_year_id",
-      references: {
-        model: acedmicYearModel,
-        key: "acedmic_year_id",
       },
     },
     createdAt: {
