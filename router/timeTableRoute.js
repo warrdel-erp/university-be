@@ -15,6 +15,8 @@ import {
   deleteStructureCourseMapping,
   cloneTimeTableStructure,
   copyTimeTableStructure,
+  addTimeTableVariant,
+  deleteTimeTableVariant,
 } from "../controllers/timeTableController.js";
 import userAuth from "../middleware/authUser.js";
 import { checkAccess } from "../middleware/checkAccess.js";
@@ -71,13 +73,33 @@ const addTimeTableSchema = z
     }
   });
 
+const variantMappingItemSchema = z
+  .object({
+    timeTableStructureVariantId: positiveIntegerId,
+    startingDate: z.string().min(1, "startingDate is required"),
+    endingDate: z.string().min(1, "endingDate is required"),
+  })
+  .refine((data) => new Date(data.endingDate) >= new Date(data.startingDate), {
+    message: "variant endingDate cannot be before startingDate",
+    path: ["endingDate"],
+  });
+
 const addStructureCourseMappingSchema = z
   .object({
     timeTableNameId: positiveIntegerId,
-    courseId: positiveIntegerId,
+    courseId: optionalPositiveId,
+    academicGroupScopeId: optionalPositiveId,
+    timeTableStructureVariantId: optionalPositiveId,
     sessionId: positiveIntegerId,
     startingDate: z.string().min(1, "startingDate is required"),
     endingDate: z.string().min(1, "endingDate is required"),
+    variants: z.array(variantMappingItemSchema).min(1, "variants array cannot be empty").optional(),
+  })
+  .refine((data) => data.courseId != null || data.academicGroupScopeId != null, {
+    message: "Either courseId or academicGroupScopeId must be provided",
+  })
+  .refine((data) => !(data.courseId != null && data.academicGroupScopeId != null), {
+    message: "Provide either courseId or academicGroupScopeId, not both",
   })
   .refine((data) => new Date(data.endingDate) >= new Date(data.startingDate), {
     message: "endingDate cannot be before startingDate",
@@ -86,6 +108,7 @@ const addStructureCourseMappingSchema = z
 
 const updateTimeTableItemSchema = z.object({
   timeTableCreationId: positiveIntegerId,
+  timeTableStructureVariantId: optionalPositiveId,
   startTime: z.string().optional(),
   endTime: z.string().optional(),
   periodName: z.string().optional(),
@@ -111,6 +134,18 @@ const addTimeTablePeriodSchema = z.object({
 const cloneTimeTableStructureSchema = z.object({
   timeTableNameId: positiveIntegerId,
   name: z.string().trim().min(1, "name cannot be empty").optional(),
+});
+
+const addTimeTableVariantSchema = z.object({
+  timeTableNameId: positiveIntegerId,
+  name: z.string().trim().min(1, "name is required"),
+  isDefault: z.boolean().optional(),
+  periods: z.array(z.object({
+    timeTableStructurePeriodsId: positiveIntegerId,
+    startTime: z.string().optional(),
+    endTime: z.string().optional(),
+    isCourse: z.boolean().optional(),
+  })).optional(),
 });
 
 const copyTimeTableStructureSchema = z.object({
@@ -143,18 +178,22 @@ const updateStructureSchema = z
   .object({
     timetableStructureCourseMapperId: positiveIntegerId,
     timeTableNameId: positiveIntegerId.optional(),
+    timeTableStructureVariantId: optionalPositiveId,
     courseId: positiveIntegerId.optional(),
     sessionId: positiveIntegerId.optional(),
     startingDate: z.string().min(1).optional(),
     endingDate: z.string().min(1).optional(),
+    variants: z.array(variantMappingItemSchema).min(1).optional(),
   })
   .refine(
     (data) =>
       data.timeTableNameId ||
+      data.timeTableStructureVariantId ||
       data.courseId ||
       data.sessionId ||
       data.startingDate ||
-      data.endingDate,
+      data.endingDate ||
+      (Array.isArray(data.variants) && data.variants.length > 0),
     { message: "Provide at least one field to update" },
   )
   .refine(
@@ -176,6 +215,10 @@ const deleteStructureCourseMappingQuerySchema = z.object({
   timetableStructureCourseMapperId: positiveIntegerId,
 });
 
+const deleteTimeTableVariantQuerySchema = z.object({
+  timeTableStructureVariantId: positiveIntegerId,
+});
+
 // ---------------------------------------------------------------------------
 // 1. Structure template — create / edit periods
 // ---------------------------------------------------------------------------
@@ -193,6 +236,22 @@ router.post(
   checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null),
   validate({ body: cloneTimeTableStructureSchema }),
   cloneTimeTableStructure,
+);
+
+router.post(
+  "/variant",
+  userAuth,
+  checkAccess(PERMISSIONS.TIME_TABLE_SETUP_ADD.value, null),
+  validate({ body: addTimeTableVariantSchema }),
+  addTimeTableVariant,
+);
+
+router.delete(
+  "/variant",
+  userAuth,
+  checkAccess(PERMISSIONS.TIME_TABLE_SETUP_DELETE.value, null),
+  validate({ query: deleteTimeTableVariantQuerySchema }),
+  deleteTimeTableVariant,
 );
 
 router.post(
@@ -250,6 +309,11 @@ router.delete(
   deleteStructureCourseMapping,
 );
 
+const getTimeTableDetailsQuerySchema = z.object({
+  courseId: optionalPositiveId,
+  sessionId: optionalPositiveId,
+});
+
 // ---------------------------------------------------------------------------
 // 3. Read / list — UI lists, dropdowns, print table
 // ---------------------------------------------------------------------------
@@ -257,6 +321,7 @@ router.get(
   "/",
   userAuth,
   checkAccess(PERMISSIONS.TIME_TABLE_SETUP.value, null),
+  validate({ query: getTimeTableDetailsQuerySchema }),
   getTimeTableDetails,
 );
 router.get(

@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/billingScheduleRepository.js";
 import * as repoPaymentTerms from "../repository/billingSchedulePaymentTermsRepository.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
-import { resolveBatchCurrentPosition, buildCurrentTermsForYear } from "../utility/courseTerms.js";
+import { resolveBatchCurrentPosition, buildCurrentTermsForYear, termsForYear, buildTermName } from "../utility/courseTerms.js";
 import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
 
 function httpError(message, statusCode = 400) {
@@ -46,15 +46,41 @@ export async function createBillingSchedule(payload, user = {}) {
     if (!feePlanItem) {
       throw httpError(`Fee plan item with ID ${id} not found`, 404);
     }
-    planItemMap.set(id, feePlanItem);
+    
+    // Fetch course details manually if not included by the repo function
+    const { batchModel, sessionModel, courseModel } = await import("../models/index.js");
+    const feePlanItemWithCourse = await feePlanItem.reload({
+      include: [
+        {
+          model: batchModel,
+          as: "batch",
+          include: [
+            {
+              model: sessionModel,
+              as: "session",
+              include: [
+                {
+                  model: courseModel,
+                  as: "course"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    });
+    
+    planItemMap.set(id, feePlanItemWithCourse);
   }
 
   const createdIds = [];
 
   // 2. Execute all creation in a single transaction
   await sequelize.transaction(async (t) => {
+    const termCounterMap = new Map();
+
     for (const item of scheduleItems) {
-      const { feePlanItemId, amount, plannedDate, status, subItems } =
+      const { feePlanItemId, name, amount, plannedDate, status, subItems } =
         item;
 
       let totalAmount = amount != null ? toMoneyNumber(amount) : 0;
@@ -69,9 +95,27 @@ export async function createBillingSchedule(payload, user = {}) {
       const universityId = user?.universityId || feePlan?.universityId || null;
       const instituteId = user?.instituteId || feePlan?.instituteId;
 
+      let scheduleName = name || null;
+      if (!scheduleName) {
+        let currentIndex = termCounterMap.get(feePlanItemId) || 0;
+        const course = feePlan?.batch?.session?.course;
+        if (course) {
+          const generatedTerms = termsForYear(feePlan.year, course);
+          if (generatedTerms && currentIndex < generatedTerms.length) {
+            scheduleName = buildTermName(course.termType, generatedTerms[currentIndex]);
+          } else {
+            scheduleName = `Installment ${currentIndex + 1}`;
+          }
+        } else {
+          scheduleName = `Installment ${currentIndex + 1}`;
+        }
+        termCounterMap.set(feePlanItemId, currentIndex + 1);
+      }
+
       const parentRecord = await repo.createBillingScheduleItem(
         {
           feePlanItemId,
+          name: scheduleName,
           amount: totalAmount,
           plannedDate: plannedDate || null,
           status: status || "pending",
@@ -98,11 +142,12 @@ export async function createBillingSchedule(payload, user = {}) {
         });
       }
 
-      const { paymentTerms, installment } = item;
+      const { paymentTerms, installment, isDefault } = item;
       if (Array.isArray(paymentTerms) && paymentTerms.length > 0) {
         const termsData = paymentTerms.map((pt) => ({
           billingScheduleItemId: createdItemId,
           installment: Number(pt.installment || pt),
+          isDefault: pt.isDefault != null ? Boolean(pt.isDefault) : false,
         }));
         await repoPaymentTerms.bulkCreatePaymentTerms(termsData, {
           transaction: t,
@@ -112,6 +157,7 @@ export async function createBillingSchedule(payload, user = {}) {
           {
             billingScheduleItemId: createdItemId,
             installment: Number(installment),
+            isDefault: isDefault != null ? Boolean(isDefault) : false,
           },
           { transaction: t },
         );
@@ -199,12 +245,17 @@ export async function updateBillingSchedule(
     );
   }
 
+  if (existingItem.status === "published") {
+    throw httpError("Cannot edit data because the billing schedule is already published", 400);
+  }
+
   const universityId = user?.universityId || existingItem.universityId || null;
   const instituteId = user?.instituteId || existingItem.instituteId;
 
   await sequelize.transaction(async (t) => {
     const updateData = {};
 
+    if (payload.name !== undefined) updateData.name = payload.name;
     if (payload.plannedDate !== undefined)
       updateData.plannedDate = payload.plannedDate;
     if (payload.status !== undefined) updateData.status = payload.status;
@@ -436,6 +487,7 @@ export async function addBillingSchedulePaymentTerm(payload) {
   const newTerm = await repoPaymentTerms.createPaymentTerm({
     billingScheduleItemId,
     installment: Number(installment),
+    isDefault: payload.isDefault != null ? Boolean(payload.isDefault) : false,
   });
 
   return repoPaymentTerms.findPaymentTermById(
@@ -781,7 +833,10 @@ function buildYearWiseData(feePlanItems = [], course = {}, batchYear, currentYea
       null;
 
     const plannedDate = activeSchedule?.plannedDate || null;
-    const amount = activeSchedule?.amount != null ? Number(activeSchedule.amount) : 0;
+    const amount = schedules.reduce((sum, s) => {
+      if (s.status === "cancelled") return sum;
+      return sum + (s.amount != null ? Number(s.amount) : 0);
+    }, 0);
 
     const status = !feePlanItem
       ? "Fee Plan Required"
@@ -933,7 +988,16 @@ export async function getBillingScheduleBatchOverview(queryParams = {}) {
 
     const plain = row.get ? row.get({ plain: true }) : row;
     const feePlanItem = (plain.feePlanItems || []).find((f) => Number(f.year) === year);
-    const schedule = feePlanItem?.billingScheduleItems?.[0];
+    const schedules = feePlanItem?.billingScheduleItems || [];
+    const activeSchedule =
+      schedules.find((s) => s.plannedDate && s.status !== "billed" && s.status !== "cancelled") ||
+      schedules[0] ||
+      null;
+
+    const amount = schedules.reduce((sum, s) => {
+      if (s.status === "cancelled") return sum;
+      return sum + (s.amount != null ? Number(s.amount) : 0);
+    }, 0);
 
     return {
       batchId,
@@ -943,9 +1007,9 @@ export async function getBillingScheduleBatchOverview(queryParams = {}) {
       year,
       feePlanItemName: feePlanItem?.name || null,
       feePlanItemId: feePlanItem?.feePlanItemId || null,
-      plannedDate: schedule?.plannedDate || null,
-      amount: schedule ? Number(schedule.amount) : 0,
-      status: !feePlanItem ? "Fee Plan Required" : !schedule ? "Setup Required" : "Published",
+      plannedDate: activeSchedule?.plannedDate || null,
+      amount: amount,
+      status: !feePlanItem ? "Fee Plan Required" : schedules.length === 0 ? "Setup Required" : "Published",
     };
   }
 
@@ -1120,66 +1184,85 @@ export async function getBillingScheduleView(billingScheduleItemId) {
 export async function getBillingScheduleBatchReview(queryParams = {}) {
   const batchId = Number(queryParams.batchId);
   const year = Number(queryParams.year);
+  const term = queryParams.term != null && queryParams.term !== "" ? Number(queryParams.term) : null;
   if (!batchId || !year) {
     throw httpError("batchId and year query parameters are required", 400);
   }
 
-  const { batch, feePlanItem } = await repo.findBatchReviewData(batchId, year);
+  const { batch, feePlanItems = [] } = await repo.findBatchReviewData(batchId, year, term);
   if (!batch) {
     throw httpError(`Batch with ID ${batchId} not found`, 404);
   }
 
   const plainBatch = batch.get ? batch.get({ plain: true }) : batch;
   const course = plainBatch.session?.course || {};
-  const plainPlan = feePlanItem?.get ? feePlanItem.get({ plain: true }) : feePlanItem;
-
-  // Index sub-items for fast fee name lookup
-  const feeSubMap = new Map();
-  const feePlanSubItems = (plainPlan?.feePlanSubItems || []).map((sub) => {
-    const item = {
-      feePlanSubitemId: sub.feePlanSubitemId,
-      feeTypeId: sub.feeTypeId,
-      feeTypeName: sub.feeTypeCatalog?.name || null,
-      amount: Number(sub.amount || 0),
-      isMainSubItem: Boolean(sub.isMainSubItem),
-    };
-    feeSubMap.set(sub.feePlanSubitemId, item.feeTypeName);
-    return item;
-  });
 
   let totalAmount = 0;
-  const schedules = (plainPlan?.billingScheduleItems || []).map((s) => {
-    const scheduleAmount = Number(s.amount || 0);
-    totalAmount += scheduleAmount;
+  const allSchedules = [];
+  const feePlanItemsList = [];
 
-    const paymentTerms = (s.paymentTerms || [])
-      .map((pt) => ({
-        billingSchedulePaymentTermsId: pt.billingSchedulePaymentTermsId,
-        billingScheduleItemId: pt.billingScheduleItemId || s.billingScheduleItemId,
-        installment: Number(pt.installment),
-      }))
-      .sort((a, b) => a.installment - b.installment);
+  for (const rawPlan of feePlanItems) {
+    const plainPlan = rawPlan?.get ? rawPlan.get({ plain: true }) : rawPlan;
+    if (!plainPlan) continue;
 
-    return {
-      billingScheduleItemId: s.billingScheduleItemId,
-      feePlanItemId: s.feePlanItemId,
-      amount: scheduleAmount,
-      plannedDate: s.plannedDate || null,
-      status: s.status,
-      installment: paymentTerms.length > 0 ? paymentTerms[0].installment : null,
-      scheduleItems: (s.subItems || []).map((sub) => ({
-        billingScheduleSubItemId: sub.billingScheduleSubItemId,
-        feePlanSubItemId: sub.feePlanSubItemId,
-        feeTypeName: feeSubMap.get(sub.feePlanSubItemId) || null,
+    // Index sub-items for fast fee name lookup
+    const feeSubMap = new Map();
+    const feePlanSubItems = (plainPlan.feePlanSubItems || []).map((sub) => {
+      const item = {
+        feePlanSubitemId: sub.feePlanSubitemId,
+        feeTypeId: sub.feeTypeId,
+        feeTypeName: sub.feeTypeCatalog?.name || null,
         amount: Number(sub.amount || 0),
-      })),
-      paymentTerms,
-    };
-  });
+        isMainSubItem: Boolean(sub.isMainSubItem),
+      };
+      feeSubMap.set(sub.feePlanSubitemId, item.feeTypeName);
+      return item;
+    });
 
-  const status = !plainPlan
+    for (const s of plainPlan.billingScheduleItems || []) {
+      const scheduleAmount = Number(s.amount || 0);
+      totalAmount = toMoneyNumber(decimalAdd(totalAmount, scheduleAmount));
+
+      const paymentTerms = (s.paymentTerms || [])
+        .map((pt) => ({
+          billingSchedulePaymentTermsId: pt.billingSchedulePaymentTermsId,
+          billingScheduleItemId: pt.billingScheduleItemId || s.billingScheduleItemId,
+          installment: Number(pt.installment),
+          isDefault: Boolean(pt.isDefault),
+        }))
+        .sort((a, b) => a.installment - b.installment);
+
+      allSchedules.push({
+        billingScheduleItemId: s.billingScheduleItemId,
+        feePlanItemId: s.feePlanItemId,
+        term: plainPlan.term != null ? Number(plainPlan.term) : null,
+        amount: scheduleAmount,
+        plannedDate: s.plannedDate || null,
+        status: s.status,
+        installment: paymentTerms.length > 0 ? paymentTerms[0].installment : null,
+        scheduleItems: (s.subItems || []).map((sub) => ({
+          billingScheduleSubItemId: sub.billingScheduleSubItemId,
+          feePlanSubItemId: sub.feePlanSubItemId,
+          feeTypeName: feeSubMap.get(sub.feePlanSubItemId) || null,
+          amount: Number(sub.amount || 0),
+        })),
+        paymentTerms,
+      });
+    }
+
+    feePlanItemsList.push({
+      feePlanItemId: plainPlan.feePlanItemId,
+      term: plainPlan.term != null ? Number(plainPlan.term) : null,
+      name: plainPlan.name,
+      createDate: plainPlan.createDate || null,
+      publishStatus: plainPlan.publishStatus,
+      subItems: feePlanSubItems,
+    });
+  }
+
+  const status = feePlanItemsList.length === 0
     ? "Fee Plan Required"
-    : schedules.length === 0
+    : allSchedules.length === 0
       ? "Setup Required"
       : "Published";
 
@@ -1192,15 +1275,8 @@ export async function getBillingScheduleBatchReview(queryParams = {}) {
     year,
     status,
     amount: totalAmount,
-    feePlanItem: plainPlan
-      ? {
-          feePlanItemId: plainPlan.feePlanItemId,
-          name: plainPlan.name,
-          createDate: plainPlan.createDate || null,
-          publishStatus: plainPlan.publishStatus,
-          subItems: feePlanSubItems,
-        }
-      : null,
-    schedules,
+    feePlanItem: feePlanItemsList[0] || null,
+    feePlanItems: feePlanItemsList,
+    schedules: allSchedules,
   };
 }

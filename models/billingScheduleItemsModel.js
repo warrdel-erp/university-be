@@ -22,6 +22,12 @@ const billingScheduleItemsModel = sequelize.define(
         key: "fee_plan_item_id",
       },
     },
+    name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: "name",
+      comment: "Optional custom name for this specific billing schedule",
+    },
     amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,

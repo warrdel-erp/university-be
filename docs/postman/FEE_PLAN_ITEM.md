@@ -571,46 +571,73 @@ Amounts: `amountPerStudent` and `expectedBatchAmount` use `decimalMoney` (`toMon
 | **Auth** | Bearer Token Required |
 | **Permission** | `FEES_PLAN` + `FEES_PLAN_ADD` |
 
-### Request body
+### Request body (Option A: Bulk Terms under Batch & Year)
 
 ```json
 {
   "batchId": 1,
   "year": 1,
-  "name": "Admission / Semester I Fee",
-  "academicPeriod": "Semester I",
-  "createDate": "2026-07-01",
-  "dueDate": "2026-08-15",
-  "feePlanSubItems": [
+  "items": [
     {
-      "feeTypeCatalogId": 1,
-      "amount": "50000.00",
-      "isMainSubItem": true
+      "term": 1,
+      "name": "Semester 1 Fee",
+      "createDate": "2026-07-01",
+      "feePlanSubItems": [
+        {
+          "feeTypeCatalogId": 1,
+          "amount": "50000.00",
+          "isMainSubItem": true
+        }
+      ]
     },
     {
-      "feeTypeCatalogId": 2,
-      "amount": "25000.00",
-      "isMainSubItem": false
+      "term": 2,
+      "name": "Semester 2 Fee",
+      "createDate": "2027-01-01",
+      "feePlanSubItems": [
+        {
+          "feeTypeCatalogId": 1,
+          "amount": "55000.00",
+          "isMainSubItem": true
+        }
+      ]
     }
   ]
 }
 ```
 
-### Body fields
+### Request body (Single item fallback)
+
+```json
+{
+  "batchId": 1,
+  "term": 1,
+  "name": "Semester 1 Fee",
+  "createDate": "2026-07-01",
+  "feePlanSubItems": [
+    {
+      "feeTypeCatalogId": 1,
+      "amount": "50000.00",
+      "isMainSubItem": true
+    }
+  ]
+}
+```
+
+### Body fields (Option A)
 
 | Field | Type | Required | Nullable | Description |
 |---|---|---|---|---|
 | batchId | Integer | Yes | No | Batch ID |
-| year | Integer | Yes | No | Programme year |
-| name | String | Yes | No | Planned receipt label |
-| academicPeriod | String | Yes | No | Period tag (e.g. Semester I) |
-| createDate | Date `YYYY-MM-DD` | Yes | No | Planned raise date |
-| dueDate | Date `YYYY-MM-DD` | No | Yes | Due date |
-| feePlanSubItems | Array | Yes | No | Min 1 fee component |
-| feePlanSubItems[].feeTypeCatalogId | Integer | Yes | No | Fee type catalog ID |
-| feePlanSubItems[].amount | String/Number | Yes | No | Line amount |
-| feePlanSubItems[].isMainSubItem | Boolean | No | No | Main line flag |
-| feePlanSubItems[].isMainItem | Boolean | No | No | Alias for isMainSubItem |
+| year | Integer | No | Yes | Programme year (auto-inferred if term is sent) |
+| items | Array | Yes | No | Array of fee plan items for terms (e.g. Term 1, Term 2) |
+| items[].term | Integer | Yes | No | Term / Semester index (1, 2, 3...) |
+| items[].name | String | Yes | No | Planned receipt label |
+| items[].createDate | Date `YYYY-MM-DD` | Yes | No | Planned raise date |
+| items[].feePlanSubItems | Array | Yes | No | Min 1 fee component |
+| items[].feePlanSubItems[].feeTypeCatalogId | Integer | Yes | No | Fee type catalog ID |
+| items[].feePlanSubItems[].amount | String/Number | Yes | No | Line amount |
+| items[].feePlanSubItems[].isMainSubItem | Boolean | No | No | Main line flag |
 
 ### Errors
 
@@ -843,6 +870,14 @@ Blocked if any `student_fee_invoice` with `status = generated` exists for those 
 ---
 
 ## Changelog
+
+### v7 (2026-10-15)
+
+- Added `term` (`INTEGER`: 1, 2, 3...) support to `fee_plan_item` and `fee_plan_publish_history`.
+- Creating `fee_plan_item` supports `term` (e.g. 1 = Sem 1, 2 = Sem 2). `year` is auto-derived via `yearFromTerm(term, course)`.
+- Uniqueness validation is scoped by `batchId` + `term`.
+- Publish / unpublish supports both `term` and `year`.
+- Overview & year endpoints return enriched `term` and `termName`.
 
 ### v6 (2026-09-23)
 

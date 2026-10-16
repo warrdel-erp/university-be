@@ -280,6 +280,7 @@ export async function createFeePolicy(body, authUser = {}) {
       const studentRows = students.map((st) => ({
         feePolicyId,
         studentId: st.studentId,
+        effect: body.effect,
         instituteId: st.instituteId || instituteId,
         universityId: st.universityId || universityId,
       }));
@@ -432,13 +433,15 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
 
     // Students
     if (body.studentIds !== undefined) {
-      await feePolicyRepo.deleteFeePolicyStudents({ feePolicyId }, { transaction });
+      const targetEffect = body.effect || policy.effect;
+      await feePolicyRepo.deleteFeePolicyStudents({ feePolicyId, effect: targetEffect }, { transaction });
       if (Array.isArray(body.studentIds) && body.studentIds.length) {
         const uniqueStudentIds = [...new Set(body.studentIds.map(Number))];
         const students = await feePolicyRepo.findStudentsByIds(uniqueStudentIds, { transaction });
         const studentRows = students.map((st) => ({
           feePolicyId,
           studentId: st.studentId,
+          effect: targetEffect,
           instituteId: st.instituteId || instituteId,
           universityId: st.universityId || universityId,
         }));
@@ -504,7 +507,7 @@ export async function deleteFeePolicy(feePolicyId) {
 }
 
 export async function mapStudentWithFeePolicies(body, authUser = {}) {
-  const { studentId, studentIds, feePolicyId, feePolicyIds, mappings, replace = false } = body;
+  const { studentId, studentIds, feePolicyId, feePolicyIds, mappings, effect, replace = false } = body;
 
   const pairs = [];
   if (Array.isArray(mappings) && mappings.length) {
@@ -513,6 +516,7 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
         pairs.push({
           studentId: Number(m.studentId),
           feePolicyId: Number(m.feePolicyId),
+          effect: m.effect || effect || null,
         });
       }
     }
@@ -537,7 +541,11 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
   if (sIds.length && pIds.length) {
     for (const sid of sIds) {
       for (const pid of pIds) {
-        pairs.push({ studentId: sid, feePolicyId: pid });
+        pairs.push({
+          studentId: sid,
+          feePolicyId: pid,
+          effect: effect || null,
+        });
       }
     }
   }
@@ -546,19 +554,8 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
     throw httpError("At least one studentId and feePolicyId mapping must be provided", 400);
   }
 
-  // Deduplicate input pairs
-  const uniquePairs = [];
-  const seenPairs = new Set();
-  for (const pair of pairs) {
-    const key = `${pair.studentId}_${pair.feePolicyId}`;
-    if (!seenPairs.has(key)) {
-      seenPairs.add(key);
-      uniquePairs.push(pair);
-    }
-  }
-
-  const distinctStudentIds = [...new Set(uniquePairs.map((p) => p.studentId))];
-  const distinctPolicyIds = [...new Set(uniquePairs.map((p) => p.feePolicyId))];
+  const distinctStudentIds = [...new Set(pairs.map((p) => p.studentId))];
+  const distinctPolicyIds = [...new Set(pairs.map((p) => p.feePolicyId))];
 
   const [students, policies] = await Promise.all([
     feePolicyRepo.findStudentsByIds(distinctStudentIds),
@@ -578,10 +575,36 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
     throw httpError(`Fee policy with ID ${missingPolicy} not found`, 404);
   }
 
+  // Deduplicate input pairs based on (studentId, feePolicyId, effect)
+  const uniquePairs = [];
+  const seenPairs = new Set();
+  const validEffects = new Set(["reduce_fee", "add_charge", "refund"]);
+
+  for (const pair of pairs) {
+    const policy = policyMap.get(pair.feePolicyId);
+    const resolvedEffect = pair.effect || policy?.effect || "reduce_fee";
+    if (!validEffects.has(resolvedEffect)) {
+      throw httpError(`Invalid effect '${resolvedEffect}'. Must be reduce_fee, add_charge, or refund.`, 400);
+    }
+    const key = `${pair.studentId}_${pair.feePolicyId}_${resolvedEffect}`;
+    if (!seenPairs.has(key)) {
+      seenPairs.add(key);
+      uniquePairs.push({
+        studentId: pair.studentId,
+        feePolicyId: pair.feePolicyId,
+        effect: resolvedEffect,
+      });
+    }
+  }
+
   return sequelize.transaction(async (transaction) => {
     if (replace) {
       for (const sid of distinctStudentIds) {
-        await feePolicyRepo.deleteFeePolicyStudents({ studentId: sid }, { transaction });
+        if (effect) {
+          await feePolicyRepo.deleteFeePolicyStudents({ studentId: sid, effect }, { transaction });
+        } else {
+          await feePolicyRepo.deleteFeePolicyStudents({ studentId: sid }, { transaction });
+        }
       }
     }
 
@@ -591,6 +614,7 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
       return {
         studentId: pair.studentId,
         feePolicyId: pair.feePolicyId,
+        effect: pair.effect,
         instituteId: student?.instituteId || policy?.instituteId || authUser?.instituteId,
         universityId: student?.universityId || policy?.universityId || authUser?.universityId || null,
       };
@@ -602,30 +626,32 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
       distinctStudentIds.length === 1
         ? { studentId: distinctStudentIds[0] }
         : distinctPolicyIds.length === 1
-        ? { feePolicyId: distinctPolicyIds[0] }
-        : {},
+          ? { feePolicyId: distinctPolicyIds[0] }
+          : {},
       { transaction }
     );
   });
 }
 
 export async function removeStudentFeePolicyMapping(query = {}, authUser = {}) {
-  const { studentId, feePolicyId } = query;
+  const { studentId, feePolicyId, effect } = query;
   if (!studentId && !feePolicyId) {
     throw httpError("Either studentId or feePolicyId must be provided to remove mapping", 400);
   }
   const deletedCount = await feePolicyRepo.deleteFeePolicyStudents({
     studentId: studentId ? Number(studentId) : undefined,
     feePolicyId: feePolicyId ? Number(feePolicyId) : undefined,
+    effect: effect ? String(effect) : undefined,
   });
   return { deletedCount };
 }
 
 export async function getStudentFeePolicies(query = {}, authUser = {}) {
-  const { studentId, feePolicyId } = query;
+  const { studentId, feePolicyId, effect } = query;
   return feePolicyRepo.findFeePolicyStudents({
     studentId: studentId ? Number(studentId) : undefined,
     feePolicyId: feePolicyId ? Number(feePolicyId) : undefined,
+    effect: effect ? String(effect) : undefined,
   });
 }
 
@@ -667,30 +693,30 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
   // 4. Find Active Fee Plan and Applicable Base Components
   let baseComponents = [];
   let applicableTotal = 0;
-  
+
   if (batchId) {
     const feePlanItemMeta = await feePlanRepo.findFeePlanItemByBatchAndYear(batchId, termYear);
     if (feePlanItemMeta) {
       const feePlanItemRow = await studentRepo.findFeePlanItemWithSubItems(feePlanItemMeta.feePlanItemId);
       if (feePlanItemRow) {
         const feePlanItem = typeof feePlanItemRow.get === "function" ? feePlanItemRow.get({ plain: true }) : feePlanItemRow;
-        
+
         let targetComponentIds = [];
         if (policy.appliesTo === "selected_components" && policy.policyComponents?.length) {
-            targetComponentIds = policy.policyComponents.map(pc => Number(pc.feeTypeCatalogId));
+          targetComponentIds = policy.policyComponents.map(pc => Number(pc.feeTypeCatalogId));
         }
 
         const subItems = feePlanItem.feePlanSubItems || [];
         for (const sub of subItems) {
-           const catalogId = sub.feeTypeCatalog?.feeTypeCatalogId || sub.feeTypeId;
-           const amount = toMoneyNumber(sub.amount);
-           if (policy.appliesTo === "all_components" || targetComponentIds.includes(Number(catalogId))) {
-               baseComponents.push({
-                   name: sub.feeTypeCatalog?.name || "Component",
-                   amount
-               });
-               applicableTotal = decimalAdd(applicableTotal, amount);
-           }
+          const catalogId = sub.feeTypeCatalog?.feeTypeCatalogId || sub.feeTypeId;
+          const amount = toMoneyNumber(sub.amount);
+          if (policy.appliesTo === "all_components" || targetComponentIds.includes(Number(catalogId))) {
+            baseComponents.push({
+              name: sub.feeTypeCatalog?.name || "Component",
+              amount
+            });
+            applicableTotal = decimalAdd(applicableTotal, amount);
+          }
         }
       }
     }
@@ -700,7 +726,7 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
   let policyAmount = 0;
   let ruleDesc = policy.description || "";
   let treatmentName = policy.policyName;
-  
+
   if (policy.calculationType === "percentage") {
     const rate = Number(policy.percentageRate) || 0;
     policyAmount = toMoneyNumber((applicableTotal * rate) / 100);
@@ -720,9 +746,9 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
 
   let finalFee = applicableTotal;
   if (policyAmount > 0) {
-     finalFee = policy.effect === "reduce_fee" 
-        ? decimalSubtract(applicableTotal, policyAmount)
-        : decimalAdd(applicableTotal, policyAmount);
+    finalFee = policy.effect === "reduce_fee"
+      ? decimalSubtract(applicableTotal, policyAmount)
+      : decimalAdd(applicableTotal, policyAmount);
   }
 
   // 6. Format the response
@@ -741,10 +767,10 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
 
   let appliesToText = "All Components";
   if (policy.appliesTo === "selected_components") {
-      appliesToText = baseComponents.map(c => c.name).join(", ");
-      if (!appliesToText && policy.policyComponents?.length) {
-        appliesToText = policy.policyComponents.map(pc => pc.feeTypeCatalog?.name).filter(Boolean).join(", ") || "Selected Components";
-      }
+    appliesToText = baseComponents.map(c => c.name).join(", ");
+    if (!appliesToText && policy.policyComponents?.length) {
+      appliesToText = policy.policyComponents.map(pc => pc.feeTypeCatalog?.name).filter(Boolean).join(", ") || "Selected Components";
+    }
   }
 
   const studentName = [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" ");
@@ -808,12 +834,15 @@ export async function getFeePolicyOptions(query = {}, authUser = {}) {
       }
     }
 
+    // Batch policies temporarily commented out: options should only come from fee_policy_students
+
     for (const pRow of batchPolicyRows || []) {
       const p = typeof pRow.get === "function" ? pRow.get({ plain: true }) : pRow;
       if (p && p.feePolicyId && !policyMap.has(Number(p.feePolicyId))) {
         policyMap.set(Number(p.feePolicyId), p);
       }
     }
+
 
     let policies = Array.from(policyMap.values());
 
@@ -911,13 +940,17 @@ export async function getStudentFeeTreatmentSummary(query = {}, authUser = {}) {
   // 2. Fee Treatments (student-specific & batch-level policies)
   const policies = [];
   const seenPolicy = new Set();
-  const addPolicy = (p) => {
-    if (!p || seenPolicy.has(p.feePolicyId)) return;
-    seenPolicy.add(p.feePolicyId);
-    policies.push(p);
+  const addPolicy = (p, effect) => {
+    if (!p || !p.feePolicyId) return;
+    const eff = effect || p.effect;
+    const key = `${p.feePolicyId}_${eff}`;
+    if (seenPolicy.has(key)) return;
+    seenPolicy.add(key);
+    policies.push({ ...p, effect: eff });
   };
-  for (const sp of student.feePolicyStudents || []) addPolicy(sp.policy);
-  for (const bp of student.batch?.feePolicyBatches || []) addPolicy(bp.policy);
+  for (const sp of student.feePolicyStudents || []) addPolicy(sp.policy, sp.effect);
+  // Batch policies temporarily commented out: policy discount should only come from fee_policy_students
+  // for (const bp of student.batch?.feePolicyBatches || []) addPolicy(bp.policy, bp.policy?.effect);
 
   let totalDiscount = 0;
   let totalAddCharge = 0;
@@ -1002,8 +1035,8 @@ export async function getStudentFeeTreatmentSummary(query = {}, authUser = {}) {
       yStat.amountPaidTillNow >= yStat.totalAmount
         ? "paid"
         : yStat.amountPaidTillNow > 0
-        ? "partial"
-        : "unpaid";
+          ? "partial"
+          : "unpaid";
   }
 
   const yearWiseFeeStatus = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);

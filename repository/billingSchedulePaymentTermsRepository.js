@@ -52,6 +52,10 @@ export async function findPaymentTerms(filters = {}, pagination = {}, options = 
     where.installment = filters.installment;
   }
 
+  if (filters.isDefault !== undefined && filters.isDefault !== null) {
+    where.isDefault = filters.isDefault;
+  }
+
   const page = Math.max(1, Number(pagination.page) || 1);
   const limit = Math.max(1, Number(pagination.limit) || 10);
   const offset = (page - 1) * limit;

@@ -32,6 +32,7 @@ export const getBatchFeePlanYear = async (req, res) => {
     const data = await feePlanItemServices.getBatchFeePlanYear(
       req.query.batchId,
       req.query.year,
+      req.query.term,
     );
     return SuccessResponse(res, 200, 'Batch fee plan year retrieved successfully', data);
   } catch (error) {
@@ -48,6 +49,7 @@ export const getBatchBillingDetails = async (req, res) => {
     const data = await feePlanItemServices.getBatchBillingDetails(
       req.query.batchId,
       req.query.year,
+      req.query.term,
     );
     return SuccessResponse(res, 200, 'Batch billing details retrieved successfully', data);
   } catch (error) {
@@ -62,7 +64,10 @@ export const getBatchBillingDetails = async (req, res) => {
 export const createFeePlanItem = async (req, res) => {
   try {
     const data = await feePlanItemServices.createFeePlanItemWithSubItems(req.body);
-    return SuccessResponse(res, 201, 'Fee plan item created successfully', data);
+    const message = Array.isArray(data)
+      ? 'Fee plan items created successfully'
+      : 'Fee plan item created successfully';
+    return SuccessResponse(res, 201, message, data);
   } catch (error) {
     return ErrorResponse(
       res,

@@ -44,12 +44,19 @@ const optionalPositiveId = z.preprocess(
   positiveIntegerId.optional(),
 );
 
+const optionalDateString = z.preprocess(
+  (val) => (val === "" || val == null ? undefined : String(val).trim()),
+  z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be in YYYY-MM-DD format").optional(),
+);
+
 const getRoutineSchema = z.object({
   classSectionTermId: positiveIntegerId,
+  date: optionalDateString,
 });
 
 const getRoutineByAcademicGroupSchema = z.object({
   academicGroupId: positiveIntegerId,
+  date: optionalDateString,
 });
 
 const getRoutineByTeacherSchema = z.object({
