@@ -626,8 +626,8 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
       distinctStudentIds.length === 1
         ? { studentId: distinctStudentIds[0] }
         : distinctPolicyIds.length === 1
-        ? { feePolicyId: distinctPolicyIds[0] }
-        : {},
+          ? { feePolicyId: distinctPolicyIds[0] }
+          : {},
       { transaction }
     );
   });
@@ -693,30 +693,30 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
   // 4. Find Active Fee Plan and Applicable Base Components
   let baseComponents = [];
   let applicableTotal = 0;
-  
+
   if (batchId) {
     const feePlanItemMeta = await feePlanRepo.findFeePlanItemByBatchAndYear(batchId, termYear);
     if (feePlanItemMeta) {
       const feePlanItemRow = await studentRepo.findFeePlanItemWithSubItems(feePlanItemMeta.feePlanItemId);
       if (feePlanItemRow) {
         const feePlanItem = typeof feePlanItemRow.get === "function" ? feePlanItemRow.get({ plain: true }) : feePlanItemRow;
-        
+
         let targetComponentIds = [];
         if (policy.appliesTo === "selected_components" && policy.policyComponents?.length) {
-            targetComponentIds = policy.policyComponents.map(pc => Number(pc.feeTypeCatalogId));
+          targetComponentIds = policy.policyComponents.map(pc => Number(pc.feeTypeCatalogId));
         }
 
         const subItems = feePlanItem.feePlanSubItems || [];
         for (const sub of subItems) {
-           const catalogId = sub.feeTypeCatalog?.feeTypeCatalogId || sub.feeTypeId;
-           const amount = toMoneyNumber(sub.amount);
-           if (policy.appliesTo === "all_components" || targetComponentIds.includes(Number(catalogId))) {
-               baseComponents.push({
-                   name: sub.feeTypeCatalog?.name || "Component",
-                   amount
-               });
-               applicableTotal = decimalAdd(applicableTotal, amount);
-           }
+          const catalogId = sub.feeTypeCatalog?.feeTypeCatalogId || sub.feeTypeId;
+          const amount = toMoneyNumber(sub.amount);
+          if (policy.appliesTo === "all_components" || targetComponentIds.includes(Number(catalogId))) {
+            baseComponents.push({
+              name: sub.feeTypeCatalog?.name || "Component",
+              amount
+            });
+            applicableTotal = decimalAdd(applicableTotal, amount);
+          }
         }
       }
     }
@@ -726,7 +726,7 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
   let policyAmount = 0;
   let ruleDesc = policy.description || "";
   let treatmentName = policy.policyName;
-  
+
   if (policy.calculationType === "percentage") {
     const rate = Number(policy.percentageRate) || 0;
     policyAmount = toMoneyNumber((applicableTotal * rate) / 100);
@@ -746,9 +746,9 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
 
   let finalFee = applicableTotal;
   if (policyAmount > 0) {
-     finalFee = policy.effect === "reduce_fee" 
-        ? decimalSubtract(applicableTotal, policyAmount)
-        : decimalAdd(applicableTotal, policyAmount);
+    finalFee = policy.effect === "reduce_fee"
+      ? decimalSubtract(applicableTotal, policyAmount)
+      : decimalAdd(applicableTotal, policyAmount);
   }
 
   // 6. Format the response
@@ -767,10 +767,10 @@ export async function calculateFeePolicyImpact(query = {}, authUser = {}) {
 
   let appliesToText = "All Components";
   if (policy.appliesTo === "selected_components") {
-      appliesToText = baseComponents.map(c => c.name).join(", ");
-      if (!appliesToText && policy.policyComponents?.length) {
-        appliesToText = policy.policyComponents.map(pc => pc.feeTypeCatalog?.name).filter(Boolean).join(", ") || "Selected Components";
-      }
+    appliesToText = baseComponents.map(c => c.name).join(", ");
+    if (!appliesToText && policy.policyComponents?.length) {
+      appliesToText = policy.policyComponents.map(pc => pc.feeTypeCatalog?.name).filter(Boolean).join(", ") || "Selected Components";
+    }
   }
 
   const studentName = [student.firstName, student.middleName, student.lastName].filter(Boolean).join(" ");
@@ -835,14 +835,14 @@ export async function getFeePolicyOptions(query = {}, authUser = {}) {
     }
 
     // Batch policies temporarily commented out: options should only come from fee_policy_students
-    /*
+
     for (const pRow of batchPolicyRows || []) {
       const p = typeof pRow.get === "function" ? pRow.get({ plain: true }) : pRow;
       if (p && p.feePolicyId && !policyMap.has(Number(p.feePolicyId))) {
         policyMap.set(Number(p.feePolicyId), p);
       }
     }
-    */
+
 
     let policies = Array.from(policyMap.values());
 
@@ -1035,8 +1035,8 @@ export async function getStudentFeeTreatmentSummary(query = {}, authUser = {}) {
       yStat.amountPaidTillNow >= yStat.totalAmount
         ? "paid"
         : yStat.amountPaidTillNow > 0
-        ? "partial"
-        : "unpaid";
+          ? "partial"
+          : "unpaid";
   }
 
   const yearWiseFeeStatus = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
