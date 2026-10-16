@@ -142,11 +142,12 @@ export async function createBillingSchedule(payload, user = {}) {
         });
       }
 
-      const { paymentTerms, installment } = item;
+      const { paymentTerms, installment, isDefault } = item;
       if (Array.isArray(paymentTerms) && paymentTerms.length > 0) {
         const termsData = paymentTerms.map((pt) => ({
           billingScheduleItemId: createdItemId,
           installment: Number(pt.installment || pt),
+          isDefault: pt.isDefault != null ? Boolean(pt.isDefault) : false,
         }));
         await repoPaymentTerms.bulkCreatePaymentTerms(termsData, {
           transaction: t,
@@ -156,6 +157,7 @@ export async function createBillingSchedule(payload, user = {}) {
           {
             billingScheduleItemId: createdItemId,
             installment: Number(installment),
+            isDefault: isDefault != null ? Boolean(isDefault) : false,
           },
           { transaction: t },
         );
@@ -485,6 +487,7 @@ export async function addBillingSchedulePaymentTerm(payload) {
   const newTerm = await repoPaymentTerms.createPaymentTerm({
     billingScheduleItemId,
     installment: Number(installment),
+    isDefault: payload.isDefault != null ? Boolean(payload.isDefault) : false,
   });
 
   return repoPaymentTerms.findPaymentTermById(
@@ -1225,6 +1228,7 @@ export async function getBillingScheduleBatchReview(queryParams = {}) {
           billingSchedulePaymentTermsId: pt.billingSchedulePaymentTermsId,
           billingScheduleItemId: pt.billingScheduleItemId || s.billingScheduleItemId,
           installment: Number(pt.installment),
+          isDefault: Boolean(pt.isDefault),
         }))
         .sort((a, b) => a.installment - b.installment);
 

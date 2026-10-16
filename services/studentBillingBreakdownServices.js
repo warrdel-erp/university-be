@@ -67,12 +67,15 @@ export function calculateTreatmentsForStudent(
     const studentPolicies = studentPoliciesMap.get(Number(student.studentId)) || [];
     const policyMap = new Map();
 
+    // Batch policies temporarily commented out: policy discount should only come from fee_policy_students
+    /*
     for (const p of batchPolicies) {
       if (p && p.feePolicyId) {
         const key = `${p.feePolicyId}_${p.effect || ""}`;
         policyMap.set(key, p);
       }
     }
+    */
     for (const p of studentPolicies) {
       if (p && p.feePolicyId) {
         const key = `${p.feePolicyId}_${p.effect || ""}`;
@@ -352,7 +355,8 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
 
   const studentIds = students.map((s) => Number(s.studentId));
 
-  // 6. Fetch batch-level fee policies (feePolicyBatchesModel)
+  // 6. Fetch batch-level fee policies (feePolicyBatchesModel) - Temporarily commented out
+  /*
   const primaryCourseId = students[0]?.courseId || batch?.session?.courseId || null;
   const batchPoliciesRows = await repo.findFeePoliciesForBatchAndYear({
     batchId: targetBatchId,
@@ -361,6 +365,8 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
     instituteId: schedule?.instituteId || feePlanItem?.instituteId || authUser?.instituteId,
   });
   const batchPolicies = batchPoliciesRows.map(toPlain);
+  */
+  const batchPolicies = [];
 
   // 7. Fetch student-specific fee policies (feePolicyStudentsModel)
   const studentPolicyRows = await repo.findFeePoliciesForStudents(studentIds);
@@ -724,7 +730,8 @@ export async function getSingleStudentBillingBreakdown(queryParams = {}, authUse
     }
   }
 
-  // 5. Fetch Policies (Batch level + Student specific)
+  // 5. Fetch Policies (Batch level + Student specific) - Batch level temporarily commented out
+  /*
   const batchPoliciesRows = await repo.findFeePoliciesForBatchAndYear({
     batchId: targetBatchId,
     courseId: student.courseId,
@@ -732,10 +739,20 @@ export async function getSingleStudentBillingBreakdown(queryParams = {}, authUse
     instituteId: schedule.instituteId || authUser?.instituteId,
   });
   const batchPolicies = batchPoliciesRows.map(toPlain);
-
+  */
   const studentPolicyRows = await repo.findFeePoliciesForStudents([Number(studentId)]);
   const studentPoliciesMap = new Map();
-  studentPoliciesMap.set(Number(studentId), studentPolicyRows.map(row => toPlain(row).policy).filter(Boolean));
+  for (const row of studentPolicyRows) {
+    const item = toPlain(row);
+    const sid = Number(item.studentId);
+    if (!studentPoliciesMap.has(sid)) {
+      studentPoliciesMap.set(sid, []);
+    }
+    if (item.policy) {
+      const policyObj = item.effect ? { ...item.policy, effect: item.effect } : item.policy;
+      studentPoliciesMap.get(sid).push(policyObj);
+    }
+  }
 
   // 6. Fetch Existing Invoice
   const invoiceRows = feePlanItem?.feePlanItemId ? await repo.findInvoicesForPlanAndStudents({

@@ -946,7 +946,8 @@ export async function getStudentFeeTreatmentSummary(query = {}, authUser = {}) {
     policies.push({ ...p, effect: eff });
   };
   for (const sp of student.feePolicyStudents || []) addPolicy(sp.policy, sp.effect);
-  for (const bp of student.batch?.feePolicyBatches || []) addPolicy(bp.policy, bp.policy?.effect);
+  // Batch policies temporarily commented out: policy discount should only come from fee_policy_students
+  // for (const bp of student.batch?.feePolicyBatches || []) addPolicy(bp.policy, bp.policy?.effect);
 
   let totalDiscount = 0;
   let totalAddCharge = 0;

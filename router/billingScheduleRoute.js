@@ -34,6 +34,7 @@ const installmentSchema = z.coerce
 
 const paymentTermInputSchema = z.object({
   installment: installmentSchema,
+  isDefault: z.boolean().optional().default(false),
 });
 
 const singleScheduleInputSchema = z.object({
@@ -115,6 +116,7 @@ const deleteSubItemQuerySchema = z.object({
 const addPaymentTermSchema = z.object({
   billingScheduleItemId: positiveIntegerId,
   installment: installmentSchema,
+  isDefault: z.boolean().optional().default(false),
 });
 
 const deletePaymentTermQuerySchema = z.object({
