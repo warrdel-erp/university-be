@@ -834,12 +834,15 @@ export async function getFeePolicyOptions(query = {}, authUser = {}) {
       }
     }
 
+    // Batch policies temporarily commented out: options should only come from fee_policy_students
+    /*
     for (const pRow of batchPolicyRows || []) {
       const p = typeof pRow.get === "function" ? pRow.get({ plain: true }) : pRow;
       if (p && p.feePolicyId && !policyMap.has(Number(p.feePolicyId))) {
         policyMap.set(Number(p.feePolicyId), p);
       }
     }
+    */
 
     let policies = Array.from(policyMap.values());
 

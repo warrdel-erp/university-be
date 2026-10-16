@@ -36,7 +36,7 @@ function formatStudentFullName(student) {
  */
 export function calculateTreatmentsForStudent(
   student,
-  { baseComponents, batchPolicies, studentPoliciesMap, existingInvoice }
+  { baseComponents, batchPolicies = [], studentPoliciesMap, existingInvoice } = {}
 ) {
   const treatments = [];
   let totalDiscount = 0;
@@ -740,6 +740,8 @@ export async function getSingleStudentBillingBreakdown(queryParams = {}, authUse
   });
   const batchPolicies = batchPoliciesRows.map(toPlain);
   */
+  const batchPolicies = [];
+
   const studentPolicyRows = await repo.findFeePoliciesForStudents([Number(studentId)]);
   const studentPoliciesMap = new Map();
   for (const row of studentPolicyRows) {
