@@ -1,15 +1,13 @@
 import * as userService from "../services/userServices.js";
+import * as authService from "../services/authService.js";
+import * as tokenService from "../utility/tokenService.js";
 import * as userRepository from "../repository/userRepository.js";
+import * as refreshTokenRepository from "../repository/refreshTokenRepository.js";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import {
-  getUserRolePermissionByUserId,
-} from "../repository/userRolePermissionRepository.js";
-import { getHeadDetailsByEmail } from "../repository/headRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
-import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
+import jwt from "jsonwebtoken";
 import {
   requestContext,
   buildRequestContextStore,
@@ -48,52 +46,178 @@ export const register = async (req, res) => {
   }
 };
 
-// login
 export const login = async (req, res) => {
   try {
-    let userData;
-    let { email, password } = req.body;
-    const existingEmail = await userRepository.findEmailByEmail(email);
+    const { email, password } = req.body;
+    const clientInfo = tokenService.getClientInfo(req);
 
-    if (!existingEmail) {
-      return res.status(400).send("Email does not exist");
-    }
+    const result = await authService.loginUser({ email, password }, clientInfo);
 
-    if (existingEmail.dataValues.status === "InActive") {
-      return res.status(400).send("Please Contact To The Admin");
-    }
-
-    const isPasswordCorrect = await bcrypt.compare(password, existingEmail.password);
-
-    if (!isPasswordCorrect) {
-      return res.status(400).send("Incorrect password");
-    }
-
-    const {
-      password: _password,
-      dummyPassword: _dummyPassword,
-      ...tokenPayload
-    } = existingEmail.dataValues;
-
-    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
-      expiresIn: process.env.TOKEN_TIME || undefined,
+    tokenService.setAuthCookies(res, {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
     });
 
-    res.cookie("token", token);
-
-    res.status(200).json({
+    return res.status(200).json({
       status: true,
       message: "User logged in successfully",
-      token,
-      existingEmail: { dummyPassword: Boolean(existingEmail.dataValues?.dummyPassword) },
+      existingEmail: { dummyPassword: Boolean(result.dummyPassword) },
     });
   } catch (error) {
     console.error("Error during login:", error);
-    res.status(500).send("Internal server error");
+    if (error.name === "AuthError") {
+      return res.status(error.statusCode || 400).json({
+        status: false,
+        message: error.message,
+        code: error.code || "AUTH_ERROR",
+      });
+    }
+    return res.status(500).json({
+      status: false,
+      message: "Internal server error",
+      code: "INTERNAL_SERVER_ERROR",
+    });
   }
 };
 
-// admin register student and employee
+export const refreshToken = async (req, res) => {
+  try {
+    const rawRefreshToken = req.cookies?.refreshToken ||req.body?.refreshToken
+
+    if (!rawRefreshToken) {
+      return res.status(400).json({
+        status: false,
+        message: "Refresh token is required",
+        code: "REFRESH_TOKEN_REQUIRED",
+      });
+    }
+
+    const clientInfo = tokenService.getClientInfo(req);
+    const result = await authService.rotateRefreshToken(rawRefreshToken, clientInfo);
+
+    // Update HTTP-only cookies with new rotated tokens
+    tokenService.setAuthCookies(res, {
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+    });
+
+    return res.status(200).json({
+      status: true,
+      message: "Token refreshed successfully",
+    });
+  } catch (error) {
+    console.error("Error during token refresh:", error);
+
+    // If reuse was detected, ensure any stale cookies are wiped from client
+    if (error.code === "TOKEN_REUSE_DETECTED") {
+      tokenService.clearAuthCookies(res);
+    }
+
+    const statusCode = error.statusCode || 401;
+    return res.status(statusCode).json({
+      status: false,
+      message: error.message || "Failed to refresh token",
+      code: error.code || "REFRESH_FAILED",
+    });
+  }
+};
+
+export const logout = async (req, res) => {
+  try {
+    const rawRefreshToken = req.cookies?.refreshToken ||req.body?.refreshToken;
+
+    if (rawRefreshToken) {
+      await authService.logoutUser(rawRefreshToken);
+    }
+
+    tokenService.clearAuthCookies(res);
+
+    return res.status(200).json({
+      status: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    console.error("Error during logout:", error);
+    tokenService.clearAuthCookies(res);
+    return res.status(500).json({
+      status: false,
+      message: "Error during logout",
+    });
+  }
+};
+ 
+export const logoutAll = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.dataValues?.userId;
+    await authService.logoutAllUserSessions(userId);
+
+    tokenService.clearAuthCookies(res);
+
+    return res.status(200).json({
+      status: true,
+      message: "Logged out from all devices successfully",
+    });
+  } catch (error) {
+    console.error("Error during logout-all:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Error during logout from all devices",
+    });
+  }
+};
+
+export const getActiveSessions = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.dataValues?.userId;
+    const currentRefreshToken =
+      req.body?.refreshToken ||
+      req.cookies?.refreshToken ||
+      req.headers["x-refresh-token"];
+
+    const sessions = await authService.getUserSessions(userId, currentRefreshToken);
+
+    return res.status(200).json({
+      status: true,
+      message: "Active sessions retrieved successfully",
+      data: sessions,
+    });
+  } catch (error) {
+    console.error("Error fetching active sessions:", error);
+    return res.status(500).json({
+      status: false,
+      message: "Failed to fetch active sessions",
+    });
+  }
+};
+
+export const revokeSession = async (req, res) => {
+  try {
+    const userId = req.user.userId || req.user.dataValues?.userId;
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        status: false,
+        message: "Session ID is required",
+      });
+    }
+
+    await authService.revokeUserSession(userId, sessionId);
+
+    return res.status(200).json({
+      status: true,
+      message: "Session revoked successfully",
+    });
+  } catch (error) {
+    console.error("Error revoking session:", error);
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      status: false,
+      message: error.message || "Failed to revoke session",
+    });
+  }
+};
+
 export const adminRegisterStudentAndEmployee = async (req, res) => {
   try {
     const { role, courseId, classSectionId, userId } = req.body;
@@ -166,9 +290,9 @@ export const changePassword = async (req, res) => {
   const transaction = await sequelize.transaction();
 
   try {
-    const { email, oldPassword, password, confirmPassword } = req.body;
+    const {oldPassword, password, confirmPassword } = req.body;
 
-    if (!email || !oldPassword || !password || !confirmPassword) {
+    if (!oldPassword || !password || !confirmPassword) {
       return res.status(400).json({ message: "All input fields are required" });
     }
 
@@ -176,9 +300,9 @@ export const changePassword = async (req, res) => {
       return res.status(400).json({ message: "New password and confirm password do not match" });
     }
 
-    const existingUser = await userRepository.findEmailByEmail(email);
+    const existingUser = await userRepository.getUserByUserId(req.user.userId);
     if (!existingUser) {
-      return res.status(404).json({ message: "Email does not exist" });
+      return res.status(404).json({ message: "User not found" });
     }
 
     let isOldPasswordCorrect = false;
@@ -194,9 +318,11 @@ export const changePassword = async (req, res) => {
     }
 
 
-    const updatedUser = await userService.changePassword({ email, password }, transaction);
+    const updatedUser = await userService.changePassword({ email:existingUser?.email, password }, transaction);
 
-    await userService.emptyPassword(existingUser.dataValues?.email, transaction);
+    // await userRepository.emptyPassword(existingUser?.email, transaction);
+
+    await refreshTokenRepository.revokeAllUserTokens( existingUser?.userId, "PASSWORD_CHANGED", transaction);
 
     await transaction.commit();
 
@@ -237,7 +363,7 @@ export const sendLink = async (req, res) => {
       });
     }
 
-    const result = await userService.sendLink(email.trim());
+    const result = await userService.forgotSendLink(email.trim());
 
     if (result && result.email && result.messageId) {
       return res.status(200).json({
@@ -298,9 +424,9 @@ export const forgotPassword = async (req, res) => {
 
 export const forgotChangePassword = async (req, res) => {
   try {
-    const { email, password, confirmPassword } = req.body;
+    const { password, confirmPassword } = req.body;
 
-    if (!email || !password || !confirmPassword) {
+    if (!password || !confirmPassword) {
       return res.status(400).json({ message: "All input fields are required" });
     }
 
@@ -308,12 +434,23 @@ export const forgotChangePassword = async (req, res) => {
       return res.status(400).json({ message: "New password and confirm password do not match" });
     }
 
-    const existingUser = await userRepository.findEmailByEmail(email);
-    if (!existingUser) {
-      return res.status(404).json({ message: "Email does not exist" });
+      let token = null;
+
+   const authHeader = req.headers.authorization;
+     if (authHeader) {
+    if (authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice(7).trim();
+    } else {
+      token = authHeader.trim();
     }
+  }
+
+   const decoded = jwt.verify(token, tokenService.ACCESS_SECRET);
+      const { email } = decoded;
 
     const updatedUser = await userService.changePassword({ email, password });
+
+    await refreshTokenRepository.revokeAllUserTokens(req.user.userId, "PASSWORD_CHANGED");
 
     return res.status(200).json({
       message: "Password changed successfully",
