@@ -117,6 +117,7 @@ export async function findFeePolicies({
   term,
   studentId,
   search,
+  isStudentMapped,
   page,
   limit,
 } = {}, options = {}) {
@@ -132,6 +133,15 @@ export async function findFeePolicies({
 
   if (calculationType) {
     where.calculationType = calculationType;
+  }
+
+  if (isStudentMapped !== undefined) {
+    where.isStudentMapped = Boolean(
+      isStudentMapped === true ||
+      isStudentMapped === "true" ||
+      isStudentMapped === 1 ||
+      isStudentMapped === "1"
+    );
   }
 
   if (search && search.trim()) {
@@ -286,6 +296,21 @@ export async function deleteFeePolicyStudents({ feePolicyId, studentId, effect }
 
   return model.feePolicyStudentsModel.destroy({
     where,
+    transaction: options.transaction,
+  });
+}
+
+export async function countFeePolicyStudents(where = {}, options = {}) {
+  return model.feePolicyStudentsModel.count({
+    where,
+    transaction: options.transaction,
+  });
+}
+
+export async function updateFeePoliciesStatus(feePolicyIds, data, options = {}) {
+  if (!feePolicyIds || !feePolicyIds.length) return [0];
+  return scoped(model.feePolicyModel).update(data, {
+    where: { feePolicyId: { [Op.in]: feePolicyIds.map(Number) } },
     transaction: options.transaction,
   });
 }

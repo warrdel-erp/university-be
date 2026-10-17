@@ -72,6 +72,13 @@ export function formatPolicyResponse(policy) {
   policyObj.courses = groupPolicyBatchesToCourses(
     policyObj.policyBatches || [],
   );
+  const isStudentMapped = Boolean(
+    policyObj.isStudentMapped ||
+      (Array.isArray(policyObj.policyStudents) &&
+        policyObj.policyStudents.length > 0),
+  );
+  policyObj.isStudentMapped = isStudentMapped;
+  policyObj.isMapped = isStudentMapped;
   return policyObj;
 }
 
@@ -218,6 +225,7 @@ export async function createFeePolicy(body, authUser = {}) {
       publishStatus: isPublished ? "published" : "draft",
       publishedAt: isPublished ? new Date() : null,
       publishedBy: isPublished ? (authUser.userId ?? null) : null,
+      isStudentMapped: Boolean(body.studentIds && body.studentIds.length),
       createdBy: authUser.userId ?? null,
       updatedBy: authUser.userId ?? null,
     };
@@ -285,6 +293,7 @@ export async function createFeePolicy(body, authUser = {}) {
         universityId: st.universityId || universityId,
       }));
       await feePolicyRepo.bulkCreateFeePolicyStudents(studentRows, { transaction });
+      await feePolicyRepo.updateFeePolicy(feePolicyId, { isStudentMapped: true }, { transaction });
     }
 
     const created = await feePolicyRepo.findFeePolicyById(feePolicyId, {
@@ -317,6 +326,18 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
     });
     if (!existing) {
       throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
+    }
+
+    const isMappedToStudent = Boolean(
+      existing.isStudentMapped ||
+        (Array.isArray(existing.policyStudents) &&
+          existing.policyStudents.length > 0)
+    );
+    if (isMappedToStudent) {
+      throw httpError(
+        "Fee policy cannot be edited because it is already mapped to student(s)",
+        400
+      );
     }
 
     const {
@@ -433,7 +454,7 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
 
     // Students
     if (body.studentIds !== undefined) {
-      const targetEffect = body.effect || policy.effect;
+      const targetEffect = body.effect || existing.effect;
       await feePolicyRepo.deleteFeePolicyStudents({ feePolicyId, effect: targetEffect }, { transaction });
       if (Array.isArray(body.studentIds) && body.studentIds.length) {
         const uniqueStudentIds = [...new Set(body.studentIds.map(Number))];
@@ -446,6 +467,10 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
           universityId: st.universityId || universityId,
         }));
         await feePolicyRepo.bulkCreateFeePolicyStudents(studentRows, { transaction });
+        await feePolicyRepo.updateFeePolicy(feePolicyId, { isStudentMapped: true }, { transaction });
+      } else {
+        const remainingCount = await feePolicyRepo.countFeePolicyStudents({ feePolicyId }, { transaction });
+        await feePolicyRepo.updateFeePolicy(feePolicyId, { isStudentMapped: remainingCount > 0 }, { transaction });
       }
     }
 
@@ -622,6 +647,15 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
 
     await feePolicyRepo.bulkCreateFeePolicyStudents(rows, { transaction });
 
+    const affectedPolicyIds = [...new Set(rows.map((r) => r.feePolicyId))];
+    if (affectedPolicyIds.length) {
+      await feePolicyRepo.updateFeePoliciesStatus(
+        affectedPolicyIds,
+        { isStudentMapped: true },
+        { transaction }
+      );
+    }
+
     return feePolicyRepo.findFeePolicyStudents(
       distinctStudentIds.length === 1
         ? { studentId: distinctStudentIds[0] }
@@ -638,11 +672,29 @@ export async function removeStudentFeePolicyMapping(query = {}, authUser = {}) {
   if (!studentId && !feePolicyId) {
     throw httpError("Either studentId or feePolicyId must be provided to remove mapping", 400);
   }
+
+  let targetPolicyIds = [];
+  if (feePolicyId) {
+    targetPolicyIds = [Number(feePolicyId)];
+  } else if (studentId) {
+    const existingMappings = await feePolicyRepo.findFeePolicyStudents({
+      studentId: Number(studentId),
+      effect: effect ? String(effect) : undefined,
+    });
+    targetPolicyIds = [...new Set(existingMappings.map((m) => m.feePolicyId))];
+  }
+
   const deletedCount = await feePolicyRepo.deleteFeePolicyStudents({
     studentId: studentId ? Number(studentId) : undefined,
     feePolicyId: feePolicyId ? Number(feePolicyId) : undefined,
     effect: effect ? String(effect) : undefined,
   });
+
+  for (const pid of targetPolicyIds) {
+    const remainingCount = await feePolicyRepo.countFeePolicyStudents({ feePolicyId: pid });
+    await feePolicyRepo.updateFeePolicy(pid, { isStudentMapped: remainingCount > 0 });
+  }
+
   return { deletedCount };
 }
 
