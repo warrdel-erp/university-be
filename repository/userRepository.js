@@ -252,7 +252,7 @@ export async function updateUser(userId, data, transaction) {
 export async function getUserByUserId(userId) {
   return scoped(model.userModel).findOne({
     where: { userId },
-    attributes: { exclude: ["password", "dummyPassword"] },
+    // attributes: { exclude: ["password", "dummyPassword"] },
     include: [
       {
         association: "employee",
