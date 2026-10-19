@@ -110,6 +110,12 @@ const feePolicyModel = sequelize.define(
       defaultValue: true,
       field: "is_active",
     },
+    isStudentMapped: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_student_mapped",
+    },
     createdBy: {
       type: DataTypes.INTEGER,
       allowNull: true,

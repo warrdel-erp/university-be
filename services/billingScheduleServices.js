@@ -1,4 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
+import * as model from "../models/index.js";
 import * as repo from "../repository/billingScheduleRepository.js";
 import * as repoPaymentTerms from "../repository/billingSchedulePaymentTermsRepository.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
@@ -9,6 +11,76 @@ function httpError(message, statusCode = 400) {
   const err = new Error(message);
   err.statusCode = statusCode;
   return err;
+}
+
+export async function resolveAcademicYearForFeePlanItem(feePlanItem, user = {}) {
+  const instituteId = user?.instituteId || feePlanItem?.instituteId;
+
+  // 1. Derive calendar year from batch admission year + feePlanItem.year (e.g. 2024 + (3 - 1) = 2026)
+  const batchYear = Number(feePlanItem?.batch?.batch);
+  const progYear = Number(feePlanItem?.year || 1);
+  if (batchYear && progYear) {
+    const calendarYear = batchYear + (progYear - 1);
+    const matchingAy = await model.acedmicYearModel.findOne({
+      where: {
+        ...(instituteId ? { instituteId: Number(instituteId) } : {}),
+        [Op.or]: [
+          { yearTitle: { [Op.like]: `${calendarYear}-%` } },
+          { startingDate: { [Op.like]: `${calendarYear}%` } },
+        ],
+      },
+      order: [["startingDate", "ASC"]],
+    });
+    if (matchingAy) return matchingAy;
+  }
+
+  // 2. Try session.academicYearId if available
+  const sessionAyId = feePlanItem?.batch?.session?.academicYearId;
+  if (sessionAyId) {
+    const ay = await model.acedmicYearModel.findOne({
+      where: { academicYearId: sessionAyId },
+    });
+    if (ay) return ay;
+  }
+
+  // 3. Fallback to active academic year of the institute
+  if (instituteId) {
+    const activeAy = await model.acedmicYearModel.findOne({
+      where: {
+        instituteId: Number(instituteId),
+        isActive: true,
+      },
+    });
+    if (activeAy) return activeAy;
+  }
+
+  // 4. Fallback to any active academic year
+  return model.acedmicYearModel.findOne({
+    where: { isActive: true },
+  });
+}
+
+export function validatePlannedDateWithinAcademicYear(plannedDate, academicYear) {
+  if (!plannedDate || !academicYear) return;
+
+  const targetDate = String(plannedDate).slice(0, 10);
+  const startDate = academicYear.startingDate ? String(academicYear.startingDate).slice(0, 10) : null;
+  const endDate = academicYear.endingDate ? String(academicYear.endingDate).slice(0, 10) : null;
+  const title = academicYear.yearTitle ? `academic year (${academicYear.yearTitle})` : "academic year";
+
+  if (startDate && targetDate < startDate) {
+    throw httpError(
+      `Planned date (${targetDate}) cannot be before ${title} start date (${startDate})`,
+      400
+    );
+  }
+
+  if (endDate && targetDate > endDate) {
+    throw httpError(
+      `Planned date (${targetDate}) cannot be after ${title} end date (${endDate})`,
+      400
+    );
+  }
 }
 
 /**
@@ -38,6 +110,8 @@ export async function createBillingSchedule(payload, user = {}) {
   // 1. Validate that all fee plan items exist
   const planItemIds = [...new Set(scheduleItems.map((s) => s.feePlanItemId))];
   const planItemMap = new Map();
+  const academicYearMap = new Map();
+
   for (const id of planItemIds) {
     if (!id) {
       throw httpError("feePlanItemId is required for each schedule item", 400);
@@ -48,19 +122,18 @@ export async function createBillingSchedule(payload, user = {}) {
     }
     
     // Fetch course details manually if not included by the repo function
-    const { batchModel, sessionModel, courseModel } = await import("../models/index.js");
     const feePlanItemWithCourse = await feePlanItem.reload({
       include: [
         {
-          model: batchModel,
+          model: model.batchModel,
           as: "batch",
           include: [
             {
-              model: sessionModel,
+              model: model.sessionModel,
               as: "session",
               include: [
                 {
-                  model: courseModel,
+                  model: model.courseModel,
                   as: "course"
                 }
               ]
@@ -71,6 +144,16 @@ export async function createBillingSchedule(payload, user = {}) {
     });
     
     planItemMap.set(id, feePlanItemWithCourse);
+    const ay = await resolveAcademicYearForFeePlanItem(feePlanItemWithCourse, user);
+    academicYearMap.set(id, ay);
+  }
+
+  // Validate plannedDate for each schedule item against academic year
+  for (const item of scheduleItems) {
+    if (item.plannedDate) {
+      const ay = academicYearMap.get(item.feePlanItemId);
+      validatePlannedDateWithinAcademicYear(item.plannedDate, ay);
+    }
   }
 
   const createdIds = [];
@@ -251,6 +334,31 @@ export async function updateBillingSchedule(
 
   const universityId = user?.universityId || existingItem.universityId || null;
   const instituteId = user?.instituteId || existingItem.instituteId;
+
+  if (payload.plannedDate) {
+    const feePlanItem = await repo.findFeePlanItemById(existingItem.feePlanItemId);
+    if (feePlanItem) {
+      const feePlanItemWithCourse = await feePlanItem.reload({
+        include: [
+          {
+            model: model.batchModel,
+            as: "batch",
+            include: [
+              {
+                model: model.sessionModel,
+                as: "session",
+                include: [
+                  { model: model.courseModel, as: "course" }
+                ]
+              }
+            ]
+          }
+        ]
+      });
+      const ay = await resolveAcademicYearForFeePlanItem(feePlanItemWithCourse, user);
+      validatePlannedDateWithinAcademicYear(payload.plannedDate, ay);
+    }
+  }
 
   await sequelize.transaction(async (t) => {
     const updateData = {};
