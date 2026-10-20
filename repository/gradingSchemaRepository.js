@@ -18,7 +18,7 @@ export async function createGradingSchema(data, options = {}) {
   return await getGradingSchemaById(newGrading.gradingId, options);
 }
 
-export async function getGradingSchemas({ search, status, gradingMethod, page = 1, limit = 10 }) {
+export async function getGradingSchemas({ search, status, gradingMethod, distributionMethod, page = 1, limit = 10 }) {
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
@@ -29,6 +29,9 @@ export async function getGradingSchemas({ search, status, gradingMethod, page = 
   }
   if (gradingMethod) {
     where.gradingMethod = gradingMethod;
+  }
+  if (distributionMethod) {
+    where.distributionMethod = distributionMethod;
   }
   if (search) {
     where[Op.or] = [

@@ -23,6 +23,8 @@ export async function createGradingSchema(payload, user) {
       gradingName: payload.gradingName,
       gradingCode: payload.gradingCode,
       gradingMethod: payload.gradingMethod,
+      distributionMethod: payload.distributionMethod || null,
+      relativeConfig: payload.relativeConfig || null,
       maximumMarks: payload.maximumMarks !== undefined ? payload.maximumMarks : null,
       minimumPassingMarks: payload.minimumPassingMarks !== undefined ? payload.minimumPassingMarks : null,
       description: payload.description || null,
@@ -33,6 +35,12 @@ export async function createGradingSchema(payload, user) {
     };
 
     const createdGrading = await gradingSchemaRepo.createGradingSchema(gradingData, { transaction: t });
+
+    if (Array.isArray(payload.grades) && payload.grades.length > 0) {
+      for (const gradeItem of payload.grades) {
+        await gradingSchemaRepo.createGradingSchemaGrade(createdGrading.gradingId, gradeItem, { transaction: t });
+      }
+    }
 
     await t.commit();
     return createdGrading;
@@ -84,6 +92,8 @@ export async function updateGradingSchema(gradingSchemaId, payload, user) {
     if (payload.gradingName !== undefined) updateData.gradingName = payload.gradingName;
     if (payload.gradingCode !== undefined) updateData.gradingCode = payload.gradingCode;
     if (payload.gradingMethod !== undefined) updateData.gradingMethod = payload.gradingMethod;
+    if (payload.distributionMethod !== undefined) updateData.distributionMethod = payload.distributionMethod;
+    if (payload.relativeConfig !== undefined) updateData.relativeConfig = payload.relativeConfig;
     if (payload.maximumMarks !== undefined) updateData.maximumMarks = payload.maximumMarks;
     if (payload.minimumPassingMarks !== undefined) updateData.minimumPassingMarks = payload.minimumPassingMarks;
     if (payload.description !== undefined) updateData.description = payload.description;

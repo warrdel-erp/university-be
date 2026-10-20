@@ -23,8 +23,12 @@ const router = express.Router();
 
 export const gradingGradeSchema = z.object({
   grade: z.string().min(1).max(10),
-  minPercentage: z.number().min(0).max(100),
-  maxPercentage: z.number().min(0).max(100),
+  minPercentage: z.number().min(0).max(100).optional().nullable(),
+  maxPercentage: z.number().min(0).max(100).optional().nullable(),
+  lowerBound: z.number().optional().nullable(),
+  upperBound: z.number().optional().nullable(),
+  expectedStudentsPercentage: z.number().min(0).max(100).optional().nullable(),
+  isRuleBased: z.boolean().optional().default(false),
   gradePoint: z.number().min(0).max(100),
   resultLabel: z.string().min(1).max(100),
   remarks: z.string().max(255).optional().nullable(),
@@ -38,28 +42,44 @@ export const createGradingSchemaBody = z.object({
   gradingName: z.string().min(1).max(100),
   gradingCode: z.string().min(1).max(20),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]),
+  distributionMethod: z
+    .enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"])
+    .optional()
+    .nullable(),
+  relativeConfig: z.record(z.any()).optional().nullable(),
   maximumMarks: z.coerce.number().positive().optional().nullable(),
   minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional().default("DRAFT"),
   isActive: z.boolean().optional().default(true),
+  grades: z.array(gradingGradeSchema).optional(),
 });
 
 export const updateGradingSchemaBody = z.object({
   gradingName: z.string().min(1).max(100).optional(),
   gradingCode: z.string().min(1).max(20).optional(),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]).optional(),
+  distributionMethod: z
+    .enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"])
+    .optional()
+    .nullable(),
+  relativeConfig: z.record(z.any()).optional().nullable(),
   maximumMarks: z.coerce.number().positive().optional().nullable(),
   minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
   isActive: z.boolean().optional(),
+  grades: z.array(gradingGradeSchema).optional(),
 });
 
 export const updateGradingSchemaGradeBody = z.object({
   grade: z.string().min(1).max(10).optional(),
-  minPercentage: z.number().min(0).max(100).optional(),
-  maxPercentage: z.number().min(0).max(100).optional(),
+  minPercentage: z.number().min(0).max(100).optional().nullable(),
+  maxPercentage: z.number().min(0).max(100).optional().nullable(),
+  lowerBound: z.number().optional().nullable(),
+  upperBound: z.number().optional().nullable(),
+  expectedStudentsPercentage: z.number().min(0).max(100).optional().nullable(),
+  isRuleBased: z.boolean().optional(),
   gradePoint: z.number().min(0).max(100).optional(),
   resultLabel: z.string().min(1).max(100).optional(),
   remarks: z.string().max(255).optional().nullable(),
@@ -72,6 +92,9 @@ export const listGradingSchemaQuery = z.object({
   search: z.string().optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]).optional(),
+  distributionMethod: z
+    .enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"])
+    .optional(),
   page: z.union([z.string(), z.number()]).optional(),
   limit: z.union([z.string(), z.number()]).optional(),
 });
