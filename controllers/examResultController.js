@@ -142,3 +142,22 @@ export async function getPublishHistoryByBatchId(req, res) {
     );
   }
 }
+
+export async function getCalculationBreakdown(req, res) {
+  try {
+    const result = await examResultServices.getCalculationBreakdown(req.body);
+    return SuccessResponse(
+      res,
+      200,
+      "Calculation breakdown fetched successfully",
+      result,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch calculation breakdown",
+    );
+  }
+}
+

@@ -3846,6 +3846,15 @@ assessmentPlanComponentModel.hasMany(studentResultModel, {
   as: "studentResults",
 });
 
+studentResultModel.belongsTo(gradingModel, {
+  foreignKey: "gradingId",
+  as: "gradingScheme",
+});
+gradingModel.hasMany(studentResultModel, {
+  foreignKey: "gradingId",
+  as: "studentResults",
+});
+
 examSessionAnswerSheetModel.belongsTo(examinationSessionModel, {
   foreignKey: "examinationSessionId",
   as: "examinationSession",

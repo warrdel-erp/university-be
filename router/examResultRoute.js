@@ -41,6 +41,7 @@ const skuQuery = z.object({
 const createExaminationSessionResultBody = z.object({
   examinationSessionId: id,
   studentIds: z.array(id).min(1),
+  gradingId: id.optional().nullable(),
 });
 
 const publishedResultQuery = z.object({
@@ -96,5 +97,18 @@ router.get(
   validate({ query: publishedResultQuery }),
   examResultController.getStudentResultDetails,
 );
+router.post(
+  "/calculationBreakdown",
+  userAuth,
+  validate({ body: createExaminationSessionResultBody }),
+  examResultController.getCalculationBreakdown,
+);
+router.post(
+  "/calculation-breakdown",
+  userAuth,
+  validate({ body: createExaminationSessionResultBody }),
+  examResultController.getCalculationBreakdown,
+);
 
 export default router;
+
