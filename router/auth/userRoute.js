@@ -72,6 +72,7 @@ const giveFullAccessSchema = z.object({
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     limit: 5,
+    keyGenerator: (req) => req.ip,
     message: {
         message: "Too many attempts. Try again later."
     },
@@ -128,7 +129,7 @@ router.patch("/sendLink", useAuth,limiter, checkAccess(PERMISSIONS.USER_MANAGEME
 
 router.post("/forgotPassword",limiter,limiter, forgotPassword);
 
-router.patch("/forgotPassword", useAuth,limiter, forgotChangePassword);
+router.patch("/forgotPassword",limiter, forgotChangePassword);
 
 router.get("/", useAuth, checkAccess(PERMISSIONS.USER_MANAGEMENT.value, 'user'), validate({ query: getAllUsersSchema }), getAllUsers);
 
