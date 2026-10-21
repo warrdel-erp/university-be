@@ -124,6 +124,13 @@ const listFeePolicyQuerySchema = z.object({
   term: positiveIntegerId.optional(),
   studentId: positiveIntegerId.optional(),
   search: z.string().optional(),
+  isStudentMapped: z
+    .preprocess((val) => {
+      if (val === "true" || val === true || val === 1 || val === "1") return true;
+      if (val === "false" || val === false || val === 0 || val === "0") return false;
+      return val;
+    }, z.boolean())
+    .optional(),
   page: positiveIntegerId.optional(),
   limit: positiveIntegerId.optional(),
 });
