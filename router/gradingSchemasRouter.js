@@ -46,7 +46,7 @@ export const createGradingSchemaBody = z.object({
     .enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"])
     .optional()
     .nullable(),
-  relativeConfig: z.record(z.any()).optional().nullable(),
+  relativeConfig: z.record(z.string(), z.any()).optional().nullable(),
   maximumMarks: z.coerce.number().positive().optional().nullable(),
   minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
@@ -63,7 +63,7 @@ export const updateGradingSchemaBody = z.object({
     .enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"])
     .optional()
     .nullable(),
-  relativeConfig: z.record(z.any()).optional().nullable(),
+  relativeConfig: z.record(z.string(), z.any()).optional().nullable(),
   maximumMarks: z.coerce.number().positive().optional().nullable(),
   minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
   description: z.string().max(500).optional().nullable(),
