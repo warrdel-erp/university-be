@@ -7,21 +7,8 @@ import {
 import { ACCESS_SECRET } from "../utility/tokenService.js";
 
 export default async function useAuth(req, res, next) {
-  let token = null;
-
-  const authHeader = req.headers.authorization;
-  if (authHeader) {
-    if (authHeader.startsWith("Bearer ")) {
-      token = authHeader.slice(7).trim();
-    } else {
-      token = authHeader.trim();
-    }
-  }
-
-  // 2. Fallback to HttpOnly cookies
-  if (!token && req.cookies) {
-    token = req.cookies.accessToken || req.cookies.token;
-  }
+  
+  let token = req.cookies.accessToken;
 
   if (!token) {
     return res.status(401).json({

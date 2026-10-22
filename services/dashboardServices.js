@@ -40,98 +40,201 @@ export async function getDashboard({ date, limit = 10, role, year, month, week }
   };
 }
 
-function toPlain(row) {
-  return row?.get ? row.get({ plain: true }) : row;
-}
-
-function addId(set, id) {
-  if (id) set.add(Number(id));
-}
-
-function collectTeacherDashboardIds(subjectMappings, scheduleMappings, sectionMappings) {
-  const courseIds = new Set();
-  const subjectIds = new Set();
-  const classSectionTermIds = new Set();
-
-  for (const row of subjectMappings) {
-    const mapping = toPlain(row);
-    const subject = mapping.employeeSubject;
-    addId(subjectIds, subject?.subjectId);
-    addId(courseIds, subject?.courseId);
-  }
-
-  for (const row of scheduleMappings) {
-    const schedule = toPlain(row);
-    const routine = schedule.timeTablecreate;
-    addId(classSectionTermIds, routine?.classSectionTermId);
-    addId(courseIds, routine?.courseId);
-    addId(courseIds, schedule.timeTableSubject?.courseId);
-    addId(courseIds, schedule.timeTableTeacherSubject?.employeeSubject?.courseId);
-    addId(subjectIds, schedule.timeTableSubject?.subjectId);
-    addId(subjectIds, schedule.timeTableTeacherSubject?.employeeSubject?.subjectId);
-  }
-
-  for (const row of sectionMappings) {
-    const mapping = toPlain(row);
-    const section = mapping.employeeSection;
-    addId(courseIds, section?.courseId);
-    for (const term of section?.classSectionTerms || []) {
-      addId(classSectionTermIds, term.classSectionTermId);
-    }
-  }
-
-  return {
-    courseIds: [...courseIds],
-    subjectIds: [...subjectIds],
-    classSectionTermIds: [...classSectionTermIds],
-  };
-}
-
-export async function getTeacherDashboard({ employeeId } = {}) {
+export async function getTeacherDashboard({ userId, employeeId } = {}) {
   const currentDate = formatQueryDate();
-  if (!employeeId) {
+  if (!userId && !employeeId) {
     return {
-      studentsCount: 0,
-      subjectsCount: 0,
-      coursesCount: 0,
-      examScheduledForPaperCreationCount: 0,
-      upcomingClassesCount: 0,
+      classesSummary: [],
+      todayClassesCount: 0,
+      evaluationData: [],
+      upcomingDeadlines: [],
     };
   }
-  const teacher = await dashboardRepository.getTeacherDashboardEmployee(employeeId);
-  if (!teacher) {
-    const error = new Error('Teacher not found');
-    error.statusCode = 404;
-    throw error;
-  }
-  const userId = teacher.userId;
-
   const [
-    subjectMappings,
-    sectionMappings,
-    scheduleMappings,
-    examAssignments,
-    upcomingClassRows,
+    classesRows,
+    evaluationData,
+    classesDateWiseRows,
+    upcomingDeadlines,
   ] = await Promise.all([
-    dashboardRepository.getTeacherDashboardSubjectMappings(employeeId, userId),
-    dashboardRepository.getTeacherDashboardSectionMappings(employeeId, userId),
-    dashboardRepository.getTeacherDashboardScheduleMappings(employeeId, userId),
-    dashboardRepository.getTeacherDashboardExamAssignments(employeeId, userId),
-    dashboardRepository.getTeacherDashboardUpcomingClasses(employeeId, userId, currentDate),
+      dashboardRepository.getTeacherDashboardClasses(userId)  ,
+      dashboardRepository.getMyTeacherDashboardEvaluation(userId)  ,
+      dashboardRepository.getTeacherDashboardClasses(userId, currentDate)  ,
+      dashboardRepository.getTeacherUpcomingDeadlines(employeeId, userId),
   ]);
-
-  const ids = collectTeacherDashboardIds(subjectMappings, scheduleMappings, sectionMappings);
-
-  const totalStudents = await dashboardRepository.countTeacherDashboardStudents(
-    ids.classSectionTermIds,
-    ids.courseIds,
-  );
+  const classesSummary = getClassSummary(classesRows?.rows || [], classesRows?.attendanceData || []);
 
   return {
-    studentsCount: totalStudents,
-    subjectsCount: ids.subjectIds.length,
-    coursesCount: ids.courseIds.length,
-    examScheduledForPaperCreationCount: examAssignments,
-    upcomingClassesCount: upcomingClassRows,
+    classesSummary: classesSummary,
+    todayClassesCount: classesDateWiseRows?.total || 0,
+    evaluationData: evaluationData,
+    upcomingDeadlines: upcomingDeadlines,
   };
 }
+
+export async function getMyTeacherDashboardDateWiseClasses({userId,date} = {}) {
+    const formateDate = formatQueryDate(date);
+  try {
+    const classesDateWiseRows = await dashboardRepository.getTeacherDashboardClasses(userId, formateDate);
+    const result = addAttendanceToSubjects(classesDateWiseRows.rows,classesDateWiseRows.attendanceData);
+    return result;
+  } catch (error) {
+    throw new Error("Failed to get teacher dashboard date wise classes", error);
+  }
+}
+
+
+function addAttendanceToSubjects(timeTableData, attendanceData) {
+  return timeTableData.map((item) => {
+    const attendance = attendanceData.filter((record) => record.timeTableCellDateWiseId === item.timeTableCellDateWiseId);
+    return {
+      ...item,
+      isAttendance: Boolean(attendance.length > 0)
+    };
+  });
+}
+
+function getClassSummary(timeTableData, attendanceData) {
+  const groups = new Map();
+
+  for (const item of timeTableData) {
+    const routine = item.timeTableCell?.timeTableRoutine;
+    const course = routine?.timeTableCourse;
+    const sectionInfo =
+      routine?.timeTableClassSectionTerm?.classSection;
+    const subject = item.timeTableSubject;
+
+    const key = [
+      course?.courseId,
+      sectionInfo?.classSectionsId,
+      subject?.subjectId,
+    ].join("-");
+
+    if (!groups.has(key)) {
+      groups.set(key, {
+        courseName: course?.courseName,
+        courseCode: course?.courseCode,
+        section: sectionInfo?.section,
+        subjectName: subject?.subjectName,
+        subjectCode: subject?.subjectCode,
+        plannedClasses: 0,
+        classesConducted: 0,
+        totalStudents: 0,
+        presentStudents: 0,
+        attendanceAverage: 0,
+        status: "Pending",
+      });
+    }
+
+    const group = groups.get(key);
+    group.plannedClasses += 1;
+
+    const records = attendanceData.filter(
+      (a) =>
+        a.timeTableCellDateWiseId ===
+          item.timeTableCellDateWiseId &&
+        a.classSectionsId === sectionInfo?.classSectionsId &&
+        a.deletedAt == null
+    );
+
+    // Count a class as conducted if attendance is recorded.
+    if (records.length > 0) {
+      group.classesConducted += 1;
+    }
+
+    group.totalStudents += records.length;
+    group.presentStudents += records.filter(
+      (a) => a.attendanceStatus === "Present"
+    ).length;
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    group.attendanceAverage =
+      group.totalStudents > 0
+        ? Number(((group.classesConducted / group.plannedClasses) * 100).toFixed(2))
+        : 0;
+
+    if (group.classesConducted === 0) {
+      group.status = "Pending";
+    } else if (group.attendanceAverage >= 75) {
+      group.status = "Good";
+    } else {
+      group.status = "Low";
+    }
+
+    return group;
+  });
+}
+
+export async function getMyTeacherTaskDuty({
+  userId,
+  employeeId,
+  filter = 'all',
+  date,
+} = {}) {
+  const queryDate = date ? formatQueryDate(date) : null;
+
+  const [classesResult, evaluationData, examDutyRows] = await Promise.all([
+    dashboardRepository.getTeacherDashboardClasses(userId, queryDate),
+    dashboardRepository.getTeacherEvaluationTasks(employeeId, userId),
+    dashboardRepository.getTeacherExamDutyTasks(userId, queryDate),
+  ]);
+
+  const teachingTasks = addAttendanceToSubjects(
+    classesResult?.rows || [],
+    classesResult?.attendanceData || []
+  ).map((item) => ({
+    ...item,
+    type: 'Teaching',
+    title: item.timeTableSubject?.subjectName || item.timeTableElective?.electiveSubjectName || 'Teaching',
+  }));
+
+  const evaluationTasks = [
+    ...(evaluationData?.evaluations || []).map((item) => ({
+      ...item,
+      type: 'Evaluation',
+      title: item.subjectEvalution?.subjectName || 'Evaluation',
+    })),
+    ...(evaluationData?.teacherExamAssignments || []).map((item) => ({
+      ...item,
+      type: 'Evaluation',
+      title: item.examSchedule?.subjectSchedule?.subjectName || 'Paper Setting',
+    })),
+    ...(evaluationData?.sheetAssignments || []).map((item) => ({
+      ...item,
+      type: 'Evaluation',
+      title: 'Answer Sheet Evaluation',
+    })),
+  ];
+
+  const examDutyTasks = (examDutyRows || []).map((item) => ({
+    ...item,
+    type: 'Exam Duty',
+    title: item.role ? `${item.role} Duty` : 'Exam Duty',
+  }));
+
+  const summary = {
+    all: teachingTasks.length + evaluationTasks.length + examDutyTasks.length,
+    teaching: teachingTasks.length,
+    evaluation: evaluationTasks.length,
+    examDuty: examDutyTasks.length,
+  };
+
+  const cleanFilter = String(filter || 'all').trim().toLowerCase().replace(/[\s_-]+/g, '');
+
+  let tasks = [];
+  if (cleanFilter === 'teaching') {
+    tasks = teachingTasks;
+  } else if (cleanFilter === 'evaluation') {
+    tasks = evaluationTasks;
+  } else if (cleanFilter === 'examduty') {
+    tasks = examDutyTasks;
+  } else {
+    tasks = [...teachingTasks, ...evaluationTasks, ...examDutyTasks];
+  }
+
+  return {
+    summary,
+    tasks,
+  };
+}
+

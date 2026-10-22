@@ -121,6 +121,9 @@ export function getClientInfo(req) {
 }
 
 export function setAuthCookies(res, { accessToken, refreshToken }) {
+  if(!accessToken||!refreshToken){
+    throw new Error("Access token and refresh token are required");
+  }
   const isProduction = process.env.NODE_ENV === "production";
   const accessMaxAge = parseDurationToSeconds(ACCESS_TOKEN_TIME) * 1000;
   const refreshMaxAge = parseDurationToSeconds(REFRESH_TOKEN_TIME) * 1000;
@@ -132,18 +135,15 @@ export function setAuthCookies(res, { accessToken, refreshToken }) {
     path: "/",
   };
 
-  if (accessToken) {
     res.cookie("accessToken", accessToken, {
       ...baseCookieOptions,
       maxAge: accessMaxAge,
     });
-  }
-  if (refreshToken) {
+  
     res.cookie("refreshToken", refreshToken, {
       ...baseCookieOptions,
       maxAge: refreshMaxAge,
     });
-  }
 }
 
 export function clearAuthCookies(res) {
