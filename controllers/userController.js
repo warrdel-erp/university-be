@@ -344,7 +344,11 @@ export const changeStatus = async (req, res) => {
       res.status(400).send("userId is required");
     } else {
       const result = await userService.changeStatus(userId);
-      res.status(200).send(result);
+      res.status(200).json({
+        status: true,
+        message: "Status changed successfully",
+        data: result
+      });
     }
   } catch (error) {
     console.error("Error during change status:", error);

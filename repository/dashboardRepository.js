@@ -794,168 +794,338 @@ export async function getDashboardEvents(currentDate) {
   return events;
 }
 
-export async function getTeacherDashboardEmployee(employeeId) {
-  return scoped(model.employeeModel).findOne({
-    where: { employeeId: Number(employeeId) },
-    attributes: ['employeeId', 'userId'],
-  });
-}
+export async function getTeacherDashboardClasses(
+  userId,
+  date,
+  pagination = {},
+) {
 
-export async function getTeacherDashboardSubjectMappings(employeeId, userId) {
-  return scoped(model.teacherSubjectMappingModel).findAll({
-    where: { userId: Number(userId) },
-    attributes: ['subjectId'],
-    include: [
-      {
-        model: model.subjectModel,
-        as: 'employeeSubject',
-        required: true,
-        where: buildScope(model.subjectModel),
-        attributes: ['subjectId', 'courseId'],
-      },
+  const { page, limit } = pagination;
+
+  const userCellIds = await model.timeTableCellTeachersDateWiseModel.findAll({
+    where: { userId },
+    attributes: ["timeTableCellDateWiseId"],
+  });
+
+  const timeTableCellDateWiseId= { timeTableCellDateWiseId: { [Op.in]: userCellIds.map((r) => r.timeTableCellDateWiseId)}}
+
+  const baseWhere = {...timeTableCellDateWiseId,...(date && { date })};
+
+  const attendanceData=  await model.attendanceModel.findAll({
+    where: {...timeTableCellDateWiseId ,...(date && { date : new Date(date).toISOString() })},
+    include:{
+              model: model.classSectionModel,
+              as: 'classAttendance',
+              required: false,
+              attributes: ['classSectionsId','section'],
+            }
+  });
+
+  const total = await model.timeTableCellDateWiseModel.count({
+    where: baseWhere,
+  });
+  let rows = [];
+  if (total === 0) return { rows, total };
+
+  const findOptions = {
+    where: baseWhere,
+    attributes: [
+      "timeTableCellDateWiseId",
+      "timeTableCellId",
+      "date",
+      "classRoomSectionId",
+      "subjectId",
+      "electiveSubjectId",
     ],
-  });
-}
-
-export async function getTeacherDashboardSectionMappings(employeeId, userId) {
-  return scoped(model.teacherSectionMappingModel).findAll({
-    where: { userId: Number(userId) },
-    attributes: ['classSectionsId'],
-    include: [
+    include: 
+    [
       {
-        model: model.classSectionModel,
-        as: 'employeeSection',
+        model: model.timeTableCellModel,
+        as: 'timeTableCell',
         required: true,
-        where: buildScope(model.classSectionModel),
-        attributes: ['courseId'],
-        include: [
-          {
+        include: {
+          model: model.timeTableRoutineModel,
+          as: 'timeTableRoutine',
+          attributes: ['classSectionTermId','courseId'],
+          include:[ {
             model: model.classSectionTermModel,
-            as: 'classSectionTerms',
+            as: 'timeTableClassSectionTerm',
             required: false,
-            attributes: ['classSectionTermId'],
+            attributes: ['term','classSectionsId'],
+            include:{
+              model: model.classSectionModel,
+              as: 'classSection',
+              required: false,
+              attributes: ['classSectionsId','section'],
+            }
           },
+        {
+            model: model.courseModel,
+            as: 'timeTableCourse',
+            required: false,
+            attributes: ['courseId','courseName','courseCode','termType'],
+          }
         ],
-      },
-    ],
-  });
-}
-
-export async function getTeacherDashboardScheduleMappings(employeeId, userId) {
-  return scoped(model.classScheduleModel).findAll({
-    where: {
-      [Op.or]: [
-        { userId: userId ? Number(userId) : null },
-        Sequelize.where(Sequelize.col('timeTableTeacherSubject.user_id'), Number(userId)),
-      ],
-    },
-    attributes: ['subjectId'],
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        where: buildScope(model.timeTableRoutineModel),
-        attributes: ['courseId', 'classSectionTermId'],
+        },
+        attributes: ['day', 'period','isAttendence'],
       },
       {
         model: model.subjectModel,
         as: 'timeTableSubject',
         required: false,
         where: buildScope(model.subjectModel),
-        attributes: ['subjectId', 'courseId'],
+        attributes: ['subjectId','subjectName','subjectCode','subjectType'],
       },
       {
-        model: model.teacherSubjectMappingModel,
-        as: 'timeTableTeacherSubject',
+        model: model.electiveSubjectModel,
+        as: 'timeTableElective',
         required: false,
-        attributes: ['userId', 'subjectId'],
+        where: buildScope(model.electiveSubjectModel),
+        attributes: ['electiveSubjectId','electiveSubjectName','electiveSubjectCode'],
+      },
+
+      {
+        model: model.classRoomModel,
+        as: 'classRoom',
+        required: false,
+        attributes: ['classRoomSectionId','roomNumber'],
+      },
+    ],
+    raw: true,
+  nest: true,
+    order: [["date", "ASC"]],
+  };
+  if (page && limit) {
+      rows = await model.timeTableCellDateWiseModel.findAll({
+      where: baseWhere,
+      attributes: ["timeTableCellDateWiseId"],
+      order: [["date", "ASC"]],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+  }else{
+     rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
+  }
+    
+  return { rows, total,attendanceData };
+}
+
+export async function getMyTeacherDashboardEvaluation(userId) {
+  return scoped(model.evalutionModel).findAll({
+          where: { userId },
+          include: [
+            {
+              model: model.subjectModel,
+              as: 'subjectEvalution',
+              attributes: ['subjectId', 'subjectName', 'subjectCode'],
+              where: buildScope(model.subjectModel),
+              required: false,
+            },
+            {
+              model: model.examSetupTypeModel,
+              as: 'examSetupTypeEvalution',
+              attributes: ['examSetupTypeId', 'examName', 'examCategory', 'examCode'],
+              where: buildScope(model.examSetupTypeModel),
+              required: false,
+            },
+          ],
+          raw: true,
+          nest: true,
+          order: [['createdAt', 'DESC']],
+        })
+}
+
+export async function getTeacherEvaluationTasks(employeeId, userId) {
+  const [evaluations, teacherExamAssignments, sheetAssignments] = await Promise.all([
+    scoped(model.evalutionModel).findAll({
+          where: { userId },
+          include: [
+            {
+              model: model.subjectModel,
+              as: 'subjectEvalution',
+              attributes: ['subjectId', 'subjectName', 'subjectCode'],
+              where: buildScope(model.subjectModel),
+              required: false,
+            },
+            {
+              model: model.examSetupTypeModel,
+              as: 'examSetupTypeEvalution',
+              attributes: ['examSetupTypeId', 'examName', 'examCategory', 'examCode'],
+              where: buildScope(model.examSetupTypeModel),
+              required: false,
+            },
+          ],
+          raw: true,
+          nest: true,
+          order: [['createdAt', 'DESC']],
+        }),
+     scoped(model.teacherExamAssignmentModel).findAll({
+          where: { employeeId: Number(employeeId) },
+          include: [
+            {
+              model: model.examScheduleModel,
+              as: 'examSchedule',
+              required: false,
+              where: buildScope(model.examScheduleModel),
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: 'subjectSchedule',
+                  required: false,
+                  attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                },
+              ],
+            },
+          ],
+          raw: true,
+          nest: true,
+          order: [['deadline', 'ASC']],
+        }),
+     scoped(model.answersheetEvalutionUserAssignmentModel).findAll({
+          where: { assignedToUserId: userId },
+          include: [
+            {
+              model: model.answerSheetQrModel,
+              as: 'answerSheetQrs',
+              required: false,
+              attributes: ['id', 'markingStatus', 'deadlineDate'],
+              include: [
+                {
+                  model: model.examScheduleModel,
+                  as: 'examSchedule',
+                  required: false,
+                  include: [
+                    {
+                      model: model.subjectModel,
+                      as: 'subjectSchedule',
+                      required: false,
+                      attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          raw: true,
+          nest: true,
+          order: [['createdAt', 'DESC']],
+        })
+  ]);
+
+  return {
+    evaluations,
+    teacherExamAssignments,
+    sheetAssignments,
+  };
+}
+
+export async function getTeacherExamDutyTasks(userId, date) {
+  if (!userId) return [];
+
+  return scoped(model.examInvigilatorAssignmentModel).findAll({
+    where: {
+      userId,
+      ...(date && { examDate: date }),
+    },
+    include: [
+      {
+        model: model.classRoomModel,
+        as: 'classRoom',
+        required: false,
+        attributes: ['classRoomSectionId', 'roomNumber'],
+      },
+      {
+        model: model.examinationSessionSlotModel,
+        as: 'examinationSessionSlot',
+        required: false,
+        attributes: ['examinationSessionSlotId', 'slotNumber', 'startTime', 'endTime'],
         include: [
           {
-            model: model.subjectModel,
-            as: 'employeeSubject',
+            model: model.examinationSessionModel,
+            as: 'examinationSession',
             required: false,
-            where: buildScope(model.subjectModel),
-            attributes: ['subjectId', 'courseId'],
+            attributes: ['examinationSessionId', 'sessionName'],
           },
         ],
       },
     ],
+    raw: true,
+    nest: true,
+    order: [['examDate', 'ASC']],
   });
 }
 
-export async function countTeacherDashboardStudents(classSectionTermIds, courseIds) {
-  if (classSectionTermIds.length > 0) {
-    const directStudents = await scoped(model.studentModel).findAll({
-      where: { classSectionTermId: { [Op.in]: classSectionTermIds } },
-      attributes: ['studentId'],
-    });
-    const studentIds = new Set();
-    for (const student of directStudents) {
-      studentIds.add(Number(student.studentId));
-    }
-    return studentIds.size;
-  }
+export async function getTeacherUpcomingDeadlines(employeeId, userId) {
 
-  if (courseIds.length > 0) {
-    return scoped(model.studentModel).count({
-      where: { courseId: { [Op.in]: courseIds } },
-    });
-  }
+  const [paperSettingDeadlines, sheetAssignments] = await Promise.all([
+     scoped(model.teacherExamAssignmentModel).findAll({
+          where: {
+            employeeId: Number(employeeId),
+            deadline: { [Op.ne]: null },
+          },
+          include: [
+            {
+              model: model.examScheduleModel,
+              as: 'examSchedule',
+              required: false,
+              where: buildScope(model.examScheduleModel),
+              include: [
+                {
+                  model: model.subjectModel,
+                  as: 'subjectSchedule',
+                  required: false,
+                  attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                },
+                {
+                  model: model.examinationSessionModel,
+                  as: 'examinationSession',
+                  required: false,
+                  attributes: ['examinationSessionId', 'sessionName'],
+                },
+              ],
+            },
+          ],
+          raw: true,
+          nest: true,
+          order: [['deadline', 'ASC']],
+        }),
+     scoped(model.answersheetEvalutionUserAssignmentModel).findAll({
+          where: { assignedToUserId: userId },
+          include: [
+            {
+              model: model.answerSheetQrModel,
+              as: 'answerSheetQrs',
+              required: true,
+              where: {
+                deadlineDate: { [Op.ne]: null },
+              },
+              attributes: ['id', 'markingStatus', 'deadlineDate'],
+              include: [
+                {
+                  model: model.examScheduleModel,
+                  as: 'examSchedule',
+                  required: false,
+                  include: [
+                    {
+                      model: model.subjectModel,
+                      as: 'subjectSchedule',
+                      required: false,
+                      attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          raw: true,
+          nest: true,
+          order: [['createdAt', 'DESC']],
+        })
+  ]);
 
-  return 0;
-}
-
-export async function getTeacherDashboardExamAssignments(employeeId, userId) {
-  return scoped(model.teacherExamAssignmentModel).count({
-    where: { employeeId: Number(employeeId) },
-    include: [
-      {
-        model: model.examScheduleModel,
-        as: 'examSchedule',
-        required: true,
-        where: buildScope(model.examScheduleModel),
-        attributes: [],
-      },
-    ],
-  });
-}
-
-export async function getTeacherDashboardUpcomingClasses(employeeId, userId, currentDate) {
-  return scoped(model.classScheduleModel).count({
-    where: {
-      [Op.or]: [
-        { userId: userId ? Number(userId) : null },
-        Sequelize.where(Sequelize.col('timeTableTeacherSubject.user_id'), Number(userId)),
-      ],
-    },
-    include: [
-      {
-        model: model.timeTableRoutineModel,
-        as: 'timeTablecreate',
-        required: true,
-        where: {
-          isPublish: true,
-          endingDate: { [Op.gte]: currentDate },
-          ...buildScope(model.timeTableRoutineModel),
-        },
-        attributes: [],
-      },
-      {
-        model: model.timeTableStructurePeriodsModel,
-        as: 'timeTablecreation',
-        required: true,
-        where: {
-          [Op.or]: [{ isBreak: false }, { isBreak: { [Op.is]: null } }],
-        },
-        attributes: [],
-      },
-      {
-        model: model.teacherSubjectMappingModel,
-        as: 'timeTableTeacherSubject',
-        required: false,
-        attributes: [],
-      },
-    ],
-  });
+  return [
+    ...paperSettingDeadlines,
+    ...sheetAssignments,
+  ];
 }
