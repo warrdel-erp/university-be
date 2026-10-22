@@ -260,6 +260,7 @@ app.use("/transportRoute", transportRoute);
 app.use("/answerSheetQr", answerSheetQr);
 
 app.use("/examResult", examResult);
+app.use("/exam-results", examResult);
 app.use("/examOperations", examOperations);
 
 app.use("/fileUpload", s3FileRoute);

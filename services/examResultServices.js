@@ -1275,11 +1275,27 @@ export async function getCalculationBreakdown(body) {
   const requestedBatchId = body.batchId != null ? Number(body.batchId) : null;
   const studentIds = [];
   const studentIdSeen = new Set();
-  for (const studentId of body.studentIds) {
-    const id = Number(studentId);
-    if (studentIdSeen.has(id)) continue;
-    studentIdSeen.add(id);
-    studentIds.push(id);
+  if (Array.isArray(body.studentIds) && body.studentIds.length > 0) {
+    for (const studentId of body.studentIds) {
+      const id = Number(studentId);
+      if (studentIdSeen.has(id)) continue;
+      studentIdSeen.add(id);
+      studentIds.push(id);
+    }
+  } else {
+    const allStudentsResult = await listStudents({
+      examinationSessionId,
+      filterStatus: "Ready",
+      limit: 10000,
+    });
+    const items = allStudentsResult?.data?.items || (Array.isArray(allStudentsResult?.data) ? allStudentsResult.data : []);
+    for (const st of items) {
+      const id = Number(st.studentId);
+      if (!studentIdSeen.has(id)) {
+        studentIdSeen.add(id);
+        studentIds.push(id);
+      }
+    }
   }
 
   const context = await resolveContext({ examinationSessionId });
@@ -1616,6 +1632,33 @@ export async function getCalculationBreakdown(body) {
     };
   });
 
+  let filteredStudentsTable = studentsTable;
+  if (body.search) {
+    const term = String(body.search).toLowerCase().trim();
+    filteredStudentsTable = studentsTable.filter((st) =>
+      (st.studentName && String(st.studentName).toLowerCase().includes(term)) ||
+      (st.scholarNo && String(st.scholarNo).toLowerCase().includes(term)) ||
+      (st.enrollNumber && String(st.enrollNumber).toLowerCase().includes(term)) ||
+      (st.grade && String(st.grade).toLowerCase().includes(term))
+    );
+  }
+
+  const total = filteredStudentsTable.length;
+  const isAll = body.limit === "all" || Number(body.limit) === -1;
+  const page = isAll ? 1 : Math.max(1, Number(body.page) || 1);
+  const limit = isAll ? (total || 1) : Math.max(1, Number(body.limit) || 10);
+  const totalPages = Math.ceil(total / limit) || 1;
+  const offset = (page - 1) * limit;
+  const paginatedStudentsTable = isAll ? filteredStudentsTable : filteredStudentsTable.slice(offset, offset + limit);
+
+  const pagination = {
+    total,
+    totalRecords: total,
+    page,
+    limit,
+    totalPages,
+  };
+
   const cohortStatistics = {
     includedStudents: N,
     excludedDirectFails: directFailStudents.length,
@@ -1696,7 +1739,8 @@ export async function getCalculationBreakdown(body) {
         : null,
     },
     cohortStatistics,
-    studentsTable,
+    pagination,
+    studentsTable: paginatedStudentsTable,
     gradeBands,
     steps,
   };

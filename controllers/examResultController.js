@@ -145,12 +145,22 @@ export async function getPublishHistoryByBatchId(req, res) {
 
 export async function getCalculationBreakdown(req, res) {
   try {
-    const result = await examResultServices.getCalculationBreakdown(req.body);
+    const payload = {
+      ...req.body,
+      examinationSessionId: req.body?.examinationSessionId ?? req.query?.examinationSessionId,
+      gradingId: req.body?.gradingId ?? req.query?.gradingId,
+      batchId: req.body?.batchId ?? req.query?.batchId,
+      page: req.query?.page ?? req.body?.page,
+      limit: req.query?.limit ?? req.body?.limit,
+      search: req.query?.search ?? req.body?.search,
+    };
+    const result = await examResultServices.getCalculationBreakdown(payload);
     return SuccessResponse(
       res,
       200,
       "Calculation breakdown fetched successfully",
       result,
+      result.pagination,
     );
   } catch (error) {
     return ErrorResponse(

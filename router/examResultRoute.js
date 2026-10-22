@@ -98,16 +98,47 @@ router.get(
   validate({ query: publishedResultQuery }),
   examResultController.getStudentResultDetails,
 );
+const calculationBreakdownBody = z.object({
+  examinationSessionId: id,
+  studentIds: z.array(id).optional().default([]),
+  gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+  search: z.string().trim().optional(),
+}).passthrough();
+
+const calculationBreakdownQuery = z.object({
+  examinationSessionId: id.optional(),
+  gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+  search: z.string().trim().optional(),
+});
+
 router.post(
   "/calculationBreakdown",
   userAuth,
-  validate({ body: createExaminationSessionResultBody }),
+  validate({ body: calculationBreakdownBody, query: calculationBreakdownQuery }),
   examResultController.getCalculationBreakdown,
 );
 router.post(
   "/calculation-breakdown",
   userAuth,
-  validate({ body: createExaminationSessionResultBody }),
+  validate({ body: calculationBreakdownBody, query: calculationBreakdownQuery }),
+  examResultController.getCalculationBreakdown,
+);
+router.get(
+  "/calculationBreakdown",
+  userAuth,
+  validate({ query: calculationBreakdownQuery }),
+  examResultController.getCalculationBreakdown,
+);
+router.get(
+  "/calculation-breakdown",
+  userAuth,
+  validate({ query: calculationBreakdownQuery }),
   examResultController.getCalculationBreakdown,
 );
 
