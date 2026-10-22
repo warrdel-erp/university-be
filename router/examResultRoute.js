@@ -42,6 +42,7 @@ const createExaminationSessionResultBody = z.object({
   examinationSessionId: id,
   studentIds: z.array(id).min(1),
   gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
 });
 
 const publishedResultQuery = z.object({

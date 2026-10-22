@@ -98,21 +98,33 @@ function sheetMapForStudent(sheets, studentId) {
 
 function toStudentSummary(row) {
   const plain = row.get({ plain: true });
+  const rawBatchId =
+    plain.batchId != null
+      ? plain.batchId
+      : plain.studentClassSectionTerm?.classSection?.batchId != null
+        ? plain.studentClassSectionTerm.classSection.batchId
+        : null;
   return {
     studentId: plain.studentId,
+    batchId: rawBatchId != null ? Number(rawBatchId) : null,
     studentName: plain.studentName || null,
     scholarNo: plain.scholarNumber,
     enrollNumber: plain.enrollNumber,
     admissionDate: plain.admisssionDate || null,
-    courseId: plain.course.courseId,
-    sessionId: plain.studentSession.sessionId,
-    term: Number(plain.studentClassSectionTerm.term),
+    courseId: plain.course?.courseId,
+    sessionId: plain.studentSession?.sessionId,
+    term: Number(plain.studentClassSectionTerm?.term),
     course: plain.course,
     session: plain.studentSession,
   };
 }
 
-async function resolveGradingScheme({ gradingId, student, transaction }) {
+async function resolveGradingScheme({
+  gradingId,
+  batchId,
+  student,
+  transaction,
+}) {
   // 1. If explicit gradingId passed
   if (gradingId) {
     const scheme = await scoped(model.gradingModel).findOne({
@@ -130,30 +142,58 @@ async function resolveGradingScheme({ gradingId, student, transaction }) {
     if (scheme) return scheme;
   }
 
-  // 2. Try resolving via Assessment Plan for student's course/batch
-  if (student?.courseId) {
-    const assessmentPlan = await scoped(model.assessmentPlanModel).findOne({
-      where: {
-        gradingId: { [Op.ne]: null },
-      },
+  // 2. Tareeqa 1: Resolve via Academic Regulation mapped to Batch
+  let targetBatchId = batchId || student?.batchId;
+  if (!targetBatchId && student?.sessionId) {
+    const batch = await scoped(model.batchModel).findOne({
+      where: { sessionId: Number(student.sessionId) },
+      order: [["batchId", "DESC"]],
+      transaction,
+    });
+    if (batch?.batchId) {
+      targetBatchId = batch.batchId;
+    }
+  }
+
+  if (targetBatchId) {
+    const regMapping = await scoped(
+      model.academicRegulationCourseMappingModel,
+    ).findOne({
+      where: { batchId: Number(targetBatchId) },
       include: [
         {
-          model: model.gradingModel,
-          as: "gradingScheme",
+          model: model.academicRegulationModel,
+          as: "academicRegulation",
+          required: true,
           include: [
             {
-              model: model.gradingGradeModel,
-              as: "grades",
-              required: false,
+              model: model.gradingModel,
+              as: "gradingScheme",
+              required: true,
+              include: [
+                {
+                  model: model.gradingGradeModel,
+                  as: "grades",
+                  required: false,
+                },
+              ],
             },
           ],
         },
       ],
-      order: [["assessmentPlanId", "DESC"]],
+      order: [["academicRegulationCourseMappingId", "DESC"]],
       transaction,
     });
-    if (assessmentPlan?.gradingScheme) {
-      return assessmentPlan.gradingScheme;
+
+    if (regMapping?.academicRegulation?.gradingScheme) {
+      const scheme = regMapping.academicRegulation.gradingScheme;
+      if (Array.isArray(scheme.grades)) {
+        scheme.grades.sort(
+          (a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0),
+        );
+      }
+      scheme.academicRegulation = regMapping.academicRegulation;
+      return scheme;
     }
   }
 
@@ -328,8 +368,10 @@ async function resolveContext(query) {
   };
 
   let terms = [];
+  const batchIds = [];
   for (const row of examSession.examinationSessionTerms || []) {
-    terms.push(Number(row.term));
+    if (row.term != null) terms.push(Number(row.term));
+    if (row.batchId != null) batchIds.push(Number(row.batchId));
   }
 
   let classSectionOr = null;
@@ -356,15 +398,15 @@ async function resolveContext(query) {
     }
 
     if (!classSectionOr.length || !terms.length) {
-      return { examinationSession, empty: true };
+      return { examinationSession, terms, batchIds, empty: true };
     }
   }
 
   if (!terms.length) {
-    return { examinationSession, empty: true };
+    return { examinationSession, terms, batchIds, empty: true };
   }
 
-  return { examinationSession, terms, classSectionOr, empty: false };
+  return { examinationSession, terms, batchIds, classSectionOr, empty: false };
 }
 
 export async function listStudents(query) {
@@ -764,6 +806,7 @@ export async function getSku(query) {
 export async function createExaminationSessionResult(body) {
   const examinationSessionId = Number(body.examinationSessionId);
   const requestedGradingId = body.gradingId != null ? Number(body.gradingId) : null;
+  const requestedBatchId = body.batchId != null ? Number(body.batchId) : null;
   const studentIds = [];
   const studentIdSeen = new Set();
   for (const studentId of body.studentIds) {
@@ -902,11 +945,39 @@ export async function createExaminationSessionResult(body) {
     }
 
     // -------------------------------------------------------------
-    // RESOLVE GRADING SCHEME (Absolute vs Relative)
+    // RESOLVE GRADING SCHEME (Tareeqa 1: Academic Regulation)
     // -------------------------------------------------------------
     const sampleStudent = evaluatedStudents[0]?.student;
+    const studentWithBatch = evaluatedStudents.find(
+      (e) => e.student?.batchId != null,
+    );
+    const resolvedStudentBatchId = studentWithBatch?.student?.batchId || null;
+
+    let scheduleBatchId = null;
+    for (const item of evaluatedStudents) {
+      for (const sch of item.applicable || []) {
+        if (sch.batchId != null) {
+          scheduleBatchId = Number(sch.batchId);
+          break;
+        }
+        if (sch.batch?.batchId != null) {
+          scheduleBatchId = Number(sch.batch.batchId);
+          break;
+        }
+      }
+      if (scheduleBatchId) break;
+    }
+
+    const fallbackBatchId =
+      requestedBatchId ||
+      resolvedStudentBatchId ||
+      scheduleBatchId ||
+      context.batchIds?.[0] ||
+      null;
+
     const gradingScheme = await resolveGradingScheme({
       gradingId: requestedGradingId,
+      batchId: fallbackBatchId,
       student: sampleStudent,
       transaction,
     });
@@ -1201,6 +1272,7 @@ export async function getPublishHistoryByBatchId(publishBatchId) {
 export async function getCalculationBreakdown(body) {
   const examinationSessionId = Number(body.examinationSessionId);
   const requestedGradingId = body.gradingId != null ? Number(body.gradingId) : null;
+  const requestedBatchId = body.batchId != null ? Number(body.batchId) : null;
   const studentIds = [];
   const studentIdSeen = new Set();
   for (const studentId of body.studentIds) {
@@ -1314,10 +1386,38 @@ export async function getCalculationBreakdown(body) {
     });
   }
 
-  // Resolve grading scheme
+  // Resolve grading scheme (Tareeqa 1: Academic Regulation)
   const sampleStudent = evaluatedStudents[0]?.student;
+  const studentWithBatch = evaluatedStudents.find(
+    (e) => e.student?.batchId != null,
+  );
+  const resolvedStudentBatchId = studentWithBatch?.student?.batchId || null;
+
+  let scheduleBatchId = null;
+  for (const item of evaluatedStudents) {
+    for (const sch of item.applicable || []) {
+      if (sch.batchId != null) {
+        scheduleBatchId = Number(sch.batchId);
+        break;
+      }
+      if (sch.batch?.batchId != null) {
+        scheduleBatchId = Number(sch.batch.batchId);
+        break;
+      }
+    }
+    if (scheduleBatchId) break;
+  }
+
+  const fallbackBatchId =
+    requestedBatchId ||
+    resolvedStudentBatchId ||
+    scheduleBatchId ||
+    context.batchIds?.[0] ||
+    null;
+
   const gradingScheme = await resolveGradingScheme({
     gradingId: requestedGradingId,
+    batchId: fallbackBatchId,
     student: sampleStudent,
   });
 
@@ -1586,6 +1686,14 @@ export async function getCalculationBreakdown(body) {
       gradingMethod: gradingScheme.gradingMethod,
       distributionType: gradingScheme.distributionType || null,
       isRelative,
+      academicRegulation: gradingScheme.academicRegulation
+        ? {
+            academicRegulationId:
+              Number(gradingScheme.academicRegulation.academicRegulationId),
+            regulationCode: gradingScheme.academicRegulation.regulationCode,
+            regulationName: gradingScheme.academicRegulation.regulationName,
+          }
+        : null,
     },
     cohortStatistics,
     studentsTable,

@@ -246,12 +246,18 @@
         "updatedBy": 15,
         "created_at": "2026-07-31T00:30:00.000Z",
         "updated_at": "2026-07-31T00:30:00.000Z",
+        "isMapped": false,
+        "isEditable": true,
         "grades": [...]
       }
     ]
   }
 }
 ```
+
+> **Dynamic Fields**:
+> - `isMapped` (`boolean`): `true` if linked to any `academic_regulation` record (`grading_scheme_id`).
+> - `isEditable` (`boolean`): `false` if `isMapped` is `true`, otherwise `true`.
 
 ---
 
@@ -277,6 +283,8 @@
     "updatedBy": 15,
     "created_at": "2026-07-31T00:30:00.000Z",
     "updated_at": "2026-07-31T00:30:00.000Z",
+    "isMapped": false,
+    "isEditable": true,
     "grades": [...]
   }
 }
@@ -285,9 +293,9 @@
 ---
 
 ### 1.4 Update Grading Schema
-- **Method**: `PUT`
+- **Method**: `PUT` / `PATCH`
 - **URL**: `{{baseurl}}/gradingSchemas/1`
-- **Description**: Updates grading schema details and optionally replaces full grade array.
+- **Description**: Updates grading schema details and optionally replaces full grade array. **Note**: If the schema is mapped to an `academic_regulation`, updates will be rejected with `400 Bad Request`.
 
 #### Request Body
 ```json
@@ -309,9 +317,20 @@
     "gradingId": 1,
     "gradingName": "Updated 10-Point Scale",
     "gradingCode": "G10_SCALE_V2",
+    "gradingMethod": "ABSOLUTE",
     "status": "PUBLISHED",
-    "updated_at": "2026-07-31T00:35:00.000Z"
+    "isMapped": false,
+    "isEditable": true
   }
+}
+```
+
+#### Error Response (400 Bad Request - Schema Mapped to Academic Regulation)
+```json
+{
+  "success": false,
+  "message": "Cannot edit grading schema as it is mapped to an academic regulation",
+  "errors": null
 }
 ```
 

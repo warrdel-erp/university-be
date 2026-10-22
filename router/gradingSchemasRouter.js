@@ -21,72 +21,105 @@ import {
 
 const router = express.Router();
 
+const emptyStringToNull = (val) => (val === "" || val === undefined ? null : val);
+const coerceBoolean = (val) => (val === "true" || val === 1 || val === "1" ? true : val === "false" || val === 0 || val === "0" ? false : val);
+
 export const gradingGradeSchema = z.object({
+  gradingGradeId: z.preprocess(emptyStringToNull, z.coerce.number().int().optional().nullable()),
+  gradingId: z.preprocess(emptyStringToNull, z.coerce.number().int().optional().nullable()),
   grade: z.string().min(1).max(10),
-  minPercentage: z.number().min(0).max(100).optional().nullable(),
-  maxPercentage: z.number().min(0).max(100).optional().nullable(),
-  lowerBound: z.number().optional().nullable(),
-  upperBound: z.number().optional().nullable(),
-  expectedStudentsPercentage: z.number().min(0).max(100).optional().nullable(),
-  isRuleBased: z.boolean().optional().default(false),
-  gradePoint: z.number().min(0).max(100),
+  minPercentage: z.preprocess(emptyStringToNull, z.coerce.number().min(0).max(100).optional().nullable()),
+  maxPercentage: z.preprocess(emptyStringToNull, z.coerce.number().min(0).max(100).optional().nullable()),
+  lowerBound: z.preprocess(emptyStringToNull, z.coerce.number().optional().nullable()),
+  upperBound: z.preprocess(emptyStringToNull, z.coerce.number().optional().nullable()),
+  expectedStudentsPercentage: z.preprocess(emptyStringToNull, z.coerce.number().min(0).max(100).optional().nullable()),
+  isRuleBased: z.preprocess(coerceBoolean, z.boolean().optional().default(false)),
+  gradePoint: z.coerce.number().min(0).max(100),
   resultLabel: z.string().min(1).max(100),
-  remarks: z.string().max(255).optional().nullable(),
-  sortOrder: z.number().int(),
-  isPass: z.boolean().optional().default(true),
-  isActive: z.boolean().optional().default(true),
-});
+  remarks: z.preprocess(emptyStringToNull, z.string().max(255).optional().nullable()),
+  sortOrder: z.coerce.number().int(),
+  isPass: z.preprocess(coerceBoolean, z.boolean().optional().default(true)),
+  isActive: z.preprocess(coerceBoolean, z.boolean().optional().default(true)),
+}).passthrough();
 
 export const createGradingSchemaBody = z.object({
-  universityId: z.number().int().optional(),
+  universityId: z.preprocess(emptyStringToNull, z.coerce.number().int().optional().nullable()),
   gradingName: z.string().min(1).max(100),
   gradingCode: z.string().min(1).max(20),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]),
-  distributionMethod: z
-    .enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"])
-    .optional()
-    .nullable(),
-  relativeConfig: z.record(z.string(), z.any()).optional().nullable(),
-  maximumMarks: z.coerce.number().positive().optional().nullable(),
-  minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
-  description: z.string().max(500).optional().nullable(),
+  distributionMethod: z.preprocess(
+    emptyStringToNull,
+    z.enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"]).optional().nullable()
+  ),
+  relativeConfig: z.preprocess(
+    emptyStringToNull,
+    z.union([z.record(z.string(), z.any()), z.null()]).optional()
+  ),
+  maximumMarks: z.preprocess(
+    emptyStringToNull,
+    z.coerce.number().positive().optional().nullable()
+  ),
+  minimumPassingMarks: z.preprocess(
+    emptyStringToNull,
+    z.coerce.number().min(0).optional().nullable()
+  ),
+  description: z.preprocess(
+    emptyStringToNull,
+    z.string().max(500).optional().nullable()
+  ),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional().default("DRAFT"),
-  isActive: z.boolean().optional().default(true),
+  isActive: z.preprocess(coerceBoolean, z.boolean().optional().default(true)),
   grades: z.array(gradingGradeSchema).optional(),
-});
+}).passthrough();
 
 export const updateGradingSchemaBody = z.object({
+  gradingId: z.preprocess(emptyStringToNull, z.coerce.number().int().optional().nullable()),
+  universityId: z.preprocess(emptyStringToNull, z.coerce.number().int().optional().nullable()),
   gradingName: z.string().min(1).max(100).optional(),
   gradingCode: z.string().min(1).max(20).optional(),
   gradingMethod: z.enum(["ABSOLUTE", "RELATIVE"]).optional(),
-  distributionMethod: z
-    .enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"])
-    .optional()
-    .nullable(),
-  relativeConfig: z.record(z.string(), z.any()).optional().nullable(),
-  maximumMarks: z.coerce.number().positive().optional().nullable(),
-  minimumPassingMarks: z.coerce.number().min(0).optional().nullable(),
-  description: z.string().max(500).optional().nullable(),
+  distributionMethod: z.preprocess(
+    emptyStringToNull,
+    z.enum(["PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"]).optional().nullable()
+  ),
+  relativeConfig: z.preprocess(
+    emptyStringToNull,
+    z.union([z.record(z.string(), z.any()), z.null()]).optional()
+  ),
+  maximumMarks: z.preprocess(
+    emptyStringToNull,
+    z.coerce.number().positive().optional().nullable()
+  ),
+  minimumPassingMarks: z.preprocess(
+    emptyStringToNull,
+    z.coerce.number().min(0).optional().nullable()
+  ),
+  description: z.preprocess(
+    emptyStringToNull,
+    z.string().max(500).optional().nullable()
+  ),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
-  isActive: z.boolean().optional(),
+  isActive: z.preprocess(coerceBoolean, z.boolean().optional()),
   grades: z.array(gradingGradeSchema).optional(),
-});
+}).passthrough();
 
 export const updateGradingSchemaGradeBody = z.object({
+  gradingGradeId: z.preprocess(emptyStringToNull, z.coerce.number().int().optional().nullable()),
+  gradingId: z.preprocess(emptyStringToNull, z.coerce.number().int().optional().nullable()),
   grade: z.string().min(1).max(10).optional(),
-  minPercentage: z.number().min(0).max(100).optional().nullable(),
-  maxPercentage: z.number().min(0).max(100).optional().nullable(),
-  lowerBound: z.number().optional().nullable(),
-  upperBound: z.number().optional().nullable(),
-  expectedStudentsPercentage: z.number().min(0).max(100).optional().nullable(),
-  isRuleBased: z.boolean().optional(),
-  gradePoint: z.number().min(0).max(100).optional(),
+  minPercentage: z.preprocess(emptyStringToNull, z.coerce.number().min(0).max(100).optional().nullable()),
+  maxPercentage: z.preprocess(emptyStringToNull, z.coerce.number().min(0).max(100).optional().nullable()),
+  lowerBound: z.preprocess(emptyStringToNull, z.coerce.number().optional().nullable()),
+  upperBound: z.preprocess(emptyStringToNull, z.coerce.number().optional().nullable()),
+  expectedStudentsPercentage: z.preprocess(emptyStringToNull, z.coerce.number().min(0).max(100).optional().nullable()),
+  isRuleBased: z.preprocess(coerceBoolean, z.boolean().optional()),
+  gradePoint: z.preprocess(emptyStringToNull, z.coerce.number().min(0).max(100).optional()),
   resultLabel: z.string().min(1).max(100).optional(),
-  remarks: z.string().max(255).optional().nullable(),
-  sortOrder: z.number().int().optional(),
-  isPass: z.boolean().optional(),
-  isActive: z.boolean().optional(),
-});
+  remarks: z.preprocess(emptyStringToNull, z.string().max(255).optional().nullable()),
+  sortOrder: z.preprocess(emptyStringToNull, z.coerce.number().int().optional()),
+  isPass: z.preprocess(coerceBoolean, z.boolean().optional()),
+  isActive: z.preprocess(coerceBoolean, z.boolean().optional()),
+}).passthrough();
 
 export const listGradingSchemaQuery = z.object({
   search: z.string().optional(),

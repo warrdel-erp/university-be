@@ -4,6 +4,7 @@ import { buildScope, scoped } from "../utility/scoped.js";
 
 const studentListAttributes = [
   "studentId",
+  "batchId",
   "scholarNumber",
   "enrollNumber",
   "admissionNumber",
@@ -58,7 +59,7 @@ function studentIncludes(filters) {
           model: model.classSectionModel,
           as: "classSection",
           required: true,
-          attributes: [],
+          attributes: ["classSectionsId", "batchId"],
           where: classSectionWhere,
         },
       ],

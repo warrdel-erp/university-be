@@ -18,6 +18,23 @@ export async function createGradingSchema(data, options = {}) {
   return await getGradingSchemaById(newGrading.gradingId, options);
 }
 
+export async function isGradingSchemaMappedToAcademicRegulation(gradingSchemaId, universityId = null, options = {}) {
+  const where = {
+    gradingSchemeId: Number(gradingSchemaId),
+    deletedAt: null,
+  };
+  if (universityId) {
+    where.universityId = Number(universityId);
+  }
+
+  const count = await model.academicRegulationModel.count({
+    where,
+    transaction: options.transaction,
+  });
+
+  return count > 0;
+}
+
 export async function getGradingSchemas({ search, status, gradingMethod, distributionMethod, page = 1, limit = 10 }) {
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.max(1, Number(limit) || 10);
@@ -55,6 +72,38 @@ export async function getGradingSchemas({ search, status, gradingMethod, distrib
     offset,
   });
 
+  const gradingIds = rows.map((r) => Number(r.gradingId)).filter(Boolean);
+  const mappedGradingIds = new Set();
+
+  if (gradingIds.length > 0) {
+    const regWhere = {
+      gradingSchemeId: { [Op.in]: gradingIds },
+      deletedAt: null,
+    };
+    if (rows[0]?.universityId) {
+      regWhere.universityId = rows[0].universityId;
+    }
+
+    const mappedRegulations = await model.academicRegulationModel.findAll({
+      attributes: ["gradingSchemeId"],
+      where: regWhere,
+      raw: true,
+    });
+
+    for (const reg of mappedRegulations) {
+      if (reg.gradingSchemeId) {
+        mappedGradingIds.add(Number(reg.gradingSchemeId));
+      }
+    }
+  }
+
+  for (const row of rows) {
+    const isMapped = mappedGradingIds.has(Number(row.gradingId));
+    const isEditable = !isMapped;
+    row.setDataValue("isMapped", isMapped);
+    row.setDataValue("isEditable", isEditable);
+  }
+
   return {
     totalRecords: count,
     totalPages: Math.ceil(count / limitNum),
@@ -65,7 +114,7 @@ export async function getGradingSchemas({ search, status, gradingMethod, distrib
 }
 
 export async function getGradingSchemaById(gradingSchemaId, options = {}) {
-  return await scoped(model.gradingModel).findOne({
+  const schema = await scoped(model.gradingModel).findOne({
     where: { gradingId: Number(gradingSchemaId) },
     include: [
       {
@@ -77,6 +126,18 @@ export async function getGradingSchemaById(gradingSchemaId, options = {}) {
     order: [[{ model: model.gradingGradeModel, as: "grades" }, "sortOrder", "ASC"]],
     transaction: options.transaction,
   });
+
+  if (schema) {
+    const isMapped = await isGradingSchemaMappedToAcademicRegulation(
+      schema.gradingId,
+      schema.universityId,
+      options
+    );
+    schema.setDataValue("isMapped", isMapped);
+    schema.setDataValue("isEditable", !isMapped);
+  }
+
+  return schema;
 }
 
 export async function updateGradingSchema(gradingSchemaId, data, options = {}) {
@@ -93,6 +154,64 @@ export async function deleteGradingSchema(gradingSchemaId, options = {}) {
     where: { gradingId: Number(gradingSchemaId) },
     transaction: options.transaction,
   });
+}
+
+export async function syncGradingSchemaGrades(gradingSchemaId, gradesList, options = {}) {
+  const existingGrades = await model.gradingGradeModel.findAll({
+    where: { gradingId: Number(gradingSchemaId) },
+    transaction: options.transaction,
+  });
+
+  const submittedGradeIds = new Set(
+    gradesList
+      .map((g) => (g.gradingGradeId ? Number(g.gradingGradeId) : null))
+      .filter(Boolean)
+  );
+
+  // Delete grades that were removed
+  const toDelete = existingGrades.filter(
+    (g) => !submittedGradeIds.has(Number(g.gradingGradeId))
+  );
+  if (toDelete.length > 0) {
+    await model.gradingGradeModel.destroy({
+      where: {
+        gradingGradeId: toDelete.map((g) => g.gradingGradeId),
+      },
+      transaction: options.transaction,
+    });
+  }
+
+  // Update existing or create new grades
+  for (const gradeItem of gradesList) {
+    const gradeData = {
+      grade: gradeItem.grade,
+      minPercentage: gradeItem.minPercentage !== undefined ? gradeItem.minPercentage : null,
+      maxPercentage: gradeItem.maxPercentage !== undefined ? gradeItem.maxPercentage : null,
+      lowerBound: gradeItem.lowerBound !== undefined ? gradeItem.lowerBound : null,
+      upperBound: gradeItem.upperBound !== undefined ? gradeItem.upperBound : null,
+      expectedStudentsPercentage: gradeItem.expectedStudentsPercentage !== undefined ? gradeItem.expectedStudentsPercentage : null,
+      isRuleBased: gradeItem.isRuleBased !== undefined ? Boolean(gradeItem.isRuleBased) : false,
+      gradePoint: gradeItem.gradePoint,
+      resultLabel: gradeItem.resultLabel,
+      remarks: gradeItem.remarks || null,
+      sortOrder: gradeItem.sortOrder,
+      isPass: gradeItem.isPass !== undefined ? Boolean(gradeItem.isPass) : true,
+      isActive: gradeItem.isActive !== undefined ? Boolean(gradeItem.isActive) : true,
+      gradingId: Number(gradingSchemaId),
+    };
+
+    if (gradeItem.gradingGradeId && submittedGradeIds.has(Number(gradeItem.gradingGradeId))) {
+      const existingGrade = existingGrades.find(
+        (g) => Number(g.gradingGradeId) === Number(gradeItem.gradingGradeId)
+      );
+      if (existingGrade) {
+        await existingGrade.update(gradeData, { transaction: options.transaction });
+        continue;
+      }
+    }
+
+    await model.gradingGradeModel.create(gradeData, { transaction: options.transaction });
+  }
 }
 
 export async function createGradingSchemaGrade(gradingSchemaId, gradeData, options = {}) {

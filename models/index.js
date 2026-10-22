@@ -3954,6 +3954,10 @@ academicRegulationModel.belongsTo(gradingModel, {
   foreignKey: "gradingSchemeId",
   as: "gradingScheme",
 });
+gradingModel.hasMany(academicRegulationModel, {
+  foreignKey: "gradingSchemeId",
+  as: "academicRegulations",
+});
 academicRegulationModel.belongsTo(userModel, {
   foreignKey: "createdBy",
   as: "creator",
