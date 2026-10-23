@@ -142,5 +142,69 @@ router.get(
   examResultController.getCalculationBreakdown,
 );
 
+const subjectCalculationBreakdownBody = z.object({
+  examinationSessionId: id,
+  subjectId: id,
+  term: z.coerce.number().int().positive().optional(),
+  examScheduleId: id.optional(),
+  gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
+  studentIds: z.array(id).optional().default([]),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+  search: z.string().trim().optional(),
+}).passthrough();
+
+const subjectCalculationBreakdownQuery = z.object({
+  examinationSessionId: id.optional(),
+  subjectId: id.optional(),
+  term: z.coerce.number().int().positive().optional(),
+  examScheduleId: id.optional(),
+  gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+  search: z.string().trim().optional(),
+});
+
+router.post(
+  "/subject/zscore",
+  userAuth,
+  validate({ body: subjectCalculationBreakdownBody, query: subjectCalculationBreakdownQuery }),
+  examResultController.getSubjectCalculationBreakdown,
+);
+router.get(
+  "/subject/zscore",
+  userAuth,
+  validate({ query: subjectCalculationBreakdownQuery }),
+  examResultController.getSubjectCalculationBreakdown,
+);
+router.post(
+  "/subject/calculation-breakdown",
+  userAuth,
+  validate({ body: subjectCalculationBreakdownBody, query: subjectCalculationBreakdownQuery }),
+  examResultController.getSubjectCalculationBreakdown,
+);
+router.post(
+  "/subject-calculation-breakdown",
+  userAuth,
+  validate({ body: subjectCalculationBreakdownBody, query: subjectCalculationBreakdownQuery }),
+  examResultController.getSubjectCalculationBreakdown,
+);
+router.get(
+  "/subject/calculation-breakdown",
+  userAuth,
+  validate({ query: subjectCalculationBreakdownQuery }),
+  examResultController.getSubjectCalculationBreakdown,
+);
+router.get(
+  "/subject-calculation-breakdown",
+  userAuth,
+  validate({ query: subjectCalculationBreakdownQuery }),
+  examResultController.getSubjectCalculationBreakdown,
+);
+
 export default router;
+
+
 

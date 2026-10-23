@@ -171,3 +171,36 @@ export async function getCalculationBreakdown(req, res) {
   }
 }
 
+export async function getSubjectCalculationBreakdown(req, res) {
+  try {
+    const payload = {
+      ...req.body,
+      examinationSessionId: req.body?.examinationSessionId ?? req.query?.examinationSessionId,
+      term: req.body?.term ?? req.query?.term,
+      subjectId: req.body?.subjectId ?? req.query?.subjectId,
+      examScheduleId: req.body?.examScheduleId ?? req.query?.examScheduleId,
+      gradingId: req.body?.gradingId ?? req.query?.gradingId,
+      batchId: req.body?.batchId ?? req.query?.batchId,
+      studentIds: req.body?.studentIds ?? (req.query?.studentIds ? (Array.isArray(req.query.studentIds) ? req.query.studentIds : [req.query.studentIds]) : []),
+      page: req.query?.page ?? req.body?.page,
+      limit: req.query?.limit ?? req.body?.limit,
+      search: req.query?.search ?? req.body?.search,
+    };
+    const result = await examResultServices.getSubjectCalculationBreakdown(payload);
+    return SuccessResponse(
+      res,
+      200,
+      "Subject calculation breakdown fetched successfully",
+      result,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch subject calculation breakdown",
+    );
+  }
+}
+
+

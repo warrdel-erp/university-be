@@ -1745,3 +1745,478 @@ export async function getCalculationBreakdown(body) {
     steps,
   };
 }
+
+export async function getSubjectCalculationBreakdown(body) {
+  const examinationSessionId = Number(body.examinationSessionId);
+  const subjectId = Number(body.subjectId);
+  const requestedTerm = body.term != null ? Number(body.term) : null;
+  const requestedGradingId = body.gradingId != null ? Number(body.gradingId) : null;
+  const requestedBatchId = body.batchId != null ? Number(body.batchId) : null;
+  const requestedExamScheduleId = body.examScheduleId != null ? Number(body.examScheduleId) : null;
+
+  if (!examinationSessionId || !subjectId) {
+    const err = new Error("examinationSessionId and subjectId are required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const examSession = await examResultRepository.findExaminationSession(
+    examinationSessionId,
+  );
+  if (!examSession) {
+    const err = new Error("Examination session not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const scheduleWhere = {
+    examinationSessionId,
+    subjectId,
+  };
+  if (requestedTerm != null) {
+    scheduleWhere.term = requestedTerm;
+  }
+  if (requestedExamScheduleId) {
+    scheduleWhere.examScheduleId = requestedExamScheduleId;
+  }
+  if (requestedBatchId) {
+    scheduleWhere.batchId = requestedBatchId;
+  }
+
+  const schedule = await scoped(model.examScheduleModel).findOne({
+    where: scheduleWhere,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        required: false,
+        attributes: ["batchId", "batch", "sessionId"],
+      },
+    ],
+  });
+
+  if (!schedule) {
+    const err = new Error(
+      `Exam schedule not found for examinationSessionId=${examinationSessionId}, subjectId=${subjectId}`,
+    );
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const term = schedule.term != null ? Number(schedule.term) : null;
+
+
+  const examScheduleId = Number(schedule.examScheduleId);
+  const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
+
+  const sheetWhere = {
+    examScheduleId,
+    studentId: { [Op.ne]: null },
+    markingStatus: "submit",
+  };
+  if (Array.isArray(body.studentIds) && body.studentIds.length > 0) {
+    sheetWhere.studentId = { [Op.in]: body.studentIds.map(Number) };
+  }
+
+  const answerSheets = await scoped(model.answerSheetQrModel).findAll({
+    where: sheetWhere,
+    attributes: [
+      "id",
+      "studentId",
+      "examScheduleId",
+      "markingStatus",
+      "obtainedMarks",
+      "evaluatedAt",
+    ],
+    raw: true,
+  });
+
+  const studentIds = [...new Set(answerSheets.map((s) => Number(s.studentId)))];
+
+  let studentMap = new Map();
+  if (studentIds.length > 0) {
+    const students = await scoped(model.studentModel).findAll({
+      where: { studentId: { [Op.in]: studentIds } },
+      attributes: [
+        "studentId",
+        "batchId",
+        "scholarNumber",
+        "enrollNumber",
+        "admissionNumber",
+        [
+          sequelize.fn(
+            "TRIM",
+            sequelize.fn(
+              "CONCAT_WS",
+              " ",
+              sequelize.col("students.first_name"),
+              sequelize.col("students.middle_name"),
+              sequelize.col("students.last_name"),
+            ),
+          ),
+          "studentName",
+        ],
+      ],
+      raw: true,
+    });
+    studentMap = new Map(students.map((s) => [Number(s.studentId), s]));
+  }
+
+  const evaluatedStudents = [];
+  for (const sheet of answerSheets) {
+    const sId = Number(sheet.studentId);
+    const st = studentMap.get(sId);
+    const obtainedMarks = sheet.obtainedMarks == null ? 0 : toMoneyNumber(sheet.obtainedMarks);
+    const percentage = maximumMarks > 0
+      ? toMoneyNumber(decimalMultiply(decimalDivide(obtainedMarks, maximumMarks), 100))
+      : 0;
+
+    evaluatedStudents.push({
+      student: {
+        studentId: sId,
+        studentName: st?.studentName || `Student ${sId}`,
+        scholarNo: st?.scholarNumber || null,
+        enrollNumber: st?.enrollNumber || null,
+        batchId: st?.batchId || schedule.batchId || null,
+      },
+      obtainedMarks,
+      maximumMarks,
+      percentage,
+      evaluatedAt: sheet.evaluatedAt,
+    });
+  }
+
+  const sampleStudent = evaluatedStudents[0]?.student;
+  const fallbackBatchId =
+    requestedBatchId ||
+    schedule.batchId ||
+    sampleStudent?.batchId ||
+    null;
+
+  const gradingScheme = await resolveGradingScheme({
+    gradingId: requestedGradingId,
+    batchId: fallbackBatchId,
+    student: sampleStudent,
+  });
+
+  if (!gradingScheme) {
+    const err = new Error("No active grading scheme found for this cohort.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const isRelative = gradingScheme.gradingMethod === "RELATIVE";
+  const grades = Array.isArray(gradingScheme.grades)
+    ? [...gradingScheme.grades].sort(
+        (a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0),
+      )
+    : [];
+
+  const failBand =
+    grades.find((b) => b.isRuleBased || b.isPass === false) ||
+    grades[grades.length - 1];
+
+  const failConfig = gradingScheme.relativeConfig?.failGradeAssignment;
+  const minRawMarks =
+    failConfig?.minRawMarks != null ? Number(failConfig.minRawMarks) : null;
+
+  const gradeBands = grades.map((b) => {
+    let zRange = "N/A";
+    if (b.lowerBound != null && b.upperBound != null) {
+      const lower = Number(b.lowerBound);
+      const upper = Number(b.upperBound);
+      zRange = `${lower >= 0 ? "+" : ""}${lower.toFixed(2)} to ${upper >= 0 ? "+" : ""}${upper.toFixed(2)}`;
+    } else if (b.lowerBound != null) {
+      const lower = Number(b.lowerBound);
+      zRange = `z >= ${lower >= 0 ? "+" : ""}${lower.toFixed(2)}`;
+    } else if (b.upperBound != null) {
+      const upper = Number(b.upperBound);
+      zRange = `z < ${upper >= 0 ? "+" : ""}${upper.toFixed(2)}`;
+    }
+
+    return {
+      grade: b.grade,
+      gradePoint: b.gradePoint != null ? toMoneyNumber(b.gradePoint) : null,
+      zRange,
+      minPercentage: b.minPercentage != null ? toMoneyNumber(b.minPercentage) : null,
+      maxPercentage: b.maxPercentage != null ? toMoneyNumber(b.maxPercentage) : null,
+      lowerBound: b.lowerBound != null ? Number(b.lowerBound) : null,
+      upperBound: b.upperBound != null ? Number(b.upperBound) : null,
+      isRuleBased: Boolean(b.isRuleBased),
+      developerTreatment: "Policy data - not hard-coded",
+    };
+  });
+
+  const eligibleStudents = [];
+  const directFailStudents = [];
+
+  for (const item of evaluatedStudents) {
+    const pct = item.percentage != null ? Number(item.percentage) : 0;
+    if (isRelative && minRawMarks != null && pct < minRawMarks) {
+      directFailStudents.push(item);
+    } else {
+      eligibleStudents.push(item);
+    }
+  }
+
+  const eligibleScores = eligibleStudents.map((s) => Number(s.percentage) || 0);
+  const N = eligibleScores.length;
+  const totalScore = eligibleScores.reduce((acc, score) => acc + score, 0);
+  const classMean = N > 0 ? totalScore / N : 0;
+
+  let sumSquaredDeviations = 0;
+  const deviationsByStudentId = new Map();
+
+  for (const item of eligibleStudents) {
+    const score = Number(item.percentage) || 0;
+    const deviation = score - classMean;
+    const devSquared = deviation * deviation;
+    sumSquaredDeviations += devSquared;
+    deviationsByStudentId.set(item.student.studentId, {
+      deviation,
+      devSquared,
+    });
+  }
+
+  const populationVariance = N > 0 ? sumSquaredDeviations / N : 0;
+  const standardDev = Math.sqrt(populationVariance);
+
+  const studentsTable = evaluatedStudents.map((item) => {
+    const pct = item.percentage != null ? Number(item.percentage) : 0;
+    const isDirectFail = isRelative && minRawMarks != null && pct < minRawMarks;
+
+    if (isDirectFail) {
+      const dev = pct - classMean;
+      const devSq = dev * dev;
+      const calculatedZ =
+        standardDev === 0 ? 0 : Number(zScore(pct, classMean, standardDev).toFixed(4));
+
+      return {
+        studentId: item.student.studentId,
+        studentName: item.student.studentName,
+        scholarNo: item.student.scholarNo,
+        enrollNumber: item.student.enrollNumber,
+        obtainedMarks: item.obtainedMarks,
+        maximumMarks: item.maximumMarks,
+        finalScore: pct,
+        deviation: dev >= 0 ? `+${dev.toFixed(2)}` : dev.toFixed(2),
+        deviationRaw: Number(dev.toFixed(4)),
+        deviationSquared: Number(devSq.toFixed(4)),
+        calculationFormula: `(${pct} - ${classMean.toFixed(2)}) / ${standardDev.toFixed(4)}`,
+        zScore: calculatedZ >= 0 ? `+${calculatedZ.toFixed(4)}` : calculatedZ.toFixed(4),
+        zScoreRaw: calculatedZ,
+        grade: failBand ? failBand.grade : "F",
+        gradePoint: failBand?.gradePoint != null ? toMoneyNumber(failBand.gradePoint) : 0,
+        isDirectFail: true,
+        directFailReason: `Score ${pct}% < Minimum ${minRawMarks}% threshold (Direct Fail)`,
+      };
+    }
+
+    if (!isRelative) {
+      let finalGrade = null;
+      let finalGradePoint = null;
+      for (const band of grades) {
+        const minP = band.minPercentage != null ? Number(band.minPercentage) : -Infinity;
+        const maxP = band.maxPercentage != null ? Number(band.maxPercentage) : Infinity;
+        if (pct >= minP && pct <= maxP) {
+          finalGrade = band.grade;
+          finalGradePoint = band.gradePoint != null ? toMoneyNumber(band.gradePoint) : null;
+          break;
+        }
+      }
+
+      return {
+        studentId: item.student.studentId,
+        studentName: item.student.studentName,
+        scholarNo: item.student.scholarNo,
+        enrollNumber: item.student.enrollNumber,
+        obtainedMarks: item.obtainedMarks,
+        maximumMarks: item.maximumMarks,
+        finalScore: pct,
+        deviation: null,
+        deviationRaw: null,
+        deviationSquared: null,
+        calculationFormula: "Absolute Percentage Match",
+        zScore: null,
+        zScoreRaw: null,
+        grade: finalGrade,
+        gradePoint: finalGradePoint,
+        isDirectFail: false,
+      };
+    }
+
+    const devData = deviationsByStudentId.get(item.student.studentId) || {
+      deviation: pct - classMean,
+      devSquared: (pct - classMean) * (pct - classMean),
+    };
+    const calculatedZ =
+      standardDev === 0 ? 0 : Number(zScore(pct, classMean, standardDev).toFixed(4));
+
+    let finalGrade = null;
+    let finalGradePoint = null;
+
+    for (const band of grades) {
+      if (band.isRuleBased) continue;
+      const lower = band.lowerBound != null ? Number(band.lowerBound) : -Infinity;
+      const upper = band.upperBound != null ? Number(band.upperBound) : Infinity;
+
+      if (calculatedZ >= lower && (band.upperBound == null || calculatedZ < upper)) {
+        finalGrade = band.grade;
+        finalGradePoint = band.gradePoint != null ? toMoneyNumber(band.gradePoint) : null;
+        break;
+      }
+    }
+
+    if (!finalGrade && grades.length > 0) {
+      const fallbackBand = calculatedZ < 0 ? grades[grades.length - 1] : grades[0];
+      finalGrade = fallbackBand.grade;
+      finalGradePoint = fallbackBand.gradePoint != null ? toMoneyNumber(fallbackBand.gradePoint) : null;
+    }
+
+    return {
+      studentId: item.student.studentId,
+      studentName: item.student.studentName,
+      scholarNo: item.student.scholarNo,
+      enrollNumber: item.student.enrollNumber,
+      obtainedMarks: item.obtainedMarks,
+      maximumMarks: item.maximumMarks,
+      finalScore: pct,
+      deviation: devData.deviation >= 0 ? `+${devData.deviation.toFixed(2)}` : devData.deviation.toFixed(2),
+      deviationRaw: Number(devData.deviation.toFixed(4)),
+      deviationSquared: Number(devData.devSquared.toFixed(4)),
+      calculationFormula: `(${pct} - ${classMean.toFixed(2)}) / ${standardDev.toFixed(4)}`,
+      zScore: calculatedZ >= 0 ? `+${calculatedZ.toFixed(4)}` : calculatedZ.toFixed(4),
+      zScoreRaw: calculatedZ,
+      grade: finalGrade,
+      gradePoint: finalGradePoint,
+      isDirectFail: false,
+    };
+  });
+
+  let filteredStudentsTable = studentsTable;
+  if (body.search) {
+    const termSearch = String(body.search).toLowerCase().trim();
+    filteredStudentsTable = studentsTable.filter((st) =>
+      (st.studentName && String(st.studentName).toLowerCase().includes(termSearch)) ||
+      (st.scholarNo && String(st.scholarNo).toLowerCase().includes(termSearch)) ||
+      (st.enrollNumber && String(st.enrollNumber).toLowerCase().includes(termSearch)) ||
+      (st.grade && String(st.grade).toLowerCase().includes(termSearch))
+    );
+  }
+
+  const total = filteredStudentsTable.length;
+  const isAll = body.limit === "all" || Number(body.limit) === -1;
+  const page = isAll ? 1 : Math.max(1, Number(body.page) || 1);
+  const limit = isAll ? (total || 1) : Math.max(1, Number(body.limit) || 10);
+  const totalPages = Math.ceil(total / limit) || 1;
+  const offset = (page - 1) * limit;
+  const paginatedStudentsTable = isAll ? filteredStudentsTable : filteredStudentsTable.slice(offset, offset + limit);
+
+  const pagination = {
+    total,
+    totalRecords: total,
+    page,
+    limit,
+    totalPages,
+  };
+
+  const cohortStatistics = {
+    includedStudents: N,
+    excludedDirectFails: directFailStudents.length,
+    totalStudents: evaluatedStudents.length,
+    totalScore: Number(totalScore.toFixed(2)),
+    mean: Number(classMean.toFixed(4)),
+    sumSquaredDeviations: Number(sumSquaredDeviations.toFixed(4)),
+    populationVariance: Number(populationVariance.toFixed(4)),
+    standardDeviation: Number(standardDev.toFixed(6)),
+    standardDeviationDisplay: Number(standardDev.toFixed(4)),
+  };
+
+  const steps = [
+    {
+      step: "1.1",
+      title: "Step 1 - Total & Count for Subject",
+      formula: "N = Count of eligible students, Sum = Σ(Subject Percentage)",
+      summary: `N = ${N}; Total Score = ${totalScore.toFixed(2)}`,
+    },
+    {
+      step: "1.2",
+      title: "Step 2 - Calculate Subject Mean (μ)",
+      formula: "μ = Σ(Score) / N",
+      summary: `μ = ${totalScore.toFixed(2)} / ${N} = ${classMean.toFixed(4)}`,
+    },
+    {
+      step: "1.3",
+      title: "Step 3 - Calculate Deviations",
+      formula: "Deviation = x - μ",
+      summary: "Shows how far each student's score is from the subject cohort mean.",
+    },
+    {
+      step: "1.4",
+      title: "Step 4 - Square each deviation",
+      formula: "Deviation² = (x - μ)²",
+      summary: `Sum of squared deviations = ${sumSquaredDeviations.toFixed(4)}`,
+    },
+    {
+      step: "1.5",
+      title: "Step 5 - Calculate Standard Deviation (σ)",
+      formula: "σ = √(Σ(x - μ)² / N)",
+      summary: `σ = √(${populationVariance.toFixed(6)}) = ${standardDev.toFixed(6)}`,
+    },
+    {
+      step: "1.6",
+      title: "Step 6 - Calculate Z-Score for Subject",
+      formula: "z = (x - μ) / σ",
+      summary: "Z-score standardized for this specific subject.",
+    },
+    {
+      step: "1.7",
+      title: "Step 7 - Assign Subject Grade",
+      formula: "Policy grade bands matching",
+      summary: "Maps calculated Z-score to active grading policy grades.",
+    },
+  ];
+
+  return {
+    subject: {
+      subjectId: Number(schedule.subjectId),
+      subjectName: schedule.subjectSchedule?.subjectName,
+      subjectCode: schedule.subjectSchedule?.subjectCode,
+      examScheduleId,
+      term,
+      maximumMarks,
+    },
+    examinationSession: {
+      examinationSessionId: Number(examSession.examinationSessionId),
+      sessionName: examSession.sessionName,
+      assessmentTypeId: examSession.assessmentTypeId,
+      status: examSession.status,
+    },
+    schemeDetails: {
+      gradingId: Number(gradingScheme.gradingId),
+      gradingName: gradingScheme.gradingName,
+      gradingMethod: gradingScheme.gradingMethod,
+      distributionType: gradingScheme.distributionType || null,
+      isRelative,
+      academicRegulation: gradingScheme.academicRegulation
+        ? {
+            academicRegulationId:
+              Number(gradingScheme.academicRegulation.academicRegulationId),
+            regulationCode: gradingScheme.academicRegulation.regulationCode,
+            regulationName: gradingScheme.academicRegulation.regulationName,
+          }
+        : null,
+    },
+    cohortStatistics,
+    pagination,
+    studentsTable: paginatedStudentsTable,
+    gradeBands,
+    steps,
+  };
+}
