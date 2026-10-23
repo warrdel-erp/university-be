@@ -1815,11 +1815,21 @@ export async function getSubjectCalculationBreakdown(body) {
   const examScheduleId = Number(schedule.examScheduleId);
   const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
 
+  const teacherIdFilter =
+    body.teacherId != null
+      ? Number(body.teacherId)
+      : body.assignedToUserId != null
+        ? Number(body.assignedToUserId)
+        : null;
+
   const sheetWhere = {
     examScheduleId,
     studentId: { [Op.ne]: null },
     markingStatus: "submit",
   };
+  if (teacherIdFilter != null) {
+    sheetWhere.assignedToUser = teacherIdFilter;
+  }
   if (Array.isArray(body.studentIds) && body.studentIds.length > 0) {
     sheetWhere.studentId = { [Op.in]: body.studentIds.map(Number) };
   }
@@ -1833,9 +1843,39 @@ export async function getSubjectCalculationBreakdown(body) {
       "markingStatus",
       "obtainedMarks",
       "evaluatedAt",
+      "assignedToUser",
+      "deadlineDate",
+      "assignmentId",
     ],
     raw: true,
   });
+
+  if (!answerSheets.length) {
+    const err = new Error(
+      teacherIdFilter
+        ? `No submitted answer sheets found for this teacher (teacherId=${teacherIdFilter}) for subjectId=${subjectId}.`
+        : `No submitted answer sheets found for subjectId=${subjectId}.`,
+    );
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const allTeacherIds = [
+    ...new Set(
+      answerSheets
+        .map((s) => Number(s.assignedToUser || s.assigned_to_user))
+        .filter(Boolean),
+    ),
+  ];
+  let teacherUserMap = new Map();
+  if (allTeacherIds.length > 0) {
+    const tUsers = await scoped(model.userModel).findAll({
+      where: { userId: { [Op.in]: allTeacherIds } },
+      attributes: ["userId", "userName", "email", "phone"],
+      raw: true,
+    });
+    teacherUserMap = new Map(tUsers.map((t) => [Number(t.userId), t]));
+  }
 
   const studentIds = [...new Set(answerSheets.map((s) => Number(s.studentId)))];
 
@@ -1870,12 +1910,15 @@ export async function getSubjectCalculationBreakdown(body) {
 
   const evaluatedStudents = [];
   for (const sheet of answerSheets) {
-    const sId = Number(sheet.studentId);
+    const sId = Number(sheet.studentId || sheet.student_id);
     const st = studentMap.get(sId);
     const obtainedMarks = sheet.obtainedMarks == null ? 0 : toMoneyNumber(sheet.obtainedMarks);
     const percentage = maximumMarks > 0
       ? toMoneyNumber(decimalMultiply(decimalDivide(obtainedMarks, maximumMarks), 100))
       : 0;
+
+    const tId = Number(sheet.assignedToUser || sheet.assigned_to_user) || null;
+    const tUser = tId ? teacherUserMap.get(tId) : null;
 
     evaluatedStudents.push({
       student: {
@@ -1889,6 +1932,16 @@ export async function getSubjectCalculationBreakdown(body) {
       maximumMarks,
       percentage,
       evaluatedAt: sheet.evaluatedAt,
+      assignedTeacher: tUser
+        ? {
+            teacherId: Number(tUser.userId),
+            teacherName: tUser.userName,
+            email: tUser.email,
+            phone: tUser.phone || null,
+          }
+        : null,
+      assignmentId: sheet.assignmentId ? Number(sheet.assignmentId) : null,
+      answerSheetQrId: Number(sheet.id),
     });
   }
 
@@ -2015,6 +2068,9 @@ export async function getSubjectCalculationBreakdown(body) {
         gradePoint: failBand?.gradePoint != null ? toMoneyNumber(failBand.gradePoint) : 0,
         isDirectFail: true,
         directFailReason: `Score ${pct}% < Minimum ${minRawMarks}% threshold (Direct Fail)`,
+        answerSheetQrId: item.answerSheetQrId,
+        assignedTeacher: item.assignedTeacher,
+        evaluatedAt: item.evaluatedAt,
       };
     }
 
@@ -2048,6 +2104,9 @@ export async function getSubjectCalculationBreakdown(body) {
         grade: finalGrade,
         gradePoint: finalGradePoint,
         isDirectFail: false,
+        answerSheetQrId: item.answerSheetQrId,
+        assignedTeacher: item.assignedTeacher,
+        evaluatedAt: item.evaluatedAt,
       };
     }
 
@@ -2096,6 +2155,9 @@ export async function getSubjectCalculationBreakdown(body) {
       grade: finalGrade,
       gradePoint: finalGradePoint,
       isDirectFail: false,
+      answerSheetQrId: item.answerSheetQrId,
+      assignedTeacher: item.assignedTeacher,
+      evaluatedAt: item.evaluatedAt,
     };
   });
 
@@ -2106,7 +2168,9 @@ export async function getSubjectCalculationBreakdown(body) {
       (st.studentName && String(st.studentName).toLowerCase().includes(termSearch)) ||
       (st.scholarNo && String(st.scholarNo).toLowerCase().includes(termSearch)) ||
       (st.enrollNumber && String(st.enrollNumber).toLowerCase().includes(termSearch)) ||
-      (st.grade && String(st.grade).toLowerCase().includes(termSearch))
+      (st.grade && String(st.grade).toLowerCase().includes(termSearch)) ||
+      (st.assignedTeacher?.teacherName && String(st.assignedTeacher.teacherName).toLowerCase().includes(termSearch)) ||
+      (st.assignedTeacher?.email && String(st.assignedTeacher.email).toLowerCase().includes(termSearch))
     );
   }
 
@@ -2183,7 +2247,27 @@ export async function getSubjectCalculationBreakdown(body) {
     },
   ];
 
+  let teacherSummary = null;
+  if (teacherIdFilter && teacherUserMap.has(teacherIdFilter)) {
+    const t = teacherUserMap.get(teacherIdFilter);
+    teacherSummary = {
+      teacherId: Number(t.userId),
+      teacherName: t.userName,
+      email: t.email,
+      phone: t.phone || null,
+    };
+  } else if (teacherUserMap.size === 1) {
+    const t = Array.from(teacherUserMap.values())[0];
+    teacherSummary = {
+      teacherId: Number(t.userId),
+      teacherName: t.userName,
+      email: t.email,
+      phone: t.phone || null,
+    };
+  }
+
   return {
+    teacher: teacherSummary,
     subject: {
       subjectId: Number(schedule.subjectId),
       subjectName: schedule.subjectSchedule?.subjectName,
@@ -2221,10 +2305,159 @@ export async function getSubjectCalculationBreakdown(body) {
   };
 }
 
+export async function getTeacherZScoreList(body) {
+  const examinationSessionId = Number(body.examinationSessionId);
+  const teacherId =
+    body.teacherId != null
+      ? Number(body.teacherId)
+      : body.assignedToUserId != null
+        ? Number(body.assignedToUserId)
+        : null;
+  const subjectId = body.subjectId != null ? Number(body.subjectId) : null;
+
+  if (!examinationSessionId) {
+    const err = new Error("examinationSessionId is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!teacherId) {
+    const err = new Error("teacherId (or assignedToUserId) is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const teacherUser = await scoped(model.userModel).findOne({
+    where: { userId: teacherId },
+    attributes: ["userId", "userName", "email", "phone"],
+    raw: true,
+  });
+
+  if (!teacherUser) {
+    const err = new Error(`Teacher user not found for userId=${teacherId}`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const teacher = {
+    teacherId: Number(teacherUser.userId),
+    teacherName: teacherUser.userName,
+    email: teacherUser.email,
+    phone: teacherUser.phone || null,
+  };
+
+  // If specific subjectId is passed, use getSubjectCalculationBreakdown directly
+  if (subjectId != null) {
+    const result = await getSubjectCalculationBreakdown({
+      ...body,
+      examinationSessionId,
+      subjectId,
+      teacherId,
+    });
+    return {
+      teacher,
+      ...result,
+    };
+  }
+
+  // If no subjectId passed, find all subjects evaluated by this teacher in this session
+  const examSession = await examResultRepository.findExaminationSession(
+    examinationSessionId,
+  );
+  if (!examSession) {
+    const err = new Error("Examination session not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const schedules = await scoped(model.examScheduleModel).findAll({
+    where: { examinationSessionId },
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+      },
+    ],
+    order: [["examScheduleId", "ASC"]],
+  });
+
+  const examScheduleIds = schedules.map((s) => Number(s.examScheduleId));
+  if (!examScheduleIds.length) {
+    return {
+      teacher,
+      examinationSession: {
+        examinationSessionId: Number(examSession.examinationSessionId),
+        sessionName: examSession.sessionName,
+        status: examSession.status,
+      },
+      totalSubjects: 0,
+      subjects: [],
+    };
+  }
+
+  const submittedSheets = await scoped(model.answerSheetQrModel).findAll({
+    where: {
+      examScheduleId: { [Op.in]: examScheduleIds },
+      assignedToUser: teacherId,
+      markingStatus: "submit",
+      studentId: { [Op.ne]: null },
+    },
+    attributes: ["examScheduleId"],
+    raw: true,
+  });
+
+  const distinctScheduleIds = [
+    ...new Set(submittedSheets.map((s) => Number(s.examScheduleId))),
+  ];
+
+  const subjectsBreakdown = [];
+  for (const sched of schedules) {
+    const schedId = Number(sched.examScheduleId);
+    if (!distinctScheduleIds.includes(schedId)) continue;
+
+    try {
+      const breakdown = await getSubjectCalculationBreakdown({
+        examinationSessionId,
+        subjectId: Number(sched.subjectId),
+        examScheduleId: schedId,
+        teacherId,
+        page: body.page,
+        limit: body.limit,
+        search: body.search,
+      });
+      subjectsBreakdown.push(breakdown);
+    } catch (err) {
+      console.warn(
+        `Failed to calculate Z-score for subjectId=${sched.subjectId}, teacherId=${teacherId}:`,
+        err.message,
+      );
+    }
+  }
+
+  return {
+    teacher,
+    examinationSession: {
+      examinationSessionId: Number(examSession.examinationSessionId),
+      sessionName: examSession.sessionName,
+      status: examSession.status,
+    },
+    totalSubjects: subjectsBreakdown.length,
+    subjects: subjectsBreakdown,
+  };
+}
+
 export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
   const examinationSessionId = Number(body.examinationSessionId);
   const subjectId = body.subjectId != null ? Number(body.subjectId) : null;
   const term = body.term != null ? Number(body.term) : null;
+  const teacherIdFilter =
+    body.teacherId != null
+      ? Number(body.teacherId)
+      : body.assignedToUserId != null
+        ? Number(body.assignedToUserId)
+        : null;
 
   if (!examinationSessionId) {
     const err = new Error("examinationSessionId is required.");
@@ -2280,14 +2513,19 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
 
   const examScheduleIds = schedules.map((s) => Number(s.examScheduleId));
 
+  const answerSheetWhere = {
+    examScheduleId: { [Op.in]: examScheduleIds },
+    studentId: { [Op.ne]: null },
+    markingStatus: "submit",
+  };
+  if (teacherIdFilter != null) {
+    answerSheetWhere.assignedToUser = teacherIdFilter;
+  }
+
   let answerSheets = [];
   if (examScheduleIds.length > 0) {
     answerSheets = await scoped(model.answerSheetQrModel).findAll({
-      where: {
-        examScheduleId: { [Op.in]: examScheduleIds },
-        studentId: { [Op.ne]: null },
-        markingStatus: "submit",
-      },
+      where: answerSheetWhere,
       attributes: [
         "id",
         "studentId",
@@ -2295,6 +2533,9 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
         "markingStatus",
         "obtainedMarks",
         "evaluatedAt",
+        "assignedToUser",
+        "deadlineDate",
+        "assignmentId",
       ],
       raw: true,
     });
@@ -2339,38 +2580,119 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
     studentMap = new Map(students.map((s) => [Number(s.studentId), s]));
   }
 
+  const teacherIds = [
+    ...new Set(
+      answerSheets
+        .map((s) => Number(s.assignedToUser || s.assigned_to_user))
+        .filter((id) => Boolean(id) && !Number.isNaN(id)),
+    ),
+  ];
+  let teacherMap = new Map();
+  if (teacherIds.length > 0) {
+    const teachers = await scoped(model.userModel).findAll({
+      where: { userId: { [Op.in]: teacherIds } },
+      attributes: ["userId", "userName", "email", "phone"],
+      raw: true,
+    });
+    teacherMap = new Map(teachers.map((t) => [Number(t.userId), t]));
+  }
+
+  const assignmentIds = [
+    ...new Set(
+      answerSheets
+        .map((s) => Number(s.assignmentId || s.assignment_id))
+        .filter((id) => Boolean(id) && !Number.isNaN(id)),
+    ),
+  ];
+  let assignmentMap = new Map();
+  if (assignmentIds.length > 0) {
+    const assignments = await scoped(
+      model.answersheetEvalutionUserAssignmentModel,
+    ).findAll({
+      where: { assignmentId: { [Op.in]: assignmentIds } },
+      attributes: ["assignmentId", "notes", "timestamp"],
+      raw: true,
+    });
+    assignmentMap = new Map(
+      assignments.map((a) => [Number(a.assignmentId), a]),
+    );
+  }
+
+  const formatStudent = (sheet, schedule) => {
+    const sId = Number(sheet.studentId || sheet.student_id);
+    const st = studentMap.get(sId);
+    const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
+    const obtainedMarks =
+      sheet.obtainedMarks == null ? null : toMoneyNumber(sheet.obtainedMarks);
+    const percentage =
+      obtainedMarks != null && maximumMarks > 0
+        ? toMoneyNumber(
+            decimalMultiply(decimalDivide(obtainedMarks, maximumMarks), 100),
+          )
+        : null;
+
+    const tId = Number(sheet.assignedToUser || sheet.assigned_to_user) || null;
+    const teacherUser = tId ? teacherMap.get(tId) : null;
+    const asgId = Number(sheet.assignmentId || sheet.assignment_id) || null;
+    const asg = asgId ? assignmentMap.get(asgId) : null;
+
+    return {
+      studentId: sId,
+      studentName: st?.studentName || `Student ${sId}`,
+      scholarNo: st?.scholarNumber || null,
+      enrollNumber: st?.enrollNumber || null,
+      batchId: st?.batchId || schedule.batchId || null,
+      answerSheetQrId: Number(sheet.id),
+      markingStatus: sheet.markingStatus,
+      obtainedMarks,
+      maximumMarks,
+      percentage,
+      evaluatedAt: sheet.evaluatedAt,
+      deadlineDate: sheet.deadlineDate || sheet.deadline_date || null,
+      assignmentId: asgId,
+      assignmentNotes: asg?.notes || null,
+      assignedTeacher: teacherUser
+        ? {
+            teacherId: Number(teacherUser.userId),
+            teacherName: teacherUser.userName,
+            email: teacherUser.email,
+            phone: teacherUser.phone || null,
+          }
+        : null,
+    };
+  };
+
+  const groupStudentsByTeacher = (students) => {
+    const teacherGroups = new Map();
+    for (const st of students) {
+      const tId = st.assignedTeacher?.teacherId || null;
+      const key = tId != null ? String(tId) : "unassigned";
+
+      if (!teacherGroups.has(key)) {
+        teacherGroups.set(key, {
+          teacherId: tId,
+          teacherName: st.assignedTeacher?.teacherName || "Unassigned",
+          email: st.assignedTeacher?.email || null,
+          phone: st.assignedTeacher?.phone || null,
+          evaluatedStudentsCount: 0,
+          students: [],
+        });
+      }
+
+      const group = teacherGroups.get(key);
+      group.evaluatedStudentsCount += 1;
+      group.students.push(st);
+    }
+    return Array.from(teacherGroups.values());
+  };
+
   // Case 1: Specific subjectId requested
   if (subjectId != null) {
     const schedule = schedules[0];
     const sheets = sheetsByScheduleId.get(Number(schedule.examScheduleId)) || [];
     const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
 
-    let studentsList = sheets.map((sheet) => {
-      const sId = Number(sheet.studentId);
-      const st = studentMap.get(sId);
-      const obtainedMarks =
-        sheet.obtainedMarks == null ? null : toMoneyNumber(sheet.obtainedMarks);
-      const percentage =
-        obtainedMarks != null && maximumMarks > 0
-          ? toMoneyNumber(
-              decimalMultiply(decimalDivide(obtainedMarks, maximumMarks), 100),
-            )
-          : null;
-
-      return {
-        studentId: sId,
-        studentName: st?.studentName || `Student ${sId}`,
-        scholarNo: st?.scholarNumber || null,
-        enrollNumber: st?.enrollNumber || null,
-        batchId: st?.batchId || schedule.batchId || null,
-        answerSheetQrId: Number(sheet.id),
-        markingStatus: sheet.markingStatus,
-        obtainedMarks,
-        maximumMarks,
-        percentage,
-        evaluatedAt: sheet.evaluatedAt,
-      };
-    });
+    let studentsList = sheets.map((sheet) => formatStudent(sheet, schedule));
 
     if (body.search) {
       const termSearch = String(body.search).toLowerCase().trim();
@@ -2381,7 +2703,11 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
           (st.scholarNo &&
             String(st.scholarNo).toLowerCase().includes(termSearch)) ||
           (st.enrollNumber &&
-            String(st.enrollNumber).toLowerCase().includes(termSearch)),
+            String(st.enrollNumber).toLowerCase().includes(termSearch)) ||
+          (st.assignedTeacher?.teacherName &&
+            String(st.assignedTeacher.teacherName).toLowerCase().includes(termSearch)) ||
+          (st.assignedTeacher?.email &&
+            String(st.assignedTeacher.email).toLowerCase().includes(termSearch)),
       );
     }
 
@@ -2396,6 +2722,8 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
     const paginatedStudents = isAll
       ? studentsList
       : studentsList.slice(offset, offset + limit);
+
+    const teachersList = groupStudentsByTeacher(studentsList);
 
     return {
       examinationSession: {
@@ -2412,6 +2740,8 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
         maximumMarks,
         submittedStudentsCount: sheets.length,
       },
+      totalTeachers: teachersList.length,
+      teachers: teachersList,
       totalStudents: total,
       students: paginatedStudents,
       pagination: {
@@ -2431,32 +2761,8 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
     if (!sheets.length) continue; // Only subjects that have submitted answer sheets
 
     const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
-    const students = sheets.map((sheet) => {
-      const sId = Number(sheet.studentId);
-      const st = studentMap.get(sId);
-      const obtainedMarks =
-        sheet.obtainedMarks == null ? null : toMoneyNumber(sheet.obtainedMarks);
-      const percentage =
-        obtainedMarks != null && maximumMarks > 0
-          ? toMoneyNumber(
-              decimalMultiply(decimalDivide(obtainedMarks, maximumMarks), 100),
-            )
-          : null;
-
-      return {
-        studentId: sId,
-        studentName: st?.studentName || `Student ${sId}`,
-        scholarNo: st?.scholarNumber || null,
-        enrollNumber: st?.enrollNumber || null,
-        batchId: st?.batchId || schedule.batchId || null,
-        answerSheetQrId: Number(sheet.id),
-        markingStatus: sheet.markingStatus,
-        obtainedMarks,
-        maximumMarks,
-        percentage,
-        evaluatedAt: sheet.evaluatedAt,
-      };
-    });
+    const students = sheets.map((sheet) => formatStudent(sheet, schedule));
+    const teachersList = groupStudentsByTeacher(students);
 
     subjectsWithSubmittedSheets.push({
       subjectId: Number(schedule.subjectId),
@@ -2466,6 +2772,8 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
       examScheduleId: Number(schedule.examScheduleId),
       maximumMarks,
       submittedStudentsCount: students.length,
+      totalTeachers: teachersList.length,
+      teachers: teachersList,
       students,
     });
   }

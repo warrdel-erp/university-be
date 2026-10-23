@@ -149,6 +149,8 @@ const subjectCalculationBreakdownBody = z.object({
   examScheduleId: id.optional(),
   gradingId: id.optional().nullable(),
   batchId: id.optional().nullable(),
+  teacherId: id.optional().nullable(),
+  assignedToUserId: id.optional().nullable(),
   studentIds: z.array(id).optional().default([]),
   page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
   limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
@@ -162,6 +164,8 @@ const subjectCalculationBreakdownQuery = z.object({
   examScheduleId: id.optional(),
   gradingId: id.optional().nullable(),
   batchId: id.optional().nullable(),
+  teacherId: id.optional().nullable(),
+  assignedToUserId: id.optional().nullable(),
   page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
   limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
   search: z.string().trim().optional(),
@@ -208,6 +212,8 @@ const subjectStudentsBody = z.object({
   examinationSessionId: id,
   subjectId: id.optional(),
   term: z.coerce.number().int().positive().optional(),
+  teacherId: id.optional().nullable(),
+  assignedToUserId: id.optional().nullable(),
   search: z.string().trim().optional(),
   page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
   limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
@@ -217,6 +223,8 @@ const subjectStudentsQuery = z.object({
   examinationSessionId: id.optional(),
   subjectId: id.optional(),
   term: z.coerce.number().int().positive().optional(),
+  teacherId: id.optional().nullable(),
+  assignedToUserId: id.optional().nullable(),
   search: z.string().trim().optional(),
   page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
   limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
@@ -245,6 +253,57 @@ router.post(
   userAuth,
   validate({ body: subjectStudentsBody, query: subjectStudentsQuery }),
   examResultController.getSubjectStudentsWithSubmittedAnswerSheets,
+);
+
+const teacherZScoreQuery = z.object({
+  examinationSessionId: id,
+  teacherId: id.optional(),
+  assignedToUserId: id.optional(),
+  subjectId: id.optional(),
+  term: z.coerce.number().int().positive().optional(),
+  gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
+  search: z.string().trim().optional(),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+});
+
+const teacherZScoreBody = z.object({
+  examinationSessionId: id,
+  teacherId: id.optional(),
+  assignedToUserId: id.optional(),
+  subjectId: id.optional(),
+  term: z.coerce.number().int().positive().optional(),
+  gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
+  search: z.string().trim().optional(),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+}).passthrough();
+
+router.get(
+  "/teacher/zscore",
+  userAuth,
+  validate({ query: teacherZScoreQuery }),
+  examResultController.getTeacherZScoreList,
+);
+router.post(
+  "/teacher/zscore",
+  userAuth,
+  validate({ body: teacherZScoreBody, query: teacherZScoreQuery }),
+  examResultController.getTeacherZScoreList,
+);
+router.get(
+  "/teacher-zscore",
+  userAuth,
+  validate({ query: teacherZScoreQuery }),
+  examResultController.getTeacherZScoreList,
+);
+router.post(
+  "/teacher-zscore",
+  userAuth,
+  validate({ body: teacherZScoreBody, query: teacherZScoreQuery }),
+  examResultController.getTeacherZScoreList,
 );
 
 export default router;
