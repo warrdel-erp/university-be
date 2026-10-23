@@ -204,7 +204,51 @@ router.get(
   examResultController.getSubjectCalculationBreakdown,
 );
 
+const subjectStudentsBody = z.object({
+  examinationSessionId: id,
+  subjectId: id.optional(),
+  term: z.coerce.number().int().positive().optional(),
+  search: z.string().trim().optional(),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+}).passthrough();
+
+const subjectStudentsQuery = z.object({
+  examinationSessionId: id.optional(),
+  subjectId: id.optional(),
+  term: z.coerce.number().int().positive().optional(),
+  search: z.string().trim().optional(),
+  page: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.coerce.number().int().positive()).optional(),
+  limit: z.preprocess((val) => (val === "" || val === undefined ? undefined : val), z.union([z.coerce.number().int(), z.literal("all")]).optional()),
+});
+
+router.get(
+  "/subject/students",
+  userAuth,
+  validate({ query: subjectStudentsQuery }),
+  examResultController.getSubjectStudentsWithSubmittedAnswerSheets,
+);
+router.post(
+  "/subject/students",
+  userAuth,
+  validate({ body: subjectStudentsBody, query: subjectStudentsQuery }),
+  examResultController.getSubjectStudentsWithSubmittedAnswerSheets,
+);
+router.get(
+  "/subject-students",
+  userAuth,
+  validate({ query: subjectStudentsQuery }),
+  examResultController.getSubjectStudentsWithSubmittedAnswerSheets,
+);
+router.post(
+  "/subject-students",
+  userAuth,
+  validate({ body: subjectStudentsBody, query: subjectStudentsQuery }),
+  examResultController.getSubjectStudentsWithSubmittedAnswerSheets,
+);
+
 export default router;
+
 
 
 

@@ -203,4 +203,37 @@ export async function getSubjectCalculationBreakdown(req, res) {
   }
 }
 
+export async function getSubjectStudentsWithSubmittedAnswerSheets(req, res) {
+  try {
+    const payload = {
+      ...req.body,
+      examinationSessionId: req.body?.examinationSessionId ?? req.query?.examinationSessionId,
+      subjectId: req.body?.subjectId ?? req.query?.subjectId,
+      term: req.body?.term ?? req.query?.term,
+      search: req.query?.search ?? req.body?.search,
+      page: req.query?.page ?? req.body?.page,
+      limit: req.query?.limit ?? req.body?.limit,
+    };
+    const result =
+      await examResultServices.getSubjectStudentsWithSubmittedAnswerSheets(
+        payload,
+      );
+    return SuccessResponse(
+      res,
+      200,
+      "Subject students with submitted answer sheets fetched successfully",
+      result,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message ||
+        "Failed to fetch subject students with submitted answer sheets",
+    );
+  }
+}
+
+
 

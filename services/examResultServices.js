@@ -2220,3 +2220,264 @@ export async function getSubjectCalculationBreakdown(body) {
     steps,
   };
 }
+
+export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
+  const examinationSessionId = Number(body.examinationSessionId);
+  const subjectId = body.subjectId != null ? Number(body.subjectId) : null;
+  const term = body.term != null ? Number(body.term) : null;
+
+  if (!examinationSessionId) {
+    const err = new Error("examinationSessionId is required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const examSession = await examResultRepository.findExaminationSession(
+    examinationSessionId,
+  );
+  if (!examSession) {
+    const err = new Error("Examination session not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const scheduleWhere = {
+    examinationSessionId,
+  };
+  if (subjectId != null) {
+    scheduleWhere.subjectId = subjectId;
+  }
+  if (term != null) {
+    scheduleWhere.term = term;
+  }
+
+  const schedules = await scoped(model.examScheduleModel).findAll({
+    where: scheduleWhere,
+    include: [
+      {
+        model: model.subjectModel,
+        as: "subjectSchedule",
+        required: true,
+        attributes: ["subjectId", "subjectName", "subjectCode", "courseId"],
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        required: false,
+        attributes: ["batchId", "batch", "sessionId"],
+      },
+    ],
+    order: [["examScheduleId", "ASC"]],
+  });
+
+  if (subjectId != null && !schedules.length) {
+    const err = new Error(
+      `Exam schedule not found for examinationSessionId=${examinationSessionId}, subjectId=${subjectId}`,
+    );
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const examScheduleIds = schedules.map((s) => Number(s.examScheduleId));
+
+  let answerSheets = [];
+  if (examScheduleIds.length > 0) {
+    answerSheets = await scoped(model.answerSheetQrModel).findAll({
+      where: {
+        examScheduleId: { [Op.in]: examScheduleIds },
+        studentId: { [Op.ne]: null },
+        markingStatus: "submit",
+      },
+      attributes: [
+        "id",
+        "studentId",
+        "examScheduleId",
+        "markingStatus",
+        "obtainedMarks",
+        "evaluatedAt",
+      ],
+      raw: true,
+    });
+  }
+
+  const sheetsByScheduleId = new Map();
+  for (const sheet of answerSheets) {
+    const schedId = Number(sheet.examScheduleId);
+    if (!sheetsByScheduleId.has(schedId)) {
+      sheetsByScheduleId.set(schedId, []);
+    }
+    sheetsByScheduleId.get(schedId).push(sheet);
+  }
+
+  const studentIds = [...new Set(answerSheets.map((s) => Number(s.studentId)))];
+  let studentMap = new Map();
+  if (studentIds.length > 0) {
+    const students = await scoped(model.studentModel).findAll({
+      where: { studentId: { [Op.in]: studentIds } },
+      attributes: [
+        "studentId",
+        "batchId",
+        "scholarNumber",
+        "enrollNumber",
+        "admissionNumber",
+        [
+          sequelize.fn(
+            "TRIM",
+            sequelize.fn(
+              "CONCAT_WS",
+              " ",
+              sequelize.col("students.first_name"),
+              sequelize.col("students.middle_name"),
+              sequelize.col("students.last_name"),
+            ),
+          ),
+          "studentName",
+        ],
+      ],
+      raw: true,
+    });
+    studentMap = new Map(students.map((s) => [Number(s.studentId), s]));
+  }
+
+  // Case 1: Specific subjectId requested
+  if (subjectId != null) {
+    const schedule = schedules[0];
+    const sheets = sheetsByScheduleId.get(Number(schedule.examScheduleId)) || [];
+    const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
+
+    let studentsList = sheets.map((sheet) => {
+      const sId = Number(sheet.studentId);
+      const st = studentMap.get(sId);
+      const obtainedMarks =
+        sheet.obtainedMarks == null ? null : toMoneyNumber(sheet.obtainedMarks);
+      const percentage =
+        obtainedMarks != null && maximumMarks > 0
+          ? toMoneyNumber(
+              decimalMultiply(decimalDivide(obtainedMarks, maximumMarks), 100),
+            )
+          : null;
+
+      return {
+        studentId: sId,
+        studentName: st?.studentName || `Student ${sId}`,
+        scholarNo: st?.scholarNumber || null,
+        enrollNumber: st?.enrollNumber || null,
+        batchId: st?.batchId || schedule.batchId || null,
+        answerSheetQrId: Number(sheet.id),
+        markingStatus: sheet.markingStatus,
+        obtainedMarks,
+        maximumMarks,
+        percentage,
+        evaluatedAt: sheet.evaluatedAt,
+      };
+    });
+
+    if (body.search) {
+      const termSearch = String(body.search).toLowerCase().trim();
+      studentsList = studentsList.filter(
+        (st) =>
+          (st.studentName &&
+            String(st.studentName).toLowerCase().includes(termSearch)) ||
+          (st.scholarNo &&
+            String(st.scholarNo).toLowerCase().includes(termSearch)) ||
+          (st.enrollNumber &&
+            String(st.enrollNumber).toLowerCase().includes(termSearch)),
+      );
+    }
+
+    const total = studentsList.length;
+    const isAll = body.limit === "all" || Number(body.limit) === -1;
+    const page = isAll ? 1 : Math.max(1, Number(body.page) || 1);
+    const limit = isAll
+      ? total || 1
+      : Math.max(1, Number(body.limit) || 10);
+    const totalPages = Math.ceil(total / limit) || 1;
+    const offset = (page - 1) * limit;
+    const paginatedStudents = isAll
+      ? studentsList
+      : studentsList.slice(offset, offset + limit);
+
+    return {
+      examinationSession: {
+        examinationSessionId: Number(examSession.examinationSessionId),
+        sessionName: examSession.sessionName,
+        status: examSession.status,
+      },
+      subject: {
+        subjectId: Number(schedule.subjectId),
+        subjectName: schedule.subjectSchedule?.subjectName,
+        subjectCode: schedule.subjectSchedule?.subjectCode,
+        term: schedule.term != null ? Number(schedule.term) : null,
+        examScheduleId: Number(schedule.examScheduleId),
+        maximumMarks,
+        submittedStudentsCount: sheets.length,
+      },
+      totalStudents: total,
+      students: paginatedStudents,
+      pagination: {
+        total,
+        totalRecords: total,
+        page,
+        limit,
+        totalPages,
+      },
+    };
+  }
+
+  // Case 2: No specific subjectId passed -> return only subjects with submitted answer sheets
+  const subjectsWithSubmittedSheets = [];
+  for (const schedule of schedules) {
+    const sheets = sheetsByScheduleId.get(Number(schedule.examScheduleId)) || [];
+    if (!sheets.length) continue; // Only subjects that have submitted answer sheets
+
+    const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
+    const students = sheets.map((sheet) => {
+      const sId = Number(sheet.studentId);
+      const st = studentMap.get(sId);
+      const obtainedMarks =
+        sheet.obtainedMarks == null ? null : toMoneyNumber(sheet.obtainedMarks);
+      const percentage =
+        obtainedMarks != null && maximumMarks > 0
+          ? toMoneyNumber(
+              decimalMultiply(decimalDivide(obtainedMarks, maximumMarks), 100),
+            )
+          : null;
+
+      return {
+        studentId: sId,
+        studentName: st?.studentName || `Student ${sId}`,
+        scholarNo: st?.scholarNumber || null,
+        enrollNumber: st?.enrollNumber || null,
+        batchId: st?.batchId || schedule.batchId || null,
+        answerSheetQrId: Number(sheet.id),
+        markingStatus: sheet.markingStatus,
+        obtainedMarks,
+        maximumMarks,
+        percentage,
+        evaluatedAt: sheet.evaluatedAt,
+      };
+    });
+
+    subjectsWithSubmittedSheets.push({
+      subjectId: Number(schedule.subjectId),
+      subjectName: schedule.subjectSchedule?.subjectName,
+      subjectCode: schedule.subjectSchedule?.subjectCode,
+      term: schedule.term != null ? Number(schedule.term) : null,
+      examScheduleId: Number(schedule.examScheduleId),
+      maximumMarks,
+      submittedStudentsCount: students.length,
+      students,
+    });
+  }
+
+  return {
+    examinationSession: {
+      examinationSessionId: Number(examSession.examinationSessionId),
+      sessionName: examSession.sessionName,
+      status: examSession.status,
+    },
+    totalSubjects: subjectsWithSubmittedSheets.length,
+    subjects: subjectsWithSubmittedSheets,
+  };
+}
+
