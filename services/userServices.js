@@ -288,7 +288,7 @@ export async function dataSaveUerRolePermission(
           userId,
           roleId,
           permission: perm.permission,
-          scope: perm.scope || "INSTITUTE",
+          scope: perm.scope !== undefined ? perm.scope : null,
           resourceId: resId,
         });
       });
@@ -650,6 +650,7 @@ async function seedLegacyRoleAndPermissions(
       permission: PERMISSIONS.ACCESS_INSTITUTE.value,
       scope: SCOPES.UNIVERSITY,
       resourceId: universityId,
+      universityId,
     },
     { transaction },
   );
@@ -1092,6 +1093,7 @@ export async function giveFullAccess(info) {
         permission: PERMISSIONS.ACCESS_INSTITUTE.value,
         scope: SCOPES.UNIVERSITY,
         resourceId: universityId,
+        universityId,
       },
       { transaction },
     );

@@ -2,6 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import role from './roleModel.js';
 import user from './userModel.js';
+import university from './universityModel.js';
 
 const userRolePermissionModel = sequelize.define(
     'user_role_permission_scope',
@@ -28,8 +29,8 @@ const userRolePermissionModel = sequelize.define(
         },
         scope: {
             type: DataTypes.ENUM('OWN', 'CLASS', 'DEPARTMENT', 'INSTITUTE', 'CAMPUS', 'UNIVERSITY'),
-            allowNull: false,
-            defaultValue: 'INSTITUTE',
+            allowNull: true,
+            defaultValue: null,
             comment: 'Scope level from const/scopes.js'
         },
         resourceId: {
@@ -47,6 +48,15 @@ const userRolePermissionModel = sequelize.define(
                 key: 'user_id'
             }
         },
+        universityId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'university_id',
+            references: {
+                model: university,
+                key: 'university_id'
+            }
+        },
         createdAt: {
             type: DataTypes.DATE,
             allowNull: false,
@@ -58,11 +68,6 @@ const userRolePermissionModel = sequelize.define(
             allowNull: false,
             defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
             field: 'updated_at'
-        },
-        deletedAt: {
-            type: DataTypes.DATE,
-            allowNull: true,
-            field: 'deleted_at'
         }
     },
     {

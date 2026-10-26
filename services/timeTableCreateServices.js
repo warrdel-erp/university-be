@@ -3190,7 +3190,6 @@ export async function getTimeTableElective(courseId) {
 //         employeeCode: teacherData?.employeeCode || "",
 //         pickColor: teacherData?.pickColor || "",
 //         userId: teacherData?.userId || null,
-//         isTeacher: curr?.isTeacher || null,
 //         isAttendence: curr?.isAttendence ?? null,
 //         timeTableType, // Use the raw mapping type for the final grouping key
 //         subject: timeTableElective

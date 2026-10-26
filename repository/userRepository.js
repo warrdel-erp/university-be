@@ -36,7 +36,7 @@ export async function findEmailByEmail(email) {
   });
 
   result.dataValues.instituteName = institute?.instituteName || null;
-  result.dataValues.defaultRole = result.defaultRoleRef?.role || (result.isTeacher ? "Teacher" : null);
+  result.dataValues.defaultRole = result.defaultRoleRef?.role || null;
   return result;
 }
 

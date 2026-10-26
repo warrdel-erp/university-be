@@ -1,10 +1,10 @@
 import * as UserRolePermissionCreation  from  "../services/userRolePermissionService.js";
 
 export async function addUserRolePermission(req, res) {
-    const {userId,roleId,permission,scope} = req.body
+    const {userId,roleId,permission} = req.body
     try {
-        if(!(permission && roleId && userId && scope)){
-           return res.status(400).send('userId, permission, scope and roleId are required')
+        if(!(permission && roleId && userId)){
+           return res.status(400).send('userId, permission and roleId are required')
         }
         const UserRolePermission = await UserRolePermissionCreation.addUserRolePermission(req.body);
         res.status(201).json({ message: "Data added successfully", UserRolePermission });
@@ -38,9 +38,9 @@ export async function getSingleUserRolePermissionDetails(req, res) {
 
 export async function updateUserRolePermission(req, res) {
     try {
-        const {userRolePermissionId,permission,roleId,userId,scope} = req.body
-        if(!(userRolePermissionId && permission && roleId && userId && scope)){
-            return res.status(400).send('userRolePermissionId, permission, scope, userId and roleId are required')
+        const {userRolePermissionId,permission,roleId,userId} = req.body
+        if(!(userRolePermissionId && permission && roleId && userId)){
+            return res.status(400).send('userRolePermissionId, permission, userId and roleId are required')
          }
         const updatedUserRolePermission = await UserRolePermissionCreation.updateUserRolePermission(userRolePermissionId, req.body);
             res.status(200).json({message: "UserRolePermission update succesfully" });

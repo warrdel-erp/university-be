@@ -63,7 +63,6 @@ const userDetailAttributes = [
     'status',
     'phone',
     'email',
-    'isTeacher',
     'createdAt',
     'updatedAt',
 ];
@@ -589,7 +588,7 @@ export async function getStudentIdsForMemberUsersByScope(academicGroupScopeId) {
 }
 
 /**
- * Teachers available to assign: isTeacher employees, excluding already-used userIds.
+ * Teachers available to assign: employees, excluding already-used userIds.
  */
 export async function findAvailableUsers({
     page = 1,
@@ -641,7 +640,7 @@ export async function findAvailableUsers({
         }
     }
 
-    const userWhere = { isTeacher: true };
+    const userWhere = {};
     if (search) {
         const like = `%${search}%`;
         employeeWhere[Op.or] = [

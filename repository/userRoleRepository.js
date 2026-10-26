@@ -44,8 +44,9 @@ export async function addUserRole(userId, roleId, transaction = null) {
           userId,
           roleId: role.roleId,
           permission: tp.permission,
-          scope: tp.scope,
-          resourceId: tp.resourceId
+          scope: tp.scope || null,
+          resourceId: tp.resourceId,
+          universityId: user.universityId || role.universityId || null,
         });
       }
     });

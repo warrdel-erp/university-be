@@ -2,18 +2,35 @@ import * as UserRolePermissionCreationService from "../repository/userRolePermis
 
 export async function addUserRolePermission(UserRolePermissionData) {
   const roleId = UserRolePermissionData.roleId;
-  const permissionIds = UserRolePermissionData.permissionId;
+  const permissionData = UserRolePermissionData.permission || UserRolePermissionData.permissionId;
   const userId = UserRolePermissionData.userId;
+  const scope = UserRolePermissionData.scope ?? null;
+  const resourceId = UserRolePermissionData.resourceId ?? null;
+  const universityId = UserRolePermissionData.universityId ?? null;
 
-  const mappings = permissionIds.map((permissionId) => ({
+  if (Array.isArray(permissionData)) {
+    const mappings = permissionData.map((perm) => ({
+      roleId,
+      permission: perm,
+      userId,
+      scope,
+      resourceId,
+      universityId,
+    }));
+
+    return Promise.all(
+      mappings.map((mapping) => UserRolePermissionCreationService.addUserRolePermission(mapping))
+    );
+  }
+
+  return UserRolePermissionCreationService.addUserRolePermission({
     roleId,
-    permissionId,
+    permission: permissionData,
     userId,
-  }));
-
-  return Promise.all(
-    mappings.map((mapping) => UserRolePermissionCreationService.addUserRolePermission(mapping))
-  );
+    scope,
+    resourceId,
+    universityId,
+  });
 }
 
 export async function getUserRolePermissionDetails() {

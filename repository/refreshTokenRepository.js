@@ -26,7 +26,6 @@ export async function findRefreshTokenByHash(tokenHash) {
           "defaultInstituteId",
           "defaultAcademicYearId",
           "universityId",
-          "isTeacher",
           "status",
         ],
         include: [
