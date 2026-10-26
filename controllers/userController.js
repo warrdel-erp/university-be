@@ -514,35 +514,31 @@ export const saveUserDefaults = async (req, res) => {
     const { defaultInstituteId, defaultRole, defaultAcademicYearId } = req.body;
 
     if (defaultRole) {
-      // Teachers use a static "Teacher" role that is not in user_role_permission_scope,
-      // so skip role existence validation when isTeacher is true.
-      if (!req.user.isTeacher) {
-        // Roles can have the same name in separate universities (e.g. CLIENT_ADMIN).
-        // Resolve by role name or numeric ID strictly for the user's university.
-        const roleWhere = isNaN(Number(defaultRole))
-          ? { role: defaultRole, universityId }
-          : { roleId: Number(defaultRole), universityId };
+      // Roles can have the same name in separate universities (e.g. CLIENT_ADMIN).
+      // Resolve by role name or numeric ID strictly for the user's university.
+      const roleWhere = isNaN(Number(defaultRole))
+        ? { role: defaultRole, universityId }
+        : { roleId: Number(defaultRole), universityId };
 
-        const role = await model.roleModel.findOne({ where: roleWhere });
+      const role = await model.roleModel.findOne({ where: roleWhere });
 
-        if (!role) {
-          return res.status(400).json({
-            success: false,
-            message: `Role not found: ${defaultRole}`
-          });
-        }
-
-        const hasRole = await userRoleRepository.checkUserRoleExists(userId, role.roleId);
-        if (!hasRole) {
-          return res.status(400).json({
-            success: false,
-            message: `User does not have the specified role: ${defaultRole}`
-          });
-        }
-
-        // Inject the actual integer roleId into the payload so the repository can update it
-        req.body.defaultRoleId = role.roleId;
+      if (!role) {
+        return res.status(400).json({
+          success: false,
+          message: `Role not found: ${defaultRole}`
+        });
       }
+
+      const hasRole = await userRoleRepository.checkUserRoleExists(userId, role.roleId);
+      if (!hasRole) {
+        return res.status(400).json({
+          success: false,
+          message: `User does not have the specified role: ${defaultRole}`
+        });
+      }
+
+      // Inject the actual integer roleId into the payload so the repository can update it
+      req.body.defaultRoleId = role.roleId;
     }
 
     if (defaultInstituteId && universityId) {

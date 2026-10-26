@@ -99,10 +99,15 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
     // SYNC WITH ASSIGNED USERS
     // 1. Find all users who currently have this role
     const usersWithRole = await model.userRolePermissionModel.findAll({
-      attributes: ['userId'],
+      attributes: ['userId', 'universityId'],
       where: { roleId },
-      group: ['userId'],
+      group: ['userId', 'universityId'],
       transaction: activeTransaction
+    });
+
+    const userUnivMap = {};
+    usersWithRole.forEach(u => {
+      userUnivMap[u.userId] = u.universityId;
     });
 
     const userIds = usersWithRole.map(u => u.userId);
@@ -123,8 +128,9 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
               userId,
               roleId,
               permission: dp.permission,
-              scope: dp.scope,
-              resourceId: dp.resourceId
+              scope: dp.scope || null,
+              resourceId: dp.resourceId,
+              universityId: userUnivMap[userId] || null,
             });
           }
         });

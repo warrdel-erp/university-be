@@ -2088,6 +2088,15 @@ userModel.hasMany(userRolePermissionModel, {
   as: "userRolePermissions",
 });
 
+userRolePermissionModel.belongsTo(universityModel, {
+  foreignKey: "university_id",
+  as: "university",
+});
+universityModel.hasMany(userRolePermissionModel, {
+  foreignKey: "university_id",
+  as: "userRolePermissions",
+});
+
 // user.defaultRoleId -> role
 userModel.belongsTo(roleModel, {
   foreignKey: "default_role_id",

@@ -4,11 +4,15 @@ import { buildScope, scoped } from "../utility/scoped.js";
 export async function addUserRolePermission(UserRolePermissionData) {
   try {
     const user = await scoped(model.userModel).findOne({
-      attributes: ["userId"],
+      attributes: ["userId", "universityId"],
       where: { userId: UserRolePermissionData.userId },
     });
     if (!user) {
       throw new Error("User not found");
+    }
+
+    if (!UserRolePermissionData.universityId && user.universityId) {
+      UserRolePermissionData.universityId = user.universityId;
     }
 
     return scoped(model.userRolePermissionModel).create(UserRolePermissionData);
@@ -21,7 +25,7 @@ export async function addUserRolePermission(UserRolePermissionData) {
 export async function getUserRolePermissionDetails() {
   try {
     return scoped(model.userRolePermissionModel).findAll({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
+      attributes: { exclude: ["createdAt", "updatedAt", "role_id", "permission_id", "user_id"] },
       include: [
         {
           model: model.userModel,
@@ -51,7 +55,7 @@ export async function getUserRolePermissionDetails() {
 export async function getSingleUserRolePermissionDetails(userRolePermissionId) {
   try {
     return scoped(model.userRolePermissionModel).findOne({
-      attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
+      attributes: { exclude: ["createdAt", "updatedAt", "role_id", "permission_id", "user_id"] },
       include: [
         {
           model: model.userModel,
@@ -438,7 +442,7 @@ export async function getEmployeeRolePermissionByUserId(userId) {
                         {
                             model: model.userRolePermissionModel,
                             as: 'user',
-                            attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "role_id", "permission_id", "user_id"] },
+                            attributes: { exclude: ["createdAt", "updatedAt", "role_id", "permission_id", "user_id"] },
                             include: [
                                 {
                                     model: model.roleModel,

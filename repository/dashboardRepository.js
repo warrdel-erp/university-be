@@ -79,15 +79,17 @@ export async function getCountWithGrowth(modelRef, dateField, options = {}) {
   };
 }
 
-// Teachers = employees linked to users with isTeacher = true
-// (TEACHER is not stored in user_role_permission_scope).
+// Teachers = employees assigned TEACHER role.
 const teacherUserInclude = [
   {
-    model: model.userModel,
-    as: 'user',
+    model: model.roleModel,
+    as: 'employeeRole',
     attributes: [],
     required: true,
-    where: { isTeacher: true },
+    where: Sequelize.where(
+      Sequelize.fn('UPPER', Sequelize.col('employeeRole.role')),
+      ROLES.TEACHER,
+    ),
   },
 ];
 
@@ -99,7 +101,7 @@ export async function getStudentOverviewStats() {
   return getCountWithGrowth(model.studentModel, studentEnrollmentDate);
 }
 
-// Teacher KPI: employees whose linked user has isTeacher = true.
+// Teacher KPI: employees whose role is TEACHER.
 export async function getTeacherOverviewStats() {
   return getCountWithGrowth(model.employeeModel, 'createdAt', {
     include: teacherUserInclude,

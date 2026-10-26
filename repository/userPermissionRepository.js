@@ -69,8 +69,9 @@ export async function setUserPermissions(userId, roleId, permissions, transactio
             userId,
             roleId: currentRoleId,
             permission: item.permission,
-            scope: item.scope || SCOPES.INSTITUTE,
+            scope: item.scope !== undefined ? item.scope : null,
             resourceId: resId !== null && resId !== undefined && !isNaN(Number(resId)) ? Number(resId) : (resId || null),
+            universityId: user.universityId || null,
           });
         });
       }

@@ -1,7 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes, Op } from 'sequelize';
 import university from "./universityModel.js";
-import institute from "./instituteModel.js";
 import role from "./roleModel.js";
 
 const userModel = sequelize.define(
@@ -77,12 +76,6 @@ const userModel = sequelize.define(
                 notEmpty: { msg: "Email is required" },
                 notNull: { msg: "Email is required" }
             }
-        },
-        isTeacher: {
-            type: DataTypes.BOOLEAN,
-            allowNull: false,
-            defaultValue: false,
-            field: 'is_teacher'
         },
 
         createdAt: {
