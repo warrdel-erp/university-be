@@ -262,19 +262,10 @@ export function applyGradingToStudents(evaluatedStudents, gradingScheme) {
   }
 
   // ── RELATIVE GRADING (Z-SCORE) ──────────────────────────────────────────
-  const failConfig = gradingScheme.relativeConfig?.failGradeAssignment;
-  const minRawMarks =
-    failConfig?.minRawMarks != null ? Number(failConfig.minRawMarks) : null;
-
-  // 1. Separate students eligible for relative bell curve calculation
-  const eligiblePercentages = [];
-  for (const item of evaluatedStudents) {
-    const pct = item.percentage != null ? Number(item.percentage) : 0;
-    if (minRawMarks != null && pct < minRawMarks) {
-      continue; // Fails directly by threshold, excluded from relative distribution
-    }
-    eligiblePercentages.push(pct);
-  }
+  // 1. All evaluated students are eligible for relative bell curve calculation
+  const eligiblePercentages = evaluatedStudents.map((item) =>
+    item.percentage != null ? Number(item.percentage) : 0,
+  );
 
   // 2. Compute Mean and Standard Deviation using simple-statistics
   let classMean = 0;
@@ -285,30 +276,9 @@ export function applyGradingToStudents(evaluatedStudents, gradingScheme) {
     classStdDev = eligiblePercentages.length > 1 ? standardDeviation(eligiblePercentages) : 0;
   }
 
-  // 3. Find Rule-based fail band or fallback to last band
-  const failBand =
-    grades.find((b) => b.isRuleBased || b.isPass === false) ||
-    grades[grades.length - 1];
-
-  // 4. Assign Z-Score and map to grade bands
+  // 3. Assign Z-Score and map to grade bands
   return evaluatedStudents.map((item) => {
     const pct = item.percentage != null ? Number(item.percentage) : 0;
-
-    // Check if student failed the minimum raw threshold
-    if (minRawMarks != null && pct < minRawMarks) {
-      const calculatedZ =
-        classStdDev === 0
-          ? 0
-          : Number(zScore(pct, classMean, classStdDev).toFixed(4));
-
-      return {
-        ...item,
-        zScore: calculatedZ,
-        grade: failBand ? failBand.grade : "F",
-        gradePoint: failBand?.gradePoint != null ? Number(failBand.gradePoint) : 0,
-        gradingId: Number(gradingScheme.gradingId),
-      };
-    }
 
     // Normal Z-Score calculation
     const calculatedZ =
@@ -1454,15 +1424,11 @@ export async function getCalculationBreakdown(body) {
     grades.find((b) => b.isRuleBased || b.isPass === false) ||
     grades[grades.length - 1];
 
-  const failConfig = gradingScheme.relativeConfig?.failGradeAssignment;
-  const minRawMarks =
-    failConfig?.minRawMarks != null ? Number(failConfig.minRawMarks) : null;
-
   // Grade Bands formatted according to developer specification
   const gradeBands = grades.map((b) => {
     let zRange = "N/A";
     if (b.isRuleBased) {
-      zRange = minRawMarks != null ? `Score < ${minRawMarks} (Rule-based)` : "Rule-based";
+      zRange = "Rule-based";
     } else if (b.lowerBound != null && b.upperBound != null) {
       const lower = Number(b.lowerBound);
       const upper = Number(b.upperBound);
@@ -1488,18 +1454,9 @@ export async function getCalculationBreakdown(body) {
     };
   });
 
-  // Calculate cohort statistics
-  const eligibleStudents = [];
+  // Calculate cohort statistics (all evaluated students are eligible)
+  const eligibleStudents = evaluatedStudents;
   const directFailStudents = [];
-
-  for (const item of evaluatedStudents) {
-    const pct = item.percentage != null ? Number(item.percentage) : 0;
-    if (isRelative && minRawMarks != null && pct < minRawMarks) {
-      directFailStudents.push(item);
-    } else {
-      eligibleStudents.push(item);
-    }
-  }
 
   const eligibleScores = eligibleStudents.map((s) => Number(s.percentage) || 0);
   const N = eligibleScores.length;
@@ -1528,32 +1485,6 @@ export async function getCalculationBreakdown(body) {
   // Build Students Worked Example Table (Image Section 4)
   const studentsTable = evaluatedStudents.map((item) => {
     const pct = item.percentage != null ? Number(item.percentage) : 0;
-    const isDirectFail = isRelative && minRawMarks != null && pct < minRawMarks;
-
-    if (isDirectFail) {
-      const dev = pct - classMean;
-      const devSq = dev * dev;
-      const calculatedZ =
-        standardDev === 0 ? 0 : Number(zScore(pct, classMean, standardDev).toFixed(4));
-
-      return {
-        studentId: item.student.studentId,
-        studentName: item.student.studentName,
-        scholarNo: item.student.scholarNo,
-        enrollNumber: item.student.enrollNumber,
-        finalScore: pct,
-        deviation: dev >= 0 ? `+${dev.toFixed(2)}` : dev.toFixed(2),
-        deviationRaw: Number(dev.toFixed(4)),
-        deviationSquared: Number(devSq.toFixed(4)),
-        calculationFormula: `(${pct} - ${classMean.toFixed(2)}) / ${standardDev.toFixed(4)}`,
-        zScore: calculatedZ >= 0 ? `+${calculatedZ.toFixed(4)}` : calculatedZ.toFixed(4),
-        zScoreRaw: calculatedZ,
-        grade: failBand ? failBand.grade : "F",
-        gradePoint: failBand?.gradePoint != null ? toMoneyNumber(failBand.gradePoint) : 0,
-        isDirectFail: true,
-        directFailReason: `Score ${pct}% < Minimum ${minRawMarks}% threshold (Direct Fail)`,
-      };
-    }
 
     if (!isRelative) {
       let finalGrade = null;
@@ -1975,9 +1906,7 @@ export async function getSubjectCalculationBreakdown(body) {
     grades.find((b) => b.isRuleBased || b.isPass === false) ||
     grades[grades.length - 1];
 
-  const failConfig = gradingScheme.relativeConfig?.failGradeAssignment;
-  const minRawMarks =
-    failConfig?.minRawMarks != null ? Number(failConfig.minRawMarks) : null;
+
 
   const gradeBands = grades.map((b) => {
     let zRange = "N/A";
@@ -2006,17 +1935,8 @@ export async function getSubjectCalculationBreakdown(body) {
     };
   });
 
-  const eligibleStudents = [];
+  const eligibleStudents = evaluatedStudents;
   const directFailStudents = [];
-
-  for (const item of evaluatedStudents) {
-    const pct = item.percentage != null ? Number(item.percentage) : 0;
-    if (isRelative && minRawMarks != null && pct < minRawMarks) {
-      directFailStudents.push(item);
-    } else {
-      eligibleStudents.push(item);
-    }
-  }
 
   const eligibleScores = eligibleStudents.map((s) => Number(s.percentage) || 0);
   const N = eligibleScores.length;
@@ -2042,37 +1962,6 @@ export async function getSubjectCalculationBreakdown(body) {
 
   const studentsTable = evaluatedStudents.map((item) => {
     const pct = item.percentage != null ? Number(item.percentage) : 0;
-    const isDirectFail = isRelative && minRawMarks != null && pct < minRawMarks;
-
-    if (isDirectFail) {
-      const dev = pct - classMean;
-      const devSq = dev * dev;
-      const calculatedZ =
-        standardDev === 0 ? 0 : Number(zScore(pct, classMean, standardDev).toFixed(4));
-
-      return {
-        studentId: item.student.studentId,
-        studentName: item.student.studentName,
-        scholarNo: item.student.scholarNo,
-        enrollNumber: item.student.enrollNumber,
-        obtainedMarks: item.obtainedMarks,
-        maximumMarks: item.maximumMarks,
-        finalScore: pct,
-        deviation: dev >= 0 ? `+${dev.toFixed(2)}` : dev.toFixed(2),
-        deviationRaw: Number(dev.toFixed(4)),
-        deviationSquared: Number(devSq.toFixed(4)),
-        calculationFormula: `(${pct} - ${classMean.toFixed(2)}) / ${standardDev.toFixed(4)}`,
-        zScore: calculatedZ >= 0 ? `+${calculatedZ.toFixed(4)}` : calculatedZ.toFixed(4),
-        zScoreRaw: calculatedZ,
-        grade: failBand ? failBand.grade : "F",
-        gradePoint: failBand?.gradePoint != null ? toMoneyNumber(failBand.gradePoint) : 0,
-        isDirectFail: true,
-        directFailReason: `Score ${pct}% < Minimum ${minRawMarks}% threshold (Direct Fail)`,
-        answerSheetQrId: item.answerSheetQrId,
-        assignedTeacher: item.assignedTeacher,
-        evaluatedAt: item.evaluatedAt,
-      };
-    }
 
     if (!isRelative) {
       let finalGrade = null;
