@@ -432,12 +432,6 @@ export async function getStudentBillingBreakdown(queryParams = {}, authUser = {}
       billedCount += 1;
       status = existingInvoice.paymentStatus === "paid" ? "Paid" : "Billed";
       statusColor = existingInvoice.paymentStatus === "paid" ? "green" : "blue";
-    } else if (schedule?.status === "billed") {
-      status = "Billed";
-      statusColor = "blue";
-    } else if (schedule?.status === "pending" || schedule?.status === "published") {
-      status = "Ready";
-      statusColor = "green";
     }
 
     totalRunDiscounts = decimalAdd(totalRunDiscounts, totalDiscount);
@@ -788,9 +782,6 @@ export async function getSingleStudentBillingBreakdown(queryParams = {}, authUse
   if (existingInvoice) {
     status = existingInvoice.paymentStatus === "paid" ? "Paid" : "Billed";
     statusColor = existingInvoice.paymentStatus === "paid" ? "green" : "blue";
-  } else if (schedule?.status === "billed") {
-    status = "Billed";
-    statusColor = "blue";
   }
 
   const course = student.course || {};
