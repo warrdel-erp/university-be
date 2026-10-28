@@ -6,7 +6,10 @@ export async function addRole(req, res) {
         if(!(role)){
            return res.status(400).send('role is required')
         }
-        const Role = await RoleCreation.addRole(req.body);
+        if (req.body.code) {
+           return res.status(403).json({ error: "Clients are not allowed to generate role codes." });
+        }
+        const Role = await RoleCreation.addRole({ ...req.body, code: null });
         res.status(201).json({ message: "Data added successfully", Role });
     } catch (error) {
         res.status(500).json({ error: error.message });

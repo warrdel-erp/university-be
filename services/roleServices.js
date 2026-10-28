@@ -68,6 +68,10 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
       transaction: activeTransaction
     });
 
+    if (roleRecord?.code) {
+      throw new Error(`Permissions for system-generated role '${roleRecord.role}' cannot be modified.`);
+    }
+
     await model.rolePermissionsModel.destroy({
       where: { role_id: roleId },
       transaction: activeTransaction
