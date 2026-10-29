@@ -94,3 +94,32 @@ export async function assignRolePermissions(req, res) {
         res.status(500).json({ error: error.message });
     }
 }
+
+export async function getRoleBaseScope(req, res) {
+    try {
+        const { roleId } = req.params;
+        if (!roleId) {
+            return res.status(400).send('roleId is required');
+        }
+        const data = await RoleCreation.getRoleBaseScope(roleId);
+        res.status(200).json(data);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+export async function assignRoleBaseScope(req, res) {
+    try {
+        const { roleId, scope, resourceIds, selectedNodes } = req.body;
+        if (!roleId) {
+            return res.status(400).send('roleId is required');
+        }
+        const data = await RoleCreation.assignRoleBaseScope(roleId, {
+            scope,
+            resourceIds: resourceIds ?? selectedNodes ?? []
+        });
+        res.status(200).json({ message: "Base scope assigned to role successfully", data });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
