@@ -48,6 +48,15 @@ export async function addUserRole(userId, roleId, transaction = null) {
           resourceId: tp.resourceId,
           universityId: user.universityId || role.universityId || null,
         });
+      } else {
+        dataToInsert.push({
+          userId,
+          roleId: role.roleId,
+          permission: tp.permission,
+          scope: tp.scope || "UNIVERSITY",
+          resourceId: user.universityId || role.universityId || null,
+          universityId: user.universityId || role.universityId || null,
+        });
       }
     });
 

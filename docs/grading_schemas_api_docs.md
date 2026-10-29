@@ -102,6 +102,116 @@
 
 ---
 
+### 1.1B Create Relative Grading Schema (Bell Curve / Z-Score)
+- **Method**: `POST`
+- **URL**: `{{baseurl}}/gradingSchemas`
+- **Description**: Creates a relative grading schema configured with distribution methods (Bell Curve, Z-Score, Percentile, Manual) and relative configs (Fail Grade Assignment & Tie Handling).
+
+#### Request Body
+```json
+{
+  "gradingName": "Relative Bell Curve 10-Point Scale",
+  "gradingCode": "REL_BELL_10",
+  "gradingMethod": "RELATIVE",
+  "distributionMethod": "BELL_CURVE",
+  "relativeConfig": {
+    "failGradeAssignment": {
+      "type": "RULE_BASED",
+      "minRawMarks": 35.0,
+      "remarks": "Must score >= 35 raw marks to enter relative grading"
+    },
+    "tieHandling": {
+      "method": "HIGHER_GRADE",
+      "remarks": "Borderline scores assigned to higher grade"
+    }
+  },
+  "description": "Bell Curve standard deviation relative grading scheme.",
+  "status": "DRAFT",
+  "isActive": true,
+  "grades": [
+    {
+      "grade": "O",
+      "lowerBound": 2.00,
+      "upperBound": null,
+      "gradePoint": 10.0,
+      "expectedStudentsPercentage": 2.30,
+      "isRuleBased": false,
+      "resultLabel": "Outstanding",
+      "sortOrder": 1,
+      "isPass": true
+    },
+    {
+      "grade": "A+",
+      "lowerBound": 1.00,
+      "upperBound": 2.00,
+      "gradePoint": 9.0,
+      "expectedStudentsPercentage": 13.60,
+      "isRuleBased": false,
+      "resultLabel": "Excellent",
+      "sortOrder": 2,
+      "isPass": true
+    },
+    {
+      "grade": "A",
+      "lowerBound": 0.00,
+      "upperBound": 1.00,
+      "gradePoint": 8.0,
+      "expectedStudentsPercentage": 34.10,
+      "isRuleBased": false,
+      "resultLabel": "Very Good",
+      "sortOrder": 3,
+      "isPass": true
+    },
+    {
+      "grade": "B+",
+      "lowerBound": -1.00,
+      "upperBound": 0.00,
+      "gradePoint": 7.0,
+      "expectedStudentsPercentage": 34.10,
+      "isRuleBased": false,
+      "resultLabel": "Good",
+      "sortOrder": 4,
+      "isPass": true
+    },
+    {
+      "grade": "B",
+      "lowerBound": -2.00,
+      "upperBound": -1.00,
+      "gradePoint": 6.0,
+      "expectedStudentsPercentage": 13.60,
+      "isRuleBased": false,
+      "resultLabel": "Above Average",
+      "sortOrder": 5,
+      "isPass": true
+    },
+    {
+      "grade": "C",
+      "lowerBound": null,
+      "upperBound": -2.00,
+      "gradePoint": 5.0,
+      "expectedStudentsPercentage": 2.30,
+      "isRuleBased": false,
+      "resultLabel": "Average",
+      "sortOrder": 6,
+      "isPass": true
+    },
+    {
+      "grade": "F",
+      "lowerBound": null,
+      "upperBound": null,
+      "gradePoint": 0.0,
+      "expectedStudentsPercentage": null,
+      "isRuleBased": true,
+      "resultLabel": "Fail",
+      "sortOrder": 7,
+      "isPass": false
+    }
+  ]
+}
+```
+
+---
+
 ### 1.2 Get List of Grading Schemas
 - **Method**: `GET`
 - **URL**: `{{baseurl}}/gradingSchemas?search=&status=&gradingMethod=&page=1&limit=10`
@@ -136,12 +246,18 @@
         "updatedBy": 15,
         "created_at": "2026-07-31T00:30:00.000Z",
         "updated_at": "2026-07-31T00:30:00.000Z",
+        "isMapped": false,
+        "isEditable": true,
         "grades": [...]
       }
     ]
   }
 }
 ```
+
+> **Dynamic Fields**:
+> - `isMapped` (`boolean`): `true` if linked to any `academic_regulation` record (`grading_scheme_id`).
+> - `isEditable` (`boolean`): `false` if `isMapped` is `true`, otherwise `true`.
 
 ---
 
@@ -167,6 +283,8 @@
     "updatedBy": 15,
     "created_at": "2026-07-31T00:30:00.000Z",
     "updated_at": "2026-07-31T00:30:00.000Z",
+    "isMapped": false,
+    "isEditable": true,
     "grades": [...]
   }
 }
@@ -175,9 +293,9 @@
 ---
 
 ### 1.4 Update Grading Schema
-- **Method**: `PUT`
+- **Method**: `PUT` / `PATCH`
 - **URL**: `{{baseurl}}/gradingSchemas/1`
-- **Description**: Updates grading schema details and optionally replaces full grade array.
+- **Description**: Updates grading schema details and optionally replaces full grade array. **Note**: If the schema is mapped to an `academic_regulation`, updates will be rejected with `400 Bad Request`.
 
 #### Request Body
 ```json
@@ -199,9 +317,20 @@
     "gradingId": 1,
     "gradingName": "Updated 10-Point Scale",
     "gradingCode": "G10_SCALE_V2",
+    "gradingMethod": "ABSOLUTE",
     "status": "PUBLISHED",
-    "updated_at": "2026-07-31T00:35:00.000Z"
+    "isMapped": false,
+    "isEditable": true
   }
+}
+```
+
+#### Error Response (400 Bad Request - Schema Mapped to Academic Regulation)
+```json
+{
+  "success": false,
+  "message": "Cannot edit grading schema as it is mapped to an academic regulation",
+  "errors": null
 }
 ```
 

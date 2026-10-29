@@ -3855,6 +3855,15 @@ assessmentPlanComponentModel.hasMany(studentResultModel, {
   as: "studentResults",
 });
 
+studentResultModel.belongsTo(gradingModel, {
+  foreignKey: "gradingId",
+  as: "gradingScheme",
+});
+gradingModel.hasMany(studentResultModel, {
+  foreignKey: "gradingId",
+  as: "studentResults",
+});
+
 examSessionAnswerSheetModel.belongsTo(examinationSessionModel, {
   foreignKey: "examinationSessionId",
   as: "examinationSession",
@@ -3953,6 +3962,10 @@ userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
 academicRegulationModel.belongsTo(gradingModel, {
   foreignKey: "gradingSchemeId",
   as: "gradingScheme",
+});
+gradingModel.hasMany(academicRegulationModel, {
+  foreignKey: "gradingSchemeId",
+  as: "academicRegulations",
 });
 academicRegulationModel.belongsTo(userModel, {
   foreignKey: "createdBy",
