@@ -1,0 +1,493 @@
+{
+  "info": {
+    "_postman_id": "e1e2e3e4-elective-pool-and-mapping-01",
+    "name": "Elective Pool & Course Mapping",
+    "description": "# Elective Pool & Course Mapping APIs\n\nCollection covering the complete Elective Pool setup:\n1. **Elective Pool (Image 1)**: CRUD operations, scope configurations (Programme / Institute / Batch), status toggling, and search.\n2. **Elective Pool Subject Mapping (Image 2)**: Available courses list from Course Master with filters (programme, components, search), dynamic selection status ('Already in Pool' vs 'Available'), bulk add courses, view mapped courses, and remove course.\n\n### Base URL\n{{baseurl}} (Default: http://localhost:8080)\n\n### Auth\nBearer token ({{token}})",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0xMVQxMDo1MDowMi4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzg5MjExMTI0LCJleHAiOjE3ODkyOTc1MjR9.L31KFUz6KRDvJX9KxnAD_vZkWAjVX5mwp1WAW_QujdY"
+    },
+    {
+      "key": "electivePoolId",
+      "value": "1"
+    },
+    {
+      "key": "courseId",
+      "value": "34"
+    },
+    {
+      "key": "subjectId",
+      "value": "129"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Elective Pool",
+      "description": "CRUD operations for managing elective pools across scopes (Image 1)",
+      "item": [
+        {
+          "name": "1. Create Elective Pool (Programme Scope - Default)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"electivePoolId\", String(jsonData.data.id));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Architecture Professional Electives\",\n  \"code\": \"ARCH-PROF\",\n  \"description\": \"Advanced discipline-specific electives for architecture and allied areas.\",\n  \"scope\": \"programme\",\n  \"courseId\": 34,\n  \"instituteId\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/electivePool/create",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Create Elective Pool (Institute Scope)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Institution Open Electives\",\n  \"code\": \"INST-OPEN\",\n  \"description\": \"Open electives available across all programmes in the institution.\",\n  \"scope\": \"institute\",\n  \"instituteId\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/electivePool/create",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Create Elective Pool (Batch Scope)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"B.Arch 2026 Specialization Electives\",\n  \"code\": \"BARCH-2026-SPEC\",\n  \"description\": \"Batch specific elective offerings for B.Arch 2026 cohort.\",\n  \"scope\": \"batch\",\n  \"courseId\": 34,\n  \"batchId\": 1,\n  \"instituteId\": 12\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/electivePool/create",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Get All Elective Pools (List with mapped counts)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/list?limit=10&page=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Filter Elective Pools by Scope (Programme)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/list?scope=programme&courseId=34",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "scope",
+                  "value": "programme"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Search Elective Pools by Name or Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/list?search=Architecture",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Architecture"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Get Single Elective Pool By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/{{electivePoolId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "{{electivePoolId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "8. Update Elective Pool",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Architecture Professional Electives (Updated)\",\n  \"description\": \"Updated discipline-specific electives for architecture and allied areas.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/electivePool/update/{{electivePoolId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "update",
+                "{{electivePoolId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "9. Toggle Status (Active / Inactive)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/toggleStatus/{{electivePoolId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "toggleStatus",
+                "{{electivePoolId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10. Delete Elective Pool (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/delete/{{electivePoolId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "delete",
+                "{{electivePoolId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Elective Pool Subject Mapping",
+      "description": "Course Master selection and mapping to elective pools (Image 2)",
+      "item": [
+        {
+          "name": "1. Get Available Courses for Pool (Image 2 Table)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/subjects/available?electivePoolId={{electivePoolId}}&limit=10&page=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "subjects",
+                "available"
+              ],
+              "query": [
+                {
+                  "key": "electivePoolId",
+                  "value": "{{electivePoolId}}",
+                  "description": "Sets selectionStatus to Already in Pool vs Available"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Search Courses by Code / Name (Image 2 Search Bar)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/subjects/available?electivePoolId={{electivePoolId}}&search=ARC",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "subjects",
+                "available"
+              ],
+              "query": [
+                {
+                  "key": "electivePoolId",
+                  "value": "{{electivePoolId}}"
+                },
+                {
+                  "key": "search",
+                  "value": "ARC"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Filter Courses by Programme (Image 2 Filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/subjects/available?electivePoolId={{electivePoolId}}&courseId=34",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "subjects",
+                "available"
+              ],
+              "query": [
+                {
+                  "key": "electivePoolId",
+                  "value": "{{electivePoolId}}"
+                },
+                {
+                  "key": "courseId",
+                  "value": "34"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Filter Courses by Component (Image 2 Filter)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/subjects/available?electivePoolId={{electivePoolId}}&componentId=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "subjects",
+                "available"
+              ],
+              "query": [
+                {
+                  "key": "electivePoolId",
+                  "value": "{{electivePoolId}}"
+                },
+                {
+                  "key": "componentId",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Add Courses to Pool (Image 2 Add Button)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"electivePoolId\": 1,\n  \"subjectIds\": [\n    129,\n    130,\n    131,\n    132\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/electivePool/subjects/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "subjects",
+                "map"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Get Mapped Courses for Pool (Image 2 Drawer)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/electivePool/subjects/mapped/{{electivePoolId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "subjects",
+                "mapped",
+                "{{electivePoolId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Remove Course from Pool (Image 2 Remove [x])",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"electivePoolId\": 1,\n  \"subjectId\": 129\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/electivePool/subjects/unmap",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "electivePool",
+                "subjects",
+                "unmap"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

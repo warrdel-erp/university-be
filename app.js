@@ -84,6 +84,7 @@ import jobs from "./router/jobRoutes.js";
 import curriculumRoute from "./router/curriculumRoute.js";
 import curriculumCategory from "./router/curriculumCategoryRoute.js";
 import subjectComponent from "./router/subjectComponentRoute.js";
+import electivePool from "./router/electivePoolRoute.js";
 import gradingSchemas from "./router/gradingSchemasRouter.js";
 import academicRegulation from "./router/academicRegulationRoute.js";
 import assessmentPlan from "./router/assessmentPlanRoute.js";
@@ -289,6 +290,8 @@ app.use("/api/curriculum-categories", curriculumCategory);
 app.use("/subjectComponent", subjectComponent);
 app.use("/api/subject-components", subjectComponent);
 app.use("/courseComponent", subjectComponent);
+app.use("/electivePool", electivePool);
+app.use("/api/elective-pools", electivePool);
 app.use("/previousAcademic", previousAcademic);
 
 export { app };

@@ -1,0 +1,173 @@
+# Elective Pool & Course Mapping APIs
+
+Postman collection: `docs/postman/univ-v2-elective-pool.postman_collection.json`
+
+This module provides complete support for:
+1. **Elective Pool (Image 1)**: Reusable course pools for elective requirements with configurable scopes (`institute`, `programme` [default], `batch`), status toggling, and full CRUD.
+2. **Elective Pool Subject Mapping (Image 2)**: Selecting courses from the institution's Course Master (`subject`), filtering by programme/components, dynamic `"Already in Pool"` vs `"Available"` status, bulk adding courses, viewing mapped courses, and removing mapped courses.
+
+| | |
+|---|---|
+| **Auth** | Bearer Token / Cookie (`accessToken={{token}}`) Required |
+| **Base URL** | `{{baseurl}}` (default `http://localhost:8080`) |
+| **Mount Paths** | `/electivePool`, `/api/elective-pools` |
+
+### Headers (all endpoints)
+
+| Header | Required | Description |
+|---|---|---|
+| Authorization | Yes | `Bearer {{token}}` |
+| Cookie | Optional | `accessToken={{token}}` |
+| Content-Type | Yes (for POST/PATCH/PUT) | `application/json` |
+| Accept | Yes | `application/json` |
+
+---
+
+## Database Tables
+
+### 1. `elective_pool`
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | INT | PRIMARY KEY, AUTO_INCREMENT | Unique Pool ID |
+| `name` | VARCHAR(150) | NOT NULL | Pool Name (e.g., "Architecture Professional Electives") |
+| `code` | VARCHAR(50) | NOT NULL, UNIQUE | Pool Code (e.g., "ARCH-PROF") |
+| `description` | VARCHAR(300) | NULL | Optional description (max 300 chars) |
+| `scope` | ENUM('institute', 'programme', 'batch') | NOT NULL, DEFAULT 'programme' | Scope level |
+| `course_id` | INT | NULL, FK `course(course_id)` | Programme ID (required when scope is programme or batch) |
+| `batch_id` | INT | NULL, FK `batch(batch_id)` | Batch ID (required when scope is batch) |
+| `institute_id` | INT | NOT NULL, FK `institute(institute_id)` | Institute ID |
+| `university_id` | INT | NULL | University ID |
+| `campus_id` | INT | NULL | Campus ID |
+| `is_active` | BOOLEAN | NOT NULL, DEFAULT TRUE | Status: Active / Inactive |
+| `created_by` | INT | NULL | Created by user ID |
+| `updated_by` | INT | NULL | Updated by user ID |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Created timestamp |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Updated timestamp |
+| `deleted_at` | TIMESTAMP | NULL | Soft delete timestamp |
+
+### 2. `elective_pool_subject_mapping`
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | INT | PRIMARY KEY, AUTO_INCREMENT | Mapping record ID |
+| `elective_pool_id` | INT | NOT NULL, FK `elective_pool(id)` ON DELETE CASCADE | Elective Pool ID |
+| `subject_id` | INT | NOT NULL, FK `subject(subject_id)` ON DELETE RESTRICT | Subject ID from Course Master |
+| `created_by` | INT | NULL | User ID who mapped the course |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Created timestamp |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Updated timestamp |
+| *UNIQUE KEY* | `(elective_pool_id, subject_id)` | UNIQUE | Ensures no duplicate course in same pool |
+
+---
+
+## API Endpoints Reference
+
+### Folder 1: Elective Pool (Image 1)
+
+| Action | Method | Route | Description |
+|---|---|---|---|
+| **Create Pool** | `POST` | `/electivePool/create` or `/electivePool` | Create a new elective pool (default scope: `programme`) |
+| **List Pools** | `GET` | `/electivePool/list` or `/electivePool` | Get paginated pools with `mappedCoursesCount`, search, scope filter |
+| **Get Pool by ID** | `GET` | `/electivePool/:id` | Get single pool with programme, batch & institute details |
+| **Update Pool** | `PATCH` | `/electivePool/update/:id` or `/electivePool/:id` | Update name, code, description, scope, courseId |
+| **Toggle Status** | `PATCH` | `/electivePool/toggleStatus/:id` | Toggle `is_active` between Active and Inactive |
+| **Delete Pool** | `DELETE` | `/electivePool/delete/:id` or `/electivePool/:id` | Soft delete pool |
+
+#### Example: Create Elective Pool (Image 1 Modal)
+```http
+POST /electivePool/create HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Architecture Professional Electives",
+  "code": "ARCH-PROF",
+  "description": "Advanced discipline-specific electives for architecture and allied areas.",
+  "scope": "programme",
+  "courseId": 34,
+  "instituteId": 12
+}
+```
+
+---
+
+### Folder 2: Elective Pool Subject Mapping (Image 2)
+
+| Action | Method | Route | Description |
+|---|---|---|---|
+| **Available Courses** | `GET` | `/electivePool/subjects/available` | Image 2 Course Master table with programme, components, and dynamic `selectionStatus` (`Already in Pool` vs `Available`) |
+| **Add Courses** | `POST` | `/electivePool/subjects/map` | "Add Courses" button - bulk map selected courses to pool |
+| **Mapped Courses** | `GET` | `/electivePool/subjects/mapped/:poolId` | Get all courses currently mapped in the pool |
+| **Remove Course** | `DELETE` | `/electivePool/subjects/unmap` | Remove single course from pool |
+
+#### Example: Get Available Courses (Image 2 Modal)
+```http
+GET /electivePool/subjects/available?electivePoolId=1&limit=10&page=1 HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+**Response:**
+```json
+{
+  "status": 200,
+  "message": "Available courses fetched successfully",
+  "data": [
+    {
+      "subjectId": 129,
+      "subjectName": "Ecology & Built Environment",
+      "subjectCode": "1AR1",
+      "subjectType": "Theoretical",
+      "isActive": true,
+      "term": 1,
+      "programme": {
+        "courseId": 34,
+        "courseName": "Bachelors in Architecture",
+        "courseCode": "BARCH"
+      },
+      "components": [
+        { "id": 1, "componentName": "Theory", "code": "TH" }
+      ],
+      "selectionStatus": "Already in Pool",
+      "isAlreadyInPool": true
+    },
+    {
+      "subjectId": 130,
+      "subjectName": "Structures I",
+      "subjectCode": "ARC103",
+      "subjectType": "Theoretical",
+      "isActive": true,
+      "term": 1,
+      "programme": {
+        "courseId": 34,
+        "courseName": "Bachelors in Architecture",
+        "courseCode": "BARCH"
+      },
+      "components": [
+        { "id": 1, "componentName": "Theory", "code": "TH" },
+        { "id": 2, "componentName": "Practical", "code": "PR" }
+      ],
+      "selectionStatus": "Available",
+      "isAlreadyInPool": false
+    }
+  ],
+  "paginationData": {
+    "total": 39,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 4
+  }
+}
+```
+
+#### Example: Add Courses to Pool (Image 2 "Add 4 Courses" Button)
+```http
+POST /electivePool/subjects/map HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "electivePoolId": 1,
+  "subjectIds": [129, 130, 131, 132]
+}
+```
+

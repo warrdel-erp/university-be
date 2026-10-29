@@ -21027,7 +21027,7 @@
           "response": []
         },
         {
-          "name": "11. Delete Subject Component (by Path Param)",
+          "name": "8. Delete Subject Component (by Path Param)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -21082,7 +21082,7 @@
           ]
         },
         {
-          "name": "12. Delete Subject Component (by Query Param)",
+          "name": "9. Delete Subject Component (by Query Param)",
           "request": {
             "method": "DELETE",
             "header": [
@@ -21124,7 +21124,7 @@
           "response": []
         },
         {
-          "name": "8. Add Subject with Component IDs (POST /main/subject)",
+          "name": "10. Add Subject with Component IDs (POST /main/subject)",
           "request": {
             "method": "POST",
             "header": [
@@ -21164,7 +21164,53 @@
                 "subject"
               ]
             },
-            "description": "### Add Subject with Multiple Components\n\nWhen creating a subject, pass componentIds: [1, 4] (e.g. Theory and Studio) to automatically map the subject to those components in subject_component_mapping."
+            "description": "### Add Subject with Multiple Components\n\nPass componentIds: [1, 4] (e.g. Theory and Studio) to automatically map the subject to those components in subject_component_mapping."
+          },
+          "response": []
+        },
+        {
+          "name": "11. Update Subject with Component IDs (PATCH /main/subject/update)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": 129,\n  \"componentIds\": [\n    4,\n    5\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/subject/update",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "subject",
+                "update"
+              ]
+            },
+            "description": "### Update Subject Components\n\nPass componentIds to re-sync mapped components for the subject."
           },
           "response": []
         }

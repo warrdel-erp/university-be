@@ -3,6 +3,8 @@ import curriculumModel from "./curriculumModel.js";
 import curriculumCategoryModel from "./curriculumCategoryModel.js";
 import subjectComponentModel from "./subjectComponentModel.js";
 import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
+import electivePoolModel from "./electivePoolModel.js";
+import electivePoolSubjectMappingModel from "./electivePoolSubjectMappingModel.js";
 import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
 import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
 import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
@@ -4319,6 +4321,8 @@ export {
   curriculumCategoryModel,
   subjectComponentModel,
   subjectComponentMappingModel,
+  electivePoolModel,
+  electivePoolSubjectMappingModel,
   curriculumSubjectTermMappingModel,
   curriculumBatchMappingModel,
   curriculumBatchTermMappingModel,
@@ -4403,6 +4407,20 @@ subjectModel.hasMany(subjectComponentMappingModel, { foreignKey: 'subject_id', a
 subjectComponentModel.hasMany(subjectComponentMappingModel, { foreignKey: 'subject_component_id', as: 'subjectComponentMappings' });
 subjectComponentMappingModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
 subjectComponentMappingModel.belongsTo(subjectComponentModel, { foreignKey: 'subject_component_id', as: 'component' });
+
+// Elective Pool Associations
+electivePoolModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'programme' });
+courseModel.hasMany(electivePoolModel, { foreignKey: 'course_id', as: 'electivePools' });
+electivePoolModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
+instituteModel.hasMany(electivePoolModel, { foreignKey: 'institute_id', as: 'electivePools' });
+electivePoolModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
+batchModel.hasMany(electivePoolModel, { foreignKey: 'batch_id', as: 'electivePools' });
+electivePoolModel.belongsToMany(subjectModel, { through: electivePoolSubjectMappingModel, foreignKey: 'elective_pool_id', otherKey: 'subject_id', as: 'subjects' });
+subjectModel.belongsToMany(electivePoolModel, { through: electivePoolSubjectMappingModel, foreignKey: 'subject_id', otherKey: 'elective_pool_id', as: 'electivePools' });
+electivePoolModel.hasMany(electivePoolSubjectMappingModel, { foreignKey: 'elective_pool_id', as: 'poolSubjectMappings' });
+electivePoolSubjectMappingModel.belongsTo(electivePoolModel, { foreignKey: 'elective_pool_id', as: 'electivePool' });
+subjectModel.hasMany(electivePoolSubjectMappingModel, { foreignKey: 'subject_id', as: 'poolSubjectMappings' });
+electivePoolSubjectMappingModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
 
 // Refresh Token Associations
 userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });
