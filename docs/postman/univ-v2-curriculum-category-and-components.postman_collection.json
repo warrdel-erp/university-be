@@ -975,149 +975,6 @@
           "response": []
         },
         {
-          "name": "8. Assign Components to Subject (Mapping)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Cookie",
-                "value": "accessToken={{token}}"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"subjectId\": {{subjectId}},\n  \"componentIds\": [1, 2, 4]\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{baseurl}}/subjectComponent/map",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "subjectComponent",
-                "map"
-              ]
-            },
-            "description": "### Map Components to a Subject\n\nAssigns an array of component IDs to a subject."
-          },
-          "response": [
-            {
-              "name": "200 Mapped Response",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Components mapped to subject successfully\",\n  \"data\": [\n    {\n      \"id\": 45,\n      \"subjectId\": 129,\n      \"subjectComponentId\": 1,\n      \"component\": {\n        \"id\": 1,\n        \"componentName\": \"Theory\",\n        \"code\": \"TH\",\n        \"description\": \"Classroom-based theoretical instruction\"\n      }\n    },\n    {\n      \"id\": 46,\n      \"subjectId\": 129,\n      \"subjectComponentId\": 4,\n      \"component\": {\n        \"id\": 4,\n        \"componentName\": \"Studio\",\n        \"code\": \"ST\",\n        \"description\": \"Studio-based design and drafting instruction\"\n      }\n    }\n  ]\n}"
-            }
-          ]
-        },
-        {
-          "name": "9. Get Components Mapped to Subject",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Cookie",
-                "value": "accessToken={{token}}"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/subjectComponent/subject/{{subjectId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "subjectComponent",
-                "subject",
-                "{{subjectId}}"
-              ]
-            },
-            "description": "### Get Mapped Components for a Given Subject"
-          },
-          "response": [
-            {
-              "name": "200 Subject Components Response",
-              "status": "OK",
-              "code": 200,
-              "_postman_previewlanguage": "json",
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "cookie": [],
-              "body": "{\n  \"success\": true,\n  \"message\": \"Subject components fetched successfully\",\n  \"data\": {\n    \"subject\": {\n      \"subjectId\": 129,\n      \"subjectName\": \"Ecology & Built Environment\",\n      \"subjectCode\": \"EBE101\"\n    },\n    \"components\": [\n      {\n        \"id\": 1,\n        \"componentName\": \"Theory\",\n        \"code\": \"TH\",\n        \"description\": \"Classroom-based theoretical instruction\"\n      },\n      {\n        \"id\": 4,\n        \"componentName\": \"Studio\",\n        \"code\": \"ST\",\n        \"description\": \"Studio-based design and drafting instruction\"\n      }\n    ]\n  }\n}"
-            }
-          ]
-        },
-        {
-          "name": "10. Unmap Component from Subject",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Cookie",
-                "value": "accessToken={{token}}"
-              },
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token}}"
-              },
-              {
-                "key": "Accept",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseurl}}/subjectComponent/subject/{{subjectId}}/component/{{subjectComponentId}}",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "subjectComponent",
-                "subject",
-                "{{subjectId}}",
-                "component",
-                "{{subjectComponentId}}"
-              ]
-            },
-            "description": "### Unmap Specific Component from Subject"
-          },
-          "response": []
-        },
-        {
           "name": "11. Delete Subject Component (by Path Param)",
           "request": {
             "method": "DELETE",
@@ -1211,6 +1068,51 @@
               ]
             },
             "description": "### Delete Subject Component by Query Param"
+          },
+          "response": []
+        },
+        {
+          "name": "8. Add Subject with Component IDs (POST /main/subject)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseId\": 34,\n  \"subjectCode\": \"ARC101\",\n  \"subjectName\": \"Architectural Design & Studio\",\n  \"subjectType\": \"Major\",\n  \"componentIds\": [\n    1,\n    4\n  ],\n  \"shortName\": \"ADS\",\n  \"description\": \"Theory and Studio coursework\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/main/subject",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "main",
+                "subject"
+              ]
+            },
+            "description": "### Add Subject with Multiple Components\n\nWhen creating a subject, pass componentIds: [1, 4] (e.g. Theory and Studio) to automatically map the subject to those components in subject_component_mapping."
           },
           "response": []
         }

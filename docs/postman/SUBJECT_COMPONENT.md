@@ -1,8 +1,12 @@
 # Course / Subject Component APIs
 
-Postman collection: `docs/postman/univ-v2-subject-component.postman_collection.json`
+Postman collection: `docs/postman/univ-v2-curriculum-category-and-components.postman_collection.json` (Folder: `2. Subject Component`)
 
-This module provides complete CRUD operations for managing `subject_component` (Course / Subject Delivery Components such as Theory, Practical, Lab, Studio, Workshop, Seminar, Project) and their many-to-many associations with subjects via `subject_component_mapping`.
+This module provides complete CRUD operations for managing `subject_component` (Course / Subject Delivery Components such as Theory, Practical, Lab, Studio, Workshop, Seminar, Project).
+
+Components are directly assigned to subjects when creating or updating a subject via:
+- `POST /main/subject` (with `componentIds: [1, 2, 4]`)
+- `PATCH /main/subject/update` (with `componentIds: [1, 4]`)
 
 | | |
 |---|---|
@@ -48,6 +52,7 @@ This module provides complete CRUD operations for managing `subject_component` (
 
 ## API Summary
 
+### 1. Subject Component Master (CRUD)
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/subjectComponent` | Create a new component (e.g. Studio) |
@@ -58,182 +63,39 @@ This module provides complete CRUD operations for managing `subject_component` (
 | `PATCH` | `/subjectComponent` | Update component by body |
 | `DELETE` | `/subjectComponent/:id` | Delete component (fails if mapped unless `?force=true`) |
 | `DELETE` | `/subjectComponent?id=` | Delete component by query |
-| `POST` | `/subjectComponent/map` | Assign components to a subject |
-| `GET` | `/subjectComponent/subject/:subjectId` | Get all components mapped to a subject |
-| `DELETE` | `/subjectComponent/subject/:subjectId/component/:componentId` | Unmap component from subject |
 
----
+### 2. Mapping via Subject Creation / Updation
+Components are assigned directly when adding or updating subjects:
 
-## 1. Create Subject Component
-
-- **HTTP Method:** `POST`
-- **Endpoint:** `/subjectComponent` (or `/courseComponent`)
-
-### Request Body
+#### Adding a Subject with Component IDs (`POST /main/subject`):
 ```json
 {
-  "componentName": "Studio",
-  "code": "ST",
-  "description": "Studio-based design and drafting instruction"
+  "courseId": 34,
+  "subjectCode": "ARC101",
+  "subjectName": "Architectural Design & Studio",
+  "subjectType": "Major",
+  "componentIds": [1, 4],
+  "shortName": "ADS",
+  "description": "Theory and Studio coursework"
 }
 ```
-
-### Fields
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `componentName` (or `component_name`, `name`) | String (max 150) | Yes | Name of the component |
-| `code` | String (max 20) | Yes | Unique short code (e.g. ST, TH) |
-| `description` | String (max 250) | No | Brief description |
-
-### Response (201 Created)
+*Response returns the created subject along with mapped `components`:*
 ```json
 {
-  "success": true,
-  "message": "Subject component created successfully",
-  "data": {
-    "id": 4,
-    "componentName": "Studio",
-    "code": "ST",
-    "description": "Studio-based design and drafting instruction",
-    "createdAt": "2026-10-29T11:23:56.000Z",
-    "updatedAt": "2026-10-29T11:23:56.000Z"
-  }
-}
-```
-
----
-
-## 2. Get All Subject Components
-
-- **HTTP Method:** `GET`
-- **Endpoint:** `/subjectComponent`
-- **Description:** Returns all components along with `mappedSubjectsCount` (matching the course count in the UI cards).
-
-### Response (200 OK)
-```json
-{
-  "success": true,
-  "message": "Subject components fetched successfully",
-  "data": [
-    {
-      "id": 1,
-      "componentName": "Theory",
-      "code": "TH",
-      "description": "Classroom-based theoretical instruction",
-      "mappedSubjectsCount": 10,
-      "createdAt": "2026-10-29T11:23:56.000Z",
-      "updatedAt": "2026-10-29T11:23:56.000Z"
-    },
-    {
-      "id": 2,
-      "componentName": "Practical",
-      "code": "PR",
-      "description": "Practical coursework and laboratory application",
-      "mappedSubjectsCount": 20,
-      "createdAt": "2026-10-29T11:23:56.000Z",
-      "updatedAt": "2026-10-29T11:23:56.000Z"
-    }
-  ],
-  "paginationData": null
-}
-```
-
----
-
-## 3. Assign Components to a Subject
-
-- **HTTP Method:** `POST`
-- **Endpoint:** `/subjectComponent/map` (or `/subjectComponent/subject/:subjectId`)
-
-### Request Body
-```json
-{
-  "subjectId": 129,
-  "componentIds": [1, 2, 4]
-}
-```
-
-### Response (200 OK)
-```json
-{
-  "success": true,
-  "message": "Components mapped to subject successfully",
-  "data": [
-    {
-      "id": 45,
-      "subjectId": 129,
-      "subjectComponentId": 1,
-      "component": {
-        "id": 1,
-        "componentName": "Theory",
-        "code": "TH",
-        "description": "Classroom-based theoretical instruction"
-      }
-    },
-    {
-      "id": 46,
-      "subjectId": 129,
-      "subjectComponentId": 4,
-      "component": {
-        "id": 4,
-        "componentName": "Studio",
-        "code": "ST",
-        "description": "Studio-based design and drafting instruction"
-      }
-    }
+  "subjectId": 373,
+  "subjectName": "Architectural Design & Studio",
+  "subjectCode": "ARC101",
+  "components": [
+    { "id": 1, "componentName": "Theory", "code": "TH" },
+    { "id": 4, "componentName": "Studio", "code": "ST" }
   ]
 }
 ```
 
----
-
-## 4. Get Mapped Components for a Subject
-
-- **HTTP Method:** `GET`
-- **Endpoint:** `/subjectComponent/subject/:subjectId`
-
-### Response (200 OK)
+#### Updating a Subject's Components (`PATCH /main/subject/update`):
 ```json
 {
-  "success": true,
-  "message": "Subject components fetched successfully",
-  "data": {
-    "subject": {
-      "subjectId": 129,
-      "subjectName": "Ecology & Built Environment",
-      "subjectCode": "EBE101"
-    },
-    "components": [
-      {
-        "id": 1,
-        "componentName": "Theory",
-        "code": "TH",
-        "description": "Classroom-based theoretical instruction"
-      },
-      {
-        "id": 4,
-        "componentName": "Studio",
-        "code": "ST",
-        "description": "Studio-based design and drafting instruction"
-      }
-    ]
-  }
+  "subjectId": 373,
+  "componentIds": [4, 5]
 }
 ```
-
----
-
-## 5. Unmap Component from Subject
-
-- **HTTP Method:** `DELETE`
-- **Endpoint:** `/subjectComponent/subject/:subjectId/component/:componentId`
-
-### Response (200 OK)
-```json
-{
-  "success": true,
-  "message": "Component unmapped from subject successfully",
-  "data": null
-}
-```
-

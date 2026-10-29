@@ -65,35 +65,3 @@ export async function deleteSubjectComponent(req, res) {
   }
 }
 
-export async function assignComponentsToSubject(req, res) {
-  try {
-    const subjectId = req.params.subjectId || req.body.subjectId;
-    const componentIds = req.body.componentIds || [];
-    const result = await subjectComponentService.assignComponentsToSubject(subjectId, componentIds);
-    return SuccessResponse(res, 200, "Components mapped to subject successfully", result);
-  } catch (error) {
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-  }
-}
-
-export async function getComponentsForSubject(req, res) {
-  try {
-    const subjectId = req.params.subjectId || req.query.subjectId;
-    const result = await subjectComponentService.getComponentsForSubject(subjectId);
-    return SuccessResponse(res, 200, "Subject components fetched successfully", result);
-  } catch (error) {
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-  }
-}
-
-export async function unmapComponentFromSubject(req, res) {
-  try {
-    const subjectId = req.params.subjectId || req.query.subjectId;
-    const componentId = req.params.componentId || req.query.componentId;
-    await subjectComponentService.unmapComponentFromSubject(subjectId, componentId);
-    return SuccessResponse(res, 200, "Component unmapped from subject successfully", null);
-  } catch (error) {
-    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
-  }
-}
-

@@ -8,9 +8,6 @@ import {
   getSubjectComponentById,
   updateSubjectComponent,
   deleteSubjectComponent,
-  assignComponentsToSubject,
-  getComponentsForSubject,
-  unmapComponentFromSubject,
 } from "../controllers/subjectComponentController.js";
 
 const router = Router();
@@ -81,20 +78,6 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
 });
 
-const mapSubjectSchema = z.object({
-  subjectId: positiveIntegerId.optional(),
-  componentIds: z.array(positiveIntegerId),
-});
-
-const subjectIdParamSchema = z.object({
-  subjectId: positiveIntegerId,
-});
-
-const unmapParamSchema = z.object({
-  subjectId: positiveIntegerId,
-  componentId: positiveIntegerId,
-});
-
 // Create
 router.post(
   "/",
@@ -109,32 +92,6 @@ router.get(
   userAuth,
   validate({ query: listQuerySchema }),
   getAllSubjectComponents
-);
-
-// Mapping routes
-router.post(
-  "/map",
-  userAuth,
-  validate({ body: mapSubjectSchema }),
-  assignComponentsToSubject
-);
-router.post(
-  "/subject/:subjectId",
-  userAuth,
-  validate({ params: subjectIdParamSchema, body: z.object({ componentIds: z.array(positiveIntegerId) }) }),
-  assignComponentsToSubject
-);
-router.get(
-  "/subject/:subjectId",
-  userAuth,
-  validate({ params: subjectIdParamSchema }),
-  getComponentsForSubject
-);
-router.delete(
-  "/subject/:subjectId/component/:componentId",
-  userAuth,
-  validate({ params: unmapParamSchema }),
-  unmapComponentFromSubject
 );
 
 // Single view via query (?id=)

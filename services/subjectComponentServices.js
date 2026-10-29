@@ -144,6 +144,24 @@ export async function deleteSubjectComponent(id, options = {}) {
 /**
  * Mapping Services: Subject <-> Components
  */
+export async function syncSubjectComponents(subjectId, componentIds = [], options = {}) {
+  const { transaction } = options;
+  if (!subjectId) return [];
+
+  // Remove existing mappings for this subject
+  await repo.removeAllMappingsForSubject(subjectId, { transaction });
+
+  const ids = Array.isArray(componentIds) ? [...new Set(componentIds.map(Number))] : [];
+  if (ids.length === 0) return [];
+
+  const created = [];
+  for (const compId of ids) {
+    const row = await repo.addSubjectComponentMapping(subjectId, compId, { transaction });
+    created.push(row);
+  }
+  return created;
+}
+
 export async function assignComponentsToSubject(subjectId, componentIds = []) {
   if (!subjectId) {
     throw httpError("subjectId is required", 400);
