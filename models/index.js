@@ -1,5 +1,8 @@
 
 import curriculumModel from "./curriculumModel.js";
+import curriculumCategoryModel from "./curriculumCategoryModel.js";
+import subjectComponentModel from "./subjectComponentModel.js";
+import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
 import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
 import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
 import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
@@ -4313,6 +4316,9 @@ export {
   userModel as users,
 
   curriculumModel,
+  curriculumCategoryModel,
+  subjectComponentModel,
+  subjectComponentMappingModel,
   curriculumSubjectTermMappingModel,
   curriculumBatchMappingModel,
   curriculumBatchTermMappingModel,
@@ -4389,6 +4395,14 @@ feePlanSubItemsModel.hasMany(billingScheduleSubItemsModel, { foreignKey: 'feePla
 
 billingScheduleItemsModel.hasMany(billingSchedulePaymentTermsModel, { foreignKey: 'billingScheduleItemId', as: 'paymentTerms' });
 billingSchedulePaymentTermsModel.belongsTo(billingScheduleItemsModel, { foreignKey: 'billingScheduleItemId', as: 'billingScheduleItem' });
+
+// Subject Component Associations
+subjectModel.belongsToMany(subjectComponentModel, { through: subjectComponentMappingModel, foreignKey: 'subject_id', otherKey: 'subject_component_id', as: 'components' });
+subjectComponentModel.belongsToMany(subjectModel, { through: subjectComponentMappingModel, foreignKey: 'subject_component_id', otherKey: 'subject_id', as: 'subjects' });
+subjectModel.hasMany(subjectComponentMappingModel, { foreignKey: 'subject_id', as: 'subjectComponentMappings' });
+subjectComponentModel.hasMany(subjectComponentMappingModel, { foreignKey: 'subject_component_id', as: 'subjectComponentMappings' });
+subjectComponentMappingModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+subjectComponentMappingModel.belongsTo(subjectComponentModel, { foreignKey: 'subject_component_id', as: 'component' });
 
 // Refresh Token Associations
 userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });

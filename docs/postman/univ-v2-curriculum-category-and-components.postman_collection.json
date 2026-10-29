@@ -1,0 +1,1220 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-merged-curriculum-setup-01",
+    "name": "Curriculum Category & Subject Components",
+    "description": "# Curriculum Setup APIs\n\nSingle collection containing separate folders for:\n1. **Curriculum Category** - Master CRUD for category configuration\n2. **Subject Component** - Master CRUD & Subject-to-Component Mapping\n\n### Base URL\n{{baseurl}} (Default: http://localhost:8080)\n\n### Auth\nBearer token or cookie (\u0007ccessToken={{token}})",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseurl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjQ2LCJ1bml2ZXJzaXR5SWQiOjQsImRlZmF1bHRJbnN0aXR1dGVJZCI6MTIsImRlZmF1bHRSb2xlSWQiOjE1LCJkZWZhdWx0QWNhZGVtaWNZZWFySWQiOjU5LCJ1c2VyTmFtZSI6IkFhZGkgS2lyYW4gTWFoYWphbmkiLCJ1bmlxdWVJZCI6IjgzZmI5YjdlLTU4YjMtNDI4Zi04YTc1LWM0YjVlNjk4OTFkMyIsInN0YXR1cyI6ImFjdGl2ZSIsInBob25lIjoiOTkyOTU1NTY0NCIsImVtYWlsIjoiYWFkaTI4eDZAZ21haWwuY29tIiwiaXNUZWFjaGVyIjpmYWxzZSwiY3JlYXRlZEF0IjoiMjAyNS0wOC0xM1QxNjo0ODo0Mi4wMDBaIiwidXBkYXRlZEF0IjoiMjAyNi0wOS0xMVQxMDo1MDowMi4wMDBaIiwiZGVsZXRlZEF0IjpudWxsLCJkZWZhdWx0X3JvbGVfaWQiOjE1LCJpbnN0aXR1dGVOYW1lIjoiQWF5b2phbiBTY2hvb2wgb2YgQXJjaGl0ZWN0dXJlIiwiaWF0IjoxNzg5MjExMTI0LCJleHAiOjE3ODkyOTc1MjR9.L31KFUz6KRDvJX9KxnAD_vZkWAjVX5mwp1WAW_QujdY"
+    },
+    {
+      "key": "curriculumCategoryId",
+      "value": "1"
+    },
+    {
+      "key": "subjectComponentId",
+      "value": "4"
+    },
+    {
+      "key": "subjectId",
+      "value": "129"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "1. Curriculum Category",
+      "description": "Curriculum category master CRUD operations",
+      "item": [
+        {
+          "name": "1. Create Curriculum Category (Core Coursework)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  const data = json.data || json;",
+                  "  const id = data.id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('curriculumCategoryId', String(id));",
+                  "    console.log('Saved curriculumCategoryId:', id);",
+                  "  }",
+                  "} catch (e) {",
+                  "  console.error('Error saving curriculumCategoryId:', e);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Core Coursework\",\n  \"code\": \"CC\",\n  \"isElectiveCoursework\": false,\n  \"description\": \"Mandatory core curriculum subjects for all students\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory"
+              ]
+            },
+            "description": "### Create Curriculum Category\n\nCreates a new curriculum category.\n\n#### Request Fields\n| Field | Type | Required | Default | Description |\n|---|---|---|---|---|\n| `categoryName` | String (max 150) | Yes | - | Name of the curriculum category |\n| `code` | String (max 20) | Yes | - | Unique identifier code (auto uppercase) |\n| `isElectiveCoursework` | Boolean | No | `true` | Whether this category is elective coursework |\n| `description` | String (max 250) | No | `null` | Optional description |"
+          },
+          "response": [
+            {
+              "name": "201 Created Response",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categoryName\": \"Core Coursework\",\n  \"code\": \"CC\",\n  \"isElectiveCoursework\": false,\n  \"description\": \"Mandatory core curriculum subjects for all students\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseurl}}/curriculumCategory",
+                  "host": [
+                    "{{baseurl}}"
+                  ],
+                  "path": [
+                    "curriculumCategory"
+                  ]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Curriculum category created successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"categoryName\": \"Core Coursework\",\n    \"code\": \"CC\",\n    \"isElectiveCoursework\": false,\n    \"description\": \"Mandatory core curriculum subjects for all students\",\n    \"createdAt\": \"2026-10-29T11:08:25.876Z\",\n    \"updatedAt\": \"2026-10-29T11:08:25.876Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Create Curriculum Category (Elective Coursework)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Department Elective\",\n  \"code\": \"DE\",\n  \"isElectiveCoursework\": true,\n  \"description\": \"Elective coursework offered within the department\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory"
+              ]
+            },
+            "description": "### Create Elective Curriculum Category\n\nCreates a category with `isElectiveCoursework: true`."
+          },
+          "response": [
+            {
+              "name": "201 Created Response",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Curriculum category created successfully\",\n  \"data\": {\n    \"id\": 2,\n    \"categoryName\": \"Department Elective\",\n    \"code\": \"DE\",\n    \"isElectiveCoursework\": true,\n    \"description\": \"Elective coursework offered within the department\",\n    \"createdAt\": \"2026-10-29T11:09:10.000Z\",\n    \"updatedAt\": \"2026-10-29T11:09:10.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Get All Curriculum Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search by category name, code, or description"
+                },
+                {
+                  "key": "isElectiveCoursework",
+                  "value": "false",
+                  "disabled": true,
+                  "description": "Filter by elective status (true / false)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Page number (optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true,
+                  "description": "Items per page (optional)"
+                }
+              ]
+            },
+            "description": "### List All Curriculum Categories\n\nRetrieves all curriculum categories with optional search, filter, and pagination."
+          },
+          "response": [
+            {
+              "name": "200 Success Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Curriculum categories fetched successfully\",\n  \"data\": [\n    {\n      \"id\": 2,\n      \"categoryName\": \"Department Elective\",\n      \"code\": \"DE\",\n      \"isElectiveCoursework\": true,\n      \"description\": \"Elective coursework offered within the department\",\n      \"createdAt\": \"2026-10-29T11:09:10.000Z\",\n      \"updatedAt\": \"2026-10-29T11:09:10.000Z\"\n    },\n    {\n      \"id\": 1,\n      \"categoryName\": \"Core Coursework\",\n      \"code\": \"CC\",\n      \"isElectiveCoursework\": false,\n      \"description\": \"Mandatory core curriculum subjects for all students\",\n      \"createdAt\": \"2026-10-29T11:08:25.876Z\",\n      \"updatedAt\": \"2026-10-29T11:08:25.876Z\"\n    }\n  ],\n  \"paginationData\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "4. Get All Curriculum Categories (Paginated & Filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory?search=Core&isElectiveCoursework=false&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Core",
+                  "description": "Search text matching name, code or description"
+                },
+                {
+                  "key": "isElectiveCoursework",
+                  "value": "false",
+                  "description": "Filter by elective flag"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page index"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Page size"
+                }
+              ]
+            },
+            "description": "### List with Pagination and Filters\n\nWhen `page` and `limit` are supplied, the response returns pagination metadata."
+          },
+          "response": [
+            {
+              "name": "200 Paginated Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Curriculum categories fetched successfully\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"categoryName\": \"Core Coursework\",\n      \"code\": \"CC\",\n      \"isElectiveCoursework\": false,\n      \"description\": \"Mandatory core curriculum subjects for all students\",\n      \"createdAt\": \"2026-10-29T11:08:25.876Z\",\n      \"updatedAt\": \"2026-10-29T11:08:25.876Z\"\n    }\n  ],\n  \"paginationData\": {\n    \"total\": 1,\n    \"page\": 1,\n    \"limit\": 10,\n    \"totalPages\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "5. Get Single Curriculum Category (by Path Param)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory/{{curriculumCategoryId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory",
+                "{{curriculumCategoryId}}"
+              ]
+            },
+            "description": "### Get Single Curriculum Category by Path Param\n\nFetch a single category record by its ID in the URL path."
+          },
+          "response": [
+            {
+              "name": "200 Single Details Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Curriculum category fetched successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"categoryName\": \"Core Coursework\",\n    \"code\": \"CC\",\n    \"isElectiveCoursework\": false,\n    \"description\": \"Mandatory core curriculum subjects for all students\",\n    \"createdAt\": \"2026-10-29T11:08:25.876Z\",\n    \"updatedAt\": \"2026-10-29T11:08:25.876Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "6. Get Single Curriculum Category (by Query Param)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory/single?id={{curriculumCategoryId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{curriculumCategoryId}}",
+                  "description": "ID of category"
+                }
+              ]
+            },
+            "description": "### Get Single Curriculum Category by Query Param\n\nAlternative endpoint using `/single?id=` query parameter."
+          },
+          "response": []
+        },
+        {
+          "name": "7. Update Curriculum Category (by Path Param)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryName\": \"Core Coursework (Revised)\",\n  \"isElectiveCoursework\": false,\n  \"description\": \"Updated description for core coursework subjects\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory/{{curriculumCategoryId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory",
+                "{{curriculumCategoryId}}"
+              ]
+            },
+            "description": "### Update Curriculum Category by Path Param\n\nPartially updates an existing curriculum category record.\n\n#### Editable Fields\n- `categoryName` (String max 150)\n- `code` (String max 20, unique)\n- `isElectiveCoursework` (Boolean)\n- `description` (String max 250)"
+          },
+          "response": [
+            {
+              "name": "200 Updated Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Curriculum category updated successfully\",\n  \"data\": {\n    \"id\": 1,\n    \"categoryName\": \"Core Coursework (Revised)\",\n    \"code\": \"CC\",\n    \"isElectiveCoursework\": false,\n    \"description\": \"Updated description for core coursework subjects\",\n    \"createdAt\": \"2026-10-29T11:08:25.876Z\",\n    \"updatedAt\": \"2026-10-29T11:15:30.123Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "8. Update Curriculum Category (by Body ID)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{curriculumCategoryId}},\n  \"categoryName\": \"Core Coursework (Full Revised)\",\n  \"description\": \"Updated using root PATCH endpoint\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory"
+              ]
+            },
+            "description": "### Update Curriculum Category by Body ID\n\nAllows updating by passing the `id` directly in the request body."
+          },
+          "response": []
+        },
+        {
+          "name": "9. Delete Curriculum Category (by Path Param)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory/{{curriculumCategoryId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory",
+                "{{curriculumCategoryId}}"
+              ]
+            },
+            "description": "### Delete Curriculum Category by Path Param\n\nDeletes the category record by its ID in the URL path."
+          },
+          "response": [
+            {
+              "name": "200 Deleted Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Curriculum category deleted successfully (ID 1)\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "10. Delete Curriculum Category (by Query Param)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumCategory?id={{curriculumCategoryId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumCategory"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{curriculumCategoryId}}",
+                  "description": "ID of category to delete"
+                }
+              ]
+            },
+            "description": "### Delete Curriculum Category by Query Param\n\nAlternative delete endpoint using `?id=` query parameter."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Subject Component",
+      "description": "Subject / Course component master CRUD and Subject mapping operations",
+      "item": [
+        {
+          "name": "1. Create Subject Component",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  const data = json.data || json;",
+                  "  const id = data.id;",
+                  "  if (id) {",
+                  "    pm.collectionVariables.set('subjectComponentId', String(id));",
+                  "    console.log('Saved subjectComponentId:', id);",
+                  "  }",
+                  "} catch (e) {",
+                  "  console.error('Error saving subjectComponentId:', e);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"componentName\": \"Studio\",\n  \"code\": \"ST\",\n  \"description\": \"Studio-based design and drafting instruction\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent"
+              ]
+            },
+            "description": "### Create Course / Subject Component\n\nCreates a reusable course delivery component (e.g. Studio, Theory, Lab, Practical).\n\n#### Fields\n| Field | Type | Required | Description |\n|---|---|---|---|\n| `componentName` | String (max 150) | Yes | Name of the component |\n| `code` | String (max 20) | Yes | Short unique code (e.g. TH, PR, ST) |\n| `description` | String (max 250) | No | Brief description |"
+          },
+          "response": [
+            {
+              "name": "201 Created Response",
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Subject component created successfully\",\n  \"data\": {\n    \"id\": 4,\n    \"componentName\": \"Studio\",\n    \"code\": \"ST\",\n    \"description\": \"Studio-based design and drafting instruction\",\n    \"createdAt\": \"2026-10-29T11:23:56.000Z\",\n    \"updatedAt\": \"2026-10-29T11:23:56.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "2. Get All Subject Components",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true,
+                  "description": "Search keyword"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": true,
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": true,
+                  "description": "Page limit"
+                }
+              ]
+            },
+            "description": "### List All Subject Components\n\nRetrieves all components along with `mappedSubjectsCount` for each component (e.g. 42 courses, 18 courses)."
+          },
+          "response": [
+            {
+              "name": "200 Success Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Subject components fetched successfully\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"componentName\": \"Theory\",\n      \"code\": \"TH\",\n      \"description\": \"Classroom-based theoretical instruction\",\n      \"mappedSubjectsCount\": 10,\n      \"createdAt\": \"2026-10-29T11:23:56.000Z\",\n      \"updatedAt\": \"2026-10-29T11:23:56.000Z\"\n    },\n    {\n      \"id\": 2,\n      \"componentName\": \"Practical\",\n      \"code\": \"PR\",\n      \"description\": \"Practical coursework and laboratory application\",\n      \"mappedSubjectsCount\": 20,\n      \"createdAt\": \"2026-10-29T11:23:56.000Z\",\n      \"updatedAt\": \"2026-10-29T11:23:56.000Z\"\n    }\n  ],\n  \"paginationData\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "3. Get Subject Components (Paginated & Search)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent?search=Studio&page=1&limit=10",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "Studio"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "### List with Pagination and Search"
+          },
+          "response": []
+        },
+        {
+          "name": "4. Get Single Subject Component (by Path Param)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent/{{subjectComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent",
+                "{{subjectComponentId}}"
+              ]
+            },
+            "description": "### Get Single Subject Component by Path Param"
+          },
+          "response": []
+        },
+        {
+          "name": "5. Get Single Subject Component (by Query Param)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent/single?id={{subjectComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent",
+                "single"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{subjectComponentId}}"
+                }
+              ]
+            },
+            "description": "### Get Single Subject Component by Query Param"
+          },
+          "response": []
+        },
+        {
+          "name": "6. Update Subject Component (by Path Param)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"componentName\": \"Studio (Design & Draft)\",\n  \"description\": \"Updated description for studio coursework\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent/{{subjectComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent",
+                "{{subjectComponentId}}"
+              ]
+            },
+            "description": "### Update Subject Component"
+          },
+          "response": []
+        },
+        {
+          "name": "7. Update Subject Component (by Body ID)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": {{subjectComponentId}},\n  \"componentName\": \"Studio (Full Revised)\",\n  \"code\": \"ST-REV\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent"
+              ]
+            },
+            "description": "### Update Subject Component by Root Body"
+          },
+          "response": []
+        },
+        {
+          "name": "8. Assign Components to Subject (Mapping)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subjectId\": {{subjectId}},\n  \"componentIds\": [1, 2, 4]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent/map",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent",
+                "map"
+              ]
+            },
+            "description": "### Map Components to a Subject\n\nAssigns an array of component IDs to a subject."
+          },
+          "response": [
+            {
+              "name": "200 Mapped Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Components mapped to subject successfully\",\n  \"data\": [\n    {\n      \"id\": 45,\n      \"subjectId\": 129,\n      \"subjectComponentId\": 1,\n      \"component\": {\n        \"id\": 1,\n        \"componentName\": \"Theory\",\n        \"code\": \"TH\",\n        \"description\": \"Classroom-based theoretical instruction\"\n      }\n    },\n    {\n      \"id\": 46,\n      \"subjectId\": 129,\n      \"subjectComponentId\": 4,\n      \"component\": {\n        \"id\": 4,\n        \"componentName\": \"Studio\",\n        \"code\": \"ST\",\n        \"description\": \"Studio-based design and drafting instruction\"\n      }\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "9. Get Components Mapped to Subject",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent/subject/{{subjectId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent",
+                "subject",
+                "{{subjectId}}"
+              ]
+            },
+            "description": "### Get Mapped Components for a Given Subject"
+          },
+          "response": [
+            {
+              "name": "200 Subject Components Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Subject components fetched successfully\",\n  \"data\": {\n    \"subject\": {\n      \"subjectId\": 129,\n      \"subjectName\": \"Ecology & Built Environment\",\n      \"subjectCode\": \"EBE101\"\n    },\n    \"components\": [\n      {\n        \"id\": 1,\n        \"componentName\": \"Theory\",\n        \"code\": \"TH\",\n        \"description\": \"Classroom-based theoretical instruction\"\n      },\n      {\n        \"id\": 4,\n        \"componentName\": \"Studio\",\n        \"code\": \"ST\",\n        \"description\": \"Studio-based design and drafting instruction\"\n      }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "10. Unmap Component from Subject",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent/subject/{{subjectId}}/component/{{subjectComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent",
+                "subject",
+                "{{subjectId}}",
+                "component",
+                "{{subjectComponentId}}"
+              ]
+            },
+            "description": "### Unmap Specific Component from Subject"
+          },
+          "response": []
+        },
+        {
+          "name": "11. Delete Subject Component (by Path Param)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent/{{subjectComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent",
+                "{{subjectComponentId}}"
+              ],
+              "query": [
+                {
+                  "key": "force",
+                  "value": "true",
+                  "disabled": true,
+                  "description": "Pass true to force delete even if mapped to subjects"
+                }
+              ]
+            },
+            "description": "### Delete Subject Component\n\nPrevents deletion if component is assigned to any subject. Pass `force=true` query parameter to force cascade deletion."
+          },
+          "response": [
+            {
+              "name": "200 Deleted Response",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "body": "{\n  \"success\": true,\n  \"message\": \"Subject component deleted successfully (ID 4)\",\n  \"data\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "12. Delete Subject Component (by Query Param)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "accessToken={{token}}"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/subjectComponent?id={{subjectComponentId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "subjectComponent"
+              ],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{subjectComponentId}}"
+                },
+                {
+                  "key": "force",
+                  "value": "true",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "### Delete Subject Component by Query Param"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
