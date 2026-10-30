@@ -2,6 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import curriculumModel from "./curriculumModel.js";
 import subjectModel from "./subjectModel.js";
+import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
+import curriculumCategoryModel from "./curriculumCategoryModel.js";
 import users from "./userModel.js";
 
 const curriculumSubjectTermMappingModel = sequelize.define(
@@ -29,6 +31,24 @@ const curriculumSubjectTermMappingModel = sequelize.define(
             references: {
                 model: subjectModel,
                 key: 'subject_id'
+            }
+        },
+        subjectComponentMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'subject_component_mapping_id',
+            references: {
+                model: subjectComponentMappingModel,
+                key: 'id'
+            }
+        },
+        curriculumCategoryId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'curriculum_category_id',
+            references: {
+                model: curriculumCategoryModel,
+                key: 'id'
             }
         },
         term: {

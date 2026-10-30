@@ -39,6 +39,8 @@ const mapSubjectsSchema = z.object({
     .array(
       z.object({
         subjectId: z.number().int().positive(),
+        subjectComponentMappingId: z.number().int().positive().nullable().optional(),
+        curriculumCategoryId: z.number().int().positive().nullable().optional(),
         term: z.number().int().positive(),
         credit: z.number().nonnegative().nullable().optional(),
       }),
@@ -47,8 +49,10 @@ const mapSubjectsSchema = z.object({
 });
 
 const updateSubjectTermMappingSchema = z.object({
-  credit: z.number().nonnegative().nullable(),
+  credit: z.number().nonnegative().nullable().optional(),
   term: z.number().int().positive().optional(),
+  subjectComponentMappingId: z.number().int().positive().nullable().optional(),
+  curriculumCategoryId: z.number().int().positive().nullable().optional(),
 });
 
 const idParamSchema = z.object({

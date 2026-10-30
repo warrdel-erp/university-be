@@ -25,6 +25,18 @@
     {
       "key": "subjectId",
       "value": "129"
+    },
+    {
+      "key": "curriculumElectiveRequirementId",
+      "value": "1"
+    },
+    {
+      "key": "curriculumId",
+      "value": "9"
+    },
+    {
+      "key": "curriculumCategoryId",
+      "value": "1"
     }
   ],
   "auth": {
@@ -483,6 +495,217 @@
                 "electivePool",
                 "subjects",
                 "unmap"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Curriculum Elective Requirement",
+      "description": "Manage Elective Requirements for Curriculum Terms (Image 3: Add Elective Requirement to Term Modal)",
+      "item": [
+        {
+          "name": "1. Add Elective Requirement to Term (Modal Create)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.data && jsonData.data.id) {",
+                  "    pm.collectionVariables.set(\"curriculumElectiveRequirementId\", String(jsonData.data.id));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"curriculumId\": 9,\n  \"term\": 1,\n  \"requirementCode\": \"PE-1\",\n  \"requirementName\": \"Professional Elective I\",\n  \"curriculumCategoryId\": 1,\n  \"courseCount\": true,\n  \"coursesRequired\": 1,\n  \"minCredits\": 3,\n  \"electivePoolId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/create",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "create"
+              ]
+            }
+          }
+        },
+        {
+          "name": "2. Get All Elective Requirements (List by Curriculum & Term)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/list?curriculumId={{curriculumId}}&term=1&limit=10&page=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "curriculumId",
+                  "value": "{{curriculumId}}"
+                },
+                {
+                  "key": "term",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "3. Filter Requirements by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/list?curriculumId={{curriculumId}}&curriculumCategoryId={{curriculumCategoryId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "curriculumId",
+                  "value": "{{curriculumId}}"
+                },
+                {
+                  "key": "curriculumCategoryId",
+                  "value": "{{curriculumCategoryId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "4. Search Requirements by Code or Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/list?search=PE-1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "list"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "PE-1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "5. Get Single Elective Requirement By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "6. Update Elective Requirement",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"requirementName\": \"Professional Elective I (Updated)\",\n  \"minCredits\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/update/{{curriculumElectiveRequirementId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "update",
+                "{{curriculumElectiveRequirementId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "7. Toggle Status (Active / Inactive)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/toggleStatus/{{curriculumElectiveRequirementId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "toggleStatus",
+                "{{curriculumElectiveRequirementId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "8. Delete Elective Requirement (Soft Delete)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/delete/{{curriculumElectiveRequirementId}}",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "delete",
+                "{{curriculumElectiveRequirementId}}"
               ]
             }
           }

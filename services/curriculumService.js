@@ -461,9 +461,12 @@ export async function mapSubjects(curriculumId, subjects) {
     httpError('At least one subject is required', 400);
   }
 
-  const subjectIds = subjects.map((s) => s.subjectId);
-  if (new Set(subjectIds).size !== subjectIds.length) {
-    httpError('Duplicate subjects are not allowed in the same request', 400);
+  // Duplicate check: Allow same subjectId if subjectComponentMappingId is different
+  const requestKeys = subjects.map(
+    (s) => `${s.subjectId}_${s.subjectComponentMappingId ?? 'none'}`
+  );
+  if (new Set(requestKeys).size !== requestKeys.length) {
+    httpError('Duplicate subject component mappings are not allowed in the same request', 400);
   }
 
   const terms = subjects.map((s) => s.term ?? s.termNumber);
@@ -483,20 +486,30 @@ export async function mapSubjects(curriculumId, subjects) {
     }
   }
 
+  // Check if any subject + component mapping is already mapped to this curriculum
+  const existingConditions = subjects.map((s) => ({
+    subjectId: s.subjectId,
+    subjectComponentMappingId: s.subjectComponentMappingId ?? null,
+  }));
+
   const existingMappings = await models.curriculumSubjectTermMappingModel.findAll({
-    where: { curriculumId, subjectId: { [Op.in]: subjectIds } },
-    attributes: ['subjectId'],
+    where: {
+      curriculumId,
+      [Op.or]: existingConditions,
+    },
+    attributes: ['subjectId', 'subjectComponentMappingId'],
   });
   if (existingMappings.length > 0) {
-    httpError('One or more subjects are already mapped to this curriculum', 409);
+    httpError('One or more subject component mappings are already mapped to this curriculum', 409);
   }
 
+  const uniqueSubjectIds = [...new Set(subjects.map((s) => s.subjectId))];
   const subjectRecords = await scoped(models.subjectModel).findAll({
-    where: { subjectId: { [Op.in]: subjectIds } },
+    where: { subjectId: { [Op.in]: uniqueSubjectIds } },
     attributes: ['subjectId', 'subjectCode', 'courseId'],
   });
 
-  if (subjectRecords.length !== subjectIds.length) {
+  if (subjectRecords.length !== uniqueSubjectIds.length) {
     httpError('One or more subjects were not found', 404);
   }
 
@@ -511,9 +524,56 @@ export async function mapSubjects(curriculumId, subjects) {
     );
   }
 
+  // Validate subjectComponentMappingId belongs to subjectId
+  const scmIds = subjects
+    .map((s) => s.subjectComponentMappingId)
+    .filter((id) => id != null);
+
+  if (scmIds.length > 0) {
+    const scmMappings = await models.subjectComponentMappingModel.findAll({
+      where: { id: { [Op.in]: scmIds } },
+      attributes: ['id', 'subjectId'],
+    });
+    const scmMap = new Map(scmMappings.map((m) => [m.id, m.subjectId]));
+
+    for (const s of subjects) {
+      if (s.subjectComponentMappingId != null) {
+        if (!scmMap.has(s.subjectComponentMappingId)) {
+          httpError(`Subject component mapping id ${s.subjectComponentMappingId} not found`, 404);
+        }
+        if (scmMap.get(s.subjectComponentMappingId) !== s.subjectId) {
+          httpError(
+            `Subject component mapping id ${s.subjectComponentMappingId} does not belong to subject ${s.subjectId}`,
+            400,
+          );
+        }
+      }
+    }
+  }
+
+  // Validate curriculumCategoryId exists if provided
+  const categoryIds = subjects
+    .map((s) => s.curriculumCategoryId)
+    .filter((id) => id != null);
+
+  if (categoryIds.length > 0) {
+    const categories = await models.curriculumCategoryModel.findAll({
+      where: { id: { [Op.in]: categoryIds } },
+      attributes: ['id'],
+    });
+    const catSet = new Set(categories.map((c) => c.id));
+    for (const s of subjects) {
+      if (s.curriculumCategoryId != null && !catSet.has(s.curriculumCategoryId)) {
+        httpError(`Curriculum category with id ${s.curriculumCategoryId} not found`, 404);
+      }
+    }
+  }
+
   const mappings = subjects.map((s) => ({
     curriculumId,
     subjectId: s.subjectId,
+    subjectComponentMappingId: s.subjectComponentMappingId ?? null,
+    curriculumCategoryId: s.curriculumCategoryId ?? null,
     term: s.term ?? s.termNumber,
     credit: s.credit,
   }));
@@ -543,6 +603,26 @@ export async function updateSubjectTermMapping(
         `Term ${data.term} exceeds programme total terms (${curriculum.course.totalTerms})`,
         400,
       );
+    }
+  }
+
+  if (data.subjectComponentMappingId !== undefined && data.subjectComponentMappingId !== null) {
+    const scm = await models.subjectComponentMappingModel.findByPk(data.subjectComponentMappingId);
+    if (!scm) {
+      httpError(`Subject component mapping id ${data.subjectComponentMappingId} not found`, 404);
+    }
+    if (scm.subjectId !== mapping.subjectId) {
+      httpError(
+        `Subject component mapping id ${data.subjectComponentMappingId} does not belong to subject ${mapping.subjectId}`,
+        400,
+      );
+    }
+  }
+
+  if (data.curriculumCategoryId !== undefined && data.curriculumCategoryId !== null) {
+    const cat = await models.curriculumCategoryModel.findByPk(data.curriculumCategoryId);
+    if (!cat) {
+      httpError(`Curriculum category with id ${data.curriculumCategoryId} not found`, 404);
     }
   }
 

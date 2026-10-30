@@ -5,6 +5,7 @@ import subjectComponentModel from "./subjectComponentModel.js";
 import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
 import electivePoolModel from "./electivePoolModel.js";
 import electivePoolSubjectMappingModel from "./electivePoolSubjectMappingModel.js";
+import curriculumElectiveRequirementModel from "./curriculumElectiveRequirementModel.js";
 import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
 import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
 import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
@@ -4117,6 +4118,10 @@ curriculumSubjectTermMappingModel.belongsTo(curriculumModel, { foreignKey: 'curr
 
 curriculumSubjectTermMappingModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subject' });
 subjectModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectId', as: 'curriculumTermMappings' });
+curriculumSubjectTermMappingModel.belongsTo(subjectComponentMappingModel, { foreignKey: 'subjectComponentMappingId', as: 'subjectComponentMapping' });
+subjectComponentMappingModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectComponentMappingId', as: 'curriculumSubjectTermMappings' });
+curriculumSubjectTermMappingModel.belongsTo(curriculumCategoryModel, { foreignKey: 'curriculum_category_id', as: 'curriculumCategory' });
+curriculumCategoryModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'curriculum_category_id', as: 'curriculumSubjectTermMappings' });
 
 curriculumModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'curriculumId', as: 'batchMappings' });
 curriculumBatchMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
@@ -4323,6 +4328,7 @@ export {
   subjectComponentMappingModel,
   electivePoolModel,
   electivePoolSubjectMappingModel,
+  curriculumElectiveRequirementModel,
   curriculumSubjectTermMappingModel,
   curriculumBatchMappingModel,
   curriculumBatchTermMappingModel,
@@ -4421,6 +4427,15 @@ electivePoolModel.hasMany(electivePoolSubjectMappingModel, { foreignKey: 'electi
 electivePoolSubjectMappingModel.belongsTo(electivePoolModel, { foreignKey: 'elective_pool_id', as: 'electivePool' });
 subjectModel.hasMany(electivePoolSubjectMappingModel, { foreignKey: 'subject_id', as: 'poolSubjectMappings' });
 electivePoolSubjectMappingModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+// Curriculum Elective Requirement Associations
+curriculumElectiveRequirementModel.belongsTo(curriculumModel, { foreignKey: 'curriculum_id', as: 'curriculum' });
+curriculumModel.hasMany(curriculumElectiveRequirementModel, { foreignKey: 'curriculum_id', as: 'electiveRequirements' });
+
+curriculumElectiveRequirementModel.belongsTo(curriculumCategoryModel, { foreignKey: 'curriculum_category_id', as: 'curriculumCategory' });
+curriculumCategoryModel.hasMany(curriculumElectiveRequirementModel, { foreignKey: 'curriculum_category_id', as: 'electiveRequirements' });
+
+curriculumElectiveRequirementModel.belongsTo(electivePoolModel, { foreignKey: 'elective_pool_id', as: 'electivePool' });
+electivePoolModel.hasMany(curriculumElectiveRequirementModel, { foreignKey: 'elective_pool_id', as: 'curriculumElectiveRequirements' });
 
 // Refresh Token Associations
 userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });

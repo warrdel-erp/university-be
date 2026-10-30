@@ -60,6 +60,26 @@ This module provides complete support for:
 
 ---
 
+
+### 3. `curriculum_elective_requirement` (Image 3)
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | INT | PRIMARY KEY, AUTO_INCREMENT | Unique Requirement ID |
+| `curriculum_id` | INT | NOT NULL, FK `curriculum(curriculum_id)` | Curriculum ID |
+| `term` | INT | NOT NULL | Term/Semester number |
+| `requirement_code` | VARCHAR(50) | NOT NULL | Requirement Code (e.g. "PE-1", "OE-1") |
+| `requirement_name` | VARCHAR(150) | NOT NULL | Title (e.g. "Professional Elective I") |
+| `curriculum_category_id` | INT | NOT NULL, FK `curriculum_category(id)` | Category ID |
+| `course_count` | BOOLEAN | NOT NULL, DEFAULT TRUE | Boolean flag for course count mode |
+| `courses_required` | INT | NOT NULL, DEFAULT 1 | Number of courses required |
+| `min_credits` | FLOAT | NULL (Optional) | Minimum credits required |
+| `elective_pool_id` | INT | NOT NULL, FK `elective_pool(id)` | Elective Pool ID |
+| `is_active` | BOOLEAN | NOT NULL, DEFAULT TRUE | Status: Active / Inactive |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | Created timestamp |
+| `updated_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | Updated timestamp |
+| `deleted_at` | TIMESTAMP | NULL | Soft delete timestamp |
+
 ## API Endpoints Reference
 
 ### Folder 1: Elective Pool (Image 1)
@@ -171,3 +191,38 @@ Authorization: Bearer {{token}}
 }
 ```
 
+
+---
+
+### Folder 3: Curriculum Elective Requirement (Image 3)
+
+Mount: `/curriculumElectiveRequirement`, `/api/curriculum-elective-requirements`
+
+| Action | Method | Route | Description |
+|---|---|---|---|
+| **Add Requirement** | `POST` | `/curriculumElectiveRequirement/create` | Modal Add Requirement (Image 3) |
+| **List Requirements** | `GET` | `/curriculumElectiveRequirement/list` | List by `?curriculumId=9&term=1` with pool preview & count |
+| **Filter by Category** | `GET` | `/curriculumElectiveRequirement/list` | Filter by `?curriculumCategoryId=1` |
+| **Get Requirement by ID** | `GET` | `/curriculumElectiveRequirement/:id` | Single requirement view |
+| **Update Requirement** | `PATCH` | `/curriculumElectiveRequirement/update/:id` | Update name, coursesRequired, minCredits |
+| **Toggle Status** | `PATCH` | `/curriculumElectiveRequirement/toggleStatus/:id` | Toggle active status |
+| **Delete Requirement** | `DELETE` | `/curriculumElectiveRequirement/delete/:id` | Soft delete requirement |
+
+#### Example: Add Elective Requirement to Term (Image 3 Modal)
+```http
+POST /curriculumElectiveRequirement/create HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "curriculumId": 9,
+  "term": 1,
+  "requirementCode": "PE-1",
+  "requirementName": "Professional Elective I",
+  "curriculumCategoryId": 1,
+  "courseCount": true,
+  "coursesRequired": 1,
+  "minCredits": 3.0,
+  "electivePoolId": 1
+}
+```

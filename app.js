@@ -85,6 +85,7 @@ import curriculumRoute from "./router/curriculumRoute.js";
 import curriculumCategory from "./router/curriculumCategoryRoute.js";
 import subjectComponent from "./router/subjectComponentRoute.js";
 import electivePool from "./router/electivePoolRoute.js";
+import curriculumElectiveRequirement from "./router/curriculumElectiveRequirementRoute.js";
 import gradingSchemas from "./router/gradingSchemasRouter.js";
 import academicRegulation from "./router/academicRegulationRoute.js";
 import assessmentPlan from "./router/assessmentPlanRoute.js";
@@ -292,6 +293,8 @@ app.use("/api/subject-components", subjectComponent);
 app.use("/courseComponent", subjectComponent);
 app.use("/electivePool", electivePool);
 app.use("/api/elective-pools", electivePool);
+app.use("/curriculumElectiveRequirement", curriculumElectiveRequirement);
+app.use("/api/curriculum-elective-requirements", curriculumElectiveRequirement);
 app.use("/previousAcademic", previousAcademic);
 
 export { app };
