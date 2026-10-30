@@ -166,69 +166,83 @@ export async function deleteCurriculumElectiveRequirement(id, options = {}) {
 
 export async function findRequirementForOverview(id, options = {}) {
   const { transaction } = options;
-  return scoped(model.curriculumElectiveRequirementModel).findOne({
+  const include = [
+    {
+      model: model.curriculumCategoryModel,
+      as: "curriculumCategory",
+      attributes: ["id", "categoryName", "code"],
+      required: false,
+    },
+    {
+      model: model.electivePoolModel,
+      as: "electivePool",
+      attributes: ["id", "name", "code", "scope", "isActive"],
+      include: [
+        {
+          model: model.electivePoolSubjectMappingModel,
+          as: "poolSubjectMappings",
+          attributes: ["id", "subjectId"],
+          include: [
+            {
+              model: model.subjectModel,
+              as: "subject",
+              attributes: ["subjectId", "subjectCode", "subjectName"],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+      required: false,
+    },
+    {
+      model: model.curriculumModel,
+      as: "curriculum",
+      attributes: ["curriculumId", "name", "courseId"],
+      include: [
+        {
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName", "courseCode", "totalTerms"],
+          required: false,
+        },
+        {
+          model: model.curriculumBatchMappingModel,
+          as: "batchMappings",
+          attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
+          include: [
+            {
+              model: model.batchModel,
+              as: "batch",
+              attributes: ["batchId", "batch"],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+      required: false,
+    },
+  ];
+
+  let req = await scoped(model.curriculumElectiveRequirementModel).findOne({
     where: { id },
     attributes: defaultAttributes,
-    include: [
-      {
-        model: model.curriculumCategoryModel,
-        as: "curriculumCategory",
-        attributes: ["id", "categoryName", "code"],
-        required: false,
-      },
-      {
-        model: model.electivePoolModel,
-        as: "electivePool",
-        attributes: ["id", "name", "code", "scope", "isActive"],
-        include: [
-          {
-            model: model.electivePoolSubjectMappingModel,
-            as: "poolSubjectMappings",
-            attributes: ["id", "subjectId"],
-            include: [
-              {
-                model: model.subjectModel,
-                as: "subject",
-                attributes: ["subjectId", "subjectCode", "subjectName"],
-                required: false,
-              },
-            ],
-            required: false,
-          },
-        ],
-        required: false,
-      },
-      {
-        model: model.curriculumModel,
-        as: "curriculum",
-        attributes: ["curriculumId", "name", "courseId"],
-        include: [
-          {
-            model: model.courseModel,
-            as: "course",
-            attributes: ["courseId", "courseName", "courseCode", "totalTerms"],
-            required: false,
-          },
-          {
-            model: model.curriculumBatchMappingModel,
-            as: "batchMappings",
-            attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
-            include: [
-              {
-                model: model.batchModel,
-                as: "batch",
-                attributes: ["batchId", "batch"],
-                required: false,
-              },
-            ],
-            required: false,
-          },
-        ],
-        required: false,
-      },
-    ],
+    include,
     transaction,
   });
+
+  if (!req) {
+    req = await scoped(model.curriculumElectiveRequirementModel).findOne({
+      where: { curriculumId: id },
+      attributes: defaultAttributes,
+      include,
+      order: [["id", "DESC"]],
+      transaction,
+    });
+  }
+
+  return req;
 }
 
 /**

@@ -188,7 +188,48 @@ export async function getCourseStudentsForManagement(req, res) {
       return ErrorResponse(res, 400, "subjectId is required");
     }
     const result = await service.getCourseStudentsForManagement(id, subjectId, req.query);
-    return SuccessResponse(res, 200, "Course students for management fetched successfully", result);
+
+    const activeTab = (req.query.tab || "").toLowerCase().trim();
+    if (activeTab === "eligible" || activeTab === "assigned") {
+      const activePagination =
+        activeTab === "assigned" ? result.assignedPagination : result.availablePagination;
+      return res.status(200).json({
+        success: true,
+        message: "Course students for management fetched successfully",
+        data: result.students,
+        paginationData: activePagination && {
+          ...activePagination,
+          totalPages: Math.ceil(
+            activePagination.total / (activePagination.limit || 1)
+          ),
+        },
+        total: activePagination?.total || 0,
+        totalPages: activePagination?.totalPages || 1,
+        page: activePagination?.page || 1,
+        limit: activePagination?.limit || 10,
+        courseInfo: result.courseInfo,
+        summary: result.summary,
+        requirementId: result.requirementId,
+        requirementCode: result.requirementCode,
+        requirementName: result.requirementName,
+        activeTab: result.activeTab,
+        assignedStudents: result.assignedStudents,
+        availableStudents: result.availableStudents,
+        assignedPagination: result.assignedPagination,
+        availablePagination: result.availablePagination,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Course students for management fetched successfully",
+      data: result,
+      paginationData: result.paginationData || result.availablePagination,
+      total: result.paginationData?.total ?? result.availablePagination?.total ?? 0,
+      totalPages: result.paginationData?.totalPages ?? result.availablePagination?.totalPages ?? 1,
+      courseInfo: result.courseInfo,
+      summary: result.summary,
+    });
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -196,11 +237,17 @@ export async function getCourseStudentsForManagement(req, res) {
 
 export async function getCourseAssignedStudents(req, res) {
   try {
-    const id = req.params.id || req.query.id || req.query.curriculumElectiveRequirementId;
+    let id = req.params.id || req.query.id || req.query.curriculumElectiveRequirementId;
     const subjectId = req.params.subjectId || req.query.subjectId;
     if (!id) {
       return ErrorResponse(res, 400, "id is required");
     }
+
+    const resolvedReq = await service.resolveRequirementId(id, subjectId);
+    if (resolvedReq) {
+      id = resolvedReq.id;
+    }
+
     const query = {
       ...req.query,
       curriculumElectiveRequirementId: id,
@@ -218,6 +265,10 @@ export async function getCourseAssignedStudents(req, res) {
             result.paginationData.total / (result.paginationData.limit || 1)
           ),
         },
+        total: result.paginationData?.total || 0,
+        totalPages: result.paginationData?.totalPages || 1,
+        page: result.paginationData?.page || 1,
+        limit: result.paginationData?.limit || 10,
         courseInfo: result.courseInfo,
         summary: result.summary,
       });

@@ -1508,8 +1508,35 @@ export async function bulkUnassignStudentsFromCurriculumElective(id, payload = {
  * Get Course Students for Manage Students Modal (Image 4 "Manage Students ->" action)
  * Returns assigned students to this course AND available students who can be assigned
  */
+export async function resolveRequirementId(id, subjectId, options = {}) {
+  let req = await repo.findRequirementForOverview(id, options);
+  if (!req) {
+    const sId = subjectId ? parseInt(subjectId, 10) : null;
+    const candidateRequirements = await repo.findCurriculumElectiveRequirements(
+      { curriculumId: id },
+      options
+    );
+    if (sId) {
+      for (const cand of candidateRequirements.rows || []) {
+        const fullCand = await repo.findRequirementForOverview(cand.id, options);
+        const hasSubject = (fullCand?.electivePool?.poolSubjectMappings || []).some(
+          (m) => m.subjectId === sId
+        );
+        if (hasSubject) {
+          req = fullCand;
+          break;
+        }
+      }
+    }
+    if (!req && candidateRequirements.rows?.length > 0) {
+      req = await repo.findRequirementForOverview(candidateRequirements.rows[0].id, options);
+    }
+  }
+  return req;
+}
+
 export async function getCourseStudentsForManagement(id, subjectId, query = {}, options = {}) {
-  const req = await repo.findRequirementForOverview(id, options);
+  const req = await resolveRequirementId(id, subjectId, options);
   if (!req) {
     throw httpError("Curriculum elective requirement not found", 404);
   }
@@ -1583,34 +1610,39 @@ export async function getCourseStudentsForManagement(id, subjectId, query = {}, 
     includeStudent: true,
   });
 
-  const assignmentByStudentId = new Map();
+  const assignmentsByStudent = new Map();
   for (const a of activeAssignments) {
     if (a.status === "Assigned") {
-      assignmentByStudentId.set(a.studentId, a);
+      if (!assignmentsByStudent.has(a.studentId)) {
+        assignmentsByStudent.set(a.studentId, []);
+      }
+      assignmentsByStudent.get(a.studentId).push(a);
     }
   }
 
   let assignedStudents = [];
   let availableStudents = [];
+  const coursesRequired = req.coursesRequired || 1;
 
   for (const s of allStudents) {
     const studentName = [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" ");
     const enrolmentNo = s.enrollNumber || s.scholarNumber || `ENR${s.studentId}`;
-    const assign = assignmentByStudentId.get(s.studentId);
+    const studentAssignments = assignmentsByStudent.get(s.studentId) || [];
+    const assignToThisCourse = studentAssignments.find((a) => a.subjectId === sId);
 
-    if (assign && assign.subjectId === sId) {
+    if (assignToThisCourse) {
       assignedStudents.push({
         studentId: s.studentId,
         studentName,
         enrolmentNo,
         scholarNumber: s.scholarNumber || null,
-        assignmentSource: assign.assignmentSource || "Direct",
-        assignedAt: assign.createdAt,
+        assignmentSource: assignToThisCourse.assignmentSource || "Direct",
+        assignedAt: assignToThisCourse.createdAt,
         status: "Assigned",
         assignmentStatus: "Assigned",
         statusBadge: { label: "Assigned", color: "green" },
       });
-    } else if (!assign) {
+    } else if (studentAssignments.length < coursesRequired) {
       availableStudents.push({
         studentId: s.studentId,
         studentName,
@@ -1624,8 +1656,9 @@ export async function getCourseStudentsForManagement(id, subjectId, query = {}, 
   }
 
   // Search filter
-  if (query.search && String(query.search).trim()) {
-    const term = String(query.search).trim().toLowerCase();
+  const searchVal = query.search || query.studentSearch;
+  if (searchVal && String(searchVal).trim()) {
+    const term = String(searchVal).trim().toLowerCase();
     assignedStudents = assignedStudents.filter(
       (st) =>
         st.studentName.toLowerCase().includes(term) ||
