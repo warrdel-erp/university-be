@@ -928,10 +928,11 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
   const poolSubtitle = `Select ${coursesRequired} course${coursesRequired > 1 ? "s" : ""} • Minimum ${minCredits} credits`;
 
   // 2. Applicable Students for this requirement
-  const students = await repo.findRequirementStudents(req, {
-    allBatchStudents: true,
-    transaction: options.transaction,
-  });
+  const students = await repo.findEligibleStudentsForRequirement(
+    req,
+    { allBatchStudents: true },
+    options
+  );
   const totalStudents = students.length;
 
   // 3. Current active assignments
@@ -1157,7 +1158,7 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
                   {
                     model: models.classSectionModel,
                     as: "classSection",
-                    attributes: ["classSectionsId", "capacity", "section"],
+                    attributes: ["classSectionsId", "expectedCapacity", "section"],
                   },
                 ],
               },
@@ -1172,7 +1173,7 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
   for (const cell of routineCells) {
     const subId = cell.subjectId;
     const routine = cell.timeTableRoutine;
-    const cap = routine?.timeTableClassSectionTerm?.classSection?.capacity || 40;
+    const cap = routine?.timeTableClassSectionTerm?.classSection?.expectedCapacity || 40;
     if (!subjectCapacityMap.has(subId)) {
       subjectCapacityMap.set(subId, { capacity: 0, sections: new Set() });
     }
@@ -1335,7 +1336,6 @@ export async function assignStudentToCurriculumElective(id, payload = {}, option
       subjectId,
       assignmentSource: payload.assignmentSource || "Direct",
       status: "Assigned",
-      remarks: payload.remarks || null,
       universityId,
       instituteId,
       academicYearId,
@@ -1385,7 +1385,7 @@ export async function bulkAssignStudentsToCurriculumElective(id, payload = {}, o
     throw httpError("Curriculum elective requirement not found", 404);
   }
 
-  const { studentIds = [], subjectId, assignmentSource = "Direct", remarks } = payload;
+  const { studentIds = [], subjectId, assignmentSource = "Direct" } = payload;
   if (!Array.isArray(studentIds) || studentIds.length === 0) {
     throw httpError("studentIds array cannot be empty", 400);
   }
@@ -1413,7 +1413,6 @@ export async function bulkAssignStudentsToCurriculumElective(id, payload = {}, o
     subjectId: sId,
     assignmentSource,
     status: "Assigned",
-    remarks: remarks || null,
     universityId,
     instituteId,
     academicYearId,
@@ -1426,6 +1425,192 @@ export async function bulkAssignStudentsToCurriculumElective(id, payload = {}, o
     success: true,
     count: results.length,
     message: `${results.length} students assigned successfully to course`,
+  };
+}
+
+/**
+ * Bulk unassign multiple students from an elective requirement
+ */
+export async function bulkUnassignStudentsFromCurriculumElective(id, payload = {}, options = {}) {
+  const req = await repo.findRequirementForOverview(id, options);
+  if (!req) {
+    throw httpError("Curriculum elective requirement not found", 404);
+  }
+
+  const { studentIds = [] } = payload;
+  if (!Array.isArray(studentIds) || studentIds.length === 0) {
+    throw httpError("studentIds array cannot be empty", 400);
+  }
+
+  const numericIds = studentIds.map((id) => parseInt(id, 10)).filter(Boolean);
+  const deletedCount = await assignmentRepo.bulkUnassignStudents(req.id, numericIds, options);
+
+  return {
+    success: true,
+    deletedCount,
+    message: `${deletedCount} students unassigned successfully`,
+  };
+}
+
+/**
+ * Get Course Students for Manage Students Modal (Image 4 "Manage Students ->" action)
+ * Returns assigned students to this course AND available students who can be assigned
+ */
+export async function getCourseStudentsForManagement(id, subjectId, query = {}, options = {}) {
+  const req = await repo.findRequirementForOverview(id, options);
+  if (!req) {
+    throw httpError("Curriculum elective requirement not found", 404);
+  }
+
+  const sId = parseInt(subjectId, 10);
+  if (!sId || isNaN(sId)) {
+    throw httpError("Valid subjectId is required", 400);
+  }
+
+  const poolMapping = (req.electivePool?.poolSubjectMappings || []).find((m) => m.subjectId === sId);
+  if (!poolMapping || !poolMapping.subject) {
+    throw httpError("Selected course does not belong to the elective pool for this requirement", 400);
+  }
+  const course = poolMapping.subject;
+
+  // Recognised credits
+  const cstm = await models.curriculumSubjectTermMappingModel.findOne({
+    where: { curriculumId: req.curriculumId, subjectId: sId },
+    attributes: ["credit"],
+    transaction: options.transaction,
+  });
+  const recognisedCredits = cstm?.credit != null ? cstm.credit : (req.minCredits || 3);
+
+  // Timetable Routine capacity
+  const routineCells = await models.timeTableCellModel.findAll({
+    where: { subjectId: sId },
+    include: [
+      {
+        model: models.timeTableRoutineModel,
+        as: "timeTableRoutine",
+        attributes: ["timeTableRoutineId", "isPublish", "classSectionTermId"],
+        include: [
+          {
+            model: models.classSectionTermModel,
+            as: "timeTableClassSectionTerm",
+            attributes: ["classSectionTermId", "classSectionsId"],
+            include: [
+              {
+                model: models.classSectionModel,
+                as: "classSection",
+                attributes: ["classSectionsId", "expectedCapacity", "section"],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  let totalCapacity = 0;
+  const seenSections = new Set();
+  for (const cell of routineCells) {
+    const routine = cell.timeTableRoutine;
+    if (routine?.classSectionTermId && !seenSections.has(routine.classSectionTermId)) {
+      seenSections.add(routine.classSectionTermId);
+      totalCapacity += Number(routine?.timeTableClassSectionTerm?.classSection?.expectedCapacity) || 40;
+    }
+  }
+  if (totalCapacity === 0) totalCapacity = 40;
+
+  const enrolledSeatsAcrossAll = await assignmentRepo.countTotalSubjectEnrollments(sId, options);
+  const enrolledSeats = Math.max(0, enrolledSeatsAcrossAll);
+  const remainingSeats = Math.max(0, totalCapacity - enrolledSeats);
+  const isFull = remainingSeats <= 0;
+
+  // Students and active assignments
+  const allStudents = await repo.findEligibleStudentsForRequirement(req, { allBatchStudents: true }, options);
+  const activeAssignments = await assignmentRepo.findAssignmentsByRequirement(req.id, {
+    transaction: options.transaction,
+    includeStudent: true,
+  });
+
+  const assignmentByStudentId = new Map();
+  for (const a of activeAssignments) {
+    if (a.status === "Assigned") {
+      assignmentByStudentId.set(a.studentId, a);
+    }
+  }
+
+  let assignedStudents = [];
+  let availableStudents = [];
+
+  for (const s of allStudents) {
+    const studentName = [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" ");
+    const enrolmentNo = s.enrollNumber || s.scholarNumber || `ENR${s.studentId}`;
+    const assign = assignmentByStudentId.get(s.studentId);
+
+    if (assign && assign.subjectId === sId) {
+      assignedStudents.push({
+        studentId: s.studentId,
+        studentName,
+        enrolmentNo,
+        scholarNumber: s.scholarNumber || null,
+        assignmentSource: assign.assignmentSource || "Direct",
+        assignedAt: assign.createdAt,
+        status: "Assigned",
+      });
+    } else if (!assign) {
+      availableStudents.push({
+        studentId: s.studentId,
+        studentName,
+        enrolmentNo,
+        scholarNumber: s.scholarNumber || null,
+        status: "Awaiting",
+      });
+    }
+  }
+
+  // Search filter
+  if (query.search && String(query.search).trim()) {
+    const term = String(query.search).trim().toLowerCase();
+    assignedStudents = assignedStudents.filter(
+      (st) =>
+        st.studentName.toLowerCase().includes(term) ||
+        st.enrolmentNo.toLowerCase().includes(term) ||
+        (st.scholarNumber && st.scholarNumber.toLowerCase().includes(term))
+    );
+    availableStudents = availableStudents.filter(
+      (st) =>
+        st.studentName.toLowerCase().includes(term) ||
+        st.enrolmentNo.toLowerCase().includes(term) ||
+        (st.scholarNumber && st.scholarNumber.toLowerCase().includes(term))
+    );
+  }
+
+  return {
+    requirementId: req.id,
+    requirementCode: req.requirementCode,
+    requirementName: req.requirementName,
+    courseInfo: {
+      subjectId: course.subjectId,
+      courseCode: course.subjectCode,
+      courseTitle: course.subjectName,
+      recognisedCredits,
+      seatOccupancy: {
+        enrolledSeats,
+        totalCapacity,
+        remainingSeats,
+        isFull,
+        occupancyPercentage: totalCapacity > 0 ? Number(((enrolledSeats / totalCapacity) * 100).toFixed(1)) : 0,
+        occupancyText: `${enrolledSeats} / ${totalCapacity}`,
+        remainingText: `${remainingSeats} seats remaining`,
+      },
+    },
+    summary: {
+      totalAssignedToThisCourse: assignedStudents.length,
+      totalAvailableToAssign: availableStudents.length,
+      remainingSeats,
+      canAssignMore: remainingSeats > 0,
+    },
+    assignedStudents,
+    availableStudents,
   };
 }
 

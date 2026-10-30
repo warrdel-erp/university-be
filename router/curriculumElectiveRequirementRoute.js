@@ -12,6 +12,8 @@ import {
   assignStudentToCurriculumElective,
   unassignStudentFromCurriculumElective,
   bulkAssignStudentsToCurriculumElective,
+  bulkUnassignStudentsFromCurriculumElective,
+  getCourseStudentsForManagement,
   updateCurriculumElectiveRequirement,
   toggleStatusCurriculumElectiveRequirement,
   deleteCurriculumElectiveRequirement,
@@ -59,7 +61,6 @@ const assignStudentSchema = z.object({
   studentId: positiveIntegerId,
   subjectId: positiveIntegerId,
   assignmentSource: z.enum(["Direct", "Selection Round"]).optional(),
-  remarks: z.string().max(255).optional().nullable(),
   allowOverflow: z.boolean().optional(),
 });
 
@@ -67,12 +68,20 @@ const bulkAssignSchema = z.object({
   studentIds: z.array(positiveIntegerId).nonempty("studentIds must contain at least one student"),
   subjectId: positiveIntegerId,
   assignmentSource: z.enum(["Direct", "Selection Round"]).optional(),
-  remarks: z.string().max(255).optional().nullable(),
 });
 
 const unassignParamSchema = z.object({
   id: positiveIntegerId,
   studentId: positiveIntegerId,
+});
+
+const courseSubjectParamSchema = z.object({
+  id: positiveIntegerId,
+  subjectId: positiveIntegerId,
+});
+
+const bulkUnassignSchema = z.object({
+  studentIds: z.array(positiveIntegerId).nonempty("studentIds must contain at least one student"),
 });
 
 // Create
@@ -181,6 +190,34 @@ router.post(
   userAuth,
   validate({ params: idParamSchema }),
   unassignStudentFromCurriculumElective
+);
+
+// Bulk unassign students from elective requirement
+router.post(
+  "/:id/bulk-unassign",
+  userAuth,
+  validate({ params: idParamSchema, body: bulkUnassignSchema }),
+  bulkUnassignStudentsFromCurriculumElective
+);
+router.post(
+  "/bulk-unassign/:id",
+  userAuth,
+  validate({ params: idParamSchema, body: bulkUnassignSchema }),
+  bulkUnassignStudentsFromCurriculumElective
+);
+
+// Course Students Management (For Image 4 "Manage Students ->" action on course row)
+router.get(
+  "/:id/course-students/:subjectId",
+  userAuth,
+  validate({ params: courseSubjectParamSchema }),
+  getCourseStudentsForManagement
+);
+router.get(
+  "/course-students/:id/:subjectId",
+  userAuth,
+  validate({ params: courseSubjectParamSchema }),
+  getCourseStudentsForManagement
 );
 
 // Single view via param

@@ -56,11 +56,6 @@ const curriculumElectiveAssignmentModel = sequelize.define(
       defaultValue: 'Assigned',
       field: 'status',
     },
-    remarks: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      field: 'remarks',
-    },
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -141,3 +136,4 @@ curriculumElectiveAssignmentModel.scopeConfig = {
 };
 
 export default curriculumElectiveAssignmentModel;
+

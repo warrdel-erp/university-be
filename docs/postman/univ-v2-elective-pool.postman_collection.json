@@ -95,33 +95,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "2. Create Elective Pool (Institute Scope)",
           "request": {
             "method": "POST",
@@ -148,33 +121,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "3. Create Elective Pool (Batch Scope)",
           "request": {
             "method": "POST",
@@ -198,33 +144,6 @@
                 "create"
               ]
             }
-          }
-        },
-        {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
           }
         },
         {
@@ -255,33 +174,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "5. Filter Elective Pools by Scope (Programme)",
           "request": {
             "method": "GET",
@@ -309,33 +201,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "6. Search Elective Pools by Name or Code",
           "request": {
             "method": "GET",
@@ -359,33 +224,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "7. Get Single Elective Pool By ID",
           "request": {
             "method": "GET",
@@ -400,33 +238,6 @@
                 "{{electivePoolId}}"
               ]
             }
-          }
-        },
-        {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
           }
         },
         {
@@ -457,33 +268,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "9. Toggle Status (Active / Inactive)",
           "request": {
             "method": "PATCH",
@@ -499,33 +283,6 @@
                 "{{electivePoolId}}"
               ]
             }
-          }
-        },
-        {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
           }
         },
         {
@@ -586,33 +343,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "2. Search Courses by Code / Name (Image 2 Search Bar)",
           "request": {
             "method": "GET",
@@ -638,33 +368,6 @@
                 }
               ]
             }
-          }
-        },
-        {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
           }
         },
         {
@@ -696,33 +399,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "4. Filter Courses by Component (Image 2 Filter)",
           "request": {
             "method": "GET",
@@ -748,33 +424,6 @@
                 }
               ]
             }
-          }
-        },
-        {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
           }
         },
         {
@@ -805,33 +454,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "6. Get Mapped Courses for Pool (Image 2 Drawer)",
           "request": {
             "method": "GET",
@@ -848,33 +470,6 @@
                 "{{electivePoolId}}"
               ]
             }
-          }
-        },
-        {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
           }
         },
         {
@@ -951,88 +546,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
-          "name": "5C. Get Elective Requirement Course Offerings (Tab Screen)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/course-offerings?search=&offeringStatus=all&routineStatus=all&assignmentAvailability=all&limit=10&page=1",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "course-offerings"
-              ],
-              "query": [
-                {
-                  "key": "search",
-                  "value": "",
-                  "description": "Optional: search courses by code or title",
-                  "disabled": true
-                },
-                {
-                  "key": "offeringStatus",
-                  "value": "Published",
-                  "description": "Optional: filter by offering status (Published, Draft, Not Created)",
-                  "disabled": true
-                },
-                {
-                  "key": "routineStatus",
-                  "value": "Published",
-                  "description": "Optional: filter by routine status (Published, Draft, Not Scheduled)",
-                  "disabled": true
-                },
-                {
-                  "key": "assignmentAvailability",
-                  "value": "Available",
-                  "description": "Optional: filter by availability (Available, Not Available, Credit Mapping Required)",
-                  "disabled": true
-                },
-                {
-                  "key": "limit",
-                  "value": "10",
-                  "description": "Optional: pagination limit"
-                },
-                {
-                  "key": "page",
-                  "value": "1",
-                  "description": "Optional: page number"
-                }
-              ]
-            },
-            "description": "### Course Offerings Tab Screen (Image 1)\nReturns 4 KPI cards (Eligible Courses, Courses with Offerings, Available for Assignment, Assigned Students) + Table of courses with offering status, routine status, sections, shared capacity, assigned students, and assignment availability."
-          }
-        },
-        {
           "name": "2. Get All Elective Requirements (List by Curriculum & Term)",
           "request": {
             "method": "GET",
@@ -1068,33 +581,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "3. Filter Requirements by Category",
           "request": {
             "method": "GET",
@@ -1122,33 +608,6 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
           "name": "4. Search Requirements by Code or Name",
           "request": {
             "method": "GET",
@@ -1169,33 +628,6 @@
                 }
               ]
             }
-          }
-        },
-        {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
           }
         },
         {
@@ -1252,7 +684,7 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
+          "name": "6. Get Elective Requirement Overview Dashboard",
           "request": {
             "method": "GET",
             "header": [],
@@ -1279,34 +711,62 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
+          "name": "7. Get Elective Requirement Course Offerings (Tab Screen)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/course-offerings?search=&offeringStatus=all&routineStatus=all&assignmentAvailability=all&limit=10&page=1",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "curriculumElectiveRequirement",
                 "{{curriculumElectiveRequirementId}}",
-                "overview"
+                "course-offerings"
               ],
               "query": [
                 {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
+                  "key": "search",
+                  "value": "",
+                  "description": "Optional: search courses by code or title",
                   "disabled": true
+                },
+                {
+                  "key": "offeringStatus",
+                  "value": "Published",
+                  "description": "Optional: filter by offering status (Published, Draft, Not Created)",
+                  "disabled": true
+                },
+                {
+                  "key": "routineStatus",
+                  "value": "Published",
+                  "description": "Optional: filter by routine status (Published, Draft, Not Scheduled)",
+                  "disabled": true
+                },
+                {
+                  "key": "assignmentAvailability",
+                  "value": "Available",
+                  "description": "Optional: filter by availability (Available, Not Available, Credit Mapping Required)",
+                  "disabled": true
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Optional: pagination limit"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Optional: page number"
                 }
               ]
             },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
+            "description": "### Course Offerings Tab Screen (Image 1)\nReturns 4 KPI cards (Eligible Courses, Courses with Offerings, Available for Assignment, Assigned Students) + Table of courses with offering status, routine status, sections, shared capacity, assigned students, and assignment availability."
           }
         },
         {
-          "name": "6. Update Elective Requirement",
+          "name": "8. Update Elective Requirement",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1333,34 +793,7 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
-          "name": "7. Toggle Status (Active / Inactive)",
+          "name": "9. Toggle Status (Active / Inactive)",
           "request": {
             "method": "PATCH",
             "header": [],
@@ -1378,34 +811,7 @@
           }
         },
         {
-          "name": "5B. Get Elective Requirement Overview Dashboard",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/overview",
-              "host": [
-                "{{baseurl}}"
-              ],
-              "path": [
-                "curriculumElectiveRequirement",
-                "{{curriculumElectiveRequirementId}}",
-                "overview"
-              ],
-              "query": [
-                {
-                  "key": "courseSearch",
-                  "value": "Architecture",
-                  "description": "Optional: search pool courses by code or title",
-                  "disabled": true
-                }
-              ]
-            },
-            "description": "### Elective Requirement Overview Dashboard\nReturns complete screen data: Academic period, batch span, 4 KPI cards, assignment progress bar with percentage, and eligible elective courses table with offering status."
-          }
-        },
-        {
-          "name": "8. Delete Elective Requirement (Soft Delete)",
+          "name": "10. Delete Elective Requirement (Soft Delete)",
           "request": {
             "method": "DELETE",
             "header": [],
@@ -1423,6 +829,289 @@
           }
         }
       ]
+    },
+    {
+      "name": "4. Curriculum Elective Assignments",
+      "item": [
+        {
+          "name": "1. Get Elective Requirement Assignments (Student-wise Tab)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/assignments?view=student-wise&search=&assignmentStatus=all&courseId=&assignmentSource=all&limit=10&page=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "assignments"
+              ],
+              "query": [
+                {
+                  "key": "view",
+                  "value": "student-wise",
+                  "description": "student-wise (Image 3) or course-wise (Image 4)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by student name, enrollment no, or scholar no"
+                },
+                {
+                  "key": "assignmentStatus",
+                  "value": "all",
+                  "description": "all, Assigned, Awaiting"
+                },
+                {
+                  "key": "courseId",
+                  "value": "",
+                  "description": "Filter by assigned subject ID"
+                },
+                {
+                  "key": "assignmentSource",
+                  "value": "all",
+                  "description": "all, Direct, Selection Round"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Returns Student-wise Assignments table matching Image 3 with Academic Header, 4 KPIs, Assignment Rule banner, student rows (status: Assigned/Awaiting, course name, credits, source: Direct/Selection Round, action: View/Edit or Assign), and pagination."
+          }
+        },
+        {
+          "name": "2. Get Elective Requirement Assignments (Course-wise Tab)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/assignments?view=course-wise&search=&courseAvailability=all&limit=10&page=1",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "assignments"
+              ],
+              "query": [
+                {
+                  "key": "view",
+                  "value": "course-wise",
+                  "description": "Course-wise assignment view"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search by course code or title"
+                },
+                {
+                  "key": "courseAvailability",
+                  "value": "all",
+                  "description": "all, Available, Full"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Returns Course-wise Assignments table matching Image 4 with Academic Header, 4 KPIs, Course rows with assigned students count & %, Seat Occupancy (e.g. 28/40 across all programmes), Assignment Availability (Available/Full), and Action (Manage Students -> / View Students)."
+          }
+        },
+        {
+          "name": "3. Assign Student to Elective Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": 2268,\n  \"subjectId\": 129,\n  \"assignmentSource\": \"Direct\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/assign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "assign"
+              ]
+            },
+            "description": "Assigns or updates an elective course for a student under the requirement with capacity check."
+          }
+        },
+        {
+          "name": "4. Bulk Assign Students to Elective Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    2268,\n    2269\n  ],\n  \"subjectId\": 129,\n  \"assignmentSource\": \"Direct\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/bulk-assign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "bulk-assign"
+              ]
+            },
+            "description": "Assigns multiple students to a pool subject in a single batch transaction."
+          }
+        },
+        {
+          "name": "5. Unassign Student from Elective",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/unassign/2268",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "unassign",
+                "2268"
+              ]
+            },
+            "description": "Unassigns (removes) a student from an elective course, reverting their status back to Awaiting."
+          }
+        },
+        {
+          "name": "6. Get Course Students for Management (Image 4 Manage Students Action)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/course-students/{{subjectId}}?search=",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "course-students",
+                "{{subjectId}}"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search students by name or enrolment number"
+                }
+              ]
+            },
+            "description": "When clicking Manage Students -> on a course in Image 4, this API returns the course info, seat occupancy, list of currently assigned students to this course, and list of available unassigned batch students eligible to be assigned."
+          }
+        },
+        {
+          "name": "7. Bulk Unassign Students from Elective",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentIds\": [\n    2268,\n    2269\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/bulk-unassign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "bulk-unassign"
+              ]
+            },
+            "description": "Bulk unassigns (removes) multiple students from an elective course, reverting them back to Awaiting and freeing course capacity."
+          }
+        }
+      ],
+      "description": "APIs for Elective Assignments (Student-wise view matching Image 3, Course-wise view matching Image 4, Single Assign, Bulk Assign, and Unassign)."
     }
   ]
 }

@@ -163,4 +163,35 @@ export async function bulkAssignStudentsToCurriculumElective(req, res) {
   }
 }
 
+export async function bulkUnassignStudentsFromCurriculumElective(req, res) {
+  try {
+    const id = req.params.id || req.body.id || req.body.curriculumElectiveRequirementId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    const result = await service.bulkUnassignStudentsFromCurriculumElective(id, req.body);
+    return SuccessResponse(res, 200, result.message || "Students unassigned successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getCourseStudentsForManagement(req, res) {
+  try {
+    const id = req.params.id || req.query.id || req.query.curriculumElectiveRequirementId;
+    const subjectId = req.params.subjectId || req.query.subjectId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    if (!subjectId) {
+      return ErrorResponse(res, 400, "subjectId is required");
+    }
+    const result = await service.getCourseStudentsForManagement(id, subjectId, req.query);
+    return SuccessResponse(res, 200, "Course students for management fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+
 

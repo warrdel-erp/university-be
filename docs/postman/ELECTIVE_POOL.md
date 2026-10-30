@@ -502,3 +502,340 @@ Authorization: Bearer {{token}}
   }
 }
 ```
+
+
+#### Example: Get Elective Requirement Assignments (Student-wise Tab)
+```http
+GET /curriculumElectiveRequirement/1/assignments?view=student-wise&limit=10&page=1 HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+**Supported Query Parameters:**
+- `view` (string, optional, default: `"student-wise"`): `"student-wise"` or `"course-wise"`.
+- `search` (string, optional): Filter by student name, enrolment number, or scholar number.
+- `assignmentStatus` (string, optional): Filter by status (`"All"`, `"Assigned"`, `"Awaiting"`).
+- `courseId` (integer, optional): Filter by assigned subject ID.
+- `assignmentSource` (string, optional): Filter by source (`"All"`, `"Direct"`, `"Selection Round"`).
+- `limit` (integer, optional, default: 10): Page size.
+- `page` (integer, optional, default: 1): Page number.
+
+**Response Structure (Directly powers Image 3 Student-wise Tab):**
+```json
+{
+  "status": 200,
+  "message": "Curriculum elective assignments fetched successfully",
+  "data": {
+    "id": 1,
+    "requirementCode": "REQ-PE1",
+    "requirementName": "Professional Elective I",
+    "statusBadge": "Assignment In Progress",
+    "academicContext": {
+      "term": 5,
+      "termRoman": "Term V",
+      "academicPeriod": "Term V (Jul - Dec 2026)",
+      "programmeCode": "BARCH",
+      "programmeName": "Bachelor of Architecture",
+      "programme": "BARCH (Bachelor of Architecture)",
+      "admissionBatch": 2024,
+      "admissionBatchSpan": "Admission Batch 2024-29",
+      "poolName": "Architecture Professional Electives",
+      "coursesRequired": 1,
+      "minCredits": 3.0,
+      "poolSubtitle": "Select 1 course • Minimum 3 credits"
+    },
+    "kpiSummary": {
+      "applicableStudents": {
+        "count": 65,
+        "label": "Applicable Students",
+        "subtitle": "from B.Arch 2024-29 · Term V"
+      },
+      "assigned": {
+        "count": 18,
+        "percentage": 27.7,
+        "label": "Assigned",
+        "subtitle": "27.7% of 65 students"
+      },
+      "awaitingAssignment": {
+        "count": 47,
+        "percentage": 72.3,
+        "label": "Awaiting Assignment",
+        "subtitle": "72.3% of 65 students"
+      },
+      "needsAttention": {
+        "count": 0,
+        "label": "Needs Attention",
+        "subtitle": "no blocking issues"
+      }
+    },
+    "assignmentRule": {
+      "coursesRequired": 1,
+      "minCredits": 3,
+      "ruleText": "1 course · Minimum 3 recognised credits"
+    },
+    "view": "student-wise",
+    "students": [
+      {
+        "srNo": 1,
+        "studentId": 101,
+        "studentName": "Aarav Sharma",
+        "enrolmentNo": "ARCH24001",
+        "scholarNumber": "SCH-001",
+        "assignedCourse": {
+          "subjectId": 129,
+          "courseCode": "ARCH501",
+          "courseTitle": "Sustainable Architecture",
+          "fullTitle": "Sustainable Architecture (ARCH501)"
+        },
+        "assignedCourseText": "Sustainable Architecture ARCH501",
+        "recognisedCredits": 3,
+        "recognisedCreditsText": "3",
+        "assignmentSource": "Direct",
+        "status": "Assigned",
+        "statusBadge": {
+          "label": "Assigned",
+          "color": "green"
+        },
+        "availableActions": [
+          "View / Edit"
+        ]
+      },
+      {
+        "srNo": 2,
+        "studentId": 102,
+        "studentName": "Kabir Jain",
+        "enrolmentNo": "ARCH24003",
+        "scholarNumber": "SCH-003",
+        "assignedCourse": null,
+        "assignedCourseText": "-",
+        "recognisedCredits": null,
+        "recognisedCreditsText": "-",
+        "assignmentSource": "-",
+        "status": "Awaiting",
+        "statusBadge": {
+          "label": "Awaiting",
+          "color": "grey"
+        },
+        "availableActions": [
+          "Assign"
+        ]
+      }
+    ],
+    "paginationData": {
+      "total": 65,
+      "page": 1,
+      "limit": 10,
+      "totalPages": 7
+    }
+  }
+}
+```
+
+#### Example: Get Elective Requirement Assignments (Course-wise Tab)
+```http
+GET /curriculumElectiveRequirement/1/assignments?view=course-wise&limit=10&page=1 HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+**Response Structure (Directly powers Image 4 Course-wise Tab):**
+```json
+{
+  "status": 200,
+  "message": "Curriculum elective assignments fetched successfully",
+  "data": {
+    "id": 1,
+    "requirementCode": "REQ-PE1",
+    "requirementName": "Professional Elective I",
+    "statusBadge": "Assignment In Progress",
+    "academicContext": {
+      "term": 5,
+      "termRoman": "Term V",
+      "academicPeriod": "Term V (Jul - Dec 2026)",
+      "programme": "BARCH (Bachelor of Architecture)",
+      "admissionBatchSpan": "Admission Batch 2024-29",
+      "poolName": "Architecture Professional Electives"
+    },
+    "kpiSummary": {
+      "applicableStudents": { "count": 65, "label": "Applicable Students" },
+      "assigned": { "count": 18, "percentage": 27.7, "label": "Assigned" },
+      "awaitingAssignment": { "count": 47, "percentage": 72.3, "label": "Awaiting Assignment" },
+      "needsAttention": { "count": 0, "label": "Needs Attention" }
+    },
+    "view": "course-wise",
+    "courseAssignments": [
+      {
+        "srNo": 1,
+        "subjectId": 129,
+        "courseCode": "ARCH501",
+        "courseTitle": "Sustainable Architecture",
+        "teachingType": "Studio Based",
+        "recognisedCredits": 3,
+        "recognisedCreditsText": "3",
+        "assignedStudents": {
+          "count": 12,
+          "percentage": 18.5,
+          "text": "12 (18.5% of 65 students)"
+        },
+        "seatOccupancy": {
+          "enrolledSeats": 28,
+          "totalCapacity": 40,
+          "remainingSeats": 12,
+          "occupancyPercentage": 70.0,
+          "occupancyText": "28 / 40",
+          "remainingText": "12 seats remaining",
+          "tooltip": "Total students enrolled in this course offering across all participating programmes, batches and terms. Capacity is managed centrally through Timetable & Routine."
+        },
+        "assignmentAvailability": "Available",
+        "assignmentAvailabilityBadge": {
+          "label": "Available",
+          "remainingText": "12 seats remaining",
+          "color": "green"
+        },
+        "availableActions": [
+          "Manage Students ->"
+        ]
+      },
+      {
+        "srNo": 2,
+        "subjectId": 130,
+        "courseCode": "ARCH520",
+        "courseTitle": "Urban Design Studio",
+        "teachingType": "Studio Based",
+        "recognisedCredits": 3,
+        "recognisedCreditsText": "3",
+        "assignedStudents": {
+          "count": 0,
+          "percentage": 0.0,
+          "text": "0 (0% of 65 students)"
+        },
+        "seatOccupancy": {
+          "enrolledSeats": 30,
+          "totalCapacity": 30,
+          "remainingSeats": 0,
+          "occupancyPercentage": 100.0,
+          "occupancyText": "30 / 30",
+          "remainingText": "0 seats remaining"
+        },
+        "assignmentAvailability": "Full",
+        "assignmentAvailabilityBadge": {
+          "label": "Full",
+          "remainingText": "No seats available",
+          "color": "red"
+        },
+        "availableActions": [
+          "View Students"
+        ]
+      }
+    ],
+    "paginationData": {
+      "total": 6,
+      "page": 1,
+      "limit": 10,
+      "totalPages": 1
+    }
+  }
+}
+```
+
+#### Example: Assign Student to Elective Course
+```http
+POST /curriculumElectiveRequirement/1/assign HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "studentId": 2268,
+  "subjectId": 129,
+  "assignmentSource": "Direct"
+}
+```
+
+#### Example: Bulk Assign Students to Elective Course
+```http
+POST /curriculumElectiveRequirement/1/bulk-assign HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "studentIds": [2268, 2269],
+  "subjectId": 129,
+  "assignmentSource": "Direct"
+}
+```
+
+#### Example: Unassign Student from Elective Course
+```http
+DELETE /curriculumElectiveRequirement/1/unassign/2268 HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+
+#### Example: Get Course Students for Management (Image 4 "Manage Students ->" Action)
+```http
+GET /curriculumElectiveRequirement/1/course-students/129?search= HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+**Response Structure:**
+```json
+{
+  "status": 200,
+  "message": "Course students for management fetched successfully",
+  "data": {
+    "requirementId": 1,
+    "requirementCode": "REQ-PE1",
+    "requirementName": "Professional Elective I",
+    "courseInfo": {
+      "subjectId": 129,
+      "courseCode": "ARCH501",
+      "courseTitle": "Sustainable Architecture",
+      "recognisedCredits": 3,
+      "seatOccupancy": {
+        "enrolledSeats": 12,
+        "totalCapacity": 40,
+        "remainingSeats": 28,
+        "isFull": false,
+        "occupancyPercentage": 30.0,
+        "occupancyText": "12 / 40",
+        "remainingText": "28 seats remaining"
+      }
+    },
+    "summary": {
+      "totalAssignedToThisCourse": 12,
+      "totalAvailableToAssign": 53,
+      "remainingSeats": 28,
+      "canAssignMore": true
+    },
+    "assignedStudents": [
+      {
+        "studentId": 2268,
+        "studentName": "Aadish Jain",
+        "enrolmentNo": "ARCH24001",
+        "scholarNumber": "ARCH24001",
+        "assignmentSource": "Direct",
+        "assignedAt": "2026-10-30T08:30:00.000Z",
+        "status": "Assigned"
+      }
+    ],
+    "availableStudents": [
+      {
+        "studentId": 2228,
+        "studentName": "Aagam Jain",
+        "enrolmentNo": "ARCH24002",
+        "scholarNumber": "ARCH24002",
+        "status": "Awaiting"
+      }
+    ]
+  }
+}
+```
+
+#### Example: Bulk Unassign Students from Elective Course
+```http
+POST /curriculumElectiveRequirement/1/bulk-unassign HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "studentIds": [2268, 2269]
+}
+```

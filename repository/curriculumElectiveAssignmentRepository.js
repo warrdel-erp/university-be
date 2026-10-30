@@ -79,7 +79,6 @@ export async function upsertAssignment(data, options = {}) {
     subjectId,
     assignmentSource = "Direct",
     status = "Assigned",
-    remarks,
     universityId,
     instituteId,
     academicYearId,
@@ -104,7 +103,6 @@ export async function upsertAssignment(data, options = {}) {
         subjectId,
         assignmentSource,
         status,
-        remarks: remarks !== undefined ? remarks : existing.remarks,
         updatedBy: userId,
       },
       { transaction }
@@ -119,7 +117,6 @@ export async function upsertAssignment(data, options = {}) {
       subjectId,
       assignmentSource,
       status,
-      remarks,
       universityId,
       instituteId,
       academicYearId,
@@ -206,3 +203,19 @@ export async function bulkUpsertAssignments(records, options = {}) {
   }
   return results;
 }
+
+/**
+ * Bulk unassign students from a requirement
+ */
+export async function bulkUnassignStudents(curriculumElectiveRequirementId, studentIds, options = {}) {
+  const { transaction } = options;
+  return scoped(model.curriculumElectiveAssignmentModel).destroy({
+    where: {
+      curriculumElectiveRequirementId,
+      studentId: { [Op.in]: studentIds },
+    },
+    transaction,
+  });
+}
+
+

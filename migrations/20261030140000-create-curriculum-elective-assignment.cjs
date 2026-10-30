@@ -53,10 +53,6 @@ module.exports = {
             allowNull: false,
             defaultValue: 'Assigned',
           },
-          remarks: {
-            type: Sequelize.STRING(255),
-            allowNull: true,
-          },
           university_id: {
             type: Sequelize.INTEGER,
             allowNull: false,
@@ -160,3 +156,4 @@ module.exports = {
     return queryInterface.dropTable('curriculum_elective_assignment');
   },
 };
+
