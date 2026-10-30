@@ -89,6 +89,7 @@ export async function upsertAssignment(data, options = {}) {
     where: {
       curriculumElectiveRequirementId,
       studentId,
+      subjectId,
     },
     paranoid: false,
     transaction,

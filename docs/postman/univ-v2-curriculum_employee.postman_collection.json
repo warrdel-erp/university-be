@@ -514,7 +514,7 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"subjects\": [\n    {\n      \"subjectId\": {{subjectId}},\n      \"subjectComponentMappingId\": 1,\n      \"curriculumCategoryId\": 1,\n      \"term\": 1,\n      \"credit\": 3\n    },\n    {\n      \"subjectId\": {{subjectId}},\n      \"subjectComponentMappingId\": 2,\n      \"curriculumCategoryId\": 1,\n      \"term\": 1,\n      \"credit\": 1\n    }\n  ]\n}"
+                  "raw": "{\n  \"subjectId\": {{subjectId}},\n  \"subjectComponentMappingIds\": [1, 2],\n  \"curriculumCategoryId\": 1,\n  \"term\": 1,\n  \"credit\": 3\n}"
                 },
                 "url": {
                   "raw": "{{baseurl}}/api/curriculums/{{curriculumId}}/map-subjects",

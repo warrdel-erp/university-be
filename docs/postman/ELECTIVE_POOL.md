@@ -736,7 +736,7 @@ Authorization: Bearer {{token}}
 }
 ```
 
-#### Example: Assign Student to Elective Course
+#### Example: Assign Single Course to Student
 ```http
 POST /curriculumElectiveRequirement/1/assign HTTP/1.1
 Content-Type: application/json
@@ -746,6 +746,20 @@ Authorization: Bearer {{token}}
   "studentId": 2268,
   "subjectId": 129,
   "assignmentSource": "Direct"
+}
+```
+
+#### Example: Assign Multiple Courses to a Single Student
+```http
+POST /curriculumElectiveRequirement/1/assign HTTP/1.1
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "studentId": 2268,
+  "subjectIds": [129, 130],
+  "assignmentSource": "Direct",
+  "mode": "replace"
 }
 ```
 

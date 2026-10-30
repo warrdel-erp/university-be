@@ -109,12 +109,12 @@ module.exports = {
         { transaction: t }
       );
 
-      // Unique constraint to prevent duplicate active assignment for the same student under a requirement
+      // Unique constraint to prevent duplicate assignment of the same course to the same student under a requirement
       await queryInterface.addIndex(
         'curriculum_elective_assignment',
-        ['curriculum_elective_requirement_id', 'student_id'],
+        ['curriculum_elective_requirement_id', 'student_id', 'subject_id'],
         {
-          name: 'uq_cea_req_student',
+          name: 'uq_cea_req_student_subject',
           unique: true,
           transaction: t,
         }

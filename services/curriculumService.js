@@ -515,13 +515,69 @@ export async function getAvailableSubjects(curriculumId, query = {}) {
   });
 }
 
-export async function mapSubjects(curriculumId, subjects) {
+function normalizeSubjectMappings(input) {
+  let list = [];
+  if (Array.isArray(input)) {
+    list = input;
+  } else if (input && Array.isArray(input.subjects)) {
+    list = input.subjects;
+  } else if (input && typeof input === 'object') {
+    list = [input];
+  }
+
+  const flattened = [];
+  for (const item of list) {
+    if (!item) continue;
+    const {
+      subjectId,
+      subjectComponentMappingId,
+      subjectComponentMappingIds,
+      curriculumCategoryId,
+      term,
+      termNumber,
+      credit,
+      credits,
+    } = item;
+
+    const resolvedTerm = term ?? termNumber;
+
+    if (Array.isArray(subjectComponentMappingIds) && subjectComponentMappingIds.length > 0) {
+      for (const scmId of subjectComponentMappingIds) {
+        const itemCredit =
+          credits && scmId != null && credits[scmId] !== undefined
+            ? credits[scmId]
+            : (credit ?? null);
+        flattened.push({
+          subjectId,
+          subjectComponentMappingId: scmId,
+          curriculumCategoryId: curriculumCategoryId ?? null,
+          term: resolvedTerm,
+          credit: itemCredit,
+        });
+      }
+    } else {
+      flattened.push({
+        subjectId,
+        subjectComponentMappingId: subjectComponentMappingId ?? null,
+        curriculumCategoryId: curriculumCategoryId ?? null,
+        term: resolvedTerm,
+        credit: credit ?? null,
+      });
+    }
+  }
+
+  return flattened;
+}
+
+export async function mapSubjects(curriculumId, payload) {
   const curriculum = await curriculumRepository.findById(curriculumId);
   if (!curriculum) {
     httpError('Curriculum not found', 404);
   }
 
-  if (!subjects?.length) {
+  const subjects = normalizeSubjectMappings(payload);
+
+  if (!subjects.length) {
     httpError('At least one subject is required', 400);
   }
 

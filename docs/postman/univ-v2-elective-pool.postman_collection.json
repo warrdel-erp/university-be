@@ -982,6 +982,38 @@
           }
         },
         {
+          "name": "3B. Assign Multiple Courses to a Single Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": 2268,\n  \"subjectIds\": [\n    129,\n    130\n  ],\n  \"assignmentSource\": \"Direct\",\n  \"mode\": \"replace\"\n}"
+            },
+            "url": {
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}/assign",
+              "host": [
+                "{{baseurl}}"
+              ],
+              "path": [
+                "curriculumElectiveRequirement",
+                "{{curriculumElectiveRequirementId}}",
+                "assign"
+              ]
+            },
+            "description": "Assigns multiple elective courses to a single student under this requirement (e.g. when requirement rule specifies selecting 2 courses)."
+          }
+        },
+        {
           "name": "4. Bulk Assign Students to Elective Course",
           "request": {
             "method": "POST",

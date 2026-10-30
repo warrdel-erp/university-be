@@ -59,9 +59,13 @@ const idParamSchema = z.object({
 
 const assignStudentSchema = z.object({
   studentId: positiveIntegerId,
-  subjectId: positiveIntegerId,
+  subjectId: positiveIntegerId.optional(),
+  subjectIds: z.array(positiveIntegerId).optional(),
   assignmentSource: z.enum(["Direct", "Selection Round"]).optional(),
+  mode: z.enum(["replace", "append"]).optional(),
   allowOverflow: z.boolean().optional(),
+}).refine(data => data.subjectId !== undefined || (Array.isArray(data.subjectIds) && data.subjectIds.length > 0), {
+  message: "Either subjectId or subjectIds must be provided",
 });
 
 const bulkAssignSchema = z.object({

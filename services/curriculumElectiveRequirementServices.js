@@ -942,14 +942,17 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
     includeSubject: true,
   });
 
-  const assignmentMap = new Map();
+  const assignmentsByStudent = new Map();
   for (const a of activeAssignments) {
     if (a.status === "Assigned") {
-      assignmentMap.set(a.studentId, a);
+      if (!assignmentsByStudent.has(a.studentId)) {
+        assignmentsByStudent.set(a.studentId, []);
+      }
+      assignmentsByStudent.get(a.studentId).push(a);
     }
   }
 
-  const assignedCount = assignmentMap.size;
+  const assignedCount = assignmentsByStudent.size;
   const awaitingCount = Math.max(0, totalStudents - assignedCount);
   const assignedPercentage = totalStudents > 0 ? Number(((assignedCount / totalStudents) * 100).toFixed(1)) : 0;
   const awaitingPercentage = totalStudents > 0 ? Number(((awaitingCount / totalStudents) * 100).toFixed(1)) : 0;
@@ -1027,12 +1030,32 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
     let studentRows = students.map((s, idx) => {
       const studentName = [s.firstName, s.middleName, s.lastName].filter(Boolean).join(" ");
       const enrolmentNo = s.enrollNumber || s.scholarNumber || `ENR${s.studentId}`;
-      const assign = assignmentMap.get(s.studentId);
-      const isAssigned = !!assign;
-      const assignedSubject = assign ? assign.subject : null;
+      const studentAssignments = assignmentsByStudent.get(s.studentId) || [];
+      const isAssigned = studentAssignments.length > 0;
 
-      const rawCredit = assignedSubject ? creditMap.get(assignedSubject.subjectId) : null;
-      const cred = rawCredit !== null && rawCredit !== undefined ? rawCredit : (isAssigned ? minCredits : null);
+      const assignedCourses = studentAssignments.map((assign) => {
+        const assignedSubject = assign.subject;
+        const rawCredit = assignedSubject ? creditMap.get(assignedSubject.subjectId) : null;
+        const cred = rawCredit !== null && rawCredit !== undefined ? rawCredit : minCredits;
+        return {
+          subjectId: assign.subjectId,
+          courseCode: assignedSubject?.subjectCode || "",
+          courseTitle: assignedSubject?.subjectName || "",
+          fullTitle: `${assignedSubject?.subjectName || ""} (${assignedSubject?.subjectCode || ""})`,
+          credits: cred,
+          assignmentSource: assign.assignmentSource || "Direct",
+        };
+      });
+
+      const assignedCourseText = isAssigned
+        ? assignedCourses.map((c) => `${c.courseTitle} ${c.courseCode}`).join(", ")
+        : "-";
+
+      const totalCredits = isAssigned
+        ? assignedCourses.reduce((sum, c) => sum + (Number(c.credits) || 0), 0)
+        : null;
+
+      const primarySource = isAssigned ? assignedCourses[0].assignmentSource : "-";
 
       return {
         srNo: idx + 1,
@@ -1040,20 +1063,12 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
         studentName,
         enrolmentNo,
         scholarNumber: s.scholarNumber || null,
-        assignedCourse: assignedSubject
-          ? {
-              subjectId: assignedSubject.subjectId,
-              courseCode: assignedSubject.subjectCode,
-              courseTitle: assignedSubject.subjectName,
-              fullTitle: `${assignedSubject.subjectName} (${assignedSubject.subjectCode})`,
-            }
-          : null,
-        assignedCourseText: assignedSubject
-          ? `${assignedSubject.subjectName} ${assignedSubject.subjectCode}`
-          : "-",
-        recognisedCredits: cred,
-        recognisedCreditsText: isAssigned ? String(cred) : "-",
-        assignmentSource: isAssigned ? (assign.assignmentSource || "Direct") : "-",
+        assignedCourse: assignedCourses.length === 1 ? assignedCourses[0] : (assignedCourses.length > 1 ? assignedCourses : null),
+        assignedCourses,
+        assignedCourseText,
+        recognisedCredits: totalCredits,
+        recognisedCreditsText: isAssigned ? String(totalCredits) : "-",
+        assignmentSource: primarySource,
         status: isAssigned ? "Assigned" : "Awaiting",
         statusBadge: isAssigned
           ? { label: "Assigned", color: "green" }
@@ -1290,7 +1305,7 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
 }
 
 /**
- * Assign a single student to an elective course
+ * Assign elective course(s) to a student (supports single subjectId or multiple subjectIds)
  */
 export async function assignStudentToCurriculumElective(id, payload = {}, options = {}) {
   const req = await repo.findRequirementForOverview(id, options);
@@ -1303,12 +1318,18 @@ export async function assignStudentToCurriculumElective(id, payload = {}, option
     throw httpError("Valid studentId is required", 400);
   }
 
-  const subjectId = parseInt(payload.subjectId, 10);
-  if (!subjectId || isNaN(subjectId)) {
-    throw httpError("Valid subjectId is required", 400);
+  // 1. Extract subject IDs (supports both subjectId and subjectIds)
+  const subjectIds = Array.isArray(payload.subjectIds) && payload.subjectIds.length > 0
+    ? payload.subjectIds.map((sid) => parseInt(sid, 10)).filter(Boolean)
+    : payload.subjectId
+    ? [parseInt(payload.subjectId, 10)]
+    : [];
+
+  if (subjectIds.length === 0) {
+    throw httpError("Either subjectId (single) or subjectIds (array) must be provided", 400);
   }
 
-  // 1. Validate student exists
+  // 2. Validate student exists
   const student = await models.studentModel.findByPk(studentId, {
     transaction: options.transaction,
   });
@@ -1316,38 +1337,69 @@ export async function assignStudentToCurriculumElective(id, payload = {}, option
     throw httpError("Student not found", 404);
   }
 
-  // 2. Validate subject belongs to elective pool
+  // 3. Validate subjects belong to elective pool
   const poolSubjects = (req.electivePool?.poolSubjectMappings || []).map((m) => m.subjectId);
-  if (!poolSubjects.includes(subjectId)) {
-    throw httpError("Selected course does not belong to the elective pool for this requirement", 400);
+  for (const sId of subjectIds) {
+    if (!poolSubjects.includes(sId)) {
+      throw httpError(`Course ID ${sId} does not belong to the elective pool for this requirement`, 400);
+    }
   }
 
-  // 3. User & Tenant context
+  // 4. User & Tenant context
   const store = requestContext.getStore() || {};
   const userId = store.userId || 1;
   const universityId = store.universityId || student.universityId || 1;
   const instituteId = store.instituteId || student.instituteId || 1;
   const academicYearId = store.academicYearId || null;
 
-  const assignment = await assignmentRepo.upsertAssignment(
-    {
-      curriculumElectiveRequirementId: req.id,
-      studentId,
-      subjectId,
-      assignmentSource: payload.assignmentSource || "Direct",
-      status: "Assigned",
-      universityId,
-      instituteId,
-      academicYearId,
-      userId,
-    },
-    options
-  );
+  const mode = payload.mode || "replace";
+  if (mode === "replace") {
+    // Soft-delete previous assignments for this student not in the new subjectIds list
+    const existing = await assignmentRepo.findAssignmentsByRequirement(req.id, {
+      where: { studentId },
+      transaction: options.transaction,
+    });
+    const existingSubjectIds = existing.filter((a) => a.status === "Assigned").map((a) => a.subjectId);
+    const toRemove = existingSubjectIds.filter((sid) => !subjectIds.includes(sid));
+    if (toRemove.length > 0) {
+      await models.curriculumElectiveAssignmentModel.destroy({
+        where: {
+          curriculumElectiveRequirementId: req.id,
+          studentId,
+          subjectId: { [Op.in]: toRemove },
+        },
+        transaction: options.transaction,
+      });
+    }
+  }
+
+  const assignments = [];
+  for (const sId of subjectIds) {
+    const assignment = await assignmentRepo.upsertAssignment(
+      {
+        curriculumElectiveRequirementId: req.id,
+        studentId,
+        subjectId: sId,
+        assignmentSource: payload.assignmentSource || "Direct",
+        status: "Assigned",
+        universityId,
+        instituteId,
+        academicYearId,
+        userId,
+      },
+      options
+    );
+    assignments.push(assignment);
+  }
 
   return {
     success: true,
-    message: "Student successfully assigned to elective course",
-    assignment,
+    message: subjectIds.length > 1
+      ? `${subjectIds.length} elective courses successfully assigned to student`
+      : "Student successfully assigned to elective course",
+    studentId,
+    assignedCourseIds: subjectIds,
+    assignments,
   };
 }
 
