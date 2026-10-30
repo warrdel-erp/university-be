@@ -22,6 +22,18 @@ export async function createAcademicRegulation(payload, user) {
       courseMappings: mappings,
     };
 
+    
+    const batchIds = (mappings || []).map(m => Number(m.batchId ?? m)).filter(Boolean);
+    if (batchIds.length > 0) {
+      const conflicts = await academicRegulationRepo.findConflictingBatchMappings(batchIds, null, { transaction: t });
+      if (conflicts.length > 0) {
+        const conflictNames = conflicts.map(c => `Batch ${c.batch?.batch || c.batchId} is already assigned to "${c.academicRegulation?.regulationName || c.academicRegulation?.regulationCode}"`).join("; ");
+        const error = new Error(`Cannot assign batch: ${conflictNames}. A batch can only be mapped to one regulation.`);
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     return await academicRegulationRepo.createAcademicRegulation(regulationData, { transaction: t });
   });
 }
@@ -156,18 +168,84 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     else if (payload.courseMappings !== undefined) updateData.courseMappings = payload.courseMappings;
     else if (payload.batchId !== undefined) updateData.courseMappings = payload.batchId ? [{ batchId: Number(payload.batchId) }] : [];
 
+    
+    if (updateData.courseMappings !== undefined) {
+      const batchIds = (updateData.courseMappings || []).map(m => Number(m.batchId ?? m)).filter(Boolean);
+      if (batchIds.length > 0) {
+        const conflicts = await academicRegulationRepo.findConflictingBatchMappings(batchIds, academicRegulationId, { transaction: t });
+        if (conflicts.length > 0) {
+          const conflictNames = conflicts.map(c => `Batch ${c.batch?.batch || c.batchId} is already assigned to "${c.academicRegulation?.regulationName || c.academicRegulation?.regulationCode}"`).join("; ");
+          const error = new Error(`Cannot assign batch: ${conflictNames}. A batch can only be mapped to one regulation.`);
+          error.statusCode = 400;
+          throw error;
+        }
+      }
+    }
+
+    if (updateData.status === "PUBLISHED" && existing.status !== "PUBLISHED") {
+      const merged = { ...existing.toJSON(), ...updateData };
+      const validationErrors = validateRegulationForPublish(merged);
+      if (validationErrors.length > 0) {
+        const error = new Error("Cannot publish regulation. Missing required fields: " + validationErrors.join(", "));
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     return await academicRegulationRepo.updateAcademicRegulation(academicRegulationId, updateData, { transaction: t });
   });
 }
 
+export function validateRegulationForPublish(data) {
+  const errors = [];
+  // Tab 1: General
+  if (!data.regulationCode || !String(data.regulationCode).trim()) errors.push("Regulation Code is required");
+  if (!data.regulationName || !String(data.regulationName).trim()) errors.push("Regulation Name is required");
+  
+  const mappings = data.courseMappings || data.batchMappings || [];
+  if (!mappings || mappings.length === 0) {
+    errors.push("At least one Academic Batch must be mapped");
+  }
+
+  // Tab 2: Evaluation Policy
+  if (!data.evaluationPattern) {
+    errors.push("Evaluation Pattern must be selected");
+  }
+  
+  // Tab 3: Eligibility & Passing
+  if (!data.minimumAttendance || Number(data.minimumAttendance) <= 0 || Number(data.minimumAttendance) > 100) {
+    errors.push("Minimum Attendance is required");
+  }
+  
+  if ((data.minimumOverallMarks == null || data.minimumOverallMarks === "") && 
+      (data.minimumOverallPercentage == null || data.minimumOverallPercentage === "")) {
+    errors.push("Minimum Overall Marks or Percentage is required");
+  }
+
+  // Tab 4: Grading
+  if (!data.gradingSchemeId) {
+    errors.push("Grading Scheme must be selected");
+  }
+
+  return errors;
+}
+
 export async function deleteAcademicRegulation(academicRegulationId) {
   return await sequelize.transaction(async (t) => {
-    const result = await academicRegulationRepo.deleteAcademicRegulation(academicRegulationId, { transaction: t });
-    if (!result) {
+    const existing = await academicRegulationRepo.getAcademicRegulationById(academicRegulationId, { transaction: t });
+    if (!existing) {
       const error = new Error("Academic regulation not found");
       error.statusCode = 404;
       throw error;
     }
+
+    if (existing.status === "PUBLISHED") {
+      const error = new Error("Cannot delete a published academic regulation. Published regulations are active and locked.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const result = await academicRegulationRepo.deleteAcademicRegulation(academicRegulationId, { transaction: t });
     return result;
   });
 }

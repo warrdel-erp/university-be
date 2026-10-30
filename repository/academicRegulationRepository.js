@@ -14,6 +14,36 @@ export async function findAcademicRegulationByCode(regulationCode, universityId,
   return await scoped(model.academicRegulationModel).findOne({ where, transaction: options.transaction });
 }
 
+
+export async function findConflictingBatchMappings(batchIds, excludeRegulationId = null, options = {}) {
+  if (!Array.isArray(batchIds) || batchIds.length === 0) return [];
+  const where = {
+    batchId: { [Op.in]: batchIds.map(Number) },
+  };
+  if (excludeRegulationId) {
+    where.academicRegulationId = { [Op.ne]: Number(excludeRegulationId) };
+  }
+  return await scoped(model.academicRegulationCourseMappingModel).findAll({
+    where,
+    include: [
+      {
+        model: model.academicRegulationModel,
+        as: 'academicRegulation',
+        where: { isActive: true },
+        attributes: ['academicRegulationId', 'regulationName', 'regulationCode', 'status'],
+        required: true,
+      },
+      {
+        model: model.batchModel,
+        as: 'batch',
+        attributes: ['batchId', 'batch'],
+        required: false,
+      }
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function createAcademicRegulation(data, options = {}) {
   const { courseMappings, batchMappings, ...regulationData } = data;
   const mappings = batchMappings || courseMappings;
@@ -50,6 +80,8 @@ export async function getAcademicRegulations({ search, status, batchId, courseId
   const where = {};
   if (status) {
     where.status = status;
+  } else {
+    where.isActive = true;
   }
   if (batchId) {
     const matchingMappings = await scoped(model.academicRegulationCourseMappingModel).findAll({
@@ -308,20 +340,35 @@ export async function deleteAcademicRegulation(academicRegulationId, options = {
     return null;
   }
 
-  const newIsActive = !existing.isActive;
+  // Delete classifications linked to this regulation
+  await scoped(model.academicRegulationClassificationModel).destroy({
+    where: { academicRegulationId: Number(academicRegulationId) },
+    transaction: options.transaction,
+  });
 
+  // Delete course mappings linked to this regulation
+  await scoped(model.academicRegulationCourseMappingModel).destroy({
+    where: { academicRegulationId: Number(academicRegulationId) },
+    transaction: options.transaction,
+  });
+
+  // Soft delete regulation and mark as inactive
   await scoped(model.academicRegulationModel).update(
-    { isActive: newIsActive },
+    { isActive: false },
     {
       where: { academicRegulationId: Number(academicRegulationId) },
       transaction: options.transaction,
     }
   );
 
+  await scoped(model.academicRegulationModel).destroy({
+    where: { academicRegulationId: Number(academicRegulationId) },
+    transaction: options.transaction,
+  });
+
   return {
     academicRegulationId: Number(academicRegulationId),
-    isActive: newIsActive,
-    message: `Academic regulation marked as ${newIsActive ? "active" : "inactive"} successfully`,
+    message: "Academic regulation deleted successfully",
   };
 }
 

@@ -675,7 +675,7 @@ const academicRegulationModel = sequelize.define(
     {
         tableName: 'academic_regulation',
         timestamps: true,
-        paranoid: false
+        paranoid: true
     }
 );
 
