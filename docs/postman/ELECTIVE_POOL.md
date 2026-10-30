@@ -853,3 +853,151 @@ Authorization: Bearer {{token}}
   "studentIds": [2268, 2269]
 }
 ```
+
+---
+
+### Folder 4: Curriculum Elective Assignment & Manage Students (Assigned Tab)
+
+Mount Paths: `/curriculumElectiveAssignment`, `/api/curriculum-elective-assignments`
+
+| Action | Method | Route | Description |
+|---|---|---|---|
+| **List Assignments with Filters** | `GET` | `/curriculumElectiveAssignment` or `/curriculumElectiveAssignment/list` | Fetch assignments with search, status, batch, programme, subject filters, occupancy & pagination |
+| **Get Assigned Students for Course** | `GET` | `/curriculumElectiveRequirement/:id/course-students/:subjectId/assigned` | Assigned Students tab for Manage Students modal |
+| **Manage Students (Tab support)** | `GET` | `/curriculumElectiveRequirement/:id/course-students/:subjectId?tab=assigned` | Supports `?tab=assigned` or `?tab=eligible` with pagination & search |
+| **Get Assignment by ID** | `GET` | `/curriculumElectiveAssignment/:id` | Single assignment details with student, course & requirement info |
+| **Assign Student** | `POST` | `/curriculumElectiveAssignment/assign` or `/curriculumElectiveAssignment` | Assign student to course under requirement |
+| **Bulk Assign** | `POST` | `/curriculumElectiveAssignment/bulk-assign` | Bulk assign students to course |
+| **Unassign Student** | `DELETE` | `/curriculumElectiveAssignment/unassign/:id` or `/:curriculumElectiveRequirementId/:studentId` | Soft delete assignment |
+| **Bulk Unassign** | `POST` | `/curriculumElectiveAssignment/bulk-unassign` | Bulk unassign students |
+
+#### Example: Get Filtered Assignments (Powers Manage Students - Assigned Students Tab)
+```http
+GET /curriculumElectiveAssignment?curriculumElectiveRequirementId=1&subjectId=129&search=&status=Assigned&page=1&limit=10 HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+**Supported Query Filters:**
+- `curriculumElectiveRequirementId` (integer, optional): Filter by requirement ID.
+- `subjectId` (integer, optional): Filter by elective course (subject ID, e.g. ARCH501).
+- `studentId` (integer, optional): Filter by specific student.
+- `status` (string, optional): `"Assigned"`, `"Awaiting"`, `"Dropped"`, or `"All"`.
+- `assignmentSource` (string, optional): `"Direct"`, `"Selection Round"`, or `"All"`.
+- `search` / `studentSearch` (string, optional): Search by student name, enrolment number, or scholar number.
+- `batchId` (integer, optional): Filter by student's batch.
+- `courseId` / `programmeId` (integer, optional): Filter by student's programme/course.
+- `section` (string, optional): Filter by class section (e.g. `"A"`).
+- `academicYearId` (integer, optional): Filter by academic year.
+- `page` (integer, optional, default: 1): Page number.
+- `limit` (integer, optional, default: 10): Items per page (`-1` or `"all"` for all records).
+- `sortBy` (string, optional, default: `"createdAt"`): Sort column (`"studentName"`, `"enrolmentNo"`, `"createdAt"`).
+- `sortOrder` (string, optional, default: `"DESC"`): `"ASC"` or `"DESC"`.
+
+**Response Structure:**
+```json
+{
+  "success": true,
+  "message": "Curriculum elective assignments fetched successfully",
+  "data": [
+    {
+      "srNo": 1,
+      "id": 1,
+      "curriculumElectiveRequirementId": 1,
+      "studentId": 2268,
+      "studentName": "Aditya Verma",
+      "enrolmentNo": "24BARCH002",
+      "scholarNumber": "24BARCH002",
+      "enrollNumber": "24BARCH002",
+      "batch": "2024-29",
+      "programme": "Bachelor of Architecture",
+      "programmeCode": "BARCH",
+      "section": "A",
+      "subjectId": 129,
+      "courseCode": "ARCH501",
+      "courseTitle": "Sustainable Architecture",
+      "subjectName": "Sustainable Architecture",
+      "subjectCode": "ARCH501",
+      "subjectType": "Studio Based",
+      "teachingType": "Studio Based",
+      "assignmentSource": "Direct",
+      "status": "Assigned",
+      "statusBadge": {
+        "label": "Assigned",
+        "color": "green"
+      },
+      "assignedAt": "2026-10-30T10:00:00.000Z",
+      "createdAt": "2026-10-30T10:00:00.000Z",
+      "updatedAt": "2026-10-30T10:00:00.000Z",
+      "student": {
+        "studentId": 2268,
+        "fullName": "Aditya Verma",
+        "firstName": "Aditya",
+        "middleName": null,
+        "lastName": "Verma",
+        "scholarNumber": "24BARCH002",
+        "enrollNumber": "24BARCH002",
+        "batchId": 12,
+        "batch": "2024-29",
+        "courseId": 34,
+        "programme": "Bachelor of Architecture",
+        "programmeCode": "BARCH",
+        "section": "A"
+      },
+      "subject": {
+        "subjectId": 129,
+        "courseCode": "ARCH501",
+        "courseTitle": "Sustainable Architecture",
+        "subjectName": "Sustainable Architecture",
+        "subjectCode": "ARCH501",
+        "subjectType": "Studio Based"
+      },
+      "requirement": {
+        "id": 1,
+        "curriculumId": 9,
+        "requirementCode": "PE-1",
+        "requirementName": "Professional Elective I",
+        "term": 5,
+        "coursesRequired": 1,
+        "minCredits": 3.0,
+        "category": {
+          "id": 1,
+          "categoryName": "Professional Elective",
+          "code": "PE"
+        }
+      }
+    }
+  ],
+  "paginationData": {
+    "total": 12,
+    "page": 1,
+    "limit": 10,
+    "totalPages": 2
+  },
+  "courseInfo": {
+    "subjectId": 129,
+    "courseCode": "ARCH501",
+    "courseTitle": "Sustainable Architecture",
+    "teachingType": "Studio Based",
+    "recognisedCredits": 3,
+    "seatOccupancy": {
+      "enrolledSeats": 28,
+      "totalCapacity": 40,
+      "remainingSeats": 12,
+      "isFull": false,
+      "occupancyPercentage": 70.0,
+      "occupancyText": "28 / 40",
+      "remainingText": "12 seats remaining",
+      "status": "Available",
+      "badgeText": "Available",
+      "statusDescription": "Open for assignment"
+    }
+  },
+  "summary": {
+    "totalAssignedToThisCourse": 12,
+    "totalEligible": 38,
+    "remainingSeats": 12,
+    "canAssignMore": true
+  }
+}
+```
+

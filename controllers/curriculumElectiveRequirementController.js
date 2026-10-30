@@ -1,4 +1,5 @@
 import * as service from "../services/curriculumElectiveRequirementServices.js";
+import * as assignmentService from "../services/curriculumElectiveAssignmentServices.js";
 import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function addCurriculumElectiveRequirement(req, res) {
@@ -192,6 +193,47 @@ export async function getCourseStudentsForManagement(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function getCourseAssignedStudents(req, res) {
+  try {
+    const id = req.params.id || req.query.id || req.query.curriculumElectiveRequirementId;
+    const subjectId = req.params.subjectId || req.query.subjectId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    const query = {
+      ...req.query,
+      curriculumElectiveRequirementId: id,
+      subjectId: subjectId || req.query.subjectId,
+    };
+    const result = await assignmentService.getAllCurriculumElectiveAssignments(query);
+    if (result.courseInfo || result.summary) {
+      return res.status(200).json({
+        success: true,
+        message: "Assigned course students fetched successfully",
+        data: result.rows,
+        paginationData: result.paginationData && {
+          ...result.paginationData,
+          totalPages: Math.ceil(
+            result.paginationData.total / (result.paginationData.limit || 1)
+          ),
+        },
+        courseInfo: result.courseInfo,
+        summary: result.summary,
+      });
+    }
+    return SuccessResponse(
+      res,
+      200,
+      "Assigned course students fetched successfully",
+      result.rows,
+      result.paginationData
+    );
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 
 
 

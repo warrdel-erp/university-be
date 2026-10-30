@@ -1607,6 +1607,8 @@ export async function getCourseStudentsForManagement(id, subjectId, query = {}, 
         assignmentSource: assign.assignmentSource || "Direct",
         assignedAt: assign.createdAt,
         status: "Assigned",
+        assignmentStatus: "Assigned",
+        statusBadge: { label: "Assigned", color: "green" },
       });
     } else if (!assign) {
       availableStudents.push({
@@ -1615,6 +1617,8 @@ export async function getCourseStudentsForManagement(id, subjectId, query = {}, 
         enrolmentNo,
         scholarNumber: s.scholarNumber || null,
         status: "Awaiting",
+        eligibilityStatus: "Eligible",
+        eligibilityBadge: { label: "Eligible", color: "green" },
       });
     }
   }
@@ -1636,14 +1640,61 @@ export async function getCourseStudentsForManagement(id, subjectId, query = {}, 
     );
   }
 
+  // Eligibility Status filter
+  if (query.eligibilityStatus && query.eligibilityStatus !== "All") {
+    availableStudents = availableStudents.filter(
+      (st) => st.eligibilityStatus.toLowerCase() === query.eligibilityStatus.toLowerCase()
+    );
+  }
+
+  // Assignment Status filter
+  if (query.assignmentStatus && query.assignmentStatus !== "All") {
+    assignedStudents = assignedStudents.filter(
+      (st) => st.status.toLowerCase() === query.assignmentStatus.toLowerCase()
+    );
+  }
+
+  // Add srNo to all rows
+  assignedStudents = assignedStudents.map((st, idx) => ({ srNo: idx + 1, ...st }));
+  availableStudents = availableStudents.map((st, idx) => ({ srNo: idx + 1, ...st }));
+
+  // Pagination parameters
+  const page = query.page !== undefined && query.page !== null && query.page !== "" ? Math.max(1, parseInt(query.page, 10)) : 1;
+  const limit = query.limit !== undefined && query.limit !== null && query.limit !== "" ? parseInt(query.limit, 10) : 10;
+  const isAll = limit === -1 || String(query.limit).toLowerCase() === "all";
+
+  const totalAssigned = assignedStudents.length;
+  const totalAvailable = availableStudents.length;
+
+  const assignedPagination = {
+    total: totalAssigned,
+    page,
+    limit: isAll ? totalAssigned : limit,
+    totalPages: isAll || limit <= 0 ? 1 : Math.ceil(totalAssigned / limit),
+  };
+
+  const availablePagination = {
+    total: totalAvailable,
+    page,
+    limit: isAll ? totalAvailable : limit,
+    totalPages: isAll || limit <= 0 ? 1 : Math.ceil(totalAvailable / limit),
+  };
+
+  const paginatedAssigned = isAll ? assignedStudents : assignedStudents.slice((page - 1) * limit, page * limit);
+  const paginatedAvailable = isAll ? availableStudents : availableStudents.slice((page - 1) * limit, page * limit);
+
+  const activeTab = (query.tab || "").toLowerCase().trim();
+
   return {
     requirementId: req.id,
     requirementCode: req.requirementCode,
     requirementName: req.requirementName,
+    activeTab: activeTab || "all",
     courseInfo: {
       subjectId: course.subjectId,
       courseCode: course.subjectCode,
       courseTitle: course.subjectName,
+      teachingType: course.subjectType || "Theoretical",
       recognisedCredits,
       seatOccupancy: {
         enrolledSeats,
@@ -1653,16 +1704,26 @@ export async function getCourseStudentsForManagement(id, subjectId, query = {}, 
         occupancyPercentage: totalCapacity > 0 ? Number(((enrolledSeats / totalCapacity) * 100).toFixed(1)) : 0,
         occupancyText: `${enrolledSeats} / ${totalCapacity}`,
         remainingText: `${remainingSeats} seats remaining`,
+        status: isFull ? "Full" : "Available",
+        badgeText: isFull ? "Full" : "Available",
+        statusDescription: isFull ? "No seats available" : "Open for assignment",
       },
     },
     summary: {
-      totalAssignedToThisCourse: assignedStudents.length,
-      totalAvailableToAssign: availableStudents.length,
+      totalAssignedToThisCourse: totalAssigned,
+      totalAvailableToAssign: totalAvailable,
+      totalEligible: totalAvailable,
       remainingSeats,
       canAssignMore: remainingSeats > 0,
     },
-    assignedStudents,
-    availableStudents,
+    // If specific tab is requested, provide top-level students array and paginationData matching UI
+    students: activeTab === "assigned" ? paginatedAssigned : activeTab === "eligible" ? paginatedAvailable : undefined,
+    paginationData: activeTab === "assigned" ? assignedPagination : activeTab === "eligible" ? availablePagination : undefined,
+    // Always provide both lists with their pagination metadata for backward compatibility
+    assignedStudents: paginatedAssigned,
+    availableStudents: paginatedAvailable,
+    assignedPagination,
+    availablePagination,
   };
 }
 

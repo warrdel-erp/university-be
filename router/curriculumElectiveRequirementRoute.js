@@ -14,6 +14,7 @@ import {
   bulkAssignStudentsToCurriculumElective,
   bulkUnassignStudentsFromCurriculumElective,
   getCourseStudentsForManagement,
+  getCourseAssignedStudents,
   updateCurriculumElectiveRequirement,
   toggleStatusCurriculumElectiveRequirement,
   deleteCurriculumElectiveRequirement,
@@ -211,6 +212,24 @@ router.post(
 );
 
 // Course Students Management (For Image 4 "Manage Students ->" action on course row)
+router.get(
+  "/:id/course-students/:subjectId/assigned",
+  userAuth,
+  validate({ params: courseSubjectParamSchema }),
+  getCourseAssignedStudents
+);
+router.get(
+  "/course-students/:id/:subjectId/assigned",
+  userAuth,
+  validate({ params: courseSubjectParamSchema }),
+  getCourseAssignedStudents
+);
+router.get(
+  "/:id/assigned-students",
+  userAuth,
+  validate({ params: idParamSchema }),
+  getCourseAssignedStudents
+);
 router.get(
   "/:id/course-students/:subjectId",
   userAuth,
