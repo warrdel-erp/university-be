@@ -171,7 +171,7 @@ function buildEmployeeListIncludes() {
                 {
                     model: model.userRolePermissionModel.unscoped(),
                     as: 'userRolePermissions',
-                    attributes: ['roleId', 'permission', 'scope'],
+                    attributes: ['roleId'],
                     include: [
                         {
                             model: model.roleModel.unscoped(),

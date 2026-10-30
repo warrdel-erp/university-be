@@ -1,7 +1,6 @@
 import { Op } from "sequelize";
 import * as repository from "../repository/userRoleRepository.js";
 import * as permissionRepository from "../repository/userPermissionRepository.js";
-import { ROLES } from "../const/roles.js";
 import * as model from "../models/index.js";
 import sequelize from "../database/sequelizeConfig.js";
 
@@ -80,11 +79,6 @@ export async function removeRoleFromUser(userId, roleId, transaction = null) {
 
     // Remove role
     await repository.removeUserRole(userId, roleData.roleId, activeTransaction);
-
-    // If removing ADMIN, also clear all permissions
-    if (roleName === ROLES.ADMIN) {
-      await permissionRepository.clearAllUserPermissions(userId, activeTransaction);
-    }
 
     if (internalTransaction) await internalTransaction.commit();
     return true;

@@ -2076,7 +2076,7 @@ roleModel.hasMany(rolePermissionsModel, {
   as: "rolePermissions",
 });
 
-// user_role_permission_scope: the single source of truth for user authorization
+// user_role_permission_scope: assigns roles to users (permissions come from role_permissions)
 userRolePermissionModel.belongsTo(roleModel, {
   foreignKey: "role_id",
   as: "userRole",

@@ -269,42 +269,6 @@ export async function adminRegisterStudentAndEmployee(info) {
   }
 }
 
-export async function dataSaveUerRolePermission(
-  userIds,
-  roleId,
-  permissions,
-  transaction,
-) {
-  const dataToSave = [];
-  const uIds = Array.isArray(userIds) ? userIds : [userIds];
-
-  uIds.forEach((userId) => {
-    permissions.forEach((perm) => {
-      const resourceIds =
-        perm.resourceIds && perm.resourceIds.length > 0
-          ? perm.resourceIds
-          : [null];
-      resourceIds.forEach((resId) => {
-        dataToSave.push({
-          userId,
-          roleId,
-          permission: perm.permission,
-          scope: perm.scope !== undefined ? perm.scope : null,
-          resourceId: resId,
-        });
-      });
-    });
-  });
-
-  try {
-    await model.userRolePermissionModel.bulkCreate(dataToSave, { transaction });
-    console.log("User role permission data saved successfully.");
-  } catch (error) {
-    console.error("Error saving user role permission data:", error);
-    throw new Error("Failed to save user role permission data.");
-  }
-}
-
 export async function getAdminRegisterStudentAndEmployee() {
   try {
     const [students, employees] = await Promise.all([
@@ -621,18 +585,19 @@ async function seedLegacyRoleAndPermissions(
   }
 
   // 2. Build full permission template for CLIENT_ADMIN
-  //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
+  //    ACCESS_INSTITUTE and MASTER_SECTION get UNIVERSITY scope; all other permissions get INSTITUTE scope
   const rolePermissionRows = [];
   for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
     if (!valueObj || !valueObj.value) continue;
-    const isMasterSection =
+    const isUniversityWide =
+      valueObj.value === PERMISSIONS.ACCESS_INSTITUTE.value ||
       valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
       valueObj.parentPermission === "MASTER_SECTION";
     rolePermissionRows.push({
       roleId: clientAdminRole.roleId,
       permission: valueObj.value,
-      scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
-      resourceId: isMasterSection ? universityId : instituteId,
+      scope: isUniversityWide ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
+      resourceId: isUniversityWide ? universityId : instituteId,
     });
   }
 
@@ -716,25 +681,12 @@ async function seedLegacyRoleAndPermissions(
     });
   }
 
-  // 5. Assign the CLIENT_ADMIN role to the user (copies all non-perm_access_inst rows)
+  // 5. Assign the CLIENT_ADMIN role to the user (permissions come from the role)
   await userRoleService.assignRoleToUser(
     userId,
     clientAdminRole.roleId,
     [],
     transaction,
-  );
-
-  // 6. Explicitly insert UNIVERSITY-scoped perm_access_inst with the real roleId
-  await model.userRolePermissionModel.create(
-    {
-      userId,
-      roleId: clientAdminRole.roleId,
-      permission: PERMISSIONS.ACCESS_INSTITUTE.value,
-      scope: SCOPES.UNIVERSITY,
-      resourceId: universityId,
-      universityId,
-    },
-    { transaction },
   );
 
   return clientAdminRole.roleId;
@@ -1059,12 +1011,19 @@ export async function getGrantedAccess(userId) {
     throw new Error("User not found");
   }
 
-  const accessEntries = await model.userRolePermissionModel.findAll({
-    where: {
-      userId,
-      permission: "perm_access_inst",
-    },
+  // Base access (perm_access_inst) now comes from the user's roles
+  const userRoles = await model.userRolePermissionModel.findAll({
+    where: { userId },
+    attributes: ["roleId"],
   });
+  const accessEntries = userRoles.length
+    ? await model.rolePermissionsModel.findAll({
+      where: {
+        roleId: userRoles.map((ur) => ur.roleId),
+        permission: "perm_access_inst",
+      },
+    })
+    : [];
 
   if (!accessEntries.length) {
     return buildGrantedAccessFromUserContext(user, userId);
@@ -1148,14 +1107,15 @@ export async function giveFullAccess(info) {
     const rolePermissionRows = [];
     for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
       if (!valueObj || !valueObj.value) continue;
-      const isMasterSection =
+      const isUniversityWide =
+        valueObj.value === PERMISSIONS.ACCESS_INSTITUTE.value ||
         valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
         valueObj.parentPermission === "MASTER_SECTION";
       rolePermissionRows.push({
         roleId,
         permission: valueObj.value,
-        scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
-        resourceId: isMasterSection ? universityId : instituteId,
+        scope: isUniversityWide ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
+        resourceId: isUniversityWide ? universityId : instituteId,
       });
     }
 
@@ -1168,27 +1128,12 @@ export async function giveFullAccess(info) {
       transaction,
     });
 
-    // 4. Clear existing user permissions in user_role_permission_scope for this user
+    // 4. Reset the user's roles, then assign CLIENT_ADMIN
     await model.userRolePermissionModel.destroy({
       where: { userId },
       transaction,
     });
-
-    // 5. Assign CLIENT_ADMIN role to user
     await userRoleService.assignRoleToUser(userId, roleId, [], transaction);
-
-    // 6. Explicitly insert UNIVERSITY-scoped perm_access_inst with real roleId
-    await model.userRolePermissionModel.create(
-      {
-        userId,
-        roleId,
-        permission: PERMISSIONS.ACCESS_INSTITUTE.value,
-        scope: SCOPES.UNIVERSITY,
-        resourceId: universityId,
-        universityId,
-      },
-      { transaction },
-    );
 
     // 7. Update user defaultRoleId, defaultInstituteId, and defaultAcademicYearId if unset
     const userUpdates = {
