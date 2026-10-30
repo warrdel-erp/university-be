@@ -4,8 +4,8 @@ import { scoped } from "../utility/scoped.js";
 import sequelize from "../database/sequelizeConfig.js";
 
 /**
- * Assign a role to a user by copying all role_permissions template rows
- * into user_role_permission_scope for this user.
+ * Assign a role to a user (one row in user_role_permission_scope).
+ * The user's permissions come from the role's role_permissions.
  */
 export async function addUserRole(userId, roleId, transaction = null) {
   try {
@@ -30,43 +30,12 @@ export async function addUserRole(userId, roleId, transaction = null) {
       throw new Error(`Role does not belong to user's university`);
     }
 
-    // Fetch the role template defaults
-    const templatePermissions = await model.rolePermissionsModel.findAll({
-      where: { roleId: role.roleId },
-      transaction,
-    });
+    await model.userRolePermissionModel.create(
+      { userId, roleId: role.roleId, universityId: user.universityId || role.universityId || null },
+      { transaction },
+    );
 
-    // Copy template entries into user_role_permission_scope
-    const dataToInsert = [];
-    templatePermissions.forEach((tp) => {
-      if (tp.permission !== "perm_access_inst") {
-        dataToInsert.push({
-          userId,
-          roleId: role.roleId,
-          permission: tp.permission,
-          scope: tp.scope || null,
-          resourceId: tp.resourceId,
-          universityId: user.universityId || role.universityId || null,
-        });
-      } else {
-        dataToInsert.push({
-          userId,
-          roleId: role.roleId,
-          permission: tp.permission,
-          scope: tp.scope || "UNIVERSITY",
-          resourceId: user.universityId || role.universityId || null,
-          universityId: user.universityId || role.universityId || null,
-        });
-      }
-    });
-
-    // No longer implicitly grant base access context because roles are no longer institute-wise
-
-    if (dataToInsert.length > 0) {
-      await model.userRolePermissionModel.bulkCreate(dataToInsert, { transaction });
-    }
-
-    return { userId, roleId: role.roleId, roleName: role.role, permissionsAssigned: dataToInsert.length };
+    return { userId, roleId: role.roleId, roleName: role.role };
   } catch (error) {
     console.error("Repository: Error in addUserRole:", error);
     throw error;

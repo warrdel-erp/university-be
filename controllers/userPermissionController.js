@@ -1,4 +1,3 @@
-import * as userPermissionService from "../services/userPermissionService.js";
 import * as userRoleService from "../services/userRoleService.js";
 import * as userPermissionRepository from "../repository/userPermissionRepository.js";
 import * as model from "../models/index.js";
@@ -87,26 +86,6 @@ export async function removeRole(req, res) {
     return res.status(400).json({
       success: false,
       message: error.message || "Failed to remove role",
-    });
-  }
-}
-
-// Keeping assignPermissions if they still want independent permission management for existing admins
-export async function assignPermissions(req, res) {
-  try {
-    const { userId, roleId, permissions } = req.body;
-
-    const result = await userPermissionService.assignPermissionsToUser(userId, roleId, permissions);
-    return res.status(200).json({
-      success: true,
-      message: "Permissions assigned successfully",
-      data: result,
-    });
-  } catch (error) {
-    console.error("Controller: Error in assignPermissions:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to assign permissions",
     });
   }
 }

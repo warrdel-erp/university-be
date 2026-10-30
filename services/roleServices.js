@@ -131,53 +131,6 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
       transaction: activeTransaction
     });
 
-    // SYNC WITH ASSIGNED USERS
-    // 1. Find all users who currently have this role
-    const usersWithRole = await model.userRolePermissionModel.findAll({
-      attributes: ['userId', 'universityId'],
-      where: { roleId },
-      group: ['userId', 'universityId'],
-      transaction: activeTransaction
-    });
-
-    const userUnivMap = {};
-    usersWithRole.forEach(u => {
-      userUnivMap[u.userId] = u.universityId;
-    });
-
-    const userIds = usersWithRole.map(u => u.userId);
-
-    if (userIds.length > 0) {
-      // 2. Delete all existing user permissions for this role
-      await model.userRolePermissionModel.destroy({
-        where: { roleId },
-        transaction: activeTransaction
-      });
-
-      // 3. Insert new user permissions for all these users
-      const userPermissionsToInsert = [];
-      userIds.forEach(userId => {
-        dataToInsert.forEach(dp => {
-          if (dp.permission !== "perm_access_inst") {
-            userPermissionsToInsert.push({
-              userId,
-              roleId: Number(roleId),
-              permission: dp.permission,
-              scope: dp.scope || null,
-              resourceId: dp.resourceId,
-              universityId: userUnivMap[userId] || roleRecord.universityId || null,
-            });
-          }
-        });
-      });
-
-      if (userPermissionsToInsert.length > 0) {
-        await model.userRolePermissionModel.bulkCreate(userPermissionsToInsert, {
-          transaction: activeTransaction
-        });
-      }
-    }
-
     if (internalTransaction) await internalTransaction.commit();
     return result;
   } catch (error) {
@@ -300,48 +253,6 @@ export async function assignRoleBaseScope(roleId, baseScopeData, transaction = n
     const result = await model.rolePermissionsModel.bulkCreate(dataToInsert, {
       transaction: activeTransaction
     });
-
-    // 4. SYNC WITH ASSIGNED USERS in user_role_permission_scope
-    const usersWithRole = await model.userRolePermissionModel.findAll({
-      attributes: ['userId', 'universityId'],
-      where: { roleId },
-      group: ['userId', 'universityId'],
-      transaction: activeTransaction
-    });
-
-    const userUnivMap = {};
-    usersWithRole.forEach(u => {
-      userUnivMap[u.userId] = u.universityId;
-    });
-
-    const userIds = usersWithRole.map(u => u.userId);
-
-    if (userIds.length > 0) {
-      await model.userRolePermissionModel.destroy({
-        where: { roleId },
-        transaction: activeTransaction
-      });
-
-      const userPermissionsToInsert = [];
-      userIds.forEach(userId => {
-        dataToInsert.forEach(dp => {
-          userPermissionsToInsert.push({
-            userId,
-            roleId: Number(roleId),
-            permission: dp.permission,
-            scope: dp.scope || scope,
-            resourceId: dp.resourceId,
-            universityId: userUnivMap[userId] || roleRecord.universityId || null,
-          });
-        });
-      });
-
-      if (userPermissionsToInsert.length > 0) {
-        await model.userRolePermissionModel.bulkCreate(userPermissionsToInsert, {
-          transaction: activeTransaction
-        });
-      }
-    }
 
     if (internalTransaction) await internalTransaction.commit();
     return {
