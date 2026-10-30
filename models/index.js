@@ -6,6 +6,7 @@ import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
 import electivePoolModel from "./electivePoolModel.js";
 import electivePoolSubjectMappingModel from "./electivePoolSubjectMappingModel.js";
 import curriculumElectiveRequirementModel from "./curriculumElectiveRequirementModel.js";
+import curriculumElectiveAssignmentModel from "./curriculumElectiveAssignmentModel.js";
 import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
 import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
 import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
@@ -4329,6 +4330,7 @@ export {
   electivePoolModel,
   electivePoolSubjectMappingModel,
   curriculumElectiveRequirementModel,
+  curriculumElectiveAssignmentModel,
   curriculumSubjectTermMappingModel,
   curriculumBatchMappingModel,
   curriculumBatchTermMappingModel,
@@ -4436,6 +4438,21 @@ curriculumCategoryModel.hasMany(curriculumElectiveRequirementModel, { foreignKey
 
 curriculumElectiveRequirementModel.belongsTo(electivePoolModel, { foreignKey: 'elective_pool_id', as: 'electivePool' });
 electivePoolModel.hasMany(curriculumElectiveRequirementModel, { foreignKey: 'elective_pool_id', as: 'curriculumElectiveRequirements' });
+
+// Curriculum Elective Assignment Associations
+curriculumElectiveAssignmentModel.belongsTo(curriculumElectiveRequirementModel, { foreignKey: 'curriculum_elective_requirement_id', as: 'curriculumElectiveRequirement' });
+curriculumElectiveRequirementModel.hasMany(curriculumElectiveAssignmentModel, { foreignKey: 'curriculum_elective_requirement_id', as: 'assignments' });
+
+curriculumElectiveAssignmentModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'student' });
+studentModel.hasMany(curriculumElectiveAssignmentModel, { foreignKey: 'student_id', as: 'electiveAssignments' });
+
+curriculumElectiveAssignmentModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+subjectModel.hasMany(curriculumElectiveAssignmentModel, { foreignKey: 'subject_id', as: 'electiveAssignments' });
+
+curriculumElectiveAssignmentModel.belongsTo(userModel, { foreignKey: 'created_by', as: 'creator' });
+curriculumElectiveAssignmentModel.belongsTo(universityModel, { foreignKey: 'university_id', as: 'university' });
+curriculumElectiveAssignmentModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
+curriculumElectiveAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: 'academic_year_id', as: 'academicYear' });
 
 // Refresh Token Associations
 userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });

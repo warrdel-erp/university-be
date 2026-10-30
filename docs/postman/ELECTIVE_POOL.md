@@ -204,6 +204,8 @@ Mount: `/curriculumElectiveRequirement`, `/api/curriculum-elective-requirements`
 | **List Requirements** | `GET` | `/curriculumElectiveRequirement/list` | List by `?curriculumId=9&term=1` with pool preview & count |
 | **Filter by Category** | `GET` | `/curriculumElectiveRequirement/list` | Filter by `?curriculumCategoryId=1` |
 | **Get Requirement by ID** | `GET` | `/curriculumElectiveRequirement/:id` | Single requirement view with **eligible students list** & **studentsSummary** |
+| **Get Requirement Overview** | `GET` | `/curriculumElectiveRequirement/:id/overview` | **Overview Dashboard** (Image Screen) with academic context, KPIs, progress %, and pool courses table |
+| **Get Course Offerings** | `GET` | `/curriculumElectiveRequirement/:id/course-offerings` | **Course Offerings Tab** (Image 1) with 4 KPIs, sections, capacity, routine status & availability |
 | **Update Requirement** | `PATCH` | `/curriculumElectiveRequirement/update/:id` | Update name, coursesRequired, minCredits |
 | **Toggle Status** | `PATCH` | `/curriculumElectiveRequirement/toggleStatus/:id` | Toggle active status |
 | **Delete Requirement** | `DELETE` | `/curriculumElectiveRequirement/delete/:id` | Soft delete requirement |
@@ -309,6 +311,193 @@ Authorization: Bearer {{token}}
       "page": 1,
       "limit": 10,
       "totalPages": 10
+    }
+  }
+}
+```
+
+#### Example: Get Requirement Overview Dashboard (Overview Screen)
+```http
+GET /curriculumElectiveRequirement/1/overview HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+*(Also accessible via `GET /curriculumElectiveRequirement/1?view=overview`)*
+
+**Supported Query Parameters:**
+- `courseSearch` (string, optional): Filter pool courses by code or title (e.g. `?courseSearch=Architecture`).
+
+**Response Structure (Directly renders the Overview UI):**
+```json
+{
+  "status": 200,
+  "message": "Curriculum elective requirement overview fetched successfully",
+  "data": {
+    "id": 1,
+    "requirementCode": "REQ-PE1",
+    "requirementName": "Professional Elective I",
+    "statusBadge": "Assignment In Progress",
+    "academicContext": {
+      "term": 5,
+      "termRoman": "Term V",
+      "academicPeriod": "Term V (Jul - Dec 2026)",
+      "programmeCode": "BARCH",
+      "programmeName": "Bachelors in Architecture",
+      "programme": "BARCH (Bachelors in Architecture)",
+      "admissionBatch": 2024,
+      "admissionBatchSpan": "Admission Batch 2024-29",
+      "poolName": "Architecture Professional Electives",
+      "coursesRequired": 1,
+      "minCredits": 3.0,
+      "poolSubtitle": "Select 1 course • Minimum 3 credits"
+    },
+    "kpiSummary": {
+      "applicableStudents": 65,
+      "applicableStudentsSubtitle": "from BARCH 2024-29",
+      "requiringAssignment": 47,
+      "requiringPercentage": "72.3%",
+      "assignedStudents": 18,
+      "assignedPercentage": "27.7%",
+      "eligibleCoursesCount": 12,
+      "eligibleCoursesSubtitle": "from curriculum pool"
+    },
+    "assignmentProgress": {
+      "progressPercentage": 27.7,
+      "assignedCount": 18,
+      "assignedPercentage": "27.7%",
+      "awaitingCount": 47,
+      "awaitingPercentage": "72.3%",
+      "needsAttentionCount": 0,
+      "needsAttentionPercentage": "0%",
+      "progressText": "18 of 65 students have a confirmed eligible course assignment."
+    },
+    "curriculumRequirement": {
+      "requirementCode": "REQ-PE1",
+      "requirementName": "Professional Elective I",
+      "curriculumCategory": {
+        "id": 1,
+        "categoryName": "Professional Elective",
+        "code": "PE"
+      },
+      "poolName": "Architecture Professional Electives",
+      "ruleText": "Select 1 course from the pool • Minimum 3 recognised credits"
+    },
+    "eligibleElectiveCourses": [
+      {
+        "subjectId": 129,
+        "courseCode": "ARCH501",
+        "courseTitle": "Sustainable Architecture",
+        "credits": 3,
+        "creditsText": "3",
+        "offeringStatus": "Not Offered",
+        "assignedStudentsCount": 0,
+        "assignedStudentsText": "-"
+      },
+      {
+        "subjectId": 130,
+        "courseCode": "ARCH504",
+        "courseTitle": "Building Technology",
+        "credits": 3,
+        "creditsText": "3",
+        "offeringStatus": "Published",
+        "assignedStudentsCount": 18,
+        "assignedStudentsText": "18"
+      }
+    ]
+  }
+}
+```
+
+#### Example: Get Elective Requirement Course Offerings (Course Offerings Tab)
+```http
+GET /curriculumElectiveRequirement/1/course-offerings?limit=10&page=1 HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+**Supported Query Parameters:**
+- `search` (string, optional): Filter by course code or title.
+- `offeringStatus` (string, optional): Filter by offering status (`Published`, `Draft`, `Not Created`).
+- `routineStatus` (string, optional): Filter by routine status (`Published`, `Draft`, `Not Scheduled`).
+- `assignmentAvailability` (string, optional): Filter by availability (`Available`, `Not Available`, `Credit Mapping Required`).
+- `recognisedCredits` (number, optional): Filter by credits (e.g. `3`).
+- `limit` (integer, optional, default: 10): Page size.
+- `page` (integer, optional, default: 1): Page number.
+
+**Response Structure (Directly powers the Course Offerings Tab):**
+```json
+{
+  "status": 200,
+  "message": "Curriculum elective course offerings fetched successfully",
+  "data": {
+    "id": 1,
+    "requirementCode": "REQ-PE1",
+    "requirementName": "Professional Elective I",
+    "statusBadge": "Assignment In Progress",
+    "academicContext": {
+      "term": 5,
+      "termRoman": "Term V",
+      "academicPeriod": "Term V (Jul - Dec 2026)",
+      "programmeCode": "BARCH",
+      "programmeName": "Bachelor of Architecture",
+      "programme": "BARCH (Bachelor of Architecture)",
+      "admissionBatch": 2024,
+      "admissionBatchSpan": "Admission Batch 2024-29",
+      "poolName": "Architecture Professional Electives",
+      "coursesRequired": 1,
+      "minCredits": 3.0,
+      "poolSubtitle": "Select 1 course • Minimum 3 recognised credits"
+    },
+    "kpiSummary": {
+      "eligibleCourses": 12,
+      "eligibleCoursesSubtitle": "from curriculum pool",
+      "coursesWithOfferings": 7,
+      "coursesWithOfferingsSubtitle": "with teaching offerings in this term",
+      "availableForAssignment": 5,
+      "availableForAssignmentSubtitle": "published offering, published routine, valid credits and eligible for this requirement",
+      "assignedStudents": 18,
+      "assignedStudentsSubtitle": "under this requirement"
+    },
+    "courseOfferings": [
+      {
+        "index": 1,
+        "subjectId": 129,
+        "courseCode": "ARCH501",
+        "courseTitle": "Sustainable Architecture",
+        "recognisedCredits": 3,
+        "recognisedCreditsText": "3",
+        "offeringStatus": "Published",
+        "routineStatus": "Published",
+        "sectionsCount": 2,
+        "sectionsText": "2",
+        "sharedCapacity": 60,
+        "sharedCapacityText": "60",
+        "assignedStudentsCount": 12,
+        "assignedStudentsText": "12",
+        "assignmentAvailability": "Available"
+      },
+      {
+        "index": 2,
+        "subjectId": 130,
+        "courseCode": "ARCH505",
+        "courseTitle": "Landscape Architecture",
+        "recognisedCredits": null,
+        "recognisedCreditsText": "Not Mapped",
+        "offeringStatus": "Published",
+        "routineStatus": "Published",
+        "sectionsCount": 1,
+        "sectionsText": "1",
+        "sharedCapacity": 40,
+        "sharedCapacityText": "40",
+        "assignedStudentsCount": 0,
+        "assignedStudentsText": "0",
+        "assignmentAvailability": "Credit Mapping Required"
+      }
+    ],
+    "paginationData": {
+      "total": 12,
+      "page": 1,
+      "limit": 10,
+      "totalPages": 2
     }
   }
 }

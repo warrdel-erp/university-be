@@ -31,8 +31,38 @@ export async function getCurriculumElectiveRequirementById(req, res) {
     if (!id) {
       return ErrorResponse(res, 400, "id is required");
     }
+    if (req.query.view === "overview") {
+      const result = await service.getCurriculumElectiveRequirementOverview(id, req.query);
+      return SuccessResponse(res, 200, "Curriculum elective requirement overview fetched successfully", result);
+    }
     const result = await service.getCurriculumElectiveRequirementById(id, req.query);
     return SuccessResponse(res, 200, "Curriculum elective requirement fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getCurriculumElectiveRequirementOverview(req, res) {
+  try {
+    const id = req.params.id || req.query.id || req.query.curriculumElectiveRequirementId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    const result = await service.getCurriculumElectiveRequirementOverview(id, req.query);
+    return SuccessResponse(res, 200, "Curriculum elective requirement overview fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function getCurriculumElectiveRequirementCourseOfferings(req, res) {
+  try {
+    const id = req.params.id || req.query.id || req.query.curriculumElectiveRequirementId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    const result = await service.getCurriculumElectiveRequirementCourseOfferings(id, req.query);
+    return SuccessResponse(res, 200, "Curriculum elective course offerings fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
@@ -76,4 +106,61 @@ export async function deleteCurriculumElectiveRequirement(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }
 }
+
+export async function getCurriculumElectiveRequirementAssignments(req, res) {
+  try {
+    const id = req.params.id || req.query.id || req.query.curriculumElectiveRequirementId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    const result = await service.getCurriculumElectiveRequirementAssignments(id, req.query);
+    return SuccessResponse(res, 200, "Curriculum elective assignments fetched successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function assignStudentToCurriculumElective(req, res) {
+  try {
+    const id = req.params.id || req.body.id || req.body.curriculumElectiveRequirementId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    const result = await service.assignStudentToCurriculumElective(id, req.body);
+    return SuccessResponse(res, 200, result.message || "Student assigned successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function unassignStudentFromCurriculumElective(req, res) {
+  try {
+    const id = req.params.id || req.body.id || req.body.curriculumElectiveRequirementId;
+    const studentId = req.params.studentId || req.body.studentId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    if (!studentId) {
+      return ErrorResponse(res, 400, "studentId is required");
+    }
+    const result = await service.unassignStudentFromCurriculumElective(id, studentId);
+    return SuccessResponse(res, 200, result.message || "Student unassigned successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
+export async function bulkAssignStudentsToCurriculumElective(req, res) {
+  try {
+    const id = req.params.id || req.body.id || req.body.curriculumElectiveRequirementId;
+    if (!id) {
+      return ErrorResponse(res, 400, "id is required");
+    }
+    const result = await service.bulkAssignStudentsToCurriculumElective(id, req.body);
+    return SuccessResponse(res, 200, result.message || "Students assigned successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
+  }
+}
+
 

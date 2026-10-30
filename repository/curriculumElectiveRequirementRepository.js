@@ -164,6 +164,73 @@ export async function deleteCurriculumElectiveRequirement(id, options = {}) {
   });
 }
 
+export async function findRequirementForOverview(id, options = {}) {
+  const { transaction } = options;
+  return scoped(model.curriculumElectiveRequirementModel).findOne({
+    where: { id },
+    attributes: defaultAttributes,
+    include: [
+      {
+        model: model.curriculumCategoryModel,
+        as: "curriculumCategory",
+        attributes: ["id", "categoryName", "code"],
+        required: false,
+      },
+      {
+        model: model.electivePoolModel,
+        as: "electivePool",
+        attributes: ["id", "name", "code", "scope", "isActive"],
+        include: [
+          {
+            model: model.electivePoolSubjectMappingModel,
+            as: "poolSubjectMappings",
+            attributes: ["id", "subjectId"],
+            include: [
+              {
+                model: model.subjectModel,
+                as: "subject",
+                attributes: ["subjectId", "subjectCode", "subjectName"],
+                required: false,
+              },
+            ],
+            required: false,
+          },
+        ],
+        required: false,
+      },
+      {
+        model: model.curriculumModel,
+        as: "curriculum",
+        attributes: ["curriculumId", "name", "courseId"],
+        include: [
+          {
+            model: model.courseModel,
+            as: "course",
+            attributes: ["courseId", "courseName", "courseCode", "totalTerms"],
+            required: false,
+          },
+          {
+            model: model.curriculumBatchMappingModel,
+            as: "batchMappings",
+            attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
+            include: [
+              {
+                model: model.batchModel,
+                as: "batch",
+                attributes: ["batchId", "batch"],
+                required: false,
+              },
+            ],
+            required: false,
+          },
+        ],
+        required: false,
+      },
+    ],
+    transaction,
+  });
+}
+
 /**
  * Fetches all eligible students for an elective requirement based on:
  * - Batches mapped to the curriculum (curriculum_batch_mapping)
