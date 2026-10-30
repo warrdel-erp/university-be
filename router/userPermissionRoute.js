@@ -27,31 +27,7 @@ const getByIdSchema = z.object({
   userId: z.coerce.number({ required_error: "userId is required" }),
 });
 
-const permissionOverrideSchema = z.union([
-  z.string(),
-  z.object({
-    permission: z.string(),
-    scope: z.string(),
-    resourceIds: z.array(z.number()).optional(),
-  }),
-]);
-
-const assignPermissionsSchema = z.object({
-  userId: z.coerce.number({ required_error: "userId is required" }),
-  roleId: z.coerce.number({ required_error: "roleId is required" }),
-  permissions: z.array(permissionOverrideSchema, { required_error: "permissions is required" }),
-});
-
 import { checkAccess } from "../middleware/checkAccess.js";
-
-// Independent Permission Assignment (Overrides)
-router.post(
-  "/permissions/assign",
-  userAuth,
-  checkAccess(PERMISSIONS.ADD_PERMISSION.value, "authorization"),
-  validate({ body: assignPermissionsSchema }),
-  userPermissionController.assignPermissions,
-);
 
 // Combined API for Roles and Permissions
 router.post(

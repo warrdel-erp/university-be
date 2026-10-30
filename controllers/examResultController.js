@@ -142,3 +142,134 @@ export async function getPublishHistoryByBatchId(req, res) {
     );
   }
 }
+
+export async function getCalculationBreakdown(req, res) {
+  try {
+    const payload = {
+      ...req.body,
+      examinationSessionId: req.body?.examinationSessionId ?? req.query?.examinationSessionId,
+      gradingId: req.body?.gradingId ?? req.query?.gradingId,
+      batchId: req.body?.batchId ?? req.query?.batchId,
+      page: req.query?.page ?? req.body?.page,
+      limit: req.query?.limit ?? req.body?.limit,
+      search: req.query?.search ?? req.body?.search,
+    };
+    const result = await examResultServices.getCalculationBreakdown(payload);
+    return SuccessResponse(
+      res,
+      200,
+      "Calculation breakdown fetched successfully",
+      result,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch calculation breakdown",
+    );
+  }
+}
+
+export async function getSubjectCalculationBreakdown(req, res) {
+  try {
+    const payload = {
+      ...req.body,
+      examinationSessionId: req.body?.examinationSessionId ?? req.query?.examinationSessionId,
+      term: req.body?.term ?? req.query?.term,
+      subjectId: req.body?.subjectId ?? req.query?.subjectId,
+      examScheduleId: req.body?.examScheduleId ?? req.query?.examScheduleId,
+      gradingId: req.body?.gradingId ?? req.query?.gradingId,
+      batchId: req.body?.batchId ?? req.query?.batchId,
+      teacherId: req.body?.teacherId ?? req.query?.teacherId ?? req.body?.assignedToUserId ?? req.query?.assignedToUserId,
+      assignedToUserId: req.body?.assignedToUserId ?? req.query?.assignedToUserId ?? req.body?.teacherId ?? req.query?.teacherId,
+      studentIds: req.body?.studentIds ?? (req.query?.studentIds ? (Array.isArray(req.query.studentIds) ? req.query.studentIds : [req.query.studentIds]) : []),
+      page: req.query?.page ?? req.body?.page,
+      limit: req.query?.limit ?? req.body?.limit,
+      search: req.query?.search ?? req.body?.search,
+    };
+    const result = await examResultServices.getSubjectCalculationBreakdown(payload);
+    return SuccessResponse(
+      res,
+      200,
+      "Subject calculation breakdown fetched successfully",
+      result,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch subject calculation breakdown",
+    );
+  }
+}
+
+export async function getTeacherZScoreList(req, res) {
+  try {
+    const payload = {
+      ...req.body,
+      examinationSessionId: req.body?.examinationSessionId ?? req.query?.examinationSessionId,
+      teacherId: req.body?.teacherId ?? req.query?.teacherId ?? req.body?.assignedToUserId ?? req.query?.assignedToUserId,
+      assignedToUserId: req.body?.assignedToUserId ?? req.query?.assignedToUserId ?? req.body?.teacherId ?? req.query?.teacherId,
+      subjectId: req.body?.subjectId ?? req.query?.subjectId,
+      term: req.body?.term ?? req.query?.term,
+      gradingId: req.body?.gradingId ?? req.query?.gradingId,
+      batchId: req.body?.batchId ?? req.query?.batchId,
+      search: req.query?.search ?? req.body?.search,
+      page: req.query?.page ?? req.body?.page,
+      limit: req.query?.limit ?? req.body?.limit,
+    };
+    const result = await examResultServices.getTeacherZScoreList(payload);
+    return SuccessResponse(
+      res,
+      200,
+      "Teacher student Z-score list fetched successfully",
+      result,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch teacher student Z-score list",
+    );
+  }
+}
+
+export async function getSubjectStudentsWithSubmittedAnswerSheets(req, res) {
+  try {
+    const payload = {
+      ...req.body,
+      examinationSessionId: req.body?.examinationSessionId ?? req.query?.examinationSessionId,
+      subjectId: req.body?.subjectId ?? req.query?.subjectId,
+      term: req.body?.term ?? req.query?.term,
+      teacherId: req.body?.teacherId ?? req.query?.teacherId ?? req.body?.assignedToUserId ?? req.query?.assignedToUserId,
+      assignedToUserId: req.body?.assignedToUserId ?? req.query?.assignedToUserId ?? req.body?.teacherId ?? req.query?.teacherId,
+      search: req.query?.search ?? req.body?.search,
+      page: req.query?.page ?? req.body?.page,
+      limit: req.query?.limit ?? req.body?.limit,
+    };
+    const result =
+      await examResultServices.getSubjectStudentsWithSubmittedAnswerSheets(
+        payload,
+      );
+    return SuccessResponse(
+      res,
+      200,
+      "Subject students with submitted answer sheets fetched successfully",
+      result,
+      result.pagination,
+    );
+  } catch (error) {
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message ||
+        "Failed to fetch subject students with submitted answer sheets",
+    );
+  }
+}
+
+
+

@@ -153,48 +153,40 @@ export async function changePassword(email, data, transaction) {
   }
 }
 
-export async function saveToUserRolePermission(data, transaction) {
-  return model.userRolePermissionModel.bulkCreate(data, { transaction });
-}
-
 export async function getUserRoleAndPermissionsByUserId(userId) {
   try {
-    // Query all entries from user_role_permission_scope grouped by role
+    // The user only holds roles; their permissions come from role_permissions
     const entries = await model.userRolePermissionModel.findAll({
       where: { user_id: userId },
       include: [
-        { model: model.roleModel, as: 'userRole', attributes: ['roleId', 'role'] }
-      ]
+        {
+          model: model.roleModel,
+          as: 'userRole',
+          attributes: ['roleId', 'role'],
+          include: [
+            {
+              model: model.rolePermissionsModel,
+              as: 'rolePermissions',
+              attributes: ['permission', 'scope'],
+            },
+          ],
+        },
+      ],
     });
 
-    if (entries.length === 0) {
-      return [];
-    }
-
-    // Group by roleId
-    const roleMap = new Map();
-    for (const entry of entries) {
-      if (!entry.userRole) continue;
-      const roleId = entry.userRole.roleId;
-
-      if (!roleMap.has(roleId)) {
-        roleMap.set(roleId, {
-          user_id: userId,
-          userRole: {
-            roleId: entry.userRole.roleId,
-            role: entry.userRole.role
-          },
-          permissions: []
-        });
-      }
-
-      roleMap.get(roleId).permissions.push({
-        permission: entry.permission,
-        scope: entry.scope
-      });
-    }
-
-    return Array.from(roleMap.values());
+    return entries
+      .filter((entry) => entry.userRole)
+      .map((entry) => ({
+        user_id: userId,
+        userRole: {
+          roleId: entry.userRole.roleId,
+          role: entry.userRole.role,
+        },
+        permissions: (entry.userRole.rolePermissions || []).map((p) => ({
+          permission: p.permission,
+          scope: p.scope,
+        })),
+      }));
   } catch (error) {
     console.error("Error fetching Role Permission details:", error);
     throw error;

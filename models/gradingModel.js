@@ -35,6 +35,16 @@ const gradingModel = sequelize.define(
             allowNull: false,
             field: "grading_method",
         },
+        distributionMethod: {
+            type: DataTypes.ENUM("PERCENTILE", "BELL_CURVE", "Z_SCORE", "MANUAL_DISTRIBUTION"),
+            allowNull: true,
+            field: "distribution_method",
+        },
+        relativeConfig: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            field: "relative_config",
+        },
         maximumMarks: {
             type: DataTypes.DECIMAL(6, 2),
             allowNull: true,

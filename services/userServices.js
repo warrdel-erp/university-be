@@ -19,6 +19,7 @@ import * as model from "../models/index.js";
 import { PERMISSIONS } from "../const/permissions.js";
 import { SCOPES } from "../const/scopes.js";
 import * as userRoleService from "./userRoleService.js";
+import { SYSTEM_ROLE_CODES } from "../const/roles.js";
 
 //register
 
@@ -265,42 +266,6 @@ export async function adminRegisterStudentAndEmployee(info) {
     await transaction.rollback();
     console.error("Error during registration:", error);
     throw error;
-  }
-}
-
-export async function dataSaveUerRolePermission(
-  userIds,
-  roleId,
-  permissions,
-  transaction,
-) {
-  const dataToSave = [];
-  const uIds = Array.isArray(userIds) ? userIds : [userIds];
-
-  uIds.forEach((userId) => {
-    permissions.forEach((perm) => {
-      const resourceIds =
-        perm.resourceIds && perm.resourceIds.length > 0
-          ? perm.resourceIds
-          : [null];
-      resourceIds.forEach((resId) => {
-        dataToSave.push({
-          userId,
-          roleId,
-          permission: perm.permission,
-          scope: perm.scope !== undefined ? perm.scope : null,
-          resourceId: resId,
-        });
-      });
-    });
-  });
-
-  try {
-    await model.userRolePermissionModel.bulkCreate(dataToSave, { transaction });
-    console.log("User role permission data saved successfully.");
-  } catch (error) {
-    console.error("Error saving user role permission data:", error);
-    throw new Error("Failed to save user role permission data.");
   }
 }
 
@@ -598,34 +563,45 @@ async function seedLegacyRoleAndPermissions(
 ) {
   // 1. Find or create the CLIENT_ADMIN role
   let clientAdminRole = await model.roleModel.findOne({
-    where: { role: "CLIENT_ADMIN", universityId },
+    where: {
+      universityId,
+      [Op.or]: [
+        { code: SYSTEM_ROLE_CODES.CLIENT_ADMIN },
+        { role: "CLIENT_ADMIN" },
+      ],
+    },
     transaction,
   });
 
   if (!clientAdminRole) {
     clientAdminRole = await model.roleModel.create(
-      { role: "CLIENT_ADMIN", universityId },
+      {
+        role: "CLIENT_ADMIN",
+        code: SYSTEM_ROLE_CODES.CLIENT_ADMIN,
+        universityId,
+      },
       { transaction },
     );
   }
 
   // 2. Build full permission template for CLIENT_ADMIN
-  //    MASTER_SECTION gets UNIVERSITY scope; all other permissions get INSTITUTE scope
+  //    ACCESS_INSTITUTE and MASTER_SECTION get UNIVERSITY scope; all other permissions get INSTITUTE scope
   const rolePermissionRows = [];
   for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
     if (!valueObj || !valueObj.value) continue;
-    const isMasterSection =
+    const isUniversityWide =
+      valueObj.value === PERMISSIONS.ACCESS_INSTITUTE.value ||
       valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
       valueObj.parentPermission === "MASTER_SECTION";
     rolePermissionRows.push({
       roleId: clientAdminRole.roleId,
       permission: valueObj.value,
-      scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
-      resourceId: isMasterSection ? universityId : instituteId,
+      scope: isUniversityWide ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
+      resourceId: isUniversityWide ? universityId : instituteId,
     });
   }
 
-  // 3. Sync role_permissions template
+  // 3. Sync role_permissions template for CLIENT_ADMIN
   await model.rolePermissionsModel.destroy({
     where: { roleId: clientAdminRole.roleId },
     transaction,
@@ -634,25 +610,83 @@ async function seedLegacyRoleAndPermissions(
     transaction,
   });
 
-  // 5. Assign the CLIENT_ADMIN role to the user (copies all non-perm_access_inst rows)
+  // 4. Find or create the TEACHER role
+  let teacherRole = await model.roleModel.findOne({
+    where: {
+      universityId,
+      [Op.or]: [
+        { code: SYSTEM_ROLE_CODES.TEACHER },
+        { role: "TEACHER" },
+      ],
+    },
+    transaction,
+  });
+
+  if (!teacherRole) {
+    teacherRole = await model.roleModel.create(
+      {
+        role: "TEACHER",
+        code: SYSTEM_ROLE_CODES.TEACHER,
+        universityId,
+      },
+      { transaction },
+    );
+  } else if (!teacherRole.code) {
+    await teacherRole.update({ code: SYSTEM_ROLE_CODES.TEACHER }, { transaction });
+  }
+
+  // 5. Build permission template for TEACHER (17 permissions)
+  const teacherPermissionsConfig = [
+    // 1. University Level Access
+    { perm: "perm_access_inst", scope: SCOPES.UNIVERSITY, resId: universityId },
+
+    // 2. Academic & Teacher Routine (INSTITUTE scope)
+    { perm: "USER_CLASSES", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_ROUTINE", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_LECTURES", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_QUESTION_BANK", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_LESSON_PLAN_OVERVIEW", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_LESSON_PLAN_CREATION", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_QUESTION_PAPERS", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_ISSUED_BOOKS", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_INVIGILATION", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "USER_EVALUATION", scope: SCOPES.INSTITUTE, resId: instituteId },
+
+    // 3. Answer Sheet Mapping (INSTITUTE scope)
+    { perm: "ANSWER_SHEET_MAPPING", scope: SCOPES.INSTITUTE, resId: instituteId },
+
+    // 4. Question Paper Builder (INSTITUTE scope)
+    { perm: "QUESTION_PAPER_BUILDER_SIDEBAR", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "QUESTION_PAPER_BUILDER_ADD", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "QUESTION_PAPER_BUILDER_DELETE", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "QUESTION_PAPER_BUILDER_EDIT", scope: SCOPES.INSTITUTE, resId: instituteId },
+    { perm: "QUESTION_PAPER_BUILDER_APPROVE", scope: SCOPES.INSTITUTE, resId: instituteId },
+  ];
+
+  const teacherPermissionRows = teacherPermissionsConfig.map((p) => ({
+    roleId: teacherRole.roleId,
+    permission: p.perm,
+    scope: p.scope,
+    resourceId: p.resId,
+  }));
+
+  // 6. Sync role_permissions template for TEACHER
+  await model.rolePermissionsModel.destroy({
+    where: { roleId: teacherRole.roleId },
+    transaction,
+  });
+  if (teacherPermissionRows.length > 0) {
+    await model.rolePermissionsModel.bulkCreate(teacherPermissionRows, {
+      transaction,
+    });
+  }
+
+  // 5. Assign the CLIENT_ADMIN role to the user (permissions come from the role)
   await userRoleService.assignRoleToUser(
     userId,
     clientAdminRole.roleId,
     [],
     transaction,
-  );
-
-  // 6. Explicitly insert UNIVERSITY-scoped perm_access_inst with the real roleId
-  await model.userRolePermissionModel.create(
-    {
-      userId,
-      roleId: clientAdminRole.roleId,
-      permission: PERMISSIONS.ACCESS_INSTITUTE.value,
-      scope: SCOPES.UNIVERSITY,
-      resourceId: universityId,
-      universityId,
-    },
-    { transaction },
   );
 
   return clientAdminRole.roleId;
@@ -977,12 +1011,19 @@ export async function getGrantedAccess(userId) {
     throw new Error("User not found");
   }
 
-  const accessEntries = await model.userRolePermissionModel.findAll({
-    where: {
-      userId,
-      permission: "perm_access_inst",
-    },
+  // Base access (perm_access_inst) now comes from the user's roles
+  const userRoles = await model.userRolePermissionModel.findAll({
+    where: { userId },
+    attributes: ["roleId"],
   });
+  const accessEntries = userRoles.length
+    ? await model.rolePermissionsModel.findAll({
+      where: {
+        roleId: userRoles.map((ur) => ur.roleId),
+        permission: "perm_access_inst",
+      },
+    })
+    : [];
 
   if (!accessEntries.length) {
     return buildGrantedAccessFromUserContext(user, userId);
@@ -1039,13 +1080,23 @@ export async function giveFullAccess(info) {
   try {
     // 1. Find or create the CLIENT_ADMIN role
     let clientAdminRole = await model.roleModel.findOne({
-      where: { role: "CLIENT_ADMIN", universityId },
+      where: {
+        universityId,
+        [Op.or]: [
+          { code: SYSTEM_ROLE_CODES.CLIENT_ADMIN },
+          { role: "CLIENT_ADMIN" },
+        ],
+      },
       transaction,
     });
 
     if (!clientAdminRole) {
       clientAdminRole = await model.roleModel.create(
-        { role: "CLIENT_ADMIN", universityId },
+        {
+          role: "CLIENT_ADMIN",
+          code: SYSTEM_ROLE_CODES.CLIENT_ADMIN,
+          universityId,
+        },
         { transaction },
       );
     }
@@ -1056,14 +1107,15 @@ export async function giveFullAccess(info) {
     const rolePermissionRows = [];
     for (const [key, valueObj] of Object.entries(PERMISSIONS)) {
       if (!valueObj || !valueObj.value) continue;
-      const isMasterSection =
+      const isUniversityWide =
+        valueObj.value === PERMISSIONS.ACCESS_INSTITUTE.value ||
         valueObj.value === PERMISSIONS.MASTER_SECTION.value ||
         valueObj.parentPermission === "MASTER_SECTION";
       rolePermissionRows.push({
         roleId,
         permission: valueObj.value,
-        scope: isMasterSection ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
-        resourceId: isMasterSection ? universityId : instituteId,
+        scope: isUniversityWide ? SCOPES.UNIVERSITY : SCOPES.INSTITUTE,
+        resourceId: isUniversityWide ? universityId : instituteId,
       });
     }
 
@@ -1076,27 +1128,12 @@ export async function giveFullAccess(info) {
       transaction,
     });
 
-    // 4. Clear existing user permissions in user_role_permission_scope for this user
+    // 4. Reset the user's roles, then assign CLIENT_ADMIN
     await model.userRolePermissionModel.destroy({
       where: { userId },
       transaction,
     });
-
-    // 5. Assign CLIENT_ADMIN role to user
     await userRoleService.assignRoleToUser(userId, roleId, [], transaction);
-
-    // 6. Explicitly insert UNIVERSITY-scoped perm_access_inst with real roleId
-    await model.userRolePermissionModel.create(
-      {
-        userId,
-        roleId,
-        permission: PERMISSIONS.ACCESS_INSTITUTE.value,
-        scope: SCOPES.UNIVERSITY,
-        resourceId: universityId,
-        universityId,
-      },
-      { transaction },
-    );
 
     // 7. Update user defaultRoleId, defaultInstituteId, and defaultAcademicYearId if unset
     const userUpdates = {

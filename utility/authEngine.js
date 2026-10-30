@@ -6,7 +6,8 @@ import { getPolicyFilter } from "./policyEngine.js";
 
 /**
  * Centrally resolves a user's permissions for a given active role.
- * Queries the single `user_role_permission_scope` table directly.
+ * The user only holds roles (`user_role_permission_scope`); the permissions
+ * themselves come from the role (`role_permissions`).
  * User can access only one role's permissions at a time (active/selected role).
  * Automatically expands implied permissions using `dependentOn`.
  *
@@ -21,9 +22,15 @@ export async function getUserPermissions(userId, roleId) {
 
   let entries = [];
   try {
-    // 2. Query user_role_permission_scope for this user + role
-    entries = await model.userRolePermissionModel.findAll({
-      where: { userId, roleId },
+    // 1. The user must actually hold this role
+    const hasRole = await model.userRolePermissionModel.count({ where: { userId, roleId } });
+    if (!hasRole) {
+      return {};
+    }
+
+    // 2. Permissions belong to the role
+    entries = await model.rolePermissionsModel.findAll({
+      where: { roleId },
       attributes: ['permission', 'scope', 'resourceId']
     });
   } catch (error) {

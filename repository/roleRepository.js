@@ -61,11 +61,17 @@ export async function findRoleByRoleName(roleName) {
 
 export async function deleteRole(roleId) {
   const existing = await scoped(model.roleModel).findOne({
-    attributes: ["roleId"],
+    attributes: ["roleId", "role", "code"],
     where: { roleId },
   });
   if (!existing) {
     return false;
+  }
+
+  if (existing.code) {
+    const error = new Error(`Role '${existing.role}' is a system-generated role and cannot be deleted.`);
+    error.statusCode = 403;
+    throw error;
   }
 
   const deleted = await scoped(model.roleModel).destroy({ where: { roleId } });
@@ -75,12 +81,21 @@ export async function deleteRole(roleId) {
 export async function updateRole(roleId, RoleData) {
   try {
     const existing = await scoped(model.roleModel).findOne({
-      attributes: ["roleId"],
+      attributes: ["roleId", "role", "code"],
       where: { roleId },
     });
     if (!existing) {
       return [0];
     }
+
+    if (existing.code) {
+      const error = new Error(`Role '${existing.role}' is a system-generated role and cannot be edited.`);
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Ensure client cannot set code on custom roles
+    delete RoleData.code;
 
     return scoped(model.roleModel).update(RoleData, { where: { roleId } });
   } catch (error) {
