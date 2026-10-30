@@ -202,12 +202,102 @@ export async function getAllCurriculumElectiveRequirements(query = {}) {
   };
 }
 
-export async function getCurriculumElectiveRequirementById(id) {
-  const req = await repo.findCurriculumElectiveRequirementById(id);
+export async function getCurriculumElectiveRequirementById(id, query = {}, options = {}) {
+  const req = await repo.findCurriculumElectiveRequirementById(id, options);
   if (!req) {
     throw httpError("Curriculum elective requirement not found", 404);
   }
-  return formatRequirementResponse(req);
+
+  const baseResponse = formatRequirementResponse(req);
+
+  // If includeStudents is explicitly false, omit student details
+  if (query.includeStudents === false || query.includeStudents === "false") {
+    return baseResponse;
+  }
+
+  const eligibleStudents = await repo.findEligibleStudentsForRequirement(req, query, options);
+
+  const coursesRequired = req.coursesRequired || 1;
+  let allocatedCount = 0;
+
+  const formattedStudents = eligibleStudents.map((s) => {
+    const json = s.toJSON ? s.toJSON() : s;
+    const fullName = [json.firstName, json.middleName, json.lastName]
+      .filter((part) => part && String(part).trim().length > 0)
+      .join(" ");
+
+    const allocatedElectives = (json.electiveSubjectMappings || []).map((m) => ({
+      studentElectiveSubjectId: m.studentElectiveSubjectId,
+      electiveSubjectId: m.electiveSubjectId,
+      electiveSubjectName: m.electiveSubject?.electiveSubjectName || null,
+      electiveSubjectCode: m.electiveSubject?.electiveSubjectCode || null,
+      electiveSubjectType: m.electiveSubject?.electiveSubjectType || null,
+    }));
+
+    let status = "Pending";
+    if (allocatedElectives.length >= coursesRequired) {
+      status = "Allocated";
+      allocatedCount += 1;
+    } else if (allocatedElectives.length > 0) {
+      status = "Partially Allocated";
+    }
+
+    return {
+      studentId: json.studentId,
+      scholarNumber: json.scholarNumber,
+      enrollNumber: json.enrollNumber,
+      firstName: json.firstName,
+      middleName: json.middleName,
+      lastName: json.lastName,
+      fullName,
+      batchId: json.batchId,
+      batchYear: json.batch?.batch || null,
+      term: json.studentClassSectionTerm?.term ?? req.term,
+      section: json.studentClassSectionTerm?.classSection?.section || null,
+      status,
+      allocatedElectives,
+    };
+  });
+
+  const filterStatus = query.studentStatus || query.status;
+  let filteredStudents = formattedStudents;
+  if (filterStatus && filterStatus.trim()) {
+    const fs = filterStatus.trim().toLowerCase();
+    filteredStudents = formattedStudents.filter(
+      (st) => st.status.toLowerCase() === fs
+    );
+  }
+
+  const totalEligibleStudents = formattedStudents.length;
+  const pendingStudents = Math.max(0, totalEligibleStudents - allocatedCount);
+
+  const studentLimit = query.studentLimit ? parseInt(query.studentLimit, 10) : null;
+  const studentPage = query.studentPage ? Math.max(1, parseInt(query.studentPage, 10)) : 1;
+
+  let finalStudents = filteredStudents;
+  let studentsPagination = undefined;
+
+  if (studentLimit && studentLimit > 0) {
+    const offset = (studentPage - 1) * studentLimit;
+    finalStudents = filteredStudents.slice(offset, offset + studentLimit);
+    studentsPagination = {
+      total: filteredStudents.length,
+      page: studentPage,
+      limit: studentLimit,
+      totalPages: Math.ceil(filteredStudents.length / studentLimit),
+    };
+  }
+
+  return {
+    ...baseResponse,
+    studentsSummary: {
+      totalEligibleStudents,
+      allocatedStudents: allocatedCount,
+      pendingStudents,
+    },
+    students: finalStudents,
+    ...(studentsPagination ? { studentsPagination } : {}),
+  };
 }
 
 export async function updateCurriculumElectiveRequirement(id, body) {

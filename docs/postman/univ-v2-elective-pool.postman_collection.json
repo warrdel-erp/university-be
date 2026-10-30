@@ -631,18 +631,54 @@
           }
         },
         {
-          "name": "5. Get Single Elective Requirement By ID",
+          "name": "5. Get Single Elective Requirement By ID (with Students Data)",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}",
+              "raw": "{{baseurl}}/curriculumElectiveRequirement/{{curriculumElectiveRequirementId}}?studentLimit=10&studentPage=1",
               "host": [
                 "{{baseurl}}"
               ],
               "path": [
                 "curriculumElectiveRequirement",
                 "{{curriculumElectiveRequirementId}}"
+              ],
+              "query": [
+                {
+                  "key": "studentLimit",
+                  "value": "10",
+                  "description": "Optional: paginate students list"
+                },
+                {
+                  "key": "studentPage",
+                  "value": "1",
+                  "description": "Optional: page number for students list"
+                },
+                {
+                  "key": "studentSection",
+                  "value": "A",
+                  "description": "Optional: filter students by section (e.g. A, B)",
+                  "disabled": true
+                },
+                {
+                  "key": "studentSearch",
+                  "value": "John",
+                  "description": "Optional: search students by name, scholar or enroll number",
+                  "disabled": true
+                },
+                {
+                  "key": "studentStatus",
+                  "value": "Pending",
+                  "description": "Optional: filter by status (Allocated, Pending, Partially Allocated)",
+                  "disabled": true
+                },
+                {
+                  "key": "includeStudents",
+                  "value": "true",
+                  "description": "Set to false to omit students data completely",
+                  "disabled": true
+                }
               ]
             }
           }

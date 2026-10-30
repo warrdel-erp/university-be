@@ -31,7 +31,7 @@ export async function getCurriculumElectiveRequirementById(req, res) {
     if (!id) {
       return ErrorResponse(res, 400, "id is required");
     }
-    const result = await service.getCurriculumElectiveRequirementById(id);
+    const result = await service.getCurriculumElectiveRequirementById(id, req.query);
     return SuccessResponse(res, 200, "Curriculum elective requirement fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");

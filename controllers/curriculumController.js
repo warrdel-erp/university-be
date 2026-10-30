@@ -81,7 +81,7 @@ export const remove = async (req, res) => {
 export const getAvailableSubjects = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await curriculumService.getAvailableSubjects(id);
+    const result = await curriculumService.getAvailableSubjects(id, req.query);
     return SuccessResponse(res, 200, 'Available subjects retrieved', result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || 'Internal Server Error');

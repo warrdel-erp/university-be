@@ -421,7 +421,7 @@ export async function remove(curriculumId) {
   }
 }
 
-export async function getAvailableSubjects(curriculumId) {
+export async function getAvailableSubjects(curriculumId, query = {}) {
   const curriculum = await curriculumRepository.findById(curriculumId);
   if (!curriculum) {
     httpError('Curriculum not found', 404);
@@ -429,16 +429,32 @@ export async function getAvailableSubjects(curriculumId) {
 
   const mappedRows = await models.curriculumSubjectTermMappingModel.findAll({
     where: { curriculumId },
-    attributes: ['subjectId'],
+    attributes: ['subjectId', 'subjectComponentMappingId', 'term'],
   });
-  const mappedSubjectIds = mappedRows.map((r) => r.subjectId);
 
-  const where = { courseId: curriculum.courseId, isActive: true };
-  if (mappedSubjectIds.length > 0) {
-    where.subjectId = { [Op.notIn]: mappedSubjectIds };
+  const mappedScmIds = new Set();
+  const scmTermMap = new Map();
+  const mappedSubjectIdsWithoutComponent = new Set();
+
+  for (const r of mappedRows) {
+    if (r.subjectComponentMappingId) {
+      mappedScmIds.add(r.subjectComponentMappingId);
+      scmTermMap.set(r.subjectComponentMappingId, r.term);
+    } else {
+      mappedSubjectIdsWithoutComponent.add(r.subjectId);
+    }
   }
 
-  return scoped(models.subjectModel).findAll({
+  const where = { courseId: curriculum.courseId, isActive: true };
+  if (query.search) {
+    const s = `%${query.search.trim()}%`;
+    where[Op.or] = [
+      { subjectCode: { [Op.like]: s } },
+      { subjectName: { [Op.like]: s } },
+    ];
+  }
+
+  const subjects = await scoped(models.subjectModel).findAll({
     where,
     order: [['subjectCode', 'ASC']],
     attributes: [
@@ -448,6 +464,54 @@ export async function getAvailableSubjects(curriculumId) {
       'subjectType',
       'subjectCategory',
     ],
+    include: [
+      {
+        model: models.subjectComponentMappingModel,
+        as: 'subjectComponentMappings',
+        attributes: ['id', 'subjectId', 'subjectComponentId'],
+        include: [
+          {
+            model: models.subjectComponentModel,
+            as: 'component',
+            attributes: ['id', 'componentName', 'code'],
+          },
+        ],
+        required: false,
+      },
+    ],
+  });
+
+  return subjects.map((subj) => {
+    const json = subj.toJSON();
+    const mappings = Array.isArray(json.subjectComponentMappings)
+      ? json.subjectComponentMappings
+      : [];
+
+    const components = mappings.map((m) => {
+      const isMapped = mappedScmIds.has(m.id);
+      return {
+        subjectComponentMappingId: m.id,
+        componentId: m.component ? m.component.id : m.subjectComponentId,
+        componentName: m.component ? m.component.componentName : null,
+        code: m.component ? m.component.code : null,
+        isMapped,
+        mappedTerm: isMapped ? scmTermMap.get(m.id) : null,
+      };
+    });
+
+    const isSubjectMappedWithoutComponent = mappedSubjectIdsWithoutComponent.has(json.subjectId);
+    const hasUnmappedComponent = components.length > 0
+      ? components.some((c) => !c.isMapped)
+      : !isSubjectMappedWithoutComponent;
+
+    delete json.subjectComponentMappings;
+
+    return {
+      ...json,
+      isMapped: components.length > 0 ? !hasUnmappedComponent : isSubjectMappedWithoutComponent,
+      hasAvailableComponents: hasUnmappedComponent,
+      components,
+    };
   });
 }
 

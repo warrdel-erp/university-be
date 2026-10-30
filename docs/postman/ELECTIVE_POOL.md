@@ -203,7 +203,7 @@ Mount: `/curriculumElectiveRequirement`, `/api/curriculum-elective-requirements`
 | **Add Requirement** | `POST` | `/curriculumElectiveRequirement/create` | Modal Add Requirement (Image 3) |
 | **List Requirements** | `GET` | `/curriculumElectiveRequirement/list` | List by `?curriculumId=9&term=1` with pool preview & count |
 | **Filter by Category** | `GET` | `/curriculumElectiveRequirement/list` | Filter by `?curriculumCategoryId=1` |
-| **Get Requirement by ID** | `GET` | `/curriculumElectiveRequirement/:id` | Single requirement view |
+| **Get Requirement by ID** | `GET` | `/curriculumElectiveRequirement/:id` | Single requirement view with **eligible students list** & **studentsSummary** |
 | **Update Requirement** | `PATCH` | `/curriculumElectiveRequirement/update/:id` | Update name, coursesRequired, minCredits |
 | **Toggle Status** | `PATCH` | `/curriculumElectiveRequirement/toggleStatus/:id` | Toggle active status |
 | **Delete Requirement** | `DELETE` | `/curriculumElectiveRequirement/delete/:id` | Soft delete requirement |
@@ -224,5 +224,92 @@ Authorization: Bearer {{token}}
   "coursesRequired": 1,
   "minCredits": 3.0,
   "electivePoolId": 1
+}
+```
+
+#### Example: Get Requirement by ID (with Eligible Students Data)
+```http
+GET /curriculumElectiveRequirement/1?studentLimit=10&studentPage=1 HTTP/1.1
+Authorization: Bearer {{token}}
+```
+
+**Supported Query Parameters:**
+- `studentLimit` (integer, optional): Paginate the students array.
+- `studentPage` (integer, optional, default: 1): Page number for students list.
+- `studentSection` (string, optional): Filter by section (e.g. `A`, `B`).
+- `studentSearch` (string, optional): Search students by name, scholar number, or enroll number.
+- `studentStatus` (string, optional): Filter by status (`Allocated`, `Pending`, `Partially Allocated`).
+- `includeStudents` (boolean, optional, default: true): Pass `false` to omit students array.
+
+**Response Structure:**
+```json
+{
+  "status": 200,
+  "message": "Curriculum elective requirement fetched successfully",
+  "data": {
+    "id": 1,
+    "curriculumId": 1,
+    "term": 1,
+    "requirementCode": "PE-1",
+    "requirementName": "Professional Elective I",
+    "curriculumCategoryId": 1,
+    "courseCount": true,
+    "coursesRequired": 1,
+    "minCredits": 3.0,
+    "electivePoolId": 1,
+    "isActive": true,
+    "curriculumCategory": {
+      "id": 1,
+      "categoryName": "Professional Elective",
+      "code": "PE"
+    },
+    "electivePool": {
+      "id": 1,
+      "name": "Architecture Professional Electives",
+      "code": "ARCH-PROF",
+      "scope": "programme",
+      "isActive": true,
+      "eligibleCoursesCount": 18
+    },
+    "curriculum": {
+      "curriculumId": 1,
+      "name": "Curriculum BARCH - Batch 2026",
+      "courseId": 34,
+      "course": {
+        "courseId": 34,
+        "courseName": "Bachelors in Architecture",
+        "courseCode": "BARCH",
+        "totalTerms": 10
+      }
+    },
+    "studentsSummary": {
+      "totalEligibleStudents": 94,
+      "allocatedStudents": 0,
+      "pendingStudents": 94
+    },
+    "students": [
+      {
+        "studentId": 2268,
+        "scholarNumber": "Asa@rj03/BARCH/2026/100045",
+        "enrollNumber": null,
+        "firstName": "Aadish",
+        "middleName": null,
+        "lastName": "Jain",
+        "fullName": "Aadish Jain",
+        "batchId": 12,
+        "batchYear": 2026,
+        "term": 1,
+        "section": "A",
+        "status": "Pending",
+        "allocatedElectives": []
+      }
+    ],
+    "studentsPagination": {
+      "total": 94,
+      "page": 1,
+      "limit": 10,
+      "totalPages": 10
+    }
+  }
 }
 ```

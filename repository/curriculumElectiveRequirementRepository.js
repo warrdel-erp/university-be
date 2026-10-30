@@ -45,6 +45,14 @@ const defaultIncludes = [
     model: model.curriculumModel,
     as: "curriculum",
     attributes: ["curriculumId", "name", "courseId"],
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: ["courseId", "courseName", "courseCode", "totalTerms"],
+        required: false,
+      },
+    ],
     required: false,
   },
 ];
@@ -155,4 +163,130 @@ export async function deleteCurriculumElectiveRequirement(id, options = {}) {
     transaction,
   });
 }
+
+/**
+ * Fetches all eligible students for an elective requirement based on:
+ * - Batches mapped to the curriculum (curriculum_batch_mapping)
+ * - Programme/Course ID of the curriculum
+ * - Term of the requirement (via studentClassSectionTerm)
+ * - Existing elective subject mappings (student_elective_subject)
+ */
+export async function findEligibleStudentsForRequirement(requirement, query = {}, options = {}) {
+  const mergedOptions = { ...query, ...options };
+  const transaction = options.transaction || query.transaction;
+  const curriculumId = requirement.curriculumId;
+  const courseId = requirement.curriculum?.courseId;
+  const targetTerm = mergedOptions.term !== undefined ? mergedOptions.term : requirement.term;
+
+  // 1. Fetch mapped batch IDs for this curriculum
+  const batchMappings = await scoped(model.curriculumBatchMappingModel).findAll({
+    where: { curriculumId },
+    attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
+    transaction,
+  });
+
+  const batchIds = batchMappings.map((bm) => bm.batchId).filter(Boolean);
+  if (batchIds.length === 0) {
+    return [];
+  }
+
+  // 2. Build where conditions for students
+  const studentWhere = {
+    batchId: { [Op.in]: batchIds },
+  };
+  if (courseId) {
+    studentWhere.courseId = courseId;
+  }
+
+  const search = mergedOptions.studentSearch || mergedOptions.search;
+  if (search && search.trim()) {
+    const s = `%${search.trim()}%`;
+    studentWhere[Op.or] = [
+      { firstName: { [Op.like]: s } },
+      { lastName: { [Op.like]: s } },
+      { scholarNumber: { [Op.like]: s } },
+      { enrollNumber: { [Op.like]: s } },
+    ];
+  }
+
+  // 3. Build classSectionTerm conditions
+  const sectionWhere = {};
+  const sectionFilter = mergedOptions.studentSection || mergedOptions.section;
+  if (sectionFilter && sectionFilter.trim()) {
+    sectionWhere.section = sectionFilter.trim();
+  }
+
+  const termWhere = {};
+  if (!mergedOptions.allTerms && !mergedOptions.allBatchStudents && targetTerm != null) {
+    termWhere.term = parseInt(targetTerm, 10);
+  }
+
+  const hasTermFilter = Object.keys(termWhere).length > 0;
+  const hasSectionFilter = Object.keys(sectionWhere).length > 0;
+
+  const findOptions = {
+    where: studentWhere,
+    attributes: [
+      "studentId",
+      "scholarNumber",
+      "enrollNumber",
+      "firstName",
+      "middleName",
+      "lastName",
+      "batchId",
+      "classSectionTermId",
+    ],
+    include: [
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch"],
+        required: false,
+      },
+      {
+        model: model.classSectionTermModel,
+        as: "studentClassSectionTerm",
+        attributes: ["classSectionTermId", "term", "classSectionsId"],
+        where: hasTermFilter ? termWhere : undefined,
+        required: hasTermFilter,
+        include: [
+          {
+            model: model.classSectionModel,
+            as: "classSection",
+            attributes: ["classSectionsId", "section"],
+            where: hasSectionFilter ? sectionWhere : undefined,
+            required: hasSectionFilter,
+          },
+        ],
+      },
+      {
+        model: model.studentElectiveSubjectModel,
+        as: "electiveSubjectMappings",
+        attributes: ["studentElectiveSubjectId", "electiveSubjectId"],
+        required: false,
+        include: [
+          {
+            model: model.electiveSubjectModel,
+            as: "electiveSubject",
+            attributes: [
+              "electiveSubjectId",
+              "electiveSubjectName",
+              "electiveSubjectCode",
+              "electiveSubjectType",
+            ],
+            required: false,
+          },
+        ],
+      },
+    ],
+    order: [
+      ["firstName", "ASC"],
+      ["studentId", "ASC"],
+    ],
+    transaction,
+  };
+
+  return scoped(model.studentModel, { scopeConfig: { academicYear: false } }).findAll(findOptions);
+}
+
 
