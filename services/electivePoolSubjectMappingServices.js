@@ -1,3 +1,4 @@
+import * as model from "../models/index.js";
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/electivePoolSubjectMappingRepository.js";
 import * as poolRepo from "../repository/electivePoolRepository.js";
@@ -141,17 +142,73 @@ export async function getMappedSubjectsForPool(poolId) {
   }
 
   const mappings = await repo.getMappedSubjectsForPool(parseInt(poolId, 10));
+  const allComponents = await model.subjectComponentModel.findAll();
 
-  const subjects = mappings.map((m) => {
-    const s = m.subject ? m.subject.toJSON() : {};
-    return {
+  const subjects = [];
+  for (const m of mappings) {
+    const s = m.subject ? (m.subject.toJSON ? m.subject.toJSON() : m.subject) : {};
+    let scmMappings = Array.isArray(s.subjectComponentMappings)
+      ? [...s.subjectComponentMappings]
+      : [];
+
+    // Fallback: If no components are explicitly mapped, auto-detect from subjectCategory or subjectType
+    if (scmMappings.length === 0 && (s.subjectCategory || s.subjectType)) {
+      const raw = (s.subjectCategory || s.subjectType || "").trim().toLowerCase();
+      const matched = allComponents.find(
+        (c) =>
+          c.componentName.toLowerCase() === raw ||
+          raw.includes(c.componentName.toLowerCase()) ||
+          c.code.toLowerCase() === raw ||
+          (raw.includes("theor") && c.componentName.toLowerCase() === "theory") ||
+          (raw.includes("pract") && c.componentName.toLowerCase() === "practical") ||
+          (raw.includes("work") && c.componentName.toLowerCase() === "workshop") ||
+          (raw.includes("semi") && c.componentName.toLowerCase() === "seminar") ||
+          (raw.includes("lab") && c.componentName.toLowerCase() === "lab"),
+      );
+
+      if (matched && s.subjectId) {
+        const [createdMapping] = await model.subjectComponentMappingModel.findOrCreate({
+          where: {
+            subjectId: s.subjectId,
+            subjectComponentId: matched.id,
+          },
+          defaults: {
+            subjectId: s.subjectId,
+            subjectComponentId: matched.id,
+          },
+        });
+        scmMappings.push({
+          id: createdMapping.id,
+          subjectId: s.subjectId,
+          subjectComponentId: matched.id,
+          component: matched,
+        });
+      }
+    }
+
+    const components = scmMappings.map((scm) => {
+      const comp = scm.component || {};
+      return {
+        subjectComponentMappingId: scm.id,
+        subject_component_mapping_id: scm.id,
+        id: comp.id ?? scm.subjectComponentId,
+        componentId: comp.id ?? scm.subjectComponentId,
+        componentName: comp.componentName ?? null,
+        code: comp.code ?? null,
+        description: comp.description ?? null,
+      };
+    });
+
+    subjects.push({
       mappingId: m.id,
       subjectId: s.subjectId,
       subjectName: s.subjectName,
       subjectCode: s.subjectCode,
       subjectType: s.subjectType,
+      subjectCategory: s.subjectCategory || null,
       isActive: s.isActive,
       term: s.term,
+      subjectComponentMappingId: components[0]?.subjectComponentMappingId || null,
       programme: s.course
         ? {
             courseId: s.course.courseId,
@@ -159,15 +216,9 @@ export async function getMappedSubjectsForPool(poolId) {
             courseCode: s.course.courseCode,
           }
         : null,
-      components: Array.isArray(s.components)
-        ? s.components.map((c) => ({
-            id: c.id,
-            componentName: c.componentName,
-            code: c.code,
-          }))
-        : [],
-    };
-  });
+      components,
+    });
+  }
 
   return {
     pool: {

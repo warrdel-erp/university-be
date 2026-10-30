@@ -297,6 +297,43 @@ export async function getGroupRoutinesWrappedInStructureRepository({ academicGro
   return group;
 }
 
+function formatSubjectComponents(subject, directMapping) {
+  const mappings = Array.isArray(subject?.subjectComponentMappings)
+    ? subject.subjectComponentMappings
+    : [];
+
+  const components = mappings.map((m) => {
+    const comp = m.component || {};
+    return {
+      subjectComponentMappingId: m.id,
+      subject_component_mapping_id: m.id,
+      id: comp.id ?? m.subjectComponentId,
+      componentId: comp.id ?? m.subjectComponentId,
+      componentName: comp.componentName ?? null,
+      code: comp.code ?? null,
+      description: comp.description ?? null,
+    };
+  });
+
+  if (
+    directMapping &&
+    !components.some((c) => c.subjectComponentMappingId === directMapping.id)
+  ) {
+    const comp = directMapping.component || {};
+    components.unshift({
+      subjectComponentMappingId: directMapping.id,
+      subject_component_mapping_id: directMapping.id,
+      id: comp.id ?? directMapping.subjectComponentId,
+      componentId: comp.id ?? directMapping.subjectComponentId,
+      componentName: comp.componentName ?? null,
+      code: comp.code ?? null,
+      description: comp.description ?? null,
+    });
+  }
+
+  return components;
+}
+
 export async function getSubjectOptionsRepository({ classSectionTermId, academicGroupId }, options = {}) {
   if (classSectionTermId) {
     const cst = await model.classSectionTermModel.findByPk(classSectionTermId, {
@@ -365,31 +402,72 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
         attributes: [
           'curriculumSubjectTermMappingId',
           'subjectId',
+          'subjectComponentMappingId',
           'term',
           'credit',
         ],
-        include: [{
-          model: model.subjectModel,
-          as: 'subject',
-          attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
-          where: { isActive: true },
-          required: true
-        }],
+        include: [
+          {
+            model: model.subjectModel,
+            as: 'subject',
+            attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+            where: { isActive: true },
+            required: true,
+            include: [
+              {
+                model: model.subjectComponentMappingModel,
+                as: 'subjectComponentMappings',
+                required: false,
+                attributes: ['id', 'subjectId', 'subjectComponentId'],
+                include: [
+                  {
+                    model: model.subjectComponentModel,
+                    as: 'component',
+                    required: false,
+                    attributes: ['id', 'componentName', 'code', 'description'],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            model: model.subjectComponentMappingModel,
+            as: 'subjectComponentMapping',
+            required: false,
+            attributes: ['id', 'subjectId', 'subjectComponentId'],
+            include: [
+              {
+                model: model.subjectComponentModel,
+                as: 'component',
+                required: false,
+                attributes: ['id', 'componentName', 'code', 'description'],
+              },
+            ],
+          },
+        ],
         order: [[{ model: model.subjectModel, as: 'subject' }, 'subjectName', 'ASC']],
         transaction: options.transaction
       });
 
       if (mappings.length > 0) {
-        return mappings.map(m => ({
-          subjectId: m.subject.subjectId,
-          name: m.subject.subjectName,
-          subjectName: m.subject.subjectName,
-          subjectCode: m.subject.subjectCode,
-          subjectType: m.subject.subjectType,
-          subjectCategory: m.subject.subjectCategory,
-          credit: m.credit,
-          curriculumSubjectTermMappingId: m.curriculumSubjectTermMappingId,
-        }));
+        return mappings.map((m) => {
+          const components = formatSubjectComponents(
+            m.subject,
+            m.subjectComponentMapping,
+          );
+          return {
+            subjectId: m.subject.subjectId,
+            name: m.subject.subjectName,
+            subjectName: m.subject.subjectName,
+            subjectCode: m.subject.subjectCode,
+            subjectType: m.subject.subjectType,
+            subjectCategory: m.subject.subjectCategory,
+            credit: m.credit,
+            curriculumSubjectTermMappingId: m.curriculumSubjectTermMappingId,
+            subjectComponentMappingId: m.subjectComponentMappingId ?? (components[0]?.subjectComponentMappingId || null),
+            components,
+          };
+        });
       }
     }
 
@@ -397,18 +475,39 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
     const subjects = await model.subjectModel.findAll({
       where: { courseId, term, isActive: true },
       attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+      include: [
+        {
+          model: model.subjectComponentMappingModel,
+          as: 'subjectComponentMappings',
+          required: false,
+          attributes: ['id', 'subjectId', 'subjectComponentId'],
+          include: [
+            {
+              model: model.subjectComponentModel,
+              as: 'component',
+              required: false,
+              attributes: ['id', 'componentName', 'code', 'description'],
+            },
+          ],
+        },
+      ],
       order: [['subjectName', 'ASC']],
       transaction: options.transaction
     });
 
-    return subjects.map(s => ({
-      subjectId: s.subjectId,
-      name: s.subjectName,
-      subjectName: s.subjectName,
-      subjectCode: s.subjectCode,
-      subjectType: s.subjectType,
-      subjectCategory: s.subjectCategory
-    }));
+    return subjects.map((s) => {
+      const components = formatSubjectComponents(s);
+      return {
+        subjectId: s.subjectId,
+        name: s.subjectName,
+        subjectName: s.subjectName,
+        subjectCode: s.subjectCode,
+        subjectType: s.subjectType,
+        subjectCategory: s.subjectCategory,
+        subjectComponentMappingId: components[0]?.subjectComponentMappingId || null,
+        components,
+      };
+    });
   }
 
   // Academic Group support
@@ -422,17 +521,38 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
       const subjects = await model.subjectModel.findAll({
         where: { courseId: scope.courseId, term: scope.term, isActive: true },
         attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+        include: [
+          {
+            model: model.subjectComponentMappingModel,
+            as: 'subjectComponentMappings',
+            required: false,
+            attributes: ['id', 'subjectId', 'subjectComponentId'],
+            include: [
+              {
+                model: model.subjectComponentModel,
+                as: 'component',
+                required: false,
+                attributes: ['id', 'componentName', 'code', 'description'],
+              },
+            ],
+          },
+        ],
         order: [['subjectName', 'ASC']],
         transaction: options.transaction
       });
-      return subjects.map(s => ({
-        subjectId: s.subjectId,
-        name: s.subjectName,
-        subjectName: s.subjectName,
-        subjectCode: s.subjectCode,
-        subjectType: s.subjectType,
-        subjectCategory: s.subjectCategory
-      }));
+      return subjects.map((s) => {
+        const components = formatSubjectComponents(s);
+        return {
+          subjectId: s.subjectId,
+          name: s.subjectName,
+          subjectName: s.subjectName,
+          subjectCode: s.subjectCode,
+          subjectType: s.subjectType,
+          subjectCategory: s.subjectCategory,
+          subjectComponentMappingId: components[0]?.subjectComponentMappingId || null,
+          components,
+        };
+      });
     }
   }
 

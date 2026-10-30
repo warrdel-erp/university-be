@@ -60,6 +60,7 @@ export async function getMappedSubjectsForPool(electivePoolId, options = {}) {
           "subjectName",
           "subjectCode",
           "subjectType",
+          "subjectCategory",
           "isActive",
           "term",
         ],
@@ -69,6 +70,20 @@ export async function getMappedSubjectsForPool(electivePoolId, options = {}) {
             as: "course",
             attributes: ["courseId", "courseName", "courseCode"],
             required: false,
+          },
+          {
+            model: model.subjectComponentMappingModel,
+            as: "subjectComponentMappings",
+            attributes: ["id", "subjectId", "subjectComponentId"],
+            required: false,
+            include: [
+              {
+                model: model.subjectComponentModel,
+                as: "component",
+                attributes: ["id", "componentName", "code", "description"],
+                required: false,
+              },
+            ],
           },
           {
             model: model.subjectComponentModel,
