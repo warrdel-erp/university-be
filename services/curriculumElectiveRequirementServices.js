@@ -1203,8 +1203,8 @@ export async function getCurriculumElectiveRequirementAssignments(id, query = {}
   let courseRows = [];
   let sr = 1;
   for (const sub of poolSubjects) {
-    const assignedFromThisReq = Array.from(assignmentMap.values()).filter(
-      (a) => a.subjectId === sub.subjectId
+    const assignedFromThisReq = activeAssignments.filter(
+      (a) => a.status === "Assigned" && a.subjectId === sub.subjectId
     ).length;
 
     const assignedPercentage = totalStudents > 0
