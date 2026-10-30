@@ -421,6 +421,7 @@ const COPY_OVERRIDE_FIELDS = [
   "timeTableRoutineId",
   "userId",
   "subjectId",
+  "subjectComponentMappingId",
   "electiveSubjectId",
   "teacherSubjectMappingId",
   "classRoomSectionId",
@@ -532,6 +533,12 @@ function stripMappingRow(row) {
 async function normalizeMappingTeacherInput(data, options = {}) {
   const normalized = { ...data };
 
+  if (normalized.subjectComponentMappingId == null && normalized.subject_component_mapping_id != null) {
+    normalized.subjectComponentMappingId = Number(normalized.subject_component_mapping_id);
+  } else if (normalized.subjectComponentMappingId != null) {
+    normalized.subjectComponentMappingId = Number(normalized.subjectComponentMappingId);
+  }
+
   if (normalized.userId == null && normalized.employeeId != null) {
     const emp = await model.employeeModel.findOne({
       where: { employeeId: Number(normalized.employeeId) },
@@ -585,6 +592,7 @@ function formatMappingCreateResult(cell, extra = {}) {
 
   return {
     timeTableCellId: plain.timeTableCellId,
+    subjectComponentMappingId: plain.subjectComponentMappingId ?? null,
     timeTableCellTeacherId: primaryTeacher?.timeTableCellTeacherId ?? null,
     timeTableCellTeachers: teacherRows,
     ...extra,
@@ -903,6 +911,7 @@ function buildCopyPayload(sourceRow, target, request, teachers) {
       day: target.day,
       period: target.period,
       subjectId: src.subjectId,
+      subjectComponentMappingId: src.subjectComponentMappingId,
       electiveSubjectId: src.electiveSubjectId,
       teacherSubjectMappingId: src.teacherSubjectMappingId,
       classRoomSectionId: src.classRoomSectionId,
@@ -2489,6 +2498,8 @@ function buildMappingCellPatch(item, updatedBy) {
   const cellPatch = { updatedBy };
 
   if (item.subjectId != null) cellPatch.subjectId = Number(item.subjectId);
+  const scmId = item.subjectComponentMappingId ?? item.subject_component_mapping_id;
+  if (scmId != null) cellPatch.subjectComponentMappingId = Number(scmId);
   if (item.electiveSubjectId != null)
     cellPatch.electiveSubjectId = Number(item.electiveSubjectId);
   if (item.classRoomSectionId != null)
@@ -2517,6 +2528,8 @@ function buildMappingCellPatch(item, updatedBy) {
 function hasMappingCellFieldUpdate(item) {
   return (
     item.subjectId != null ||
+    item.subjectComponentMappingId != null ||
+    item.subject_component_mapping_id != null ||
     item.electiveSubjectId != null ||
     item.classRoomSectionId != null ||
     item.teacherSubjectMappingId != null ||

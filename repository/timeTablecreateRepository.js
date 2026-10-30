@@ -509,6 +509,9 @@ export async function addtimeTableMapping(data, transaction) {
   delete cellPayload.userId;
   delete cellPayload.teacherType;
   delete cellPayload.teachers;
+  if (cellPayload.subjectComponentMappingId == null && cellPayload.subject_component_mapping_id != null) {
+    cellPayload.subjectComponentMappingId = Number(cellPayload.subject_component_mapping_id);
+  }
 
   const cell = await model.timeTableCellModel.create(cellPayload, {
     transaction,
@@ -1597,6 +1600,22 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
             "updatedBy",
           ],
         },
+      },
+      {
+        model: model.subjectComponentMappingModel,
+        as: "subjectComponentMapping",
+        required: false,
+        attributes: {
+          exclude: ["createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            model: model.subjectComponentModel,
+            as: "component",
+            required: false,
+            attributes: ["id", "componentName", "code"],
+          },
+        ],
       },
     ],
   });

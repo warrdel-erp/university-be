@@ -1695,6 +1695,15 @@ subjectModel.hasMany(timeTableCellModel, {
   as: "timeTableCells",
 });
 
+timeTableCellModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(timeTableCellModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "timeTableCells",
+});
+
 timeTableCellModel.belongsTo(electiveSubjectModel, {
   foreignKey: "electiveSubjectId",
   as: "timeTableElective",
