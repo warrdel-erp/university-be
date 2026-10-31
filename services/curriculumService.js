@@ -223,36 +223,200 @@ export async function getById(id) {
   const mappings =
     await curriculumRepository.findSubjectTermMappingsByCurriculumId(id);
 
+  // Fetch elective requirements with elective pool courses and components
+  let formattedElectiveRequirements = [];
+  try {
+    const electiveRequirements = await models.curriculumElectiveRequirementModel.findAll({
+      where: { curriculumId: id },
+      include: [
+        {
+          model: models.curriculumCategoryModel,
+          as: 'curriculumCategory',
+          attributes: ['id', 'categoryName', 'code'],
+          required: false,
+        },
+        {
+          model: models.electivePoolModel,
+          as: 'electivePool',
+          attributes: ['id', 'name', 'code', 'description', 'scope', 'isActive'],
+          include: [
+            {
+              model: models.electivePoolSubjectMappingModel,
+              as: 'poolSubjectMappings',
+              attributes: ['id', 'subjectId'],
+              include: [
+                {
+                  model: models.subjectModel,
+                  as: 'subject',
+                  attributes: [
+                    'subjectId',
+                    'subjectCode',
+                    'subjectName',
+                    'subjectType',
+                    'subjectCategory',
+                  ],
+                  include: [
+                    {
+                      model: models.subjectComponentMappingModel,
+                      as: 'subjectComponentMappings',
+                      attributes: ['id', 'subjectId', 'subjectComponentId'],
+                      include: [
+                        {
+                          model: models.subjectComponentModel,
+                          as: 'component',
+                          attributes: ['id', 'componentName', 'code', 'description'],
+                        },
+                      ],
+                      required: false,
+                    },
+                  ],
+                  required: false,
+                },
+              ],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+      order: [
+        ['term', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
+
+    formattedElectiveRequirements = electiveRequirements.map((r) => {
+      const raw = r.toJSON();
+      const pool = raw.electivePool || {};
+      const poolMappings = pool.poolSubjectMappings || [];
+
+      const courses = poolMappings.map((pm) => {
+        const subj = pm.subject || {};
+        const scmMappings = subj.subjectComponentMappings || [];
+        const components = scmMappings.map((scm) => ({
+          subjectComponentMappingId: scm.id,
+          componentId: scm.component?.id || scm.subjectComponentId,
+          componentName: scm.component?.componentName || null,
+          code: scm.component?.code || null,
+          description: scm.component?.description || null,
+        }));
+
+        return {
+          id: subj.subjectId,
+          subjectId: subj.subjectId,
+          mappingId: pm.id,
+          code: subj.subjectCode,
+          name: subj.subjectName,
+          type: subj.subjectType,
+          category: subj.subjectCategory,
+          components,
+        };
+      });
+
+      return {
+        id: raw.id,
+        curriculumId: raw.curriculumId,
+        term: raw.term,
+        requirementCode: raw.requirementCode,
+        requirementName: raw.requirementName,
+        curriculumCategoryId: raw.curriculumCategoryId,
+        curriculumCategory: raw.curriculumCategory || null,
+        courseCount: raw.courseCount,
+        coursesRequired: raw.coursesRequired,
+        minCredits: raw.minCredits,
+        electivePoolId: raw.electivePoolId,
+        isActive: raw.isActive,
+        electivePool: {
+          id: pool.id,
+          name: pool.name,
+          code: pool.code,
+          description: pool.description,
+          scope: pool.scope,
+          isActive: pool.isActive,
+          eligibleCoursesCount: courses.length,
+        },
+        courses,
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching elective requirements for curriculum:', error);
+  }
+
   const course = curriculum.course;
   const totalTerms = course?.totalTerms || 8;
 
   const terms = [];
   for (let i = 1; i <= totalTerms; i++) {
-    const courses = [];
-    for (const mapping of mappings) {
-      if (mapping.term !== i) continue;
-      courses.push({
-        id: mapping.subject?.subjectId,
-        curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
-        code: mapping.subject?.subjectCode,
-        name: mapping.subject?.subjectName,
-        type: mapping.subject?.subjectType,
-        category: mapping.subject?.subjectCategory,
-        credit: mapping.credit,
-        syllabus: 'Configured',
-      });
+    const termMappings = mappings.filter((m) => m.term === i);
+    const subjectMap = new Map();
+
+    for (const mapping of termMappings) {
+      const sId = mapping.subject?.subjectId || mapping.subjectId;
+      if (!sId) continue;
+
+      const comp = mapping.subjectComponentMapping?.component;
+      const componentItem = mapping.subjectComponentMappingId
+        ? {
+            curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+            subjectComponentMappingId: mapping.subjectComponentMappingId,
+            componentId:
+              comp?.id ||
+              mapping.subjectComponentMapping?.subjectComponentId ||
+              null,
+            componentName: comp?.componentName || null,
+            code: comp?.code || null,
+            credit: mapping.credit,
+          }
+        : null;
+
+      if (!subjectMap.has(sId)) {
+        subjectMap.set(sId, {
+          id: sId,
+          subjectId: sId,
+          curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+          code: mapping.subject?.subjectCode,
+          name: mapping.subject?.subjectName,
+          type: mapping.subject?.subjectType,
+          category: mapping.subject?.subjectCategory,
+          credit: mapping.credit,
+          syllabus: 'Configured',
+          curriculumCategoryId: mapping.curriculumCategoryId || null,
+          curriculumCategory: mapping.curriculumCategory || null,
+          subjectComponentMappingId: mapping.subjectComponentMappingId || null,
+          component: comp
+            ? {
+                id: comp.id,
+                componentName: comp.componentName,
+                code: comp.code,
+              }
+            : null,
+          components: componentItem ? [componentItem] : [],
+        });
+      } else {
+        const existing = subjectMap.get(sId);
+        if (componentItem) {
+          existing.components.push(componentItem);
+        }
+      }
     }
+
+    const courses = Array.from(subjectMap.values());
+    const termElectiveRequirements = formattedElectiveRequirements.filter(
+      (r) => r.term === i,
+    );
 
     terms.push({
       id: i,
       term_number: i,
       courses,
+      electiveRequirements: termElectiveRequirements,
     });
   }
 
   return {
     ...curriculum.toJSON(),
     terms,
+    electiveRequirements: formattedElectiveRequirements,
   };
 }
 
@@ -541,8 +705,15 @@ function normalizeSubjectMappings(input) {
 
     const resolvedTerm = term ?? termNumber;
 
-    if (Array.isArray(subjectComponentMappingIds) && subjectComponentMappingIds.length > 0) {
-      for (const scmId of subjectComponentMappingIds) {
+    const componentIds =
+      Array.isArray(subjectComponentMappingIds) && subjectComponentMappingIds.length > 0
+        ? subjectComponentMappingIds
+        : Array.isArray(subjectComponentMappingId) && subjectComponentMappingId.length > 0
+        ? subjectComponentMappingId
+        : null;
+
+    if (componentIds) {
+      for (const scmId of componentIds) {
         const itemCredit =
           credits && scmId != null && credits[scmId] !== undefined
             ? credits[scmId]
@@ -558,7 +729,8 @@ function normalizeSubjectMappings(input) {
     } else {
       flattened.push({
         subjectId,
-        subjectComponentMappingId: subjectComponentMappingId ?? null,
+        subjectComponentMappingId:
+          typeof subjectComponentMappingId === 'number' ? subjectComponentMappingId : null,
         curriculumCategoryId: curriculumCategoryId ?? null,
         term: resolvedTerm,
         credit: credit ?? null,

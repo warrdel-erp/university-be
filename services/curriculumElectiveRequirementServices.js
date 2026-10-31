@@ -186,7 +186,46 @@ function formatRequirementResponse(reqObj) {
 export async function getAllCurriculumElectiveRequirements(query = {}) {
   const result = await repo.findCurriculumElectiveRequirements(query);
 
-  const formattedRows = result.rows.map(formatRequirementResponse);
+  const reqIds = result.rows.map((r) => r.id).filter(Boolean);
+  const assignmentCountMap = new Map();
+
+  if (reqIds.length > 0) {
+    const assignmentCounts = await models.curriculumElectiveAssignmentModel.findAll({
+      attributes: [
+        'curriculumElectiveRequirementId',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'totalCount'],
+      ],
+      where: {
+        curriculumElectiveRequirementId: { [Op.in]: reqIds },
+      },
+      group: ['curriculumElectiveRequirementId'],
+      raw: true,
+    });
+
+    for (const ac of assignmentCounts) {
+      assignmentCountMap.set(
+        Number(ac.curriculumElectiveRequirementId),
+        Number(ac.totalCount) || 0,
+      );
+    }
+  }
+
+  const formattedRows = result.rows.map((reqObj) => {
+    const base = formatRequirementResponse(reqObj);
+    const assignedStudentsCount = assignmentCountMap.get(base.id) || 0;
+    const hasAssignments = assignedStudentsCount > 0;
+    const assignmentStatus = hasAssignments ? "Assigned" : "Not Assigned";
+
+    return {
+      ...base,
+      status: assignmentStatus,
+      assignmentStatus,
+      statusBadge: hasAssignments ? "Assigned" : "Not Started",
+      isAssigned: hasAssignments,
+      hasAssignments,
+      assignedStudentsCount,
+    };
+  });
 
   const limit = query.limit !== undefined ? parseInt(query.limit, 10) : null;
   const page = query.page !== undefined ? parseInt(query.page, 10) : 1;
@@ -210,7 +249,22 @@ export async function getCurriculumElectiveRequirementById(id, query = {}, optio
     throw httpError("Curriculum elective requirement not found", 404);
   }
 
-  const baseResponse = formatRequirementResponse(req);
+  const assignmentCount = await models.curriculumElectiveAssignmentModel.count({
+    where: { curriculumElectiveRequirementId: id },
+    transaction: options.transaction,
+  });
+  const hasAssignments = assignmentCount > 0;
+  const assignmentStatus = hasAssignments ? "Assigned" : "Not Assigned";
+
+  const baseResponse = {
+    ...formatRequirementResponse(req),
+    status: assignmentStatus,
+    assignmentStatus,
+    statusBadge: hasAssignments ? "Assigned" : "Not Started",
+    isAssigned: hasAssignments,
+    hasAssignments,
+    assignedStudentsCount: assignmentCount,
+  };
 
   // If includeStudents is explicitly false, omit student details
   if (query.includeStudents === false || query.includeStudents === "false") {

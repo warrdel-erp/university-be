@@ -124,7 +124,9 @@ export async function getAvailableSubjects(query = {}, options = {}) {
 
   if (query.subjectType) {
     const rawList = String(query.subjectType).split(",").map((s) => s.trim()).filter(Boolean);
-    if (rawList.length === 1 && rawList[0].toLowerCase() !== "all") {
+    if (rawList.length === 1 && rawList[0].toLowerCase() === "all") {
+      // allow all if explicitly requested via ?subjectType=all
+    } else if (rawList.length === 1) {
       const canonicalMap = {
         core: "Core",
         elective: "Elective",
@@ -138,6 +140,8 @@ export async function getAvailableSubjects(query = {}, options = {}) {
     } else if (rawList.length > 1) {
       where.subjectType = { [Op.in]: rawList };
     }
+  } else {
+    where.subjectType = "Elective";
   }
 
   if (query.search) {

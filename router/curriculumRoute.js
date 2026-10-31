@@ -41,9 +41,10 @@ const singleSubjectMapSchema = z.object({
     .optional()
     .nullable(),
   subjectComponentMappingId: z
-    .number()
-    .int()
-    .positive()
+    .union([
+      z.number().int().positive(),
+      z.array(z.number().int().positive()),
+    ])
     .nullable()
     .optional(),
   curriculumCategoryId: z.number().int().positive().nullable().optional(),
