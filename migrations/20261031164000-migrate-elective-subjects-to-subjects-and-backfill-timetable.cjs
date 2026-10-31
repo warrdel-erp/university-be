@@ -163,6 +163,41 @@ module.exports = {
       }
 
       // =========================================================================
+      // Ensure subject_component_mapping_id exists on timetable tables
+      // =========================================================================
+      const [cellCols] = await queryInterface.sequelize.query(
+        `SHOW COLUMNS FROM time_table_cell LIKE 'subject_component_mapping_id'`,
+        { transaction: t }
+      );
+      if (!cellCols || cellCols.length === 0) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE time_table_cell 
+           ADD COLUMN subject_component_mapping_id INT NULL,
+           ADD CONSTRAINT fk_time_table_cell_scm 
+           FOREIGN KEY (subject_component_mapping_id) 
+           REFERENCES subject_component_mapping(id) 
+           ON UPDATE CASCADE ON DELETE SET NULL;`,
+          { transaction: t }
+        );
+      }
+
+      const [dwCols] = await queryInterface.sequelize.query(
+        `SHOW COLUMNS FROM time_table_cell_date_wise LIKE 'subject_component_mapping_id'`,
+        { transaction: t }
+      );
+      if (!dwCols || dwCols.length === 0) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE time_table_cell_date_wise 
+           ADD COLUMN subject_component_mapping_id INT NULL,
+           ADD CONSTRAINT fk_time_table_cell_date_wise_scm 
+           FOREIGN KEY (subject_component_mapping_id) 
+           REFERENCES subject_component_mapping(id) 
+           ON UPDATE CASCADE ON DELETE SET NULL;`,
+          { transaction: t }
+        );
+      }
+
+      // =========================================================================
       // STEP 3: Update time_table_cell with subject_id and subject_component_mapping_id
       // (Retains elective_subject_id untouched for future verification)
       // =========================================================================

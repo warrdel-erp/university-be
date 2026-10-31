@@ -128,8 +128,3 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-
-
-# Migration scripts
-migrations/20261031160000-add-and-backfill-subject-component-mappings.cjs
-migrations/20261031165500-create-and-backfill-elective-pools-and-assignments.cjs
