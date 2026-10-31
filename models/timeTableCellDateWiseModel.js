@@ -3,6 +3,7 @@ import { DataTypes } from 'sequelize';
 import users from './userModel.js';
 import timeTableCellModel from './timeTableCellModel.js';
 import classRoomModel from './classRoomModel.js';
+import subjectComponentMappingModel from './subjectComponentMappingModel.js';
 
 /**
  * Calendar-day instance of a week cell (links to timeTableCellId).
@@ -46,6 +47,15 @@ const timeTableCellDateWiseModel = sequelize.define(
       type: DataTypes.INTEGER,
       allowNull: true,
       field: 'subject_id',
+    },
+    subjectComponentMappingId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'subject_component_mapping_id',
+      references: {
+        model: subjectComponentMappingModel,
+        key: 'id',
+      },
     },
     electiveSubjectId: {
       type: DataTypes.INTEGER,

@@ -1695,6 +1695,52 @@ subjectModel.hasMany(timeTableCellModel, {
   as: "timeTableCells",
 });
 
+
+timeTableCellDateWiseModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "dateWiseCells",
+});
+
+examScheduleModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(examScheduleModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "examSchedules",
+});
+
+assessmentPlanSubjectMappingModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(assessmentPlanSubjectMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "assessmentPlanSubjectMappings",
+});
+
+academicGroupScopeModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "academicGroupScopes",
+});
+
+teacherSubjectMappingModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(teacherSubjectMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "teacherSubjectMappings",
+});
+
 timeTableCellModel.belongsTo(subjectComponentMappingModel, {
   foreignKey: "subjectComponentMappingId",
   as: "subjectComponentMapping",

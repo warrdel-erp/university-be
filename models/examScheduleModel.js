@@ -1,3 +1,4 @@
+import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 import universityModel from "./universityModel.js";
@@ -40,6 +41,15 @@ const examScheduleModel = sequelize.define(
             references: {
                 model: subjectModel,
                 key: 'subject_id'
+            }
+        },
+        subjectComponentMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'subject_component_mapping_id',
+            references: {
+                model: subjectComponentMappingModel,
+                key: 'id'
             }
         },
         batchId: {
