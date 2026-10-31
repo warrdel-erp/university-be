@@ -1,9 +1,6 @@
 import * as model from "../models/index.js";
-
 import sequelize from "../database/sequelizeConfig.js";
-
 import { Op } from "sequelize";
-
 import { buildScope, scoped } from "../utility/scoped.js";
 
 async function getContactHoursSumBySubjectIds(subjectIds) {
@@ -15,19 +12,50 @@ async function getContactHoursSumBySubjectIds(subjectIds) {
     where: {
       subjectId: { [Op.in]: subjectIds },
     },
-
     attributes: ["subjectId", "contactHours"],
-
     raw: true,
   });
 
   return units.reduce((sums, unit) => {
     const hours = parseFloat(unit.contactHours) || 0;
-
     sums[unit.subjectId] = (sums[unit.subjectId] || 0) + hours;
-
     return sums;
   }, {});
+}
+
+function formatSubjectWithComponents(subjectPlain, contactHours = "0") {
+  const scmMappings = Array.isArray(subjectPlain.subjectComponentMappings)
+    ? subjectPlain.subjectComponentMappings
+    : [];
+
+  const components = scmMappings.map((scm) => {
+    const comp = scm.component || {};
+    const componentId = comp.id ?? scm.subjectComponentId ?? null;
+    return {
+      id: componentId,
+      componentId,
+      subjectComponentMappingId: scm.id ?? null,
+      subject_component_mapping_id: scm.id ?? null,
+      componentName: comp.componentName ?? null,
+      code: comp.code ?? null,
+      description: comp.description ?? null,
+      createdAt: comp.createdAt ?? scm.createdAt ?? null,
+      updatedAt: comp.updatedAt ?? scm.updatedAt ?? null,
+    };
+  });
+
+  const componentIds = components.map((c) => c.id).filter(Boolean);
+
+  return {
+    ...subjectPlain,
+    contactHours: String(contactHours),
+    components,
+    component: components[0] || null,
+    componentIds,
+    subjectComponentMappingId: components[0]?.subjectComponentMappingId || null,
+    subjectComponentMappings: scmMappings,
+    subject_component_mappings: scmMappings,
+  };
 }
 
 export async function getAllSubjects(filter = {}) {
@@ -36,8 +64,25 @@ export async function getAllSubjects(filter = {}) {
       universityId: _u,
       instituteId: _i,
       academicYearId: _y,
+      componentId,
       ...subjectFilter
     } = filter;
+
+    const mappingInclude = {
+      model: model.subjectComponentMappingModel,
+      as: "subjectComponentMappings",
+      attributes: ["id", "subjectId", "subjectComponentId", "createdAt", "updatedAt"],
+      required: Boolean(componentId),
+      ...(componentId && { where: { subjectComponentId: Number(componentId) } }),
+      include: [
+        {
+          model: model.subjectComponentModel,
+          as: "component",
+          attributes: ["id", "componentName", "code", "description", "createdAt", "updatedAt"],
+          required: false,
+        },
+      ],
+    };
 
     const result = await scoped(model.subjectModel).findAll({
       where: subjectFilter,
@@ -52,6 +97,7 @@ export async function getAllSubjects(filter = {}) {
 
           attributes: ["courseId", "courseName"],
         },
+        mappingInclude,
       ],
     });
 
@@ -69,11 +115,7 @@ export async function getAllSubjects(filter = {}) {
 
       const totalContactHours = contactHoursBySubject[plain.subjectId] || 0;
 
-      return {
-        ...plain,
-
-        contactHours: String(totalContactHours),
-      };
+      return formatSubjectWithComponents(plain, totalContactHours);
     });
   } catch (error) {
     console.error("Error in getAllSubjects repository:", error);
@@ -152,7 +194,37 @@ export async function setSubjectTerms(termsArray) {
 
 export async function getSubjectById(id) {
   try {
-    return await scoped(model.subjectModel).findByPk(id);
+    const subject = await scoped(model.subjectModel).findByPk(id, {
+      include: [
+        {
+          model: model.courseModel,
+          as: "courseInfo",
+          attributes: ["courseId", "courseName"],
+        },
+        {
+          model: model.subjectComponentMappingModel,
+          as: "subjectComponentMappings",
+          attributes: ["id", "subjectId", "subjectComponentId", "createdAt", "updatedAt"],
+          required: false,
+          include: [
+            {
+              model: model.subjectComponentModel,
+              as: "component",
+              attributes: ["id", "componentName", "code", "description", "createdAt", "updatedAt"],
+              required: false,
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!subject) return null;
+
+    const plain = subject.toJSON ? subject.toJSON() : subject;
+    const contactHoursBySubject = await getContactHoursSumBySubjectIds([plain.subjectId]);
+    const totalContactHours = contactHoursBySubject[plain.subjectId] || 0;
+
+    return formatSubjectWithComponents(plain, totalContactHours);
   } catch (error) {
     console.error("Error fetching subject by ID:", error);
 
