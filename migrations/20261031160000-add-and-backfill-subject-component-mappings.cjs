@@ -3,7 +3,12 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    return queryInterface.sequelize.transaction(async (t) => {
+    const transaction = await queryInterface.sequelize.transaction();
+    try {
+      // Disable foreign key checks to avoid errors with preexisting orphan data
+      // during ALTER TABLE temporary table rebuilds (e.g. exam_schedule orphan rows).
+      await queryInterface.sequelize.query('SET FOREIGN_KEY_CHECKS = 0;', { transaction });
+
       // =========================================================================
       // STEP 0: Base Master Backfill (subject_component_mapping)
       // Ensure EVERY subject has at least one entry in subject_component_mapping
@@ -30,7 +35,7 @@ module.exports = {
          FROM subject s
          LEFT JOIN subject_component_mapping scm ON scm.subject_id = s.subject_id
          WHERE scm.id IS NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // =========================================================================
@@ -46,7 +51,7 @@ module.exports = {
          ) scm ON scm.subject_id = cstm.subject_id
          SET cstm.subject_component_mapping_id = scm.scm_id
          WHERE cstm.subject_component_mapping_id IS NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // =========================================================================
@@ -63,7 +68,7 @@ module.exports = {
          SET ttc.subject_component_mapping_id = scm.scm_id
          WHERE ttc.subject_id IS NOT NULL 
            AND ttc.subject_component_mapping_id IS NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // =========================================================================
@@ -71,7 +76,7 @@ module.exports = {
       // =========================================================================
       const [dwCols] = await queryInterface.sequelize.query(
         `SHOW COLUMNS FROM time_table_cell_date_wise LIKE 'subject_component_mapping_id'`,
-        { transaction: t }
+        { transaction }
       );
       if (!dwCols || dwCols.length === 0) {
         await queryInterface.sequelize.query(
@@ -81,7 +86,7 @@ module.exports = {
            FOREIGN KEY (subject_component_mapping_id) 
            REFERENCES subject_component_mapping(id) 
            ON UPDATE CASCADE ON DELETE SET NULL;`,
-          { transaction: t }
+          { transaction }
         );
       }
 
@@ -92,7 +97,7 @@ module.exports = {
          SET dw.subject_component_mapping_id = ttc.subject_component_mapping_id
          WHERE dw.subject_component_mapping_id IS NULL 
            AND ttc.subject_component_mapping_id IS NOT NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // Fallback: match direct subject_id on date_wise if any remain null
@@ -106,7 +111,7 @@ module.exports = {
          SET dw.subject_component_mapping_id = scm.scm_id
          WHERE dw.subject_component_mapping_id IS NULL 
            AND dw.subject_id IS NOT NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // =========================================================================
@@ -114,7 +119,7 @@ module.exports = {
       // =========================================================================
       const [esCols] = await queryInterface.sequelize.query(
         `SHOW COLUMNS FROM exam_schedule LIKE 'subject_component_mapping_id'`,
-        { transaction: t }
+        { transaction }
       );
       if (!esCols || esCols.length === 0) {
         await queryInterface.sequelize.query(
@@ -124,7 +129,7 @@ module.exports = {
            FOREIGN KEY (subject_component_mapping_id) 
            REFERENCES subject_component_mapping(id) 
            ON UPDATE CASCADE ON DELETE SET NULL;`,
-          { transaction: t }
+          { transaction }
         );
       }
 
@@ -136,7 +141,7 @@ module.exports = {
          SET es.subject_component_mapping_id = cstm.subject_component_mapping_id
          WHERE es.subject_component_mapping_id IS NULL 
            AND cstm.subject_component_mapping_id IS NOT NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // Fallback: match via subject_id
@@ -150,7 +155,7 @@ module.exports = {
          SET es.subject_component_mapping_id = scm.scm_id
          WHERE es.subject_component_mapping_id IS NULL 
            AND es.subject_id IS NOT NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // =========================================================================
@@ -158,7 +163,7 @@ module.exports = {
       // =========================================================================
       const [apsmCols] = await queryInterface.sequelize.query(
         `SHOW COLUMNS FROM assessment_plan_subject_mapping LIKE 'subject_component_mapping_id'`,
-        { transaction: t }
+        { transaction }
       );
       if (!apsmCols || apsmCols.length === 0) {
         await queryInterface.sequelize.query(
@@ -168,7 +173,7 @@ module.exports = {
            FOREIGN KEY (subject_component_mapping_id) 
            REFERENCES subject_component_mapping(id) 
            ON UPDATE CASCADE ON DELETE SET NULL;`,
-          { transaction: t }
+          { transaction }
         );
       }
 
@@ -180,7 +185,7 @@ module.exports = {
          SET apsm.subject_component_mapping_id = cstm.subject_component_mapping_id
          WHERE apsm.subject_component_mapping_id IS NULL 
            AND cstm.subject_component_mapping_id IS NOT NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // Fallback: match via subject_id
@@ -194,7 +199,7 @@ module.exports = {
          SET apsm.subject_component_mapping_id = scm.scm_id
          WHERE apsm.subject_component_mapping_id IS NULL 
            AND apsm.subject_id IS NOT NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // =========================================================================
@@ -202,7 +207,7 @@ module.exports = {
       // =========================================================================
       const [agsCols] = await queryInterface.sequelize.query(
         `SHOW COLUMNS FROM academic_group_scope LIKE 'subject_component_mapping_id'`,
-        { transaction: t }
+        { transaction }
       );
       if (!agsCols || agsCols.length === 0) {
         await queryInterface.sequelize.query(
@@ -212,7 +217,7 @@ module.exports = {
            FOREIGN KEY (subject_component_mapping_id) 
            REFERENCES subject_component_mapping(id) 
            ON UPDATE CASCADE ON DELETE SET NULL;`,
-          { transaction: t }
+          { transaction }
         );
       }
 
@@ -226,7 +231,7 @@ module.exports = {
          SET ags.subject_component_mapping_id = scm.scm_id
          WHERE ags.context_subject_id IS NOT NULL 
            AND ags.subject_component_mapping_id IS NULL;`,
-        { transaction: t }
+        { transaction }
       );
 
       // =========================================================================
@@ -234,7 +239,7 @@ module.exports = {
       // =========================================================================
       const [tsmCols] = await queryInterface.sequelize.query(
         `SHOW COLUMNS FROM teacher_subject_mapping LIKE 'subject_component_mapping_id'`,
-        { transaction: t }
+        { transaction }
       );
       if (!tsmCols || tsmCols.length === 0) {
         await queryInterface.sequelize.query(
@@ -244,7 +249,7 @@ module.exports = {
            FOREIGN KEY (subject_component_mapping_id) 
            REFERENCES subject_component_mapping(id) 
            ON UPDATE CASCADE ON DELETE SET NULL;`,
-          { transaction: t }
+          { transaction }
         );
       }
 
@@ -258,49 +263,96 @@ module.exports = {
          SET tsm.subject_component_mapping_id = scm.scm_id
          WHERE tsm.subject_id IS NOT NULL 
            AND tsm.subject_component_mapping_id IS NULL;`,
-        { transaction: t }
+        { transaction }
       );
-    });
+
+      // Restore foreign key checks before commit
+      await queryInterface.sequelize.query('SET FOREIGN_KEY_CHECKS = 1;', { transaction });
+      await transaction.commit();
+    } catch (error) {
+      await queryInterface.sequelize.query('SET FOREIGN_KEY_CHECKS = 1;').catch(() => {});
+      await transaction.rollback();
+      throw error;
+    }
   },
 
   down: async (queryInterface, Sequelize) => {
-    return queryInterface.sequelize.transaction(async (t) => {
+    const transaction = await queryInterface.sequelize.transaction();
+    try {
+      await queryInterface.sequelize.query('SET FOREIGN_KEY_CHECKS = 0;', { transaction });
+
       // Revert added columns and constraints in reverse order
-      await queryInterface.sequelize.query(
-        `ALTER TABLE teacher_subject_mapping 
-         DROP FOREIGN KEY fk_teacher_subject_mapping_scm,
-         DROP COLUMN subject_component_mapping_id;`,
-        { transaction: t }
+      const [tsmCols] = await queryInterface.sequelize.query(
+        `SHOW COLUMNS FROM teacher_subject_mapping LIKE 'subject_component_mapping_id'`,
+        { transaction }
       );
+      if (tsmCols && tsmCols.length > 0) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE teacher_subject_mapping 
+           DROP FOREIGN KEY fk_teacher_subject_mapping_scm,
+           DROP COLUMN subject_component_mapping_id;`,
+          { transaction }
+        );
+      }
 
-      await queryInterface.sequelize.query(
-        `ALTER TABLE academic_group_scope 
-         DROP FOREIGN KEY fk_academic_group_scope_scm,
-         DROP COLUMN subject_component_mapping_id;`,
-        { transaction: t }
+      const [agsCols] = await queryInterface.sequelize.query(
+        `SHOW COLUMNS FROM academic_group_scope LIKE 'subject_component_mapping_id'`,
+        { transaction }
       );
+      if (agsCols && agsCols.length > 0) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE academic_group_scope 
+           DROP FOREIGN KEY fk_academic_group_scope_scm,
+           DROP COLUMN subject_component_mapping_id;`,
+          { transaction }
+        );
+      }
 
-      await queryInterface.sequelize.query(
-        `ALTER TABLE assessment_plan_subject_mapping 
-         DROP FOREIGN KEY fk_assessment_plan_subject_mapping_scm,
-         DROP COLUMN subject_component_mapping_id;`,
-        { transaction: t }
+      const [apsmCols] = await queryInterface.sequelize.query(
+        `SHOW COLUMNS FROM assessment_plan_subject_mapping LIKE 'subject_component_mapping_id'`,
+        { transaction }
       );
+      if (apsmCols && apsmCols.length > 0) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE assessment_plan_subject_mapping 
+           DROP FOREIGN KEY fk_assessment_plan_subject_mapping_scm,
+           DROP COLUMN subject_component_mapping_id;`,
+          { transaction }
+        );
+      }
 
-      await queryInterface.sequelize.query(
-        `ALTER TABLE exam_schedule 
-         DROP FOREIGN KEY fk_exam_schedule_scm,
-         DROP COLUMN subject_component_mapping_id;`,
-        { transaction: t }
+      const [esCols] = await queryInterface.sequelize.query(
+        `SHOW COLUMNS FROM exam_schedule LIKE 'subject_component_mapping_id'`,
+        { transaction }
       );
+      if (esCols && esCols.length > 0) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE exam_schedule 
+           DROP FOREIGN KEY fk_exam_schedule_scm,
+           DROP COLUMN subject_component_mapping_id;`,
+          { transaction }
+        );
+      }
 
-      await queryInterface.sequelize.query(
-        `ALTER TABLE time_table_cell_date_wise 
-         DROP FOREIGN KEY fk_time_table_cell_date_wise_scm,
-         DROP COLUMN subject_component_mapping_id;`,
-        { transaction: t }
+      const [dwCols] = await queryInterface.sequelize.query(
+        `SHOW COLUMNS FROM time_table_cell_date_wise LIKE 'subject_component_mapping_id'`,
+        { transaction }
       );
-    });
+      if (dwCols && dwCols.length > 0) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE time_table_cell_date_wise 
+           DROP FOREIGN KEY fk_time_table_cell_date_wise_scm,
+           DROP COLUMN subject_component_mapping_id;`,
+          { transaction }
+        );
+      }
+
+      await queryInterface.sequelize.query('SET FOREIGN_KEY_CHECKS = 1;', { transaction });
+      await transaction.commit();
+    } catch (error) {
+      await queryInterface.sequelize.query('SET FOREIGN_KEY_CHECKS = 1;').catch(() => {});
+      await transaction.rollback();
+      throw error;
+    }
   },
 };
-
