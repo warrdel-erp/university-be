@@ -2315,6 +2315,7 @@ const ROUTINE_CELL_ATTRIBUTES = [
   "timeTableNameId",
   "timeTableCreationId",
   "subjectId",
+  "subjectComponentMappingId",
   "electiveSubjectId",
   "teacherSubjectMappingId",
   "classRoomSectionId",
@@ -2453,6 +2454,20 @@ function routineCellsInclude({
         as: "classRoom",
         attributes: ["classRoomSectionId", "roomNumber"],
         required: false,
+      },
+      {
+        model: model.subjectComponentMappingModel,
+        as: "subjectComponentMapping",
+        attributes: ["id", "subjectId", "subjectComponentId"],
+        required: false,
+        include: [
+          {
+            model: model.subjectComponentModel,
+            as: "component",
+            attributes: ["id", "componentName", "code", "description"],
+            required: false,
+          },
+        ],
       },
     ],
   };

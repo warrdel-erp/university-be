@@ -3692,9 +3692,25 @@ function collectPeriodCells(cells, period, daysName) {
 
 function resolveCellSubject(cell) {
   const subject = cell.timeTableSubject;
+  const mapping = cell.subjectComponentMapping;
+  const component = mapping?.component;
+
+  const componentData = component
+    ? {
+        id: component.id,
+        componentId: component.id,
+        componentName: component.componentName,
+        code: component.code,
+        description: component.description ?? null,
+      }
+    : null;
+
   return {
     subjectId: subject?.subjectId ?? null,
     name: subject?.subjectName ?? "N/A",
+    subjectComponentMappingId:
+      cell.subjectComponentMappingId ?? mapping?.id ?? null,
+    component: componentData,
   };
 }
 
@@ -4988,6 +5004,8 @@ function formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId) {
       isOverridingSyblingElectives: cell.isOverridingSyblingElectives,
       teachers: mapCellTeachers(cell, employeeByUserId),
       subject,
+      subjectComponentMappingId: subject.subjectComponentMappingId ?? null,
+      component: subject.component ?? null,
       room: { classRoomSectionId: roomId, name: roomName },
     });
   }
@@ -5008,12 +5026,33 @@ function formatElectiveCellsAsScheduleItems(
     const roomName = cell.classRoom ? cell.classRoom.roomNumber : "N/A";
     const roomId = cell.classRoom ? cell.classRoom.classRoomSectionId : null;
 
+    const mapping = cell.subjectComponentMapping;
+    const component = mapping?.component;
+    const componentData = component
+      ? {
+          id: component.id,
+          componentId: component.id,
+          componentName: component.componentName,
+          code: component.code,
+          description: component.description ?? null,
+        }
+      : null;
+
     scheduleItems.push({
       timeTableCellId: cell.timeTableCellId,
       period: cell.period,
       type: "elective",
       teachers: mapCellTeachers(cell, employeeByUserId),
-      subject: { electiveSubjectId: subjectId, name: subjectName },
+      subject: {
+        electiveSubjectId: subjectId,
+        name: subjectName,
+        subjectComponentMappingId:
+          cell.subjectComponentMappingId ?? mapping?.id ?? null,
+        component: componentData,
+      },
+      subjectComponentMappingId:
+        cell.subjectComponentMappingId ?? mapping?.id ?? null,
+      component: componentData,
       room: { classRoomSectionId: roomId, name: roomName },
     });
   }
