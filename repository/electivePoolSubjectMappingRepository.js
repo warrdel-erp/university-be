@@ -122,6 +122,24 @@ export async function getAvailableSubjects(query = {}, options = {}) {
     }
   }
 
+  if (query.subjectType) {
+    const rawList = String(query.subjectType).split(",").map((s) => s.trim()).filter(Boolean);
+    if (rawList.length === 1 && rawList[0].toLowerCase() !== "all") {
+      const canonicalMap = {
+        core: "Core",
+        elective: "Elective",
+        "open elective": "Open Elective",
+        openelective: "Open Elective",
+        "department elective": "Department Elective",
+        departmentelective: "Department Elective",
+        foundation: "Foundation",
+      };
+      where.subjectType = canonicalMap[rawList[0].toLowerCase()] || rawList[0];
+    } else if (rawList.length > 1) {
+      where.subjectType = { [Op.in]: rawList };
+    }
+  }
+
   if (query.search) {
     const searchVal = `%${query.search.trim()}%`;
     where[Op.or] = [

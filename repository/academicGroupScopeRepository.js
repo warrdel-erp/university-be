@@ -334,7 +334,37 @@ function formatSubjectComponents(subject, directMapping) {
   return components;
 }
 
-export async function getSubjectOptionsRepository({ classSectionTermId, academicGroupId }, options = {}) {
+function buildSubjectTypeWhere(subjectType) {
+  if (!subjectType) return {};
+  if (Array.isArray(subjectType)) {
+    return { subjectType: { [Op.in]: subjectType } };
+  }
+  if (typeof subjectType === "string") {
+    const rawList = subjectType.split(",").map((s) => s.trim()).filter(Boolean);
+    if (rawList.length === 0) return {};
+    if (rawList.length === 1 && rawList[0].toLowerCase() === "all") {
+      return {};
+    }
+    const canonicalMap = {
+      core: "Core",
+      elective: "Elective",
+      "open elective": "Open Elective",
+      openelective: "Open Elective",
+      "department elective": "Department Elective",
+      departmentelective: "Department Elective",
+      foundation: "Foundation",
+    };
+    const resolved = rawList.map((item) => canonicalMap[item.toLowerCase()] || item);
+    if (resolved.length === 1) {
+      return { subjectType: resolved[0] };
+    }
+    return { subjectType: { [Op.in]: resolved } };
+  }
+  return {};
+}
+
+export async function getSubjectOptionsRepository({ classSectionTermId, academicGroupId, subjectType }, options = {}) {
+  const subjectTypeWhere = buildSubjectTypeWhere(subjectType);
   if (classSectionTermId) {
     const cst = await model.classSectionTermModel.findByPk(classSectionTermId, {
       include: [{
@@ -411,7 +441,10 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
             model: model.subjectModel,
             as: 'subject',
             attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
-            where: { isActive: true },
+            where: {
+              isActive: true,
+              ...subjectTypeWhere,
+            },
             required: true,
             include: [
               {
@@ -449,7 +482,7 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
         transaction: options.transaction
       });
 
-      if (mappings.length > 0) {
+      if (mappings.length > 0 || subjectType) {
         return mappings.map((m) => {
           const components = formatSubjectComponents(
             m.subject,
@@ -473,7 +506,7 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
 
     // Fallback if curriculum mapping not yet set
     const subjects = await model.subjectModel.findAll({
-      where: { courseId, term, isActive: true },
+      where: { courseId, term, isActive: true, ...subjectTypeWhere },
       attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
       include: [
         {
@@ -519,7 +552,7 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
     const scope = group?.scope;
     if (scope?.courseId && scope?.term) {
       const subjects = await model.subjectModel.findAll({
-        where: { courseId: scope.courseId, term: scope.term, isActive: true },
+        where: { courseId: scope.courseId, term: scope.term, isActive: true, ...subjectTypeWhere },
         attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
         include: [
           {

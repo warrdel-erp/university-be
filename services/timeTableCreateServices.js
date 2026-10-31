@@ -1761,224 +1761,56 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
   }
 }
 
-export async function addtimeTableMapping(data, createdBy, updatedBy) {
-  const transaction = await sequelize.transaction();
+async function executeMappingEntry(data, createdBy, updatedBy, transaction) {
+  const request = await normalizeMappingTeacherInput(data, { transaction });
 
-  try {
-    const request = await normalizeMappingTeacherInput(data, { transaction });
-
-    if (request.sourceTimeTableCellId != null) {
-      const copyPayloads = await resolveCopyPayloads(request, { transaction });
-      if (!copyPayloads.length) {
-        throw new Error(
-          `Source mapping ${data.sourceTimeTableCellId} not found`,
-        );
-      }
-
-      const firstPayload = copyPayloads[0];
-      const routine = await timeTableCreateRepository.getRoutineByIdRepository(
-        firstPayload.timeTableRoutineId,
-        { transaction },
+  if (request.sourceTimeTableCellId != null) {
+    const copyPayloads = await resolveCopyPayloads(request, { transaction });
+    if (!copyPayloads.length) {
+      throw new Error(
+        `Source mapping ${data.sourceTimeTableCellId} not found`,
       );
-      if (!routine) {
-        throw new Error("Invalid timeTableRoutineId");
-      }
-
-      assertMappingAddAllowed(routine);
-
-      const periodInfo =
-        await timeTableCreateRepository.getPeriodInfoRepository(
-          firstPayload.timeTableCreationId,
-        );
-      if (!periodInfo) {
-        throw new Error(
-          `Invalid timeTableCreationId: ${firstPayload.timeTableCreationId}`,
-        );
-      }
-
-      const conflictOptions = {
-        allowedClassSectionTermIds: [Number(routine.classSectionTermId)],
-        excludeCombinedGroupId: null,
-      };
-
-      for (const payload of copyPayloads) {
-        const teacherList = Array.isArray(payload.teachers)
-          ? payload.teachers
-          : [];
-        if (teacherList.length === 0 && payload.userId != null) {
-          teacherList.push({ userId: payload.userId });
-        }
-
-        for (const teacher of teacherList) {
-          await assertNoSlotConflicts({
-            userId: teacher.userId,
-            classRoomSectionId: payload.classRoomSectionId,
-            day: payload.day,
-            periodInfo,
-            startingDate: routine.startingDate,
-            endingDate: routine.endingDate,
-            conflictOptions,
-            electiveSubjectId: payload.electiveSubjectId,
-            courseId: routine.courseId,
-            excludeRoutineId: routine.timeTableRoutineId,
-            transaction,
-          });
-        }
-
-        if (teacherList.length === 0) {
-          await assertNoSlotConflicts({
-            userId: null,
-            classRoomSectionId: payload.classRoomSectionId,
-            day: payload.day,
-            periodInfo,
-            startingDate: routine.startingDate,
-            endingDate: routine.endingDate,
-            conflictOptions,
-            electiveSubjectId: payload.electiveSubjectId,
-            courseId: routine.courseId,
-            excludeRoutineId: routine.timeTableRoutineId,
-            transaction,
-          });
-        }
-      }
-
-      const createdMappings = [];
-      for (const payload of copyPayloads) {
-        const rowData = stripMappingRow({
-          ...payload,
-          createdBy,
-          updatedBy,
-        });
-
-        if (rowData.timeTableType === "elective") {
-          rowData.isSameTeacher = false;
-        }
-
-        const result = await timeTableCreateRepository.addtimeTableMapping(
-          rowData,
-          transaction,
-        );
-        createdMappings.push(
-          formatMappingCreateResult(result, {
-            timeTableRoutineId: rowData.timeTableRoutineId,
-            classSectionTermId: routine.classSectionTermId,
-            timeTableCreationId: rowData.timeTableCreationId,
-            period: rowData.period,
-            day: rowData.day,
-            copiedFromTimeTableCellId: payload.copiedFromTimeTableCellId,
-          }),
-        );
-      }
-
-      const loadUserIds = [];
-      for (const payload of copyPayloads) {
-        const teacherList = Array.isArray(payload.teachers)
-          ? payload.teachers
-          : [];
-        if (teacherList.length === 0 && payload.userId != null) {
-          teacherList.push({ userId: payload.userId });
-        }
-        for (const teacher of teacherList) {
-          loadUserIds.push(teacher.userId);
-        }
-      }
-      await recomputeFacultyLoadForUsers(loadUserIds, transaction);
-
-      await transaction.commit();
-      return {
-        isCopy: true,
-        copiedFromTimeTableCellId: Number(request.sourceTimeTableCellId),
-        mappings: createdMappings,
-      };
     }
 
-    const payload = request;
-
-    const {
-      timeTableRoutineId,
-      day,
-      classRoomSectionId,
-      userId,
-      combinedGroupId: existingCombinedGroupId,
-    } = payload;
-
-    if (!timeTableRoutineId) {
-      throw new Error("timeTableRoutineId is required");
-    }
-
+    const firstPayload = copyPayloads[0];
     const routine = await timeTableCreateRepository.getRoutineByIdRepository(
-      timeTableRoutineId,
+      firstPayload.timeTableRoutineId,
       { transaction },
     );
     if (!routine) {
       throw new Error("Invalid timeTableRoutineId");
     }
 
-    const termIds = resolveTermIds(payload, routine);
-
     assertMappingAddAllowed(routine);
 
-    if (payload.timeTableType === "elective" && !payload.electiveSubjectId) {
-      throw new Error("electiveSubjectId is required for elective mapping");
-    }
-
-    const slots = normalizeSlots(payload);
-    const isCombined = termIds.length > 1;
-    const combinedGroupId = isCombined
-      ? existingCombinedGroupId || randomUUID()
-      : null;
-
-    // With term id(s): normal / combined section flow.
-    // Without term id: still allow mapping on this routine (e.g. elective with null classSectionTermId).
-    let routineTargets;
-    if (termIds.length > 0) {
-      routineTargets = await resolveCombinedRoutineTargets(
-        routine,
-        termIds,
-        transaction,
+    const periodInfo =
+      await timeTableCreateRepository.getPeriodInfoRepository(
+        firstPayload.timeTableCreationId,
       );
-    } else {
-      routineTargets = [
-        {
-          classSectionTermId:
-            routine.classSectionTermId != null
-              ? Number(routine.classSectionTermId)
-              : null,
-          timeTableRoutineId: Number(timeTableRoutineId),
-        },
-      ];
+    if (!periodInfo) {
+      throw new Error(
+        `Invalid timeTableCreationId: ${firstPayload.timeTableCreationId}`,
+      );
     }
 
     const conflictOptions = {
-      allowedClassSectionTermIds: termIds,
-      excludeCombinedGroupId: existingCombinedGroupId || null,
+      allowedClassSectionTermIds: [Number(routine.classSectionTermId)],
+      excludeCombinedGroupId: null,
     };
 
-    const createdMappings = [];
-
-    for (const slot of slots) {
-      const periodInfo =
-        await timeTableCreateRepository.getPeriodInfoRepository(
-          slot.timeTableCreationId,
-        );
-      if (!periodInfo) {
-        throw new Error(
-          `Invalid timeTableCreationId: ${slot.timeTableCreationId}`,
-        );
-      }
-
+    for (const payload of copyPayloads) {
       const teacherList = Array.isArray(payload.teachers)
         ? payload.teachers
         : [];
-      if (teacherList.length === 0 && userId != null) {
-        teacherList.push({ userId });
+      if (teacherList.length === 0 && payload.userId != null) {
+        teacherList.push({ userId: payload.userId });
       }
 
       for (const teacher of teacherList) {
         await assertNoSlotConflicts({
           userId: teacher.userId,
-          classRoomSectionId,
-          day,
+          classRoomSectionId: payload.classRoomSectionId,
+          day: payload.day,
           periodInfo,
           startingDate: routine.startingDate,
           endingDate: routine.endingDate,
@@ -1993,8 +1825,8 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
       if (teacherList.length === 0) {
         await assertNoSlotConflicts({
           userId: null,
-          classRoomSectionId,
-          day,
+          classRoomSectionId: payload.classRoomSectionId,
+          day: payload.day,
           periodInfo,
           startingDate: routine.startingDate,
           endingDate: routine.endingDate,
@@ -2005,63 +1837,307 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
           transaction,
         });
       }
+    }
 
-      for (const target of routineTargets) {
-        const rowData = stripMappingRow({
-          ...payload,
-          timeTableRoutineId: target.timeTableRoutineId,
-          timeTableCreationId: slot.timeTableCreationId,
-          period: slot.period,
-          combinedGroupId,
-          createdBy,
-          updatedBy,
-        });
+    const createdMappings = [];
+    for (const payload of copyPayloads) {
+      const rowData = stripMappingRow({
+        ...payload,
+        createdBy,
+        updatedBy,
+      });
 
-        if (rowData.timeTableType === "elective") {
-          rowData.isSameTeacher = false;
-        }
-
-        const result = await timeTableCreateRepository.addtimeTableMapping(
-          rowData,
-          transaction,
-        );
-        createdMappings.push(
-          formatMappingCreateResult(result, {
-            timeTableRoutineId: target.timeTableRoutineId,
-            classSectionTermId: target.classSectionTermId,
-            timeTableCreationId: slot.timeTableCreationId,
-            period: slot.period,
-            combinedGroupId,
-            copiedFromTimeTableCellId:
-              payload.copiedFromTimeTableCellId ?? null,
-          }),
-        );
+      if (rowData.timeTableType === "elective") {
+        rowData.isSameTeacher = false;
       }
+
+      const result = await timeTableCreateRepository.addtimeTableMapping(
+        rowData,
+        transaction,
+      );
+      createdMappings.push(
+        formatMappingCreateResult(result, {
+          timeTableRoutineId: rowData.timeTableRoutineId,
+          classSectionTermId: routine.classSectionTermId,
+          timeTableCreationId: rowData.timeTableCreationId,
+          period: rowData.period,
+          day: rowData.day,
+          copiedFromTimeTableCellId: payload.copiedFromTimeTableCellId,
+        }),
+      );
     }
 
     const loadUserIds = [];
-    if (Array.isArray(payload.teachers)) {
-      for (const teacher of payload.teachers) {
+    for (const payload of copyPayloads) {
+      const teacherList = Array.isArray(payload.teachers)
+        ? payload.teachers
+        : [];
+      if (teacherList.length === 0 && payload.userId != null) {
+        teacherList.push({ userId: payload.userId });
+      }
+      for (const teacher of teacherList) {
         loadUserIds.push(teacher.userId);
       }
     }
-    if (userId != null) {
-      loadUserIds.push(userId);
+
+    return {
+      isCopy: true,
+      copiedFromTimeTableCellId: Number(request.sourceTimeTableCellId),
+      mappings: createdMappings,
+      loadUserIds,
+    };
+  }
+
+  const payload = request;
+
+  const {
+    timeTableRoutineId,
+    day,
+    classRoomSectionId,
+    userId,
+    combinedGroupId: existingCombinedGroupId,
+  } = payload;
+
+  if (!timeTableRoutineId) {
+    throw new Error("timeTableRoutineId is required");
+  }
+
+  const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+    timeTableRoutineId,
+    { transaction },
+  );
+  if (!routine) {
+    throw new Error("Invalid timeTableRoutineId");
+  }
+
+  const termIds = resolveTermIds(payload, routine);
+
+  assertMappingAddAllowed(routine);
+
+  if (payload.timeTableType === "elective" && !payload.electiveSubjectId) {
+    throw new Error("electiveSubjectId is required for elective mapping");
+  }
+
+  const slots = normalizeSlots(payload);
+  const isCombined = termIds.length > 1;
+  const combinedGroupId = isCombined
+    ? existingCombinedGroupId || randomUUID()
+    : null;
+
+  let routineTargets;
+  if (termIds.length > 0) {
+    routineTargets = await resolveCombinedRoutineTargets(
+      routine,
+      termIds,
+      transaction,
+    );
+  } else {
+    routineTargets = [
+      {
+        classSectionTermId:
+          routine.classSectionTermId != null
+            ? Number(routine.classSectionTermId)
+            : null,
+        timeTableRoutineId: Number(timeTableRoutineId),
+      },
+    ];
+  }
+
+  const conflictOptions = {
+    allowedClassSectionTermIds: termIds,
+    excludeCombinedGroupId: existingCombinedGroupId || null,
+  };
+
+  const createdMappings = [];
+
+  for (const slot of slots) {
+    const periodInfo =
+      await timeTableCreateRepository.getPeriodInfoRepository(
+        slot.timeTableCreationId,
+      );
+    if (!periodInfo) {
+      throw new Error(
+        `Invalid timeTableCreationId: ${slot.timeTableCreationId}`,
+      );
     }
-    await recomputeFacultyLoadForUsers(loadUserIds, transaction);
+
+    const teacherList = Array.isArray(payload.teachers)
+      ? payload.teachers
+      : [];
+    if (teacherList.length === 0 && userId != null) {
+      teacherList.push({ userId });
+    }
+
+    for (const teacher of teacherList) {
+      await assertNoSlotConflicts({
+        userId: teacher.userId,
+        classRoomSectionId,
+        day,
+        periodInfo,
+        startingDate: routine.startingDate,
+        endingDate: routine.endingDate,
+        conflictOptions,
+        electiveSubjectId: payload.electiveSubjectId,
+        courseId: routine.courseId,
+        excludeRoutineId: routine.timeTableRoutineId,
+        transaction,
+      });
+    }
+
+    if (teacherList.length === 0) {
+      await assertNoSlotConflicts({
+        userId: null,
+        classRoomSectionId,
+        day,
+        periodInfo,
+        startingDate: routine.startingDate,
+        endingDate: routine.endingDate,
+        conflictOptions,
+        electiveSubjectId: payload.electiveSubjectId,
+        courseId: routine.courseId,
+        excludeRoutineId: routine.timeTableRoutineId,
+        transaction,
+      });
+    }
+
+    for (const target of routineTargets) {
+      const rowData = stripMappingRow({
+        ...payload,
+        timeTableRoutineId: target.timeTableRoutineId,
+        timeTableCreationId: slot.timeTableCreationId,
+        period: slot.period,
+        combinedGroupId,
+        createdBy,
+        updatedBy,
+      });
+
+      if (rowData.timeTableType === "elective") {
+        rowData.isSameTeacher = false;
+      }
+
+      const result = await timeTableCreateRepository.addtimeTableMapping(
+        rowData,
+        transaction,
+      );
+      createdMappings.push(
+        formatMappingCreateResult(result, {
+          timeTableRoutineId: target.timeTableRoutineId,
+          classSectionTermId: target.classSectionTermId,
+          timeTableCreationId: slot.timeTableCreationId,
+          period: slot.period,
+          combinedGroupId,
+          copiedFromTimeTableCellId:
+            payload.copiedFromTimeTableCellId ?? null,
+        }),
+      );
+    }
+  }
+
+  const loadUserIds = [];
+  if (Array.isArray(payload.teachers)) {
+    for (const teacher of payload.teachers) {
+      loadUserIds.push(teacher.userId);
+    }
+  }
+  if (userId != null) {
+    loadUserIds.push(userId);
+  }
+
+  return {
+    isCombined,
+    combinedGroupId,
+    classSectionTermIds: termIds,
+    mappings: createdMappings,
+    loadUserIds,
+  };
+}
+
+export async function addtimeTableMapping(data, createdBy, updatedBy) {
+  const isBulk = Array.isArray(data) || Array.isArray(data?.mappings);
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.mappings)
+      ? data.mappings
+      : [data];
+
+  // In bulk mode: prevent internal duplicate slots in the incoming batch
+  if (items.length > 1) {
+    const seenSlots = new Set();
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item && item.timeTableRoutineId && item.day && item.period) {
+        const slotKey = `${item.timeTableRoutineId}_${String(item.day).trim().toLowerCase()}_${item.period}`;
+        if (seenSlots.has(slotKey)) {
+          throw new Error(
+            `Duplicate slot in payload at index ${i}: Routine ${item.timeTableRoutineId}, ${item.day} Period ${item.period}`,
+          );
+        }
+        seenSlots.add(slotKey);
+      }
+    }
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const allCreatedMappings = [];
+    const allLoadUserIds = [];
+
+    for (const item of items) {
+      const result = await executeMappingEntry(
+        item,
+        createdBy,
+        updatedBy,
+        transaction,
+      );
+      if (Array.isArray(result?.mappings)) {
+        allCreatedMappings.push(...result.mappings);
+      }
+      if (Array.isArray(result?.loadUserIds)) {
+        allLoadUserIds.push(...result.loadUserIds);
+      }
+    }
+
+    const uniqueLoadUserIds = [...new Set(allLoadUserIds.filter(Boolean))];
+    if (uniqueLoadUserIds.length > 0) {
+      await recomputeFacultyLoadForUsers(uniqueLoadUserIds, transaction);
+    }
 
     await transaction.commit();
 
-    if (isCombined || slots.length > 1) {
+    if (isBulk) {
       return {
-        isCombined,
-        combinedGroupId,
-        classSectionTermIds: termIds,
-        mappings: createdMappings,
+        success: true,
+        count: allCreatedMappings.length,
+        mappings: allCreatedMappings,
       };
     }
 
-    return createdMappings[0];
+    // Single item backward compatibility
+    const singleResult = allCreatedMappings[0] || null;
+    const firstItem = items[0];
+    const isCopy = firstItem?.sourceTimeTableCellId != null;
+    const hasMultipleSlots = Array.isArray(firstItem?.slots) && firstItem.slots.length > 1;
+    const isCombined = Array.isArray(firstItem?.classSectionTermIds) && firstItem.classSectionTermIds.length > 1;
+
+    if (isCopy) {
+      return {
+        isCopy: true,
+        copiedFromTimeTableCellId: Number(firstItem.sourceTimeTableCellId),
+        mappings: allCreatedMappings,
+      };
+    }
+
+    if (isCombined || hasMultipleSlots) {
+      return {
+        isCombined,
+        combinedGroupId: allCreatedMappings[0]?.combinedGroupId || null,
+        classSectionTermIds: firstItem.classSectionTermIds || [],
+        mappings: allCreatedMappings,
+      };
+    }
+
+    return singleResult;
   } catch (error) {
     await transaction.rollback();
     throw error;

@@ -107,10 +107,11 @@ export const getGroupRoutinesWrappedInStructure = async (req, res) => {
 
 export const getSubjectOptions = async (req, res) => {
     try {
-        const { classSectionTermId, academicGroupId } = req.query;
+        const { classSectionTermId, academicGroupId, subjectType } = req.query;
         const result = await academicGroupScopeService.getSubjectOptionsService({
             classSectionTermId,
             academicGroupId,
+            subjectType,
         });
         return SuccessResponse(res, 200, 'Subject options fetched successfully', result);
     } catch (error) {
