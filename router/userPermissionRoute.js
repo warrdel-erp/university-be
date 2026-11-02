@@ -15,7 +15,7 @@ const validRoles = Object.values(ROLES);
 const assignAuthSchema = z.object({
   userId: z.coerce.number({ required_error: "userId is required" }),
   roleId: z.coerce.number({ required_error: "roleId is required" }),
-  permissions: z.array(z.enum(validPermissions)).optional(),
+  resourceIds: z.array(z.coerce.number()).optional(),
 });
 
 const removeRoleSchema = z.object({

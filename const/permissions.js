@@ -1,9 +1,11 @@
 export const PERMISSIONS = {
     DASHBOARD: {
         value: "DASHBOARD",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"],
     },
     MASTER_SECTION: {
         value: "MASTER_SECTION",
+        possibleScopes: ["UNIVERSITY","CAMPUS"],
     },
     COURSES: {
         value: "COURSES",
@@ -11,6 +13,7 @@ export const PERMISSIONS = {
     },
     COURSE_SESSIONS: {
         value: "COURSE_SESSIONS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ACADEMIC_YEAR: {
         value: "ACADEMIC_YEAR",
@@ -26,12 +29,15 @@ export const PERMISSIONS = {
     },
     ADMIN_PROFILE: {
         value: "ADMIN_PROFILE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ROLES_ACCESS_CONTROL: {
         value: "ROLES_ACCESS_CONTROL",
+        possibleScopes: ["UNIVERSITY"],
     },
     USER_MANAGEMENT: {
         value: "USER_MANAGEMENT",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ORGANOGARAM: {
         value: "ORGANOGARAM",
@@ -40,9 +46,11 @@ export const PERMISSIONS = {
     },
     ADD_ROLE: {
         value: "ADD_ROLE",
+        possibleScopes: ["UNIVERSITY"],
     },
     ADD_PERMISSION: {
         value: "ADD_PERMISSION",
+        possibleScopes: ["UNIVERSITY"],
     },
     HEAD_OF_THE_INSTITUTION: {
         value: "HEAD_OF_THE_INSTITUTION",
@@ -56,9 +64,11 @@ export const PERMISSIONS = {
     },
     STAFF_PROFILES: {
         value: "STAFF_PROFILES",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     DESIGNATIONS: {
         value: "DESIGNATIONS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     JOB_TYPE_SETTING: {
         value: "JOB_TYPE_SETTING",
@@ -67,6 +77,7 @@ export const PERMISSIONS = {
     },
     OTHERS_SETTING: {
         value: "OTHERS_SETTING",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CLASS_SETUP: {
         value: "CLASS_SETUP",
@@ -115,6 +126,7 @@ export const PERMISSIONS = {
     },
     GRADING_SETUP: {
         value: "GRADING_SETUP",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CREDITS: {
         value: "CREDITS",
@@ -123,48 +135,63 @@ export const PERMISSIONS = {
     },
     EXAM_TYPES: {
         value: "EXAM_TYPES",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ASSIGN_WEIGHTAGE: {
         value: "ASSIGN_WEIGHTAGE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     RULES_SETUP: {
         value: "RULES_SETUP",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     EXAM_CONTROL_CENTER: {
         value: "EXAM_CONTROL_CENTER",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ASSESSMENT_TYPES: {
         value: "ASSESSMENT_TYPES",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ACADEMIC_REGULATIONS: {
         value: "ACADEMIC_REGULATIONS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ASSESSMENT_PLANS: {
         value: "ASSESSMENT_PLANS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     GRADE_ENGINE: {
         value: "GRADE_ENGINE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     EXAM_TIME_TABLE_CREATE: {
         value: "EXAM_TIME_TABLE_CREATE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     INTERNAL_ASSESSMENT: {
         value: "INTERNAL_ASSESSMENT",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     EXAM_ROOM_ALLOCATE: {
         value: "EXAM_ROOM_ALLOCATE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     EXAM_ATTENDANCE: {
         value: "EXAM_ATTENDANCE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     EVALUATION: {
         value: "EVALUATION",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     MARK_REGISTER: {
         value: "MARK_REGISTER",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     TRANSCRIPT: {
         value: "TRANSCRIPT",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     LESSON_LIST: {
         value: "LESSON_LIST",
@@ -223,6 +250,7 @@ export const PERMISSIONS = {
     },
     ATTENDANCE_LIST: {
         value: "ATTENDANCE_LIST",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"],
     },
     ADD_STUDENT: {
         value: "ADD_STUDENT",
@@ -241,6 +269,7 @@ export const PERMISSIONS = {
     },
     MISSING_FEE_PLAN: {
         value: "MISSING_FEE_PLAN",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     STUDENT_PROMOTE: {
         value: "STUDENT_PROMOTE",
@@ -254,9 +283,11 @@ export const PERMISSIONS = {
     },
     STUDENT_WISE_LIST: {
         value: "STUDENT_WISE_LIST",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     REPORT: {
         value: "REPORT",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     FEES_TYPE: {
         value: "FEES_TYPE",
@@ -280,6 +311,7 @@ export const PERMISSIONS = {
     },
     TEACHER_EVALUATION: {
         value: "TEACHER_EVALUATION",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     APPLY_LEAVE: {
         value: "APPLY_LEAVE",
@@ -288,6 +320,7 @@ export const PERMISSIONS = {
     },
     APPROVE_LEAVE_REQUEST: {
         value: "APPROVE_LEAVE_REQUEST",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     PENDING_LEAVE_REQUEST: {
         value: "PENDING_LEAVE_REQUEST",
@@ -301,12 +334,15 @@ export const PERMISSIONS = {
     },
     ATTENDANCE: {
         value: "ATTENDANCE",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"],
     },
     SCHEDULE: {
         value: "SCHEDULE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     SHIFT: {
         value: "SHIFT",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     OVERVIEW: {
         value: "OVERVIEW",
@@ -329,12 +365,15 @@ export const PERMISSIONS = {
     },
     FLOORS: {
         value: "FLOORS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ROOM: {
         value: "ROOM",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CREATE_LIBRARY: {
         value: "CREATE_LIBRARY",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CATALOGUE: {
         value: "CATALOGUE",
@@ -343,6 +382,7 @@ export const PERMISSIONS = {
     },
     MEMBER_MANAGEMENT: {
         value: "MEMBER_MANAGEMENT",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     BOOK_ISSUE: {
         value: "BOOK_ISSUE",
@@ -351,9 +391,11 @@ export const PERMISSIONS = {
     },
     ISSUE_RETURN_BOOKS: {
         value: "ISSUE_RETURN_BOOKS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ROUTE: {
         value: "ROUTE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     VEHICLE: {
         value: "VEHICLE",
@@ -367,6 +409,7 @@ export const PERMISSIONS = {
     },
     DORMITORY_TYPES: {
         value: "DORMITORY_TYPES",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     DORMITORY_ROOMS: {
         value: "DORMITORY_ROOMS",
@@ -375,6 +418,7 @@ export const PERMISSIONS = {
     },
     ASSIGN_DORMITORY: {
         value: "ASSIGN_DORMITORY",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     NOTICE_BOARD: {
         value: "NOTICE_BOARD",
@@ -388,18 +432,23 @@ export const PERMISSIONS = {
     },
     CONTENT_TYPE: {
         value: "CONTENT_TYPE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CONTENT_LIST: {
         value: "CONTENT_LIST",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     SHARED_CONTENT_LIST: {
         value: "SHARED_CONTENT_LIST",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     VIDEO_LIST: {
         value: "VIDEO_LIST",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     HOMEWORK: {
         value: "HOMEWORK",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"],
     },
     ID_CARD: {
         value: "ID_CARD",
@@ -413,15 +462,19 @@ export const PERMISSIONS = {
     },
     PAYROLL_BULK_PRINT: {
         value: "PAYROLL_BULK_PRINT",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CALENDAR_VIEW_JOBS: {
         value: "CALENDAR_VIEW_JOBS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CERTIFICATE_LIST: {
         value: "CERTIFICATE_LIST",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     CLASS_ROOM: {
         value: "CLASS_ROOM",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"],
     },
     DORMITORY_ASSIGNMENT: {
         value: "DORMITORY_ASSIGNMENT",
@@ -475,6 +528,7 @@ export const PERMISSIONS = {
     },
     BY_PASS: {
         value: "BY_PASS",
+        possibleScopes: ["UNIVERSITY"],
     },
     DASHBOARD_SIDEBAR: {
         value: "DASHBOARD_SIDEBAR",
@@ -731,6 +785,7 @@ export const PERMISSIONS = {
     },
     SEMESTER_SUBJECT_MAPPING_ASSIGN: {
         value: "SEMESTER_SUBJECT_MAPPING_ASSIGN",
+        parentPermission: 'SEMESTER_SUBJECT_MAPPING',
         dependentOn: ["COURSES", "SUBJECTS"],
     },
     PROGRAM_OUTCOME_SIDEBAR: {
@@ -802,10 +857,12 @@ export const PERMISSIONS = {
     },
     TEACHER_MAPPED_CLASSES_ASSIGN: {
         value: "TEACHER_MAPPED_CLASSES_ASSIGN",
+        parentPermission: 'TEACHER_MAPPED_CLASSES',
         dependentOn: ["COURSES", "STAFF_DIRECTORY"],
     },
     TEACHER_MAPPED_CLASSES_UNASSIGN: {
         value: "TEACHER_MAPPED_CLASSES_UNASSIGN",
+        parentPermission: 'TEACHER_MAPPED_CLASSES',
     },
     TEACHER_MAPPED_SUBJECTS_SIDEBAR: {
         value: "TEACHER_MAPPED_SUBJECTS_SIDEBAR",
@@ -813,10 +870,12 @@ export const PERMISSIONS = {
     },
     TEACHER_MAPPED_SUBJECTS_ASSIGN: {
         value: "TEACHER_MAPPED_SUBJECTS_ASSIGN",
+        parentPermission: 'TEACHER_MAPPED_SUBJECTS',
         dependentOn: ["COURSES", "SUBJECTS", "STAFF_DIRECTORY"],
     },
     TEACHER_MAPPED_SUBJECTS_UNASSIGN: {
         value: "TEACHER_MAPPED_SUBJECTS_UNASSIGN",
+        parentPermission: 'TEACHER_MAPPED_SUBJECTS',
     },
     CLASS_RECORDS_SIDEBAR: {
         value: "CLASS_RECORDS_SIDEBAR",
@@ -883,7 +942,7 @@ export const PERMISSIONS = {
     },
     CLASSES_SIDEBAR: {
         value: "CLASSES_SIDEBAR",
-        parentPermission: 'CLASSES',
+        parentPermission: 'MY_CLASSES',
     },
     ATTENDANCE_LIST_SIDEBAR: {
         value: "ATTENDANCE_LIST_SIDEBAR",
@@ -1145,6 +1204,7 @@ export const PERMISSIONS = {
     },
     GRADE_ENGINE_EXECUTE: {
         value: "GRADE_ENGINE_EXECUTE",
+        parentPermission: 'GRADE_ENGINE',
     },
     EXAM_TIME_TABLE_CREATE_SIDEBAR: {
         value: "EXAM_TIME_TABLE_CREATE_SIDEBAR",
@@ -1229,6 +1289,7 @@ export const PERMISSIONS = {
     },
     MARK_REGISTER_EXECUTE: {
         value: "MARK_REGISTER_EXECUTE",
+        parentPermission: 'MARK_REGISTER',
         dependentOn: ["EXAM_TYPES", "SUBJECTS", "COURSES", "STUDENT_LIST"],
     },
     TRANSCRIPT_SIDEBAR: {
@@ -1305,9 +1366,11 @@ export const PERMISSIONS = {
     },
     APPROVE_LEAVE_REQUEST_APPROVE: {
         value: "APPROVE_LEAVE_REQUEST_APPROVE",
+        parentPermission: 'APPROVE_LEAVE_REQUEST',
     },
     APPROVE_LEAVE_REQUEST_REJECT: {
         value: "APPROVE_LEAVE_REQUEST_REJECT",
+        parentPermission: 'APPROVE_LEAVE_REQUEST',
     },
     PENDING_LEAVE_REQUEST_SIDEBAR: {
         value: "PENDING_LEAVE_REQUEST_SIDEBAR",
@@ -1316,9 +1379,11 @@ export const PERMISSIONS = {
     },
     PENDING_LEAVE_REQUEST_APPROVE: {
         value: "PENDING_LEAVE_REQUEST_APPROVE",
+        parentPermission: 'PENDING_LEAVE_REQUEST',
     },
     PENDING_LEAVE_REQUEST_REJECT: {
         value: "PENDING_LEAVE_REQUEST_REJECT",
+        parentPermission: 'PENDING_LEAVE_REQUEST',
     },
     LEAVE_POLICY_SIDEBAR: {
         value: "LEAVE_POLICY_SIDEBAR",
@@ -1558,6 +1623,7 @@ export const PERMISSIONS = {
     },
     BOOK_ISSUE_EXECUTE: {
         value: "BOOK_ISSUE_EXECUTE",
+        parentPermission: 'BOOK_ISSUE',
         dependentOn: ["LIBRARY_CREATION", "STUDENT_LIST", "STAFF_DIRECTORY"],
     },
     RETURN_BOOK_SIDEBAR: {
@@ -1932,6 +1998,7 @@ export const PERMISSIONS = {
 
     ACCESS_INSTITUTE: {
         value: "perm_access_inst",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
 
     GOVERNANCE: {
@@ -1989,6 +2056,7 @@ export const PERMISSIONS = {
     },
     EXAM_TYPE_TERM_MAPPING: {
         value: "EXAM_TYPE_TERM_MAPPING",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     EXAM_TYPE_TERM_MAPPING_SIDEBAR: {
         value: "EXAM_TYPE_TERM_MAPPING_SIDEBAR",
@@ -2004,6 +2072,7 @@ export const PERMISSIONS = {
     },
     EXAM_ASSIGN_TEACHER: {
         value: "EXAM_ASSIGN_TEACHER",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     EXAM_ASSIGN_TEACHER_SIDEBAR: {
         value: "EXAM_ASSIGN_TEACHER_SIDEBAR",
@@ -2020,6 +2089,7 @@ export const PERMISSIONS = {
     },
     HALL_TICKETS: {
         value: "HALL_TICKETS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     HALL_TICKETS_SIDEBAR: {
         value: "HALL_TICKETS_SIDEBAR",
@@ -2045,15 +2115,18 @@ export const PERMISSIONS = {
 
     ANSWER_SHEET_MAPPING: {
         value: "ANSWER_SHEET_MAPPING",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
 
     USER_INVIGILATION:{
         value: "USER_INVIGILATION",
+        possibleScopes: ["MY"],
 
     },
 
     ANSWER_SHEET_QRS: {
         value: "ANSWER_SHEET_QRS",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     ANSWER_SHEET_QRS_SIDEBAR: {
         value: "ANSWER_SHEET_QRS_SIDEBAR",
@@ -2070,6 +2143,7 @@ export const PERMISSIONS = {
 
     QUESTION_PAPER_BUILDER: {
         value: "QUESTION_PAPER_BUILDER",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     QUESTION_PAPER_BUILDER_SIDEBAR: {
         value: "QUESTION_PAPER_BUILDER_SIDEBAR",
@@ -2095,6 +2169,7 @@ export const PERMISSIONS = {
     },
     QUESTION_APPROVAL: {
         value: "QUESTION_APPROVAL",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE","DEPARTMENT"],
     },
     QUESTION_APPROVAL_SIDEBAR: {
         value: "QUESTION_APPROVAL_SIDEBAR",
@@ -2245,6 +2320,7 @@ export const PERMISSIONS = {
     },
     GROUPS_SCOPE: {
         value: "GROUPS_SCOPE",
+        possibleScopes: ["UNIVERSITY","CAMPUS","INSTITUTE"],
     },
     GROUPS_SCOPE_SIDEBAR: {
         value: "GROUPS_SCOPE_SIDEBAR",
@@ -2252,6 +2328,7 @@ export const PERMISSIONS = {
     },
     DATE_WISE_TIME_TABLE_ROUTINE: {
         value: "DATE_WISE_TIME_TABLE_ROUTINE",
+        possibleScopes: ["UNIVERSITY", "CAMPUS", "INSTITUTE", "DEPARTMENT"],
     },
     DATE_WISE_TIME_TABLE_ROUTINE_SIDEBAR: {
         value: "DATE_WISE_TIME_TABLE_ROUTINE_SIDEBAR",
@@ -2259,6 +2336,7 @@ export const PERMISSIONS = {
     },
     USER_CLASSES: {
         value: "USER_CLASSES",
+        possibleScopes: ["MY"],
     },
     MY_CLASSES_SIDEBAR: {
         value: "MY_CLASSES_SIDEBAR",
@@ -2266,43 +2344,84 @@ export const PERMISSIONS = {
     },
     USER_ROUTINE: {
         value: "USER_ROUTINE",
+        possibleScopes: ["MY"],
     },
     USER_LECTURES: {
         value: "USER_LECTURES",
+        possibleScopes: ["MY"],
     },
     USER_LESSON_PLAN_CREATION: {
         value: "USER_LESSON_PLAN_CREATION",
+        possibleScopes: ["MY"],
     },
     USER_LESSON_PLAN_OVERVIEW: {
         value: "USER_LESSON_PLAN_OVERVIEW",
+        possibleScopes: ["MY"],
     },
     USER_QUESTION_BANK: {
         value: "USER_QUESTION_BANK",
+        possibleScopes: ["MY"],
     },
     USER_QUESTION_PAPERS: {
         value: "USER_QUESTION_PAPERS",
+        possibleScopes: ["MY"],
     },
     USER_ISSUED_BOOKS: {
         value: "USER_ISSUED_BOOKS",
+        possibleScopes: ["MY"],
     },
     USER_APPLY_LEAVE: {
         value: "USER_APPLY_LEAVE",
+        possibleScopes: ["MY"],
     },
     USER_ASSET_ISSUES: {
         value: "USER_ASSET_ISSUES",
+        possibleScopes: ["MY"],
     },
     USER_SERVICE_TICKETS: {
         value: "USER_SERVICE_TICKETS",
+        possibleScopes: ["MY"],
     },
     USER_EVALUATION: {
-        value: "USER_EVALUATION",        dependentOn: ["USER_EVALUATION", "COURSES", "SUBJECTS", "ACADEMIC_YEAR", "SESSION_SETUP"],
+        value: "USER_EVALUATION",
+        possibleScopes: ["MY"],        dependentOn: ["USER_EVALUATION", "COURSES", "SUBJECTS", "ACADEMIC_YEAR", "SESSION_SETUP"],
     },
     USER_INTERNAL_ASSESSMENT: {
-        value: "USER_INTERNAL_ASSESSMENT",        dependentOn: ["USER_INTERNAL_ASSESSMENT", "COURSES", "SUBJECTS", "ACADEMIC_YEAR", "SESSION_SETUP"],
+        value: "USER_INTERNAL_ASSESSMENT",
+        possibleScopes: ["MY"],        dependentOn: ["USER_INTERNAL_ASSESSMENT", "COURSES", "SUBJECTS", "ACADEMIC_YEAR", "SESSION_SETUP"],
     },
 };
 
+// Make sure EVERY permission has `possibleScopes`:
+//  - a permission with a parentPermission always inherits the parent's list
+//  - a top-level permission must declare its own possibleScopes (or possibleScope)
+//  - if neither is found, an explicit handled error is thrown
+export const resolvePossibleScopes = (perm, permKey = null, seen = new Set()) => {
+    if (!perm) {
+        throw new Error(`[PermissionScopeError] Invalid or undefined permission: ${permKey}`);
+    }
+    if (seen.has(perm)) {
+        throw new Error(`[PermissionScopeError] Circular parentPermission detected for ${permKey || perm.value}`);
+    }
+    seen.add(perm);
+    if (Array.isArray(perm.possibleScopes) && perm.possibleScopes.length > 0) {
+        return perm.possibleScopes;
+    }
+    if (Array.isArray(perm.possibleScope) && perm.possibleScope.length > 0) {
+        return perm.possibleScope;
+    }
+    if (perm.parentPermission) {
+        const parent = PERMISSIONS[perm.parentPermission];
+        if (!parent) {
+            throw new Error(`[PermissionScopeError] Permission ${permKey || perm.value} references non-existent parent ${perm.parentPermission}`);
+        }
+        return resolvePossibleScopes(parent, perm.parentPermission, seen);
+    }
+    throw new Error(`[PermissionScopeError] Permission ${permKey || perm.value} has no possibleScopes defined and does not inherit one from parentPermission.`);
+};
 
-
-
-
+for (const [key, perm] of Object.entries(PERMISSIONS)) {
+    const scopes = resolvePossibleScopes(perm, key);
+    perm.possibleScopes = scopes;
+    perm.possibleScope = scopes;
+}

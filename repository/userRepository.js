@@ -3,6 +3,7 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getTenantStore } from "../utility/requestContext.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+import { getEffectiveScope } from "../utility/permissionUtility.js";
 
 export async function register(data) {
   return scoped(model.userModel).create(data);
@@ -162,36 +163,47 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
         {
           model: model.roleModel,
           as: 'userRole',
-          attributes: ['roleId', 'role'],
+          attributes: ['roleId', 'role', 'scope'],
           include: [
             {
               model: model.rolePermissionsModel,
               as: 'rolePermissions',
-              attributes: ['permission', 'scope'],
+              attributes: ['permission'],
             },
           ],
         },
       ],
     });
 
-    return entries
-      .filter((entry) => entry.userRole)
-      .map((entry) => ({
-        user_id: userId,
-        userRole: {
-          roleId: entry.userRole.roleId,
-          role: entry.userRole.role,
-        },
-        permissions: (entry.userRole.rolePermissions || []).map((p) => ({
-          permission: p.permission,
-          scope: p.scope,
-        })),
-      }));
+    // A role can appear several times (one row per resource) -> group by role
+    const roleMap = new Map();
+    for (const entry of entries) {
+      if (!entry.userRole) continue;
+      const role = entry.userRole;
+
+      if (!roleMap.has(role.roleId)) {
+        roleMap.set(role.roleId, {
+          user_id: userId,
+          userRole: { roleId: role.roleId, role: role.role, scope: role.scope },
+          resourceIds: [],
+          permissions: (role.rolePermissions || []).map((p) => ({
+            permission: p.permission,
+            scope: getEffectiveScope(p.permission, role.scope),
+          })),
+        });
+      }
+      if (entry.resourceId !== null && entry.resourceId !== undefined) {
+        roleMap.get(role.roleId).resourceIds.push(entry.resourceId);
+      }
+    }
+
+    return Array.from(roleMap.values());
   } catch (error) {
     console.error("Error fetching Role Permission details:", error);
     throw error;
   }
 }
+
 
 export async function findStatusByUserId(userId) {
   return scoped(model.userModel).findOne({

@@ -12,7 +12,8 @@ export async function addRole(req, res) {
         const Role = await RoleCreation.addRole({ ...req.body, code: null });
         res.status(201).json({ message: "Data added successfully", Role });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message, message: error.message });
     }
 }
 
@@ -21,7 +22,8 @@ export async function getAllRole(req, res) {
         const role = await RoleCreation.getRoleDetails();
         res.status(200).json(role);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message, message: error.message });
     }
 }
 
@@ -35,7 +37,8 @@ export async function getSingleRoleDetails(req, res) {
             res.status(404).json({ message: "Role not found" });
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message, message: error.message });
     }
 }
 
@@ -48,7 +51,8 @@ export async function updateRole(req, res) {
         const updatedRole = await RoleCreation.updateRole(roleId, req.body);
         res.status(200).json({message: "Role update succesfully" });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message, message: error.message });
     }
 }
 
@@ -65,7 +69,8 @@ export async function deleteRole(req, res) {
             res.status(404).json({ message: "Role not found" });
         }
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message, message: error.message });
     }
 }
 
@@ -78,7 +83,8 @@ export async function getRolePermissions(req, res) {
         const data = await RoleCreation.getRolePermissions(roleId);
         res.status(200).json(data);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message, message: error.message });
     }
 }
 
@@ -91,35 +97,7 @@ export async function assignRolePermissions(req, res) {
         const data = await RoleCreation.assignRolePermissions(roleId, permissions);
         res.status(200).json({ message: "Permissions assigned to role successfully", data });
     } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
-
-export async function getRoleBaseScope(req, res) {
-    try {
-        const { roleId } = req.params;
-        if (!roleId) {
-            return res.status(400).send('roleId is required');
-        }
-        const data = await RoleCreation.getRoleBaseScope(roleId);
-        res.status(200).json(data);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-}
-
-export async function assignRoleBaseScope(req, res) {
-    try {
-        const { roleId, scope, resourceIds, selectedNodes } = req.body;
-        if (!roleId) {
-            return res.status(400).send('roleId is required');
-        }
-        const data = await RoleCreation.assignRoleBaseScope(roleId, {
-            scope,
-            resourceIds: resourceIds ?? selectedNodes ?? []
-        });
-        res.status(200).json({ message: "Base scope assigned to role successfully", data });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+        const statusCode = error.statusCode || 500;
+        res.status(statusCode).json({ error: error.message, message: error.message });
     }
 }

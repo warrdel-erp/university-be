@@ -22,6 +22,12 @@ const userRolePermissionModel = sequelize.define(
                 key: 'role_id'
             }
         },
+        resourceId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'resource_id',
+            comment: 'Resource (Institute/Campus/Department ID...) the role applies to for this user, per the role scope. NULL for UNIVERSITY/OWN roles.'
+        },
         userId: {
             type: DataTypes.INTEGER,
             allowNull: false,

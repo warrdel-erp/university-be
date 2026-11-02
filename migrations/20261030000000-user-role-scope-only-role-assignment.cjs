@@ -11,20 +11,20 @@ module.exports = {
     // 1. Drop rows with no role (old standalone perm_access_inst rows)
     await queryInterface.sequelize.query(`DELETE FROM ${TABLE} WHERE role_id IS NULL;`);
 
-    // 2. Keep a single row per (user, role)
+    // 2. Keep a single row per (user, role, resource_id)
     await queryInterface.sequelize.query(`
       DELETE t FROM ${TABLE} t
       INNER JOIN (
-        SELECT user_id, role_id, MIN(user_role_permission_id) AS keep_id
+        SELECT user_id, role_id, resource_id, MIN(user_role_permission_id) AS keep_id
         FROM ${TABLE}
-        GROUP BY user_id, role_id
-      ) k ON k.user_id = t.user_id AND k.role_id = t.role_id
+        GROUP BY user_id, role_id, resource_id
+      ) k ON k.user_id = t.user_id AND k.role_id = t.role_id AND (k.resource_id = t.resource_id OR (k.resource_id IS NULL AND t.resource_id IS NULL))
       WHERE t.user_role_permission_id <> k.keep_id;
     `);
 
-    // 3. Drop the per-user permission columns
+    // 3. Drop only per-user permission and scope columns (preserve resource_id)
     const columns = await queryInterface.describeTable(TABLE);
-    for (const col of ['permission', 'scope', 'resource_id']) {
+    for (const col of ['permission', 'scope']) {
       if (columns[col]) await queryInterface.removeColumn(TABLE, col);
     }
 
@@ -32,12 +32,6 @@ module.exports = {
     await queryInterface.changeColumn(TABLE, 'role_id', {
       type: Sequelize.INTEGER,
       allowNull: false,
-    });
-
-    // 5. A user can hold a role only once
-    await queryInterface.addIndex(TABLE, ['user_id', 'role_id'], {
-      unique: true,
-      name: 'uq_urps_user_role',
     });
   },
 
