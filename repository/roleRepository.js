@@ -2,6 +2,7 @@ import * as model from "../models/index.js";
 import { QueryTypes } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import { scoped } from "../utility/scoped.js";
+import { isSystemRole } from "../const/roles.js";
 
 export async function addRole(RoleData) {
   try {
@@ -68,7 +69,7 @@ export async function deleteRole(roleId) {
     return false;
   }
 
-  if (existing.code) {
+  if (isSystemRole(existing)) {
     const error = new Error(`Role '${existing.role}' is a system-generated role and cannot be deleted.`);
     error.statusCode = 403;
     throw error;
@@ -88,7 +89,7 @@ export async function updateRole(roleId, RoleData) {
       return [0];
     }
 
-    if (existing.code) {
+    if (isSystemRole(existing)) {
       const error = new Error(`Role '${existing.role}' is a system-generated role and cannot be edited.`);
       error.statusCode = 403;
       throw error;

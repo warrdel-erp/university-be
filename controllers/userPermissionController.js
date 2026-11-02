@@ -9,9 +9,9 @@ import { ROLES } from "../const/roles.js";
  */
 export async function assignAuthorization(req, res) {
   try {
-    const { userId, roleId, permissions } = req.body;
+    const { userId, roleId, resourceIds } = req.body;
 
-    const result = await userRoleService.assignRoleToUser(userId, roleId, permissions);
+    const result = await userRoleService.assignRoleToUser(userId, roleId, resourceIds);
     return res.status(200).json({
       success: true,
       message: "Authorization assigned successfully",
