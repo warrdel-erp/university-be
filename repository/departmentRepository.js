@@ -8,11 +8,19 @@ const excludeMeta = ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'];
 const parentDepartmentInclude = {
     model: model.departmentModel,
     as: 'parentDepartment',
-    attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType'],
+    attributes: ['departmentId', 'departmentName', 'departmentCode', 'departmentType', 'isDefault'],
     required: false,
 };
 
 async function assertDepartmentDeletable(departmentId, transaction) {
+    const dept = await scoped(model.departmentModel).findOne({
+        where: { departmentId },
+        attributes: ['departmentId', 'departmentName', 'isDefault'],
+        transaction,
+    });
+    if (dept && (dept.isDefault || ['Admin', 'Academic', 'Academics'].includes(dept.departmentName))) {
+        throw new Error('Default department cannot be deleted');
+    }
     const courseCount = await scoped(model.courseModel).count({
         where: { departmentId },
         transaction,
@@ -170,6 +178,8 @@ export async function deleteDepartment(departmentId, transaction) {
             return false;
         }
 
+        await assertDepartmentDeletable(id, txn);
+
         const children = await scoped(model.departmentModel).findAll({
             where: {
                 parentDepartmentId: id,
@@ -182,8 +192,6 @@ export async function deleteDepartment(departmentId, transaction) {
         for (const child of children) {
             await deleteDepartment(child.departmentId, txn);
         }
-
-        await assertDepartmentDeletable(id, txn);
 
         const deleted = await scoped(model.departmentModel).destroy({
             where: { departmentId: id },
@@ -247,4 +255,77 @@ export async function employeeDetail(departmentId) {
         console.error('Error fetching employee details:', error);
         throw error;
     }
+}
+
+export async function createDefaultDepartmentsForInstitute(
+    { instituteId, universityId, createdBy },
+    transaction
+) {
+    let userId = createdBy;
+    if (!userId) {
+        const defaultUser = await model.userModel.findOne({
+            attributes: ['userId'],
+            order: [['userId', 'ASC']],
+            transaction,
+        });
+        userId = defaultUser ? defaultUser.userId : null;
+    }
+
+    const existingAcademic = await model.departmentModel.findOne({
+        where: {
+            instituteId,
+            [Op.or]: [
+                { departmentType: 'Academic' },
+                { departmentName: ['Academic', 'Academics'] },
+            ],
+        },
+        transaction,
+    });
+
+    const existingAdmin = await model.departmentModel.findOne({
+        where: {
+            instituteId,
+            [Op.or]: [
+                { departmentType: 'Admin' },
+                { departmentName: 'Admin' },
+            ],
+        },
+        transaction,
+    });
+
+    const departmentsToCreate = [];
+
+    if (!existingAcademic) {
+        departmentsToCreate.push({
+            departmentName: 'Academic',
+            departmentCode: 'ACAD',
+            departmentType: 'Academic',
+            description: 'Default Academic Department',
+            isDefault: true,
+            universityId,
+            instituteId,
+            createdBy: userId,
+            updatedBy: userId,
+        });
+    }
+
+    if (!existingAdmin) {
+        departmentsToCreate.push({
+            departmentName: 'Admin',
+            departmentCode: 'ADMIN',
+            departmentType: 'Admin',
+            description: 'Default Administrative Department',
+            isDefault: true,
+            universityId,
+            instituteId,
+            createdBy: userId,
+            updatedBy: userId,
+        });
+    }
+
+    if (departmentsToCreate.length > 0) {
+        return await model.departmentModel.bulkCreate(departmentsToCreate, { transaction });
+    }
+
+    return [];
 }

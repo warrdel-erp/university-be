@@ -36,7 +36,7 @@ const addCourseItemSchema = z
   .object({
     courseName: z.string().min(1, "courseName is required"),
     courseCode: z.string().min(1, "courseCode is required"),
-    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
+    departmentId: positiveIntegerId.optional(),
     capacity: z.union([z.string(), z.number()]).optional(),
     courseDuration: z.coerce.number().positive().optional(),
     term: z.string().min(1).optional(),
@@ -49,19 +49,29 @@ const addCourseSchema = z
       .number()
       .int()
       .positive("course_levelId is required"),
-    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
+    departmentId: positiveIntegerId.optional(),
     affiliatedUniversityId: z.coerce.number().int().positive().optional(),
     term: z.string().min(1).optional(),
     courses: z.array(addCourseItemSchema).min(1, "courses array is required"),
   })
-  .passthrough();
+  .passthrough()
+  .refine(
+    (data) => {
+      if (data.departmentId) return true;
+      return data.courses.every((c) => Boolean(c.departmentId));
+    },
+    {
+      message: "departmentId is required (either at root level or for each course)",
+      path: ["departmentId"],
+    }
+  );
 
 const updateCourseSchema = z
   .object({
     courseId: positiveIntegerId,
     courseName: z.string().min(1, "courseName cannot be empty").optional(),
     courseCode: z.string().min(1, "courseCode cannot be empty").optional(),
-    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
+    departmentId: positiveIntegerId.optional(),
     affiliatedUniversityId: z.union([positiveIntegerId, z.null()]).optional(),
   })
   .refine(
