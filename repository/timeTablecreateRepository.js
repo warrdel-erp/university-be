@@ -509,6 +509,9 @@ export async function addtimeTableMapping(data, transaction) {
   delete cellPayload.userId;
   delete cellPayload.teacherType;
   delete cellPayload.teachers;
+  if (cellPayload.subjectComponentMappingId == null && cellPayload.subject_component_mapping_id != null) {
+    cellPayload.subjectComponentMappingId = Number(cellPayload.subject_component_mapping_id);
+  }
 
   const cell = await model.timeTableCellModel.create(cellPayload, {
     transaction,
@@ -1598,6 +1601,22 @@ export async function getTimeTableMappingDetail(timeTableRoutineId) {
           ],
         },
       },
+      {
+        model: model.subjectComponentMappingModel,
+        as: "subjectComponentMapping",
+        required: false,
+        attributes: {
+          exclude: ["createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            model: model.subjectComponentModel,
+            as: "component",
+            required: false,
+            attributes: ["id", "componentName", "code"],
+          },
+        ],
+      },
     ],
   });
   return result;
@@ -2296,6 +2315,7 @@ const ROUTINE_CELL_ATTRIBUTES = [
   "timeTableNameId",
   "timeTableCreationId",
   "subjectId",
+  "subjectComponentMappingId",
   "electiveSubjectId",
   "teacherSubjectMappingId",
   "classRoomSectionId",
@@ -2434,6 +2454,20 @@ function routineCellsInclude({
         as: "classRoom",
         attributes: ["classRoomSectionId", "roomNumber"],
         required: false,
+      },
+      {
+        model: model.subjectComponentMappingModel,
+        as: "subjectComponentMapping",
+        attributes: ["id", "subjectId", "subjectComponentId"],
+        required: false,
+        include: [
+          {
+            model: model.subjectComponentModel,
+            as: "component",
+            attributes: ["id", "componentName", "code", "description"],
+            required: false,
+          },
+        ],
       },
     ],
   };

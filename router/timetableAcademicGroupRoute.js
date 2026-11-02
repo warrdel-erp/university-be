@@ -117,6 +117,7 @@ const getGroupRoutinesWrappedInStructureQuerySchema = z.object({
 const getSubjectOptionsQuerySchema = z.object({
     classSectionTermId: optionalPositiveId,
     academicGroupId: optionalPositiveId,
+    subjectType: z.string().optional(),
 });
 
 

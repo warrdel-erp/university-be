@@ -8,6 +8,7 @@ import teacherSubjectMappingModel from './teacherSubjectMappingModel.js';
 import classRoomModel from './classRoomModel.js';
 import electiveSubjectModel from './electiveSubjectModel.js';
 import subjectModel from './subjectModel.js';
+import subjectComponentMappingModel from './subjectComponentMappingModel.js';
 
 /**
  * Week-routine template cell (no teacher on this row).
@@ -56,6 +57,15 @@ const timeTableCellModel = sequelize.define(
       references: {
         model: subjectModel,
         key: 'subject_id',
+      },
+    },
+    subjectComponentMappingId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'subject_component_mapping_id',
+      references: {
+        model: subjectComponentMappingModel,
+        key: 'id',
       },
     },
     electiveSubjectId: {
