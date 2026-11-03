@@ -88,7 +88,8 @@ export async function deleteDepartmentPosition(req, res) {
         }
         return SuccessResponse(res, 200, `Delete successful for departmentPosition ID ${departmentPositionId}`);
     } catch (error) {
-        return ErrorResponse(res, 500, "Internal Server Error", error.message);
+        const status = /cannot be deleted|not found/i.test(error.message) ? 400 : 500;
+        return ErrorResponse(res, status, "Internal Server Error", error.message);
     }
 }
 

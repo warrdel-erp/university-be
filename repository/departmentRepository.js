@@ -65,12 +65,29 @@ async function assertDepartmentDeletable(departmentId, transaction) {
         throw new Error(`Department has ${childCount} active sub-department(s) and cannot be deleted. Please delete or reassign sub-departments first.`);
     }
 
-    const positionCount = await scoped(model.departmentPositionsModel).count({
-        where: { departmentId },
+    const activeHeadCount = await scoped(model.userDepartmentPositionsModel).count({
+        include: [{
+            model: model.departmentPositionsModel,
+            as: 'position',
+            where: { departmentId },
+            required: true,
+        }],
+        where: { status: 'ACTIVE' },
         transaction,
     });
-    if (positionCount > 0) {
-        throw new Error(`Department has ${positionCount} associated position(s) and cannot be deleted.`);
+    if (activeHeadCount > 0) {
+        throw new Error(`Department has ${activeHeadCount} active position holder(s)/HOD assigned and cannot be deleted. Please unassign them first.`);
+    }
+
+    const customPositionCount = await scoped(model.departmentPositionsModel).count({
+        where: {
+            departmentId,
+            isDefault: false,
+        },
+        transaction,
+    });
+    if (customPositionCount > 0) {
+        throw new Error(`Department has ${customPositionCount} custom position(s) and cannot be deleted. Please delete the custom positions first.`);
     }
 
     const jobCount = await scoped(model.jobModel).count({
@@ -115,6 +132,7 @@ export async function addDepartment(departmentData, parentDepartmentId) {
         departmentData.parentDepartmentId = parentDepartmentId || null;
 
         const department = await scoped(model.departmentModel).create(departmentData, { transaction });
+        await createDefaultHodPositionForDepartment(department, transaction);
 
         await transaction.commit();
         return department.get({ plain: true });
@@ -142,6 +160,7 @@ export async function addParentDepartment(childDepartmentId, departmentData) {
         departmentData.parentDepartmentId = childDepartment.parentDepartmentId ?? null;
 
         const parentDepartment = await scoped(model.departmentModel).create(departmentData, { transaction });
+        await createDefaultHodPositionForDepartment(parentDepartment, transaction);
 
         await scoped(model.departmentModel).update(
             {
@@ -228,6 +247,11 @@ export async function deleteDepartment(departmentId, transaction) {
         for (const child of children) {
             await deleteDepartment(child.departmentId, txn);
         }
+
+        await scoped(model.departmentPositionsModel).destroy({
+            where: { departmentId: id, isDefault: true },
+            transaction: txn,
+        });
 
         const deleted = await scoped(model.departmentModel).destroy({
             where: { departmentId: id },
@@ -360,8 +384,57 @@ export async function createDefaultDepartmentsForInstitute(
     }
 
     if (departmentsToCreate.length > 0) {
-        return await model.departmentModel.bulkCreate(departmentsToCreate, { transaction });
+        const createdDepts = await model.departmentModel.bulkCreate(departmentsToCreate, { transaction });
+        for (const dept of createdDepts) {
+            await createDefaultHodPositionForDepartment(dept, transaction);
+        }
+        return createdDepts;
     }
 
     return [];
+}
+
+export async function createDefaultHodPositionForDepartment(department, transaction) {
+    if (!department || !department.departmentId) return null;
+
+    const existingHod = await model.departmentPositionsModel.findOne({
+        where: {
+            departmentId: department.departmentId,
+            [Op.or]: [
+                { isDefault: true },
+                { positionCode: 'HOD' },
+                { positionName: ['Head of Department', 'HOD'] },
+            ],
+        },
+        transaction,
+    });
+    if (existingHod) {
+        return existingHod;
+    }
+
+    let userId = department.createdBy;
+    if (!userId) {
+        const defaultUser = await model.userModel.findOne({
+            attributes: ['userId'],
+            order: [['userId', 'ASC']],
+            transaction,
+        });
+        userId = defaultUser ? defaultUser.userId : null;
+    }
+
+    return await model.departmentPositionsModel.create({
+        departmentId: department.departmentId,
+        positionName: 'Head of Department',
+        positionCode: 'HOD',
+        employmentCategory: 'Leadership',
+        reportingType: 'Direct',
+        isLevelHead: true,
+        sortOrder: 1,
+        level: 1,
+        isDefault: true,
+        universityId: department.universityId,
+        instituteId: department.instituteId,
+        createdBy: userId,
+        updatedBy: userId,
+    }, { transaction });
 }
