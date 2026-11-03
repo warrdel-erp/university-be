@@ -342,9 +342,12 @@ export const ClassSubjectCount = async (req, res) => {
 };
 
 export const getRoutineByClassSectionId = async (req, res) => {
-  const { classSectionTermId } = req.query;
+  const { classSectionTermId, date } = req.query;
   try {
-    const result = await timeTableCreateServices.getRoutineByClassSectionId(classSectionTermId);
+    const result = await timeTableCreateServices.getRoutineByClassSectionId(
+      classSectionTermId,
+      { date },
+    );
     SuccessResponse(res, 200, 'Routine fetched successfully', result);
   } catch (error) {
     console.error("GET ROUTINE ERROR:", error);
@@ -353,11 +356,12 @@ export const getRoutineByClassSectionId = async (req, res) => {
 };
 
 export const getRoutineByAcademicGroupId = async (req, res) => {
-  const { academicGroupId } = req.query;
+  const { academicGroupId, date } = req.query;
   try {
     const result =
       await timeTableCreateServices.getRoutineByAcademicGroupId(
         academicGroupId,
+        { date },
       );
     SuccessResponse(res, 200, "Routine fetched successfully", result);
   } catch (error) {

@@ -26,6 +26,9 @@ COPY package*.json ./
 # Install dependencies
 RUN npm install
 
+# Build argument to invalidate cache on new commits
+ARG CACHE_BUST
+
 # Copy the rest of the application code
 COPY . . 
 

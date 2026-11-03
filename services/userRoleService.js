@@ -1,11 +1,14 @@
 import { Op } from "sequelize";
 import * as repository from "../repository/userRoleRepository.js";
 import * as permissionRepository from "../repository/userPermissionRepository.js";
-import { ROLES } from "../const/roles.js";
 import * as model from "../models/index.js";
 import sequelize from "../database/sequelizeConfig.js";
 
-export async function assignRoleToUser(userId, roleId, permissions = [], transaction = null) {
+/**
+ * Assign a role to a user. `resourceIds` are the institute/campus/... ids the role applies to,
+ * according to the role's scope (not needed for UNIVERSITY/OWN roles).
+ */
+export async function assignRoleToUser(userId, roleId, resourceIds = [], transaction = null) {
   const internalTransaction = !transaction ? await sequelize.transaction() : null;
   const activeTransaction = transaction || internalTransaction;
   try {
@@ -38,7 +41,7 @@ export async function assignRoleToUser(userId, roleId, permissions = [], transac
     }
 
     // Add role
-    const roleResult = await repository.addUserRole(userId, roleData.roleId, activeTransaction);
+    const roleResult = await repository.addUserRole(userId, roleData.roleId, resourceIds, activeTransaction);
 
     if (internalTransaction) await internalTransaction.commit();
     return roleResult;
@@ -80,11 +83,6 @@ export async function removeRoleFromUser(userId, roleId, transaction = null) {
 
     // Remove role
     await repository.removeUserRole(userId, roleData.roleId, activeTransaction);
-
-    // If removing ADMIN, also clear all permissions
-    if (roleName === ROLES.ADMIN) {
-      await permissionRepository.clearAllUserPermissions(userId, activeTransaction);
-    }
 
     if (internalTransaction) await internalTransaction.commit();
     return true;

@@ -22,8 +22,13 @@ export const getDashboard = async (req, res) => {
 
 export const getTeacherDashboard = async (req, res) => {
   try {
-    const { employeeId } = req.query;
-    const result = await dashboardServices.getTeacherDashboard({ employeeId });
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const userId = req.user.userId;
+    const employeeId = validation.employeeRecord?.employeeId;
+    const result = await dashboardServices.getTeacherDashboard({ userId, employeeId });
     return SuccessResponse(res, 200, 'Teacher dashboard fetched successfully', result);
   } catch (error) {
     const statusCode = error.statusCode || (/scope/i.test(error.message) ? 400 : 500);
@@ -37,12 +42,54 @@ export const getMyTeacherDashboard = async (req, res) => {
     if (!validation.valid) {
       return ErrorResponse(res, validation.status, validation.message);
     }
+    const userId = req.user.userId;
     const employeeId = validation.employeeRecord?.employeeId;
 
-    const result = await dashboardServices.getTeacherDashboard({ employeeId });
+    const result = await dashboardServices.getTeacherDashboard({ userId, employeeId });
     return SuccessResponse(res, 200, 'Teacher dashboard fetched successfully', result);
   } catch (error) {
     const statusCode = error.statusCode || (/scope/i.test(error.message) ? 400 : 500);
     return ErrorResponse(res, statusCode, error.message || 'Something went wrong');
   }
 };
+
+export const getMyTeacherDashboardDateWiseClasses = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const userId = req.user.userId;
+    const date=req.query.date;
+    const result = await dashboardServices.getMyTeacherDashboardDateWiseClasses({userId,date});
+    return SuccessResponse(res, 200, 'Teacher dashboard fetched successfully', result);
+  } catch (error) {
+    const statusCode = error.statusCode || (/scope/i.test(error.message) ? 400 : 500);
+    return ErrorResponse(res, statusCode, error.message || 'Something went wrong');
+  }
+};
+
+export const getMyTeacherTaskDuty = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const userId = req.user.userId;
+    const employeeId = validation.employeeRecord?.employeeId;
+    const { filter, type, date } = req.query;
+
+    const result = await dashboardServices.getMyTeacherTaskDuty({
+      userId,
+      employeeId,
+      filter: filter || type,
+      date,
+    });
+    return SuccessResponse(res, 200, 'Tasks and duties fetched successfully', result);
+  } catch (error) {
+    const statusCode = error.statusCode || (/scope/i.test(error.message) ? 400 : 500);
+    return ErrorResponse(res, statusCode, error.message || 'Something went wrong');
+  }
+};
+
+

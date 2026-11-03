@@ -124,6 +124,13 @@ const listFeePolicyQuerySchema = z.object({
   term: positiveIntegerId.optional(),
   studentId: positiveIntegerId.optional(),
   search: z.string().optional(),
+  isStudentMapped: z
+    .preprocess((val) => {
+      if (val === "true" || val === true || val === 1 || val === "1") return true;
+      if (val === "false" || val === false || val === 0 || val === "0") return false;
+      return val;
+    }, z.boolean())
+    .optional(),
   page: positiveIntegerId.optional(),
   limit: positiveIntegerId.optional(),
 });
@@ -195,11 +202,13 @@ const mapStudentFeePolicySchema = z
     studentIds: z.array(positiveIntegerId).optional(),
     feePolicyId: positiveIntegerId.optional(),
     feePolicyIds: z.array(positiveIntegerId).optional(),
+    effect: effectEnum.optional(),
     mappings: z
       .array(
         z.object({
           studentId: positiveIntegerId,
           feePolicyId: positiveIntegerId,
+          effect: effectEnum.optional(),
         }),
       )
       .optional(),
@@ -223,6 +232,7 @@ const deleteStudentFeePolicyQuerySchema = z
   .object({
     studentId: positiveIntegerId.optional(),
     feePolicyId: positiveIntegerId.optional(),
+    effect: effectEnum.optional(),
   })
   .refine((data) => data.studentId || data.feePolicyId, {
     message: "Either studentId or feePolicyId is required",
@@ -231,6 +241,7 @@ const deleteStudentFeePolicyQuerySchema = z
 const getStudentFeePolicyQuerySchema = z.object({
   studentId: positiveIntegerId.optional(),
   feePolicyId: positiveIntegerId.optional(),
+  effect: effectEnum.optional(),
 });
 
 router.post(

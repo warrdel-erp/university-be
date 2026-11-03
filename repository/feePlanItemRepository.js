@@ -18,6 +18,7 @@ const FEE_PLAN_ITEM_ATTRS = [
   'createDate',
   'batchId',
   'year',
+  'term',
   'name',
   'publishStatus',
   'publishedAt',
@@ -120,10 +121,13 @@ function billingScheduleItemsInclude(required = false, filters = {}) {
   };
 }
 
-function feePlanItemsInclude({ year, withSubItems = false } = {}) {
+function feePlanItemsInclude({ year, term, withSubItems = false } = {}) {
   const where = { ...buildScope(model.feePlanItemModel) };
   if (year != null) {
     where.year = Number(year);
+  }
+  if (term != null) {
+    where.term = Number(term);
   }
 
   const include = [];
@@ -157,12 +161,12 @@ export async function findFeePlanBatchesOverview(filters = {}) {
   });
 }
 
-export async function findBatchWithFeePlanItems(batchId, { year, withSubItems = true } = {}) {
+export async function findBatchWithFeePlanItems(batchId, { year, term, withSubItems = true } = {}) {
   return model.batchModel.findByPk(Number(batchId), {
     attributes: BATCH_ATTRS,
     include: [
       sessionCourseInclude(),
-      feePlanItemsInclude({ year, withSubItems }),
+      feePlanItemsInclude({ year, term, withSubItems }),
     ],
   });
 }
@@ -193,7 +197,22 @@ export async function findFeePlanItemByBatchAndYear(batchId, year, options = {})
     where.feePlanItemId = { [Op.ne]: Number(options.excludeItemId) };
   }
   return scoped(model.feePlanItemModel).findOne({
-    attributes: ['feePlanItemId', 'batchId', 'year'],
+    attributes: ['feePlanItemId', 'batchId', 'year', 'term'],
+    where,
+    transaction: options.transaction,
+  });
+}
+
+export async function findFeePlanItemByBatchAndTerm(batchId, term, options = {}) {
+  const where = {
+    batchId: Number(batchId),
+    term: Number(term),
+  };
+  if (options.excludeItemId) {
+    where.feePlanItemId = { [Op.ne]: Number(options.excludeItemId) };
+  }
+  return scoped(model.feePlanItemModel).findOne({
+    attributes: ['feePlanItemId', 'batchId', 'year', 'term'],
     where,
     transaction: options.transaction,
   });
@@ -357,6 +376,19 @@ export async function findFeePlanItemsByBatchAndYear(batchId, year, options = {}
   });
 }
 
+export async function findFeePlanItemsByBatchAndTerm(batchId, term, options = {}) {
+  return scoped(model.feePlanItemModel).findAll({
+    attributes: FEE_PLAN_ITEM_ATTRS,
+    where: {
+      batchId: Number(batchId),
+      term: Number(term),
+    },
+    include: options.withSubItems ? [feePlanSubItemsInclude()] : [],
+    order: [['feePlanItemId', 'ASC']],
+    transaction: options.transaction,
+  });
+}
+
 export async function updateFeePlanItemsPublishByIds(feePlanItemIds, data, options = {}) {
   if (!feePlanItemIds.length) {
     return [0];
@@ -381,12 +413,16 @@ export async function findFeePlanPublishHistory(filters = {}, options = {}) {
   if (filters.year != null) {
     where.year = Number(filters.year);
   }
+  if (filters.term != null) {
+    where.term = Number(filters.term);
+  }
 
   return scoped(model.feePlanPublishHistoryModel).findAll({
     attributes: [
       'feePlanPublishHistoryId',
       'batchId',
       'year',
+      'term',
       'action',
       'publishedAt',
       'publishedBy',
@@ -403,6 +439,7 @@ export async function findFeePlanPublishHistoryById(feePlanPublishHistoryId, opt
       'feePlanPublishHistoryId',
       'batchId',
       'year',
+      'term',
       'action',
       'publishedAt',
       'publishedBy',

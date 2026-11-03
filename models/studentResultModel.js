@@ -7,7 +7,7 @@ import courseModel from "./courseModel.js";
 import sessionModel from "./sessionModel.js";
 import universityModel from "./universityModel.js";
 import instituteModel from "./instituteModel.js";
-import acedmicYearModel from "./acedmicYearModel.js";
+import gradingModel from "./gradingModel.js";
 
 const studentResultModel = sequelize.define(
   "student_result",
@@ -103,6 +103,30 @@ const studentResultModel = sequelize.define(
       allowNull: true,
       field: "cgpa",
     },
+    zScore: {
+      type: DataTypes.DECIMAL(6, 4),
+      allowNull: true,
+      field: "z_score",
+    },
+    grade: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+      field: "grade",
+    },
+    gradePoint: {
+      type: DataTypes.DECIMAL(4, 2),
+      allowNull: true,
+      field: "grade_point",
+    },
+    gradingId: {
+      type: DataTypes.BIGINT,
+      allowNull: true,
+      field: "grading_id",
+      references: {
+        model: gradingModel,
+        key: "grading_id",
+      },
+    },
     resultStatus: {
       type: DataTypes.STRING(50),
       allowNull: true,
@@ -134,15 +158,6 @@ const studentResultModel = sequelize.define(
       references: {
         model: instituteModel,
         key: "institute_id",
-      },
-    },
-    academicYearId: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      field: "acedmic_year_id",
-      references: {
-        model: acedmicYearModel,
-        key: "acedmic_year_id",
       },
     },
     createdAt: {

@@ -1,19 +1,13 @@
 import * as UserRolePermissionCreationService from "../repository/userRolePermissionRepository.js";
 
 export async function addUserRolePermission(UserRolePermissionData) {
-  const roleId = UserRolePermissionData.roleId;
-  const permissionIds = UserRolePermissionData.permissionId;
-  const userId = UserRolePermissionData.userId;
+  const { roleId, userId, universityId = null } = UserRolePermissionData;
 
-  const mappings = permissionIds.map((permissionId) => ({
+  return UserRolePermissionCreationService.addUserRolePermission({
     roleId,
-    permissionId,
     userId,
-  }));
-
-  return Promise.all(
-    mappings.map((mapping) => UserRolePermissionCreationService.addUserRolePermission(mapping))
-  );
+    universityId,
+  });
 }
 
 export async function getUserRolePermissionDetails() {

@@ -41,6 +41,7 @@ import {
   resolveSourcePeriodByDateWiseId,
   resolveSourcePeriodsByDateWiseIds,
 } from "../utility/attendancePlacement.js";
+import { parseCustomDate } from "../utility/dateFormat.js";
 
 function normalizeAffiliatedUniversityId(value) {
   if (value == null || value === "") return null;
@@ -1662,28 +1663,28 @@ function mapPromotionHistoryStudent(student) {
     admissionDate: plain.admisssionDate ?? null,
     course: plain.course
       ? {
-          courseId: plain.course.courseId,
-          courseName: plain.course.courseName,
-          termType: plain.course.termType,
-        }
+        courseId: plain.course.courseId,
+        courseName: plain.course.courseName,
+        termType: plain.course.termType,
+      }
       : null,
     specialization: plain.specialization
       ? {
-          specializationId: plain.specialization.specializationId,
-          specializationName: plain.specialization.specializationName,
-        }
+        specializationId: plain.specialization.specializationId,
+        specializationName: plain.specialization.specializationName,
+      }
       : null,
     programTerm: plain.studentClassSectionTerm
       ? {
-          classSectionTermId: plain.studentClassSectionTerm.classSectionTermId,
-          term: plain.studentClassSectionTerm.term,
-          termName: plain.course?.termType
-            ? buildTermName(
-                plain.course.termType,
-                plain.studentClassSectionTerm.term,
-              )
-            : null,
-        }
+        classSectionTermId: plain.studentClassSectionTerm.classSectionTermId,
+        term: plain.studentClassSectionTerm.term,
+        termName: plain.course?.termType
+          ? buildTermName(
+            plain.course.termType,
+            plain.studentClassSectionTerm.term,
+          )
+          : null,
+      }
       : null,
     admissionYear: admissionEntry?.classSection?.acedmicYear ?? null,
     studentSections: mapPromotionClassSection(resolveStudentSection(plain)),
@@ -2831,9 +2832,9 @@ export async function getAllAnswerSheets(filters) {
   }
 
   const sessionId =
-    schedule.batch?.sessionId ;
+    schedule.batch?.sessionId;
   const courseId =
-    schedule.batch?.courseId ;
+    schedule.batch?.courseId;
   const term = schedule.term;
 
   if (sessionId == null || courseId == null || term == null) {
@@ -2991,7 +2992,7 @@ export async function getStudentsByElectiveSubject({
             where: attendanceWhere,
             required:
               normalizedAttendanceStatus &&
-              normalizedAttendanceStatus.length > 0
+                normalizedAttendanceStatus.length > 0
                 ? true
                 : false,
           },

@@ -1,5 +1,12 @@
 
 import curriculumModel from "./curriculumModel.js";
+import curriculumCategoryModel from "./curriculumCategoryModel.js";
+import subjectComponentModel from "./subjectComponentModel.js";
+import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
+import electivePoolModel from "./electivePoolModel.js";
+import electivePoolSubjectMappingModel from "./electivePoolSubjectMappingModel.js";
+import curriculumElectiveRequirementModel from "./curriculumElectiveRequirementModel.js";
+import curriculumElectiveAssignmentModel from "./curriculumElectiveAssignmentModel.js";
 import curriculumSubjectTermMappingModel from "./curriculumSubjectTermMappingModel.js";
 import curriculumBatchMappingModel from "./curriculumBatchMappingModel.js";
 import curriculumBatchTermMappingModel from "./curriculumBatchTermMappingModel.js";
@@ -29,6 +36,7 @@ import studentElectiveSubjectModel from "./studentElectiveSubjectModel.js";
 import studentMetaData from "./studentMetaData.js";
 import studentClassSectionsHistoryModel from "./studentClassSectionsHistoryModel.js";
 import userModel from "./userModel.js";
+import refreshTokenModel from "./refreshTokenModel.js";
 import employeeModel from "./employeeModel.js";
 import employeeAddressModel from "./employeeAddressModel.js";
 import employeeCorAddressModel from "./employeeCorAddressModel.js";
@@ -53,6 +61,9 @@ import libraryAuthorityModel from "./libraryAuthorityModel.js";
 import timeTableStructureModel from "./timeTableStructureModel.js";
 import timeTableStructureCourseModel from "./timeTableStructureCourseModel.js";
 import timeTableStructurePeriodsModel from "./timeTableStructurePeriodsModel.js";
+import timeTableStructureVariantModel from "./timeTableStructureVariantModel.js";
+import timeTableStructureVariantPeriodsModel from "./timeTableStructureVariantPeriodsModel.js";
+import timeTableStructureVariantCourseMappingModel from "./timeTableStructureVariantCourseMappingModel.js";
 import faculityLoadModel from "./faculityLoadModel.js";
 import timeTableRoutineModel from "./timeTableRoutineModel.js";
 import classScheduleModel from "./classScheduleModel.js";
@@ -1327,6 +1338,52 @@ timeTableStructureModel.hasMany(timeTableStructureModel, {
   as: "clonedStructures",
 });
 
+// Timetable Structure Variants
+timeTableStructureModel.hasMany(timeTableStructureVariantModel, {
+  foreignKey: "time_table_structure_id",
+  as: "structureVariants",
+});
+timeTableStructureVariantModel.belongsTo(timeTableStructureModel, {
+  foreignKey: "time_table_structure_id",
+  as: "timeTableStructure",
+});
+
+timeTableStructureVariantModel.hasMany(timeTableStructureVariantPeriodsModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variantPeriods",
+});
+timeTableStructureVariantPeriodsModel.belongsTo(timeTableStructureVariantModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variant",
+});
+
+timeTableStructureVariantPeriodsModel.belongsTo(timeTableStructurePeriodsModel, {
+  foreignKey: "time_table_structure_periods_id",
+  as: "structurePeriod",
+});
+timeTableStructurePeriodsModel.hasMany(timeTableStructureVariantPeriodsModel, {
+  foreignKey: "time_table_structure_periods_id",
+  as: "variantPeriods",
+});
+
+timeTableStructureVariantModel.hasMany(timeTableStructureVariantCourseMappingModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variantCourseMappings",
+});
+timeTableStructureVariantCourseMappingModel.belongsTo(timeTableStructureVariantModel, {
+  foreignKey: "time_table_structure_variant_id",
+  as: "variant",
+});
+
+timeTableStructureVariantCourseMappingModel.belongsTo(timeTableStructureCourseModel, {
+  foreignKey: "timetable_structure_course_mapper_id",
+  as: "structureCourseMapping",
+});
+timeTableStructureCourseModel.hasMany(timeTableStructureVariantCourseMappingModel, {
+  foreignKey: "timetable_structure_course_mapper_id",
+  as: "variantCourseMappings",
+});
+
 timeTableStructureCourseModel.belongsTo(courseModel, {
   foreignKey: "course_id",
   as: "course",
@@ -1638,6 +1695,61 @@ subjectModel.hasMany(timeTableCellModel, {
   as: "timeTableCells",
 });
 
+
+timeTableCellDateWiseModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "dateWiseCells",
+});
+
+examScheduleModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(examScheduleModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "examSchedules",
+});
+
+assessmentPlanSubjectMappingModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(assessmentPlanSubjectMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "assessmentPlanSubjectMappings",
+});
+
+academicGroupScopeModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(academicGroupScopeModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "academicGroupScopes",
+});
+
+teacherSubjectMappingModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(teacherSubjectMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "teacherSubjectMappings",
+});
+
+timeTableCellModel.belongsTo(subjectComponentMappingModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "subjectComponentMapping",
+});
+subjectComponentMappingModel.hasMany(timeTableCellModel, {
+  foreignKey: "subjectComponentMappingId",
+  as: "timeTableCells",
+});
+
 timeTableCellModel.belongsTo(electiveSubjectModel, {
   foreignKey: "electiveSubjectId",
   as: "timeTableElective",
@@ -1700,6 +1812,24 @@ timeTableCellDateWiseModel.belongsTo(classRoomModel, {
 });
 classRoomModel.hasMany(timeTableCellDateWiseModel, {
   foreignKey: "classRoomSectionId",
+  as: "timeTableCellDateWise",
+});
+
+timeTableCellDateWiseModel.belongsTo(subjectModel, {
+  foreignKey: "subjectId",
+  as: "timeTableSubject",
+});
+subjectModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "subjectId",
+  as: "timeTableCellDateWise",
+});
+
+timeTableCellDateWiseModel.belongsTo(electiveSubjectModel, {
+  foreignKey: "electiveSubjectId",
+  as: "timeTableElective",
+});
+electiveSubjectModel.hasMany(timeTableCellDateWiseModel, {
+  foreignKey: "electiveSubjectId",
   as: "timeTableCellDateWise",
 });
 
@@ -2001,7 +2131,7 @@ roleModel.hasMany(rolePermissionsModel, {
   as: "rolePermissions",
 });
 
-// user_role_permission_scope: the single source of truth for user authorization
+// user_role_permission_scope: assigns roles to users (permissions come from role_permissions)
 userRolePermissionModel.belongsTo(roleModel, {
   foreignKey: "role_id",
   as: "userRole",
@@ -2017,6 +2147,15 @@ userRolePermissionModel.belongsTo(userModel, {
 });
 userModel.hasMany(userRolePermissionModel, {
   foreignKey: "user_id",
+  as: "userRolePermissions",
+});
+
+userRolePermissionModel.belongsTo(universityModel, {
+  foreignKey: "university_id",
+  as: "university",
+});
+universityModel.hasMany(userRolePermissionModel, {
+  foreignKey: "university_id",
   as: "userRolePermissions",
 });
 
@@ -3769,16 +3908,21 @@ studentResultModel.belongsTo(instituteModel, {
   foreignKey: "instituteId",
   as: "institute",
 });
-studentResultModel.belongsTo(acedmicYearModel, {
-  foreignKey: "academicYearId",
-  as: "academicYear",
-});
 studentResultModel.belongsTo(assessmentPlanComponentModel, {
   foreignKey: "assessmentPlanComponentId",
   as: "assessmentPlanComponent",
 });
 assessmentPlanComponentModel.hasMany(studentResultModel, {
   foreignKey: "assessmentPlanComponentId",
+  as: "studentResults",
+});
+
+studentResultModel.belongsTo(gradingModel, {
+  foreignKey: "gradingId",
+  as: "gradingScheme",
+});
+gradingModel.hasMany(studentResultModel, {
+  foreignKey: "gradingId",
   as: "studentResults",
 });
 
@@ -3880,6 +4024,10 @@ userModel.hasMany(s3FileModel, { foreignKey: "createdBy", as: "s3Files" });
 academicRegulationModel.belongsTo(gradingModel, {
   foreignKey: "gradingSchemeId",
   as: "gradingScheme",
+});
+gradingModel.hasMany(academicRegulationModel, {
+  foreignKey: "gradingSchemeId",
+  as: "academicRegulations",
 });
 academicRegulationModel.belongsTo(userModel, {
   foreignKey: "createdBy",
@@ -4026,6 +4174,10 @@ curriculumSubjectTermMappingModel.belongsTo(curriculumModel, { foreignKey: 'curr
 
 curriculumSubjectTermMappingModel.belongsTo(subjectModel, { foreignKey: 'subjectId', as: 'subject' });
 subjectModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectId', as: 'curriculumTermMappings' });
+curriculumSubjectTermMappingModel.belongsTo(subjectComponentMappingModel, { foreignKey: 'subjectComponentMappingId', as: 'subjectComponentMapping' });
+subjectComponentMappingModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'subjectComponentMappingId', as: 'curriculumSubjectTermMappings' });
+curriculumSubjectTermMappingModel.belongsTo(curriculumCategoryModel, { foreignKey: 'curriculum_category_id', as: 'curriculumCategory' });
+curriculumCategoryModel.hasMany(curriculumSubjectTermMappingModel, { foreignKey: 'curriculum_category_id', as: 'curriculumSubjectTermMappings' });
 
 curriculumModel.hasMany(curriculumBatchMappingModel, { foreignKey: 'curriculumId', as: 'batchMappings' });
 curriculumBatchMappingModel.belongsTo(curriculumModel, { foreignKey: 'curriculumId', as: 'curriculum' });
@@ -4098,6 +4250,9 @@ export {
   timeTableStructureModel,
   timeTableStructureCourseModel,
   timeTableStructurePeriodsModel,
+  timeTableStructureVariantModel,
+  timeTableStructureVariantPeriodsModel,
+  timeTableStructureVariantCourseMappingModel,
   faculityLoadModel,
   timeTableRoutineModel,
   classScheduleModel,
@@ -4224,6 +4379,13 @@ export {
   userModel as users,
 
   curriculumModel,
+  curriculumCategoryModel,
+  subjectComponentModel,
+  subjectComponentMappingModel,
+  electivePoolModel,
+  electivePoolSubjectMappingModel,
+  curriculumElectiveRequirementModel,
+  curriculumElectiveAssignmentModel,
   curriculumSubjectTermMappingModel,
   curriculumBatchMappingModel,
   curriculumBatchTermMappingModel,
@@ -4237,6 +4399,7 @@ export {
   billingScheduleItemsModel,
   billingScheduleSubItemsModel,
   billingSchedulePaymentTermsModel,
+  refreshTokenModel,
 };
 
 import sequelize from "../database/sequelizeConfig.js";
@@ -4299,6 +4462,56 @@ feePlanSubItemsModel.hasMany(billingScheduleSubItemsModel, { foreignKey: 'feePla
 
 billingScheduleItemsModel.hasMany(billingSchedulePaymentTermsModel, { foreignKey: 'billingScheduleItemId', as: 'paymentTerms' });
 billingSchedulePaymentTermsModel.belongsTo(billingScheduleItemsModel, { foreignKey: 'billingScheduleItemId', as: 'billingScheduleItem' });
+
+// Subject Component Associations
+subjectModel.belongsToMany(subjectComponentModel, { through: subjectComponentMappingModel, foreignKey: 'subject_id', otherKey: 'subject_component_id', as: 'components' });
+subjectComponentModel.belongsToMany(subjectModel, { through: subjectComponentMappingModel, foreignKey: 'subject_component_id', otherKey: 'subject_id', as: 'subjects' });
+subjectModel.hasMany(subjectComponentMappingModel, { foreignKey: 'subject_id', as: 'subjectComponentMappings' });
+subjectComponentModel.hasMany(subjectComponentMappingModel, { foreignKey: 'subject_component_id', as: 'subjectComponentMappings' });
+subjectComponentMappingModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+subjectComponentMappingModel.belongsTo(subjectComponentModel, { foreignKey: 'subject_component_id', as: 'component' });
+
+// Elective Pool Associations
+electivePoolModel.belongsTo(courseModel, { foreignKey: 'course_id', as: 'programme' });
+courseModel.hasMany(electivePoolModel, { foreignKey: 'course_id', as: 'electivePools' });
+electivePoolModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
+instituteModel.hasMany(electivePoolModel, { foreignKey: 'institute_id', as: 'electivePools' });
+electivePoolModel.belongsTo(batchModel, { foreignKey: 'batch_id', as: 'batch' });
+batchModel.hasMany(electivePoolModel, { foreignKey: 'batch_id', as: 'electivePools' });
+electivePoolModel.belongsToMany(subjectModel, { through: electivePoolSubjectMappingModel, foreignKey: 'elective_pool_id', otherKey: 'subject_id', as: 'subjects' });
+subjectModel.belongsToMany(electivePoolModel, { through: electivePoolSubjectMappingModel, foreignKey: 'subject_id', otherKey: 'elective_pool_id', as: 'electivePools' });
+electivePoolModel.hasMany(electivePoolSubjectMappingModel, { foreignKey: 'elective_pool_id', as: 'poolSubjectMappings' });
+electivePoolSubjectMappingModel.belongsTo(electivePoolModel, { foreignKey: 'elective_pool_id', as: 'electivePool' });
+subjectModel.hasMany(electivePoolSubjectMappingModel, { foreignKey: 'subject_id', as: 'poolSubjectMappings' });
+electivePoolSubjectMappingModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+// Curriculum Elective Requirement Associations
+curriculumElectiveRequirementModel.belongsTo(curriculumModel, { foreignKey: 'curriculum_id', as: 'curriculum' });
+curriculumModel.hasMany(curriculumElectiveRequirementModel, { foreignKey: 'curriculum_id', as: 'electiveRequirements' });
+
+curriculumElectiveRequirementModel.belongsTo(curriculumCategoryModel, { foreignKey: 'curriculum_category_id', as: 'curriculumCategory' });
+curriculumCategoryModel.hasMany(curriculumElectiveRequirementModel, { foreignKey: 'curriculum_category_id', as: 'electiveRequirements' });
+
+curriculumElectiveRequirementModel.belongsTo(electivePoolModel, { foreignKey: 'elective_pool_id', as: 'electivePool' });
+electivePoolModel.hasMany(curriculumElectiveRequirementModel, { foreignKey: 'elective_pool_id', as: 'curriculumElectiveRequirements' });
+
+// Curriculum Elective Assignment Associations
+curriculumElectiveAssignmentModel.belongsTo(curriculumElectiveRequirementModel, { foreignKey: 'curriculum_elective_requirement_id', as: 'curriculumElectiveRequirement' });
+curriculumElectiveRequirementModel.hasMany(curriculumElectiveAssignmentModel, { foreignKey: 'curriculum_elective_requirement_id', as: 'assignments' });
+
+curriculumElectiveAssignmentModel.belongsTo(studentModel, { foreignKey: 'student_id', as: 'student' });
+studentModel.hasMany(curriculumElectiveAssignmentModel, { foreignKey: 'student_id', as: 'electiveAssignments' });
+
+curriculumElectiveAssignmentModel.belongsTo(subjectModel, { foreignKey: 'subject_id', as: 'subject' });
+subjectModel.hasMany(curriculumElectiveAssignmentModel, { foreignKey: 'subject_id', as: 'electiveAssignments' });
+
+curriculumElectiveAssignmentModel.belongsTo(userModel, { foreignKey: 'created_by', as: 'creator' });
+curriculumElectiveAssignmentModel.belongsTo(universityModel, { foreignKey: 'university_id', as: 'university' });
+curriculumElectiveAssignmentModel.belongsTo(instituteModel, { foreignKey: 'institute_id', as: 'institute' });
+curriculumElectiveAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: 'academic_year_id', as: 'academicYear' });
+
+// Refresh Token Associations
+userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });
+refreshTokenModel.belongsTo(userModel, { foreignKey: 'user_id', as: 'user' });
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 

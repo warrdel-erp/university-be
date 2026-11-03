@@ -2227,83 +2227,52 @@ export async function getPastClassSchedules(
     pagination = paginationArg || {};
   }
 
-  const { page, limit } = pagination;
-  const hasPagination = Boolean(page && limit);
+  const page = Number(pagination.page) || 1;
+  const limit = Number(pagination.limit) || undefined;
+  const hasPagination = limit != null && limit > 0;
 
-  // No grouping: DB page/limit matches response entries directly
-  if (!groupPeriods && hasPagination) {
-    const { rows: rawSchedules, total } =
-      await employeeScheduleRepository.getPastClassSchedulesForEmployee(
-        userId,
-        currentDateString,
-        sessionId,
-        { page, limit },
-      );
-    const teacher = getTeacherDetails(rawSchedules);
-    const schedules = await enrichSchedulesWithAttendance(
-      rawSchedules.map(stripTeacherFieldsFromSchedule),
+  // Fetch all rows — do not pass page/limit to the query so joins, sort and filters are consistent
+  const { rows: rawSchedules } =
+    await employeeScheduleRepository.getPastClassSchedulesForEmployee(
+      userId,
+      currentDateString,
+      sessionId,
+      {},
+      academicYearId,
     );
-    return { teacher, schedules, total };
+
+  let teacher = getTeacherDetails(rawSchedules);
+
+  let schedules = rawSchedules.map(stripTeacherFieldsFromSchedule);
+
+  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
+  if (search) {
+    schedules = schedules.filter((s) => {
+      const subj =
+        s.timeTableSubject?.subjectName ||
+        s.timeTableElective?.electiveSubjectName ||
+        "";
+      const course = s.course?.courseName || "";
+      const room = s.classRoom?.roomNumber || "";
+      const section = s.section ? String(s.section) : "";
+      return (
+        subj.toLowerCase().includes(search) ||
+        course.toLowerCase().includes(search) ||
+        room.toLowerCase().includes(search) ||
+        section.toLowerCase().includes(search)
+      );
+    });
   }
 
-  // Grouping (or no pagination): batch-fetch until response page is filled, then stop
-  const needed = hasPagination ? page * limit : Infinity;
-  const batchSize = hasPagination ? Math.max(limit * 3, 30) : undefined;
-  let allRaw = [];
-  let teacher = null;
-  let fetchPage = 1;
-  let schedules = [];
-  let exhausted = false;
-
-  while (true) {
-    const batchPagination = batchSize
-      ? { page: fetchPage, limit: batchSize }
-      : {};
-    const { rows } =
-      await employeeScheduleRepository.getPastClassSchedulesForEmployee(
-        userId,
-        currentDateString,
-        sessionId,
-        batchPagination,
-      );
-
-    if (!teacher) {
-      teacher = getTeacherDetails(rows);
-    }
-
-    if (!rows.length) {
-      exhausted = true;
-      break;
-    }
-
-    for (const row of rows) {
-      allRaw.push(row);
-    }
-
-    schedules = allRaw.map(stripTeacherFieldsFromSchedule);
-    if (groupPeriods) {
-      schedules = await groupConsecutivePeriods(
-        schedules,
-        groupPeriods === "sessional",
-      );
-      schedules.sort((a, b) => new Date(b.date) - new Date(a.date));
-    }
-
-    if (!batchSize || rows.length < batchSize) {
-      exhausted = true;
-    }
-
-    // Response page filled — do not fetch more rows
-    if (schedules.length >= needed || exhausted) {
-      break;
-    }
-
-    fetchPage += 1;
+  if (groupPeriods) {
+    schedules = await groupConsecutivePeriods(
+      schedules,
+      groupPeriods === "sessional",
+    );
+    schedules.sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
   }
 
-  const total = exhausted
-    ? schedules.length
-    : Math.max(schedules.length, needed + 1);
+  const total = schedules.length;
 
   let pageSchedules = schedules;
   if (hasPagination) {
@@ -2311,10 +2280,26 @@ export async function getPastClassSchedules(
     pageSchedules = schedules.slice(offset, offset + limit);
   }
 
-  // Enrich attendance only for response entries
+  // Enrich attendance only for response page entries
   pageSchedules = await enrichSchedulesWithAttendance(pageSchedules);
   if (groupPeriods) {
     pageSchedules = await applyGroupAttendanceStatus(pageSchedules);
+  }
+
+  if (!teacher && userId != null) {
+    const emp = await model.employeeModel.findOne({
+      where: { userId: Number(userId) },
+      attributes: ["userId", "employeeId", "employeeName", "employeeCode", "pickColor"],
+    });
+    if (emp) {
+      teacher = {
+        userId: emp.userId,
+        employeeId: emp.employeeId,
+        employeeName: emp.employeeName,
+        employeeCode: emp.employeeCode,
+        pickColor: emp.pickColor,
+      };
+    }
   }
 
   return { teacher, schedules: pageSchedules, total };
@@ -2365,6 +2350,25 @@ export async function getUpcomingClassSchedules(
     );
 
   let schedules = upcomingClasses.map(stripTeacherFieldsFromSchedule);
+
+  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
+  if (search) {
+    schedules = schedules.filter((s) => {
+      const subj =
+        s.timeTableSubject?.subjectName ||
+        s.timeTableElective?.electiveSubjectName ||
+        "";
+      const course = s.course?.courseName || "";
+      const room = s.classRoom?.roomNumber || "";
+      const section = s.section ? String(s.section) : "";
+      return (
+        subj.toLowerCase().includes(search) ||
+        course.toLowerCase().includes(search) ||
+        room.toLowerCase().includes(search) ||
+        section.toLowerCase().includes(search)
+      );
+    });
+  }
 
   if (groupPeriods) {
     schedules = await groupConsecutivePeriods(

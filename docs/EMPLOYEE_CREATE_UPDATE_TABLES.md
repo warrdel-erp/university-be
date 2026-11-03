@@ -22,9 +22,9 @@ When a new employee is created via `POST /employee/addEmp`, a multi-table databa
 
 | # | Table Name (`field`) | Sequelize Model | Primary Key | Foreign Keys Stored | Purpose & Data Saved |
 |---|----------------------|-----------------|-------------|---------------------|----------------------|
-| 1 | **`users`** | `userModel` | `user_id` | `university_id`, `default_institute_id` | Authentication record created via `employeeRegister`. Stores login credentials, hashed password, phone, email, and `is_teacher` flag. |
+| 1 | **`users`** | `userModel` | `user_id` | `university_id`, `default_institute_id` | Authentication record created via `employeeRegister`. Stores login credentials, hashed password, phone, and email. |
 | 2 | **`user_student_employee`** | `userStudentEmployeeModel` | `id` | `user_id`, `employee_id` | Cross-reference mapping table linking the auth `userId` to the ERP `employeeId`. |
-| 3 | **`user_role`** *(dynamic)* | `userRoleModel` | `user_role_id` | `user_id`, `role_id` | User roles and permissions are managed dynamically via separate role-assignment workflows. During employee create/update, `roleId` is set to `null` and `isTeacher` is always `false`. |
+| 3 | **`user_role`** *(dynamic)* | `userRoleModel` | `user_role_id` | `user_id`, `role_id` | User roles and permissions are managed dynamically via separate role-assignment workflows. During employee create/update, `roleId` is set to `null`. |
 | 4 | **`employee`** | `employeeModel` | `employee_id` | `user_id`, `campus_id`, `institute_id`, `department_id`, `university_id`, `employee_photo` (FK to `s3_files.id`), `employee_signature` (FK to `s3_files.id`) | Main employee master table. Stores `employee_code`, `employee_name`, `employment_type`, `dateOfBirth`, `fatherName`, `motherName`, `pickColor`, `created_by`, and S3 file IDs for profile photo & signature. |
 | 5 | **`s3_files`** | `s3FileModel` | `id` | `created_by`, `entity_id`, `company_id` | Central file storage catalog. Uploaded file IDs are referenced by `employee.employee_photo`, `employee.employee_signature`, and `employee_qualification.attachment`. Created as `pending` via pre-signed URL and activated (`status = 'active'`, `entity_type = 'employee_document'`, `entity_id = employeeId`) upon save. |
 | 6 | **`employee_address`** | `employeeAddressModel` | `employee_address_id` | `employee_id`, `user_id` | Permanent address details (`pAddress`, `pCity`, `pState`, `pPincode`, `pCountry`, `mobileNumber`, `personalEmail`). Note: `phoneNumber`, `offical_mobile_number`, and `offical_email_id` have been migrated to `mobileNumber` and `employee_office`. |
@@ -132,7 +132,6 @@ Beyond employee creation and profile updates, the following tables in the ERP st
 2. **Dual-Key Identification (`assertScopedEmployee`)**:
    - APIs commonly accept `/:id`. The helper `assertScopedEmployee(id)` checks if `id` matches `employee.employee_id`; if not found, it checks if it matches `employee.user_id`. This allows the frontend to supply either identifier safely.
 3. **Dynamic User Role Separation**:
-   - `isTeacher` is always hardcoded to `false`.
    - `roleId` is set to `null` on the employee record. User roles and permissions are managed dynamically via dedicated role-assignment workflows.
 4. **Scoped Campus & Institute Resolution**:
    - `campusId` and `instituteId` do **not** need to be sent in the request payload. They are automatically resolved from the active user's scoped context (`getTenantStore()`).
@@ -525,7 +524,7 @@ The endpoints **`POST /employee`** (Create) and **`PATCH /employee/:id`** (Updat
 | **`employeeSignature`** | `Integer \| null` | **Optional** | `employee.employee_signature` | FK to `s3_files.id` for digital signature. |
 | **`campusId`** | `Integer` | **Auto-Scoped** | `employee.campus_id` | *Do not send in payload.* Retrieved automatically from active profile session (`getTenantStore()`). |
 | **`instituteId`** | `Integer` | **Auto-Scoped** | `employee.institute_id` | *Do not send in payload.* Retrieved automatically from active profile session (`getTenantStore()`). |
-| **`roleId`** | `Integer \| null` | **Optional** | *Ignored* | Managed dynamically via dedicated role assignment APIs. `roleId` is set to `null` and `isTeacher` is always `false`. |
+| **`roleId`** | `Integer \| null` | **Optional** | *Ignored* | Managed dynamically via dedicated role assignment APIs. `roleId` is set to `null`. |
 
 ---
 

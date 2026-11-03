@@ -1,9 +1,38 @@
 import * as RoleCreationService from "../repository/roleRepository.js";
 import * as model from "../models/index.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { PERMISSIONS } from "../const/permissions.js";
+import { VALID_SCOPES } from "../const/scopes.js";
+import { isSystemRole } from "../const/roles.js";
+import { isPermissionAllowedForScope, getEffectiveScope } from "../utility/permissionUtility.js";
+
+function assertValidScope(scope) {
+  if (!VALID_SCOPES.includes(scope)) {
+    throw new Error(`Invalid scope '${scope}'. Allowed: ${VALID_SCOPES.join(", ")}`);
+  }
+}
+
+// Permissions the role may not hold because they don't fit the role's scope
+function findDisallowedPermissions(permissionKeys, scope) {
+  return permissionKeys.filter(
+    (key) => !PERMISSIONS[key] || !isPermissionAllowedForScope(key, scope),
+  );
+}
 
 export async function addRole(RoleData) {
-  return RoleCreationService.addRole(RoleData);
+  assertValidScope(RoleData.scope || "INSTITUTE");
+  if (isSystemRole(RoleData.role)) {
+    const error = new Error(`Cannot create role with reserved system name '${RoleData.role}'.`);
+    error.statusCode = 403;
+    throw error;
+  }
+  const existing = await RoleCreationService.findRoleByRoleName(RoleData.role);
+  if (existing) {
+    const error = new Error(`Role with name '${RoleData.role}' already exists.`);
+    error.statusCode = 400;
+    throw error;
+  }
+  return RoleCreationService.addRole({ ...RoleData, scope: RoleData.scope || "INSTITUTE" });
 }
 
 export async function getRoleDetails() {
@@ -14,128 +43,125 @@ export async function getSingleRoleDetails(roleId) {
   return RoleCreationService.getSingleRoleDetails(roleId);
 }
 
-export async function deleteRole(RoleSectionId) {
-  return RoleCreationService.deleteRole(RoleSectionId);
+export async function deleteRole(roleId) {
+  const role = await model.roleModel.findOne({ where: { roleId } });
+  if (!role) {
+    return false;
+  }
+  if (isSystemRole(role)) {
+    const error = new Error(`System role '${role.role}' cannot be deleted.`);
+    error.statusCode = 403;
+    throw error;
+  }
+  return RoleCreationService.deleteRole(roleId);
 }
 
 export async function updateRole(roleId, RoleData) {
+  const role = await model.roleModel.findOne({ where: { roleId } });
+  if (!role) {
+    const error = new Error(`Role not found: ${roleId}`);
+    error.statusCode = 404;
+    throw error;
+  }
+  if (isSystemRole(role)) {
+    const error = new Error(`System role '${role.role}' cannot be modified.`);
+    error.statusCode = 403;
+    throw error;
+  }
+  if (RoleData.role && isSystemRole(RoleData.role)) {
+    const error = new Error(`Cannot rename role to reserved system name '${RoleData.role}'.`);
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (RoleData.scope !== undefined) {
+    assertValidScope(RoleData.scope);
+
+    // Narrowing a role's scope must not leave it holding permissions that no longer fit
+    const existing = await model.rolePermissionsModel.findAll({ where: { roleId } });
+    const disallowed = findDisallowedPermissions(
+      existing.map((rp) => rp.permission),
+      RoleData.scope,
+    );
+    if (disallowed.length > 0) {
+      throw new Error(
+        `Role has permissions not allowed at ${RoleData.scope} scope: ${disallowed.join(", ")}`,
+      );
+    }
+  }
   return RoleCreationService.updateRole(roleId, RoleData);
 }
 
 /**
- * Get all permission+scope mappings for a role template.
- * Returns array of { rolePermissionsId, roleId, permission, scope }
+ * Get all permissions of a role.
+ * Returns array of { rolePermissionsId, roleId, permission, scope } where `scope` is the
+ * scope the permission effectively runs at for this role.
  */
 export async function getRolePermissions(roleId) {
-  const mappings = await model.rolePermissionsModel.findAll({
-    where: { role_id: roleId },
-  });
+  const role = await model.roleModel.findOne({ where: { roleId } });
+  if (!role) {
+    throw new Error(`Role not found: ${roleId}`);
+  }
 
-  const permissionMap = {};
-  mappings.forEach(m => {
-    const key = `${m.permission}:${m.scope}`;
-    if (!permissionMap[key]) {
-      permissionMap[key] = {
-        rolePermissionsId: m.rolePermissionsId,
-        roleId: m.roleId,
-        permission: m.permission,
-        scope: m.scope,
-        resourceIds: []
-      };
-    }
-    if (m.resourceId) {
-      permissionMap[key].resourceIds.push(m.resourceId);
-    }
-  });
+  const mappings = await model.rolePermissionsModel.findAll({ where: { roleId } });
 
-  return Object.values(permissionMap);
+  return mappings.map((m) => ({
+    rolePermissionsId: m.rolePermissionsId,
+    roleId: m.roleId,
+    permission: m.permission,
+    scope: getEffectiveScope(m.permission, role.scope),
+  }));
 }
 
 /**
- * Save role template permission+scope mappings.
- * Replaces all existing mappings for this role.
- * @param {number} roleId 
- * @param {Array<{permission: string, scope: string}>} permissions 
+ * Replace a role's permissions.
+ * Accepts permission keys (or { permission } objects). Each permission must be allowed
+ * at the role's scope (see `possibleScopes` in const/permissions.js).
+ * @param {number} roleId
+ * @param {Array<string|{permission: string}>} permissions
  */
 export async function assignRolePermissions(roleId, permissions, transaction = null) {
   const internalTransaction = !transaction ? await sequelize.transaction() : null;
   const activeTransaction = transaction || internalTransaction;
 
   try {
-    // Fetch the role
     const roleRecord = await model.roleModel.findOne({
       where: { role_id: roleId },
       transaction: activeTransaction
     });
+
+    if (!roleRecord) {
+      const error = new Error(`Role not found: ${roleId}`);
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (isSystemRole(roleRecord)) {
+      const error = new Error(`Permissions for system role '${roleRecord.role}' cannot be modified.`);
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const keys = [
+      ...new Set(permissions.map((p) => (typeof p === "string" ? p : p?.permission)).filter(Boolean)),
+    ];
+
+    const disallowed = findDisallowedPermissions(keys, roleRecord.scope);
+    if (disallowed.length > 0) {
+      throw new Error(
+        `Permissions not allowed for a ${roleRecord.scope} role: ${disallowed.join(", ")}`,
+      );
+    }
 
     await model.rolePermissionsModel.destroy({
       where: { role_id: roleId },
       transaction: activeTransaction
     });
 
-    const dataToInsert = [];
-    permissions.forEach(p => {
-      let resourceIds = (p.resourceIds && p.resourceIds.length > 0) ? p.resourceIds : [null];
-      
-      // Default null for resourceIds if not provided
-      if (resourceIds[0] === null) {
-        // Now that roles aren't institute-wise, it remains null unless explicitly provided
-      }
-
-      resourceIds.forEach(resId => {
-        dataToInsert.push({
-          roleId,
-          permission: p.permission,
-          scope: p.scope,
-          resourceId: resId
-        });
-      });
-    });
-
-    const result = await model.rolePermissionsModel.bulkCreate(dataToInsert, {
-      transaction: activeTransaction
-    });
-
-    // SYNC WITH ASSIGNED USERS
-    // 1. Find all users who currently have this role
-    const usersWithRole = await model.userRolePermissionModel.findAll({
-      attributes: ['userId'],
-      where: { roleId },
-      group: ['userId'],
-      transaction: activeTransaction
-    });
-
-    const userIds = usersWithRole.map(u => u.userId);
-
-    if (userIds.length > 0) {
-      // 2. Delete all existing user permissions for this role
-      await model.userRolePermissionModel.destroy({
-        where: { roleId },
-        transaction: activeTransaction
-      });
-
-      // 3. Insert new user permissions for all these users
-      const userPermissionsToInsert = [];
-      userIds.forEach(userId => {
-        dataToInsert.forEach(dp => {
-          if (dp.permission !== "perm_access_inst") {
-            userPermissionsToInsert.push({
-              userId,
-              roleId,
-              permission: dp.permission,
-              scope: dp.scope,
-              resourceId: dp.resourceId
-            });
-          }
-        });
-      });
-
-      if (userPermissionsToInsert.length > 0) {
-        await model.userRolePermissionModel.bulkCreate(userPermissionsToInsert, {
-          transaction: activeTransaction
-        });
-      }
-    }
+    const result = await model.rolePermissionsModel.bulkCreate(
+      keys.map((permission) => ({ roleId: Number(roleId), permission })),
+      { transaction: activeTransaction },
+    );
 
     if (internalTransaction) await internalTransaction.commit();
     return result;

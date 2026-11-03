@@ -27,13 +27,34 @@ const gradingGradeModel = sequelize.define(
         },
         minPercentage: {
             type: DataTypes.DECIMAL(5, 2),
-            allowNull: false,
+            allowNull: true,
             field: "min_percentage",
         },
         maxPercentage: {
             type: DataTypes.DECIMAL(5, 2),
-            allowNull: false,
+            allowNull: true,
             field: "max_percentage",
+        },
+        lowerBound: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: "lower_bound",
+        },
+        upperBound: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: "upper_bound",
+        },
+        expectedStudentsPercentage: {
+            type: DataTypes.DECIMAL(5, 2),
+            allowNull: true,
+            field: "expected_students_percentage",
+        },
+        isRuleBased: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            allowNull: false,
+            field: "is_rule_based",
         },
         gradePoint: {
             type: DataTypes.DECIMAL(4, 2),

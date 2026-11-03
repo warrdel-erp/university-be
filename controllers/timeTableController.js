@@ -43,7 +43,7 @@ export const addTimeTablePeriod = async (req, res) => {
 
 export const getTimeTableDetails = async (req, res) => {
   try {
-    const result = await timeTableServices.getTimeTableDetails();
+    const result = await timeTableServices.getTimeTableDetails(req.query);
     return SuccessResponse(res, 200, "Time table details fetched successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
@@ -79,7 +79,9 @@ export const getStructureMappingPrintData = async (req, res) => {
 
 export const updateTimeTable = async (req, res) => {
   try {
-    const result = await timeTableServices.updateTimeTable(req.body);
+    const variantId = req.query?.timeTableStructureVariantId || req.body?.timeTableStructureVariantId;
+    const periods = Array.isArray(req.body) ? req.body : req.body?.periods;
+    const result = await timeTableServices.updateTimeTable(periods || req.body, variantId);
     return SuccessResponse(res, 200, "Time table updated successfully", result);
   } catch (error) {
     return ErrorResponse(res, 400, error.message || "Internal Server Error");
@@ -174,6 +176,29 @@ export const copyTimeTableStructure = async (req, res) => {
   } catch (error) {
     console.error("Error in copying timetable structure:", error);
     return ErrorResponse(res, error.statusCode || 400, error.message || "Internal Server Error");
+  }
+};
+
+export const addTimeTableVariant = async (req, res) => {
+  try {
+    const result = await timeTableServices.addTimeTableVariant(
+      req.body,
+      req.user.userId,
+      req.user.userId,
+    );
+    return SuccessResponse(res, 201, "Time table variant created successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
+  }
+};
+
+export const deleteTimeTableVariant = async (req, res) => {
+  try {
+    const { timeTableStructureVariantId } = req.query;
+    const result = await timeTableServices.deleteTimeTableVariant(timeTableStructureVariantId);
+    return SuccessResponse(res, 200, "Time table variant deleted successfully", result);
+  } catch (error) {
+    return ErrorResponse(res, 400, error.message || "Internal Server Error");
   }
 };
 

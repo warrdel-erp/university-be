@@ -25,17 +25,14 @@ const sequelize = new Sequelize(
     }
 )
 
-sequelize.authenticate()
-    .then(() => {
-        console.log(`>>>>>Database connected: Name: ${dbConfig.DB} , host: ${dbConfig.HOST}>>>>>`)
-    })
-    .catch(err => {
-        console.log('Error while connecting to database' + err)
-    })
-
-    // sequelize.sync({ force: false })
-    .then(() => {
-        console.log('>>>>>yes re-sync done!>>>>>')
-    })
+if (process.env.NODE_ENV !== 'test') {
+    sequelize.authenticate()
+        .then(() => {
+            console.log(`>>>>>Database connected: Name: ${dbConfig.DB} , host: ${dbConfig.HOST}>>>>>`);
+        })
+        .catch(err => {
+            console.log('Error while connecting to database' + err);
+        });
+}
 
 export default sequelize;

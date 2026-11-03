@@ -49,6 +49,7 @@ export async function createPaymentTerm(payload) {
     const created = await repo.createPaymentTerm({
       billingScheduleItemId: items[0].billingScheduleItemId,
       installment: Number(items[0].installment),
+      isDefault: items[0].isDefault != null ? Boolean(items[0].isDefault) : false,
     });
     return repo.findPaymentTermById(created.billingSchedulePaymentTermsId);
   }
@@ -56,6 +57,7 @@ export async function createPaymentTerm(payload) {
   const recordsToCreate = items.map((i) => ({
     billingScheduleItemId: i.billingScheduleItemId,
     installment: Number(i.installment),
+    isDefault: i.isDefault != null ? Boolean(i.isDefault) : false,
   }));
 
   const createdRecords = await repo.bulkCreatePaymentTerms(recordsToCreate);
@@ -72,6 +74,9 @@ export async function getPaymentTerms(query = {}) {
   }
   if (query.installment !== undefined && query.installment !== "") {
     filters.installment = Number(query.installment);
+  }
+  if (query.isDefault !== undefined && query.isDefault !== "") {
+    filters.isDefault = query.isDefault === "true" || query.isDefault === true;
   }
 
   const pagination = {
@@ -147,6 +152,10 @@ export async function updatePaymentTerm(billingSchedulePaymentTermsId, payload) 
       throw httpError("installment must be an integer", 400);
     }
     updateData.installment = Number(payload.installment);
+  }
+
+  if (payload.isDefault !== undefined) {
+    updateData.isDefault = Boolean(payload.isDefault);
   }
 
   if (Object.keys(updateData).length === 0) {

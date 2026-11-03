@@ -8,6 +8,13 @@ const invoiceItemNetAmountSql = literal(
 );
 
 export async function findStudentFeeInvoiceForPayment(studentFeeInvoiceId, options = {}) {
+  const lock =
+    options.lock !== undefined
+      ? options.lock
+      : options.transaction
+      ? options.transaction.LOCK.UPDATE
+      : undefined;
+
   return scoped(model.studentFeeInvoiceModel).findOne({
     where: { studentFeeInvoiceId },
     attributes: [
@@ -23,7 +30,7 @@ export async function findStudentFeeInvoiceForPayment(studentFeeInvoiceId, optio
       "paymentStatus",
     ],
     transaction: options.transaction,
-    lock: options.transaction?.LOCK?.UPDATE,
+    lock,
   });
 }
 
@@ -70,12 +77,15 @@ export async function sumInvoiceTotalsByInvoiceIds(studentFeeInvoiceIds, options
 }
 
 export async function getInvoicePaymentTotals(studentFeeInvoiceId, options = {}) {
-  const [invoice, paidAmount] = await Promise.all([
-    findStudentFeeInvoiceForPayment(studentFeeInvoiceId, options),
-    sumPaidAmountFromPaymentItemsByInvoiceId(studentFeeInvoiceId, options),
-  ]);
-
+  // 1. Lock invoice row first with SELECT ... FOR UPDATE so concurrent payments wait
+  const invoice = await findStudentFeeInvoiceForPayment(studentFeeInvoiceId, options);
   if (!invoice) return null;
+
+  // 2. Read payment items sum
+  const paidAmountFromItems = await sumPaidAmountFromPaymentItemsByInvoiceId(
+    studentFeeInvoiceId,
+    options
+  );
 
   const invPlain = invoice.get ? invoice.get({ plain: true }) : invoice;
   const baseAmount = toMoneyNumber(
@@ -89,6 +99,12 @@ export async function getInvoicePaymentTotals(studentFeeInvoiceId, options = {})
     invPlain.total != null && Number(invPlain.total) > 0
       ? invPlain.total
       : Math.max(0, baseAmount - discountAmount)
+  );
+
+  // Take the maximum of the locked invoice's paidAmount and the payment items sum.
+  // This guarantees any update committed by a prior transaction is immediately reflected.
+  const paidAmount = toMoneyNumber(
+    Math.max(toMoneyNumber(invPlain.paidAmount ?? 0), toMoneyNumber(paidAmountFromItems ?? 0))
   );
 
   return { invoice, total, paidAmount };
@@ -161,6 +177,14 @@ export async function findStudentFeePaymentById(studentFeePaymentId, options = {
   return scoped(model.studentFeePaymentModel).findOne({
     where: { studentFeePaymentId },
     include: [{ model: model.paymentItemModel, as: "paymentItems" }],
+    transaction: options.transaction,
+  });
+}
+
+export async function findPaymentByTransactionId(transactionId, options = {}) {
+  if (!transactionId) return null;
+  return scoped(model.studentFeePaymentModel).findOne({
+    where: { transactionId },
     transaction: options.transaction,
   });
 }

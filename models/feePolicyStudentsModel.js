@@ -32,6 +32,12 @@ const feePolicyStudentsModel = sequelize.define(
         key: "student_id",
       },
     },
+    effect: {
+      type: DataTypes.ENUM("reduce_fee", "add_charge", "refund"),
+      allowNull: false,
+      defaultValue: "reduce_fee",
+      field: "effect",
+    },
     universityId: {
       type: DataTypes.INTEGER,
       allowNull: true,
@@ -59,6 +65,17 @@ const feePolicyStudentsModel = sequelize.define(
     createdAt: "created_at",
     updatedAt: "updated_at",
     paranoid: false,
+    indexes: [
+      {
+        unique: true,
+        fields: ["fee_policy_id", "student_id", "effect"],
+        name: "uq_fee_policy_student_effect",
+      },
+      {
+        fields: ["student_id"],
+        name: "idx_fee_policy_students_student_id",
+      },
+    ],
   }
 );
 

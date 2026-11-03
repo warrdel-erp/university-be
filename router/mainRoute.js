@@ -36,7 +36,7 @@ const addCourseItemSchema = z
   .object({
     courseName: z.string().min(1, "courseName is required"),
     courseCode: z.string().min(1, "courseCode is required"),
-    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
+    departmentId: positiveIntegerId.optional(),
     capacity: z.union([z.string(), z.number()]).optional(),
     courseDuration: z.coerce.number().positive().optional(),
     term: z.string().min(1).optional(),
@@ -49,19 +49,29 @@ const addCourseSchema = z
       .number()
       .int()
       .positive("course_levelId is required"),
-    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
+    departmentId: positiveIntegerId.optional(),
     affiliatedUniversityId: z.coerce.number().int().positive().optional(),
     term: z.string().min(1).optional(),
     courses: z.array(addCourseItemSchema).min(1, "courses array is required"),
   })
-  .passthrough();
+  .passthrough()
+  .refine(
+    (data) => {
+      if (data.departmentId) return true;
+      return data.courses.every((c) => Boolean(c.departmentId));
+    },
+    {
+      message: "departmentId is required (either at root level or for each course)",
+      path: ["departmentId"],
+    }
+  );
 
 const updateCourseSchema = z
   .object({
     courseId: positiveIntegerId,
     courseName: z.string().min(1, "courseName cannot be empty").optional(),
     courseCode: z.string().min(1, "courseCode cannot be empty").optional(),
-    departmentId: z.union([positiveIntegerId, z.null()]).optional(),
+    departmentId: positiveIntegerId.optional(),
     affiliatedUniversityId: z.union([positiveIntegerId, z.null()]).optional(),
   })
   .refine(
@@ -95,7 +105,9 @@ const addSubjectSchema = z.object({
   subjectCode: z.string().min(1, "subjectCode is required"),
   subjectName: z.string().min(1, "subjectName is required"),
   subjectType: subjectTypeEnum,
-  subjectCategory: subjectCategoryEnum,
+  subjectCategory: subjectCategoryEnum.optional(),
+  componentIds: z.array(positiveIntegerId).optional(),
+  subjectComponentIds: z.array(positiveIntegerId).optional(),
   shortName: z.string().optional(),
   description: z.string().optional(),
   isActive: z.boolean().optional(),
@@ -112,6 +124,8 @@ const updateSubjectSchema = z
     description: z.string().nullable().optional(),
     subjectType: subjectTypeEnum.optional(),
     subjectCategory: subjectCategoryEnum.optional(),
+    componentIds: z.array(positiveIntegerId).optional(),
+    subjectComponentIds: z.array(positiveIntegerId).optional(),
     isActive: z.boolean().optional(),
     specializationId: positiveIntegerId.nullable().optional(),
     term: z.coerce.number().int().positive().nullable().optional(),

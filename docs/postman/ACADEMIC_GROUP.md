@@ -136,7 +136,7 @@ GET {{baseurl}}/academicGroup/availableStudents?academicGroupId=1&page=1&limit=2
 Required: `academicGroupId`  
 Optional: `page`, `limit`, `search`, `campusId`, `subjectId`
 
-1. Lists teachers (`employee` + `user` where `isTeacher`)
+1. Lists teachers (`employee` + `user`)
 2. **Excludes** `userId`s already in `academic_group_user` for this group
 3. **Excludes** `userId`s of students already in `academic_group_student` for this group
 

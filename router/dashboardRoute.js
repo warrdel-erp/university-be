@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getDashboard, getTeacherDashboard, getMyTeacherDashboard } from '../controllers/dashboardController.js';
+import {
+  getDashboard,
+  getTeacherDashboard,
+  getMyTeacherDashboard,
+  getMyTeacherDashboardDateWiseClasses,
+  getMyTeacherTaskDuty,
+} from '../controllers/dashboardController.js';
 import userAuth from '../middleware/authUser.js';
 import { validate } from '../utility/validation.js';
 
@@ -14,11 +20,9 @@ const dashboardQuerySchema = z.object({
   week: z.coerce.number().int().min(1).max(53).optional(),
 });
 
-const teacherDashboardQuerySchema = z.object({
-  employeeId: z.coerce.number().int().positive(),
-});
-
-router.get('/teacher', userAuth, validate({ query: teacherDashboardQuerySchema }), getTeacherDashboard);
+router.get('/teacher', userAuth, getTeacherDashboard);
+router.get('/my/teacher/classes', userAuth, getMyTeacherDashboardDateWiseClasses);
+router.get('/my/teacher/task/duty', userAuth, getMyTeacherTaskDuty);
 router.get('/my/teacher', userAuth, getMyTeacherDashboard);
 router.get('/', userAuth, validate({ query: dashboardQuerySchema }), getDashboard);
 

@@ -2,15 +2,74 @@ import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { SCOPES } from "../const/scopes.js";
+
+const RESOURCE_SCOPES = [SCOPES.INSTITUTE, SCOPES.CAMPUS, SCOPES.DEPARTMENT];
 
 /**
- * Assign a role to a user by copying all role_permissions template rows
- * into user_role_permission_scope for this user.
+ * Work out which resource rows a role assignment needs, based on the role's scope.
+ *  - UNIVERSITY / MY roles need no resource (single row, resource NULL)
+ *  - INSTITUTE / CAMPUS / DEPARTMENT roles need the resource ids chosen at assignment.
+ *    If none are given, INSTITUTE/CAMPUS fall back to the user's own institute (and its campus).
  */
-export async function addUserRole(userId, roleId, transaction = null) {
+async function resolveResourceIds(user, role, requestedIds, transaction) {
+  if (!RESOURCE_SCOPES.includes(role.scope)) {
+    return [null];
+  }
+
+  let ids = [...new Set((requestedIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+
+  if (ids.length === 0 && (role.scope === SCOPES.INSTITUTE || role.scope === SCOPES.CAMPUS)) {
+    let instituteId = user.defaultInstituteId;
+    if (!instituteId) {
+      const employee = await model.employeeModel.findOne({ where: { userId: user.userId }, attributes: ["instituteId"], transaction });
+      instituteId = employee?.instituteId;
+    }
+    if (!instituteId) {
+      const student = await model.studentModel.findOne({ where: { userId: user.userId }, attributes: ["instituteId"], transaction });
+      instituteId = student?.instituteId;
+    }
+    if (instituteId && role.scope === SCOPES.INSTITUTE) {
+      ids = [Number(instituteId)];
+    } else if (instituteId) {
+      const institute = await model.instituteModel.findOne({ where: { instituteId }, attributes: ["campusId"], transaction });
+      if (institute?.campusId) ids = [Number(institute.campusId)];
+    }
+  }
+
+  if (ids.length === 0) {
+    throw new Error(`Role '${role.role}' is ${role.scope}-scoped: select the ${role.scope.toLowerCase()}(s) it applies to`);
+  }
+
+  // Institutes / campuses must belong to the user's university
+  const resourceModel =
+    role.scope === SCOPES.INSTITUTE ? model.instituteModel : role.scope === SCOPES.CAMPUS ? model.campusModel : null;
+  if (resourceModel) {
+    const pk = role.scope === SCOPES.INSTITUTE ? "instituteId" : "campusId";
+    const found = await resourceModel.findAll({
+      where: { [pk]: { [Op.in]: ids }, universityId: user.universityId },
+      attributes: [pk],
+      transaction,
+    });
+    const foundIds = new Set(found.map((f) => Number(f[pk])));
+    const invalid = ids.filter((id) => !foundIds.has(id));
+    if (invalid.length > 0) {
+      throw new Error(`Invalid ${role.scope.toLowerCase()} id(s) for user's university: ${invalid.join(", ")}`);
+    }
+  }
+
+  return ids;
+}
+
+/**
+ * Assign a role to a user: one row per resource in user_role_permission_scope.
+ * The user's permissions come from the role's role_permissions; the role's scope
+ * plus these resources decide where they apply.
+ */
+export async function addUserRole(userId, roleId, resourceIds = [], transaction = null) {
   try {
     const user = await model.userModel.findOne({
-      attributes: ["userId", "universityId"],
+      attributes: ["userId", "universityId", "defaultInstituteId"],
       where: { userId },
       transaction,
     });
@@ -30,38 +89,25 @@ export async function addUserRole(userId, roleId, transaction = null) {
       throw new Error(`Role does not belong to user's university`);
     }
 
-    // Fetch the role template defaults
-    const templatePermissions = await model.rolePermissionsModel.findAll({
-      where: { roleId: role.roleId },
-      transaction,
-    });
+    const resolved = await resolveResourceIds(user, role, resourceIds, transaction);
 
-    // Copy template entries into user_role_permission_scope
-    const dataToInsert = [];
-    templatePermissions.forEach((tp) => {
-      if (tp.permission !== "perm_access_inst") {
-        dataToInsert.push({
-          userId,
-          roleId: role.roleId,
-          permission: tp.permission,
-          scope: tp.scope,
-          resourceId: tp.resourceId
-        });
-      }
-    });
+    await model.userRolePermissionModel.bulkCreate(
+      resolved.map((resourceId) => ({
+        userId,
+        roleId: role.roleId,
+        resourceId,
+        universityId: user.universityId || role.universityId || null,
+      })),
+      { transaction },
+    );
 
-    // No longer implicitly grant base access context because roles are no longer institute-wise
-
-    if (dataToInsert.length > 0) {
-      await model.userRolePermissionModel.bulkCreate(dataToInsert, { transaction });
-    }
-
-    return { userId, roleId: role.roleId, roleName: role.role, permissionsAssigned: dataToInsert.length };
+    return { userId, roleId: role.roleId, roleName: role.role, scope: role.scope, resourceIds: resolved.filter((r) => r !== null) };
   } catch (error) {
     console.error("Repository: Error in addUserRole:", error);
     throw error;
   }
 }
+
 
 /**
  * Remove a role from a user by deleting all entries in user_role_permission_scope
@@ -95,7 +141,7 @@ export async function getUserRoles(userId) {
   try {
     const entries = await model.userRolePermissionModel.findAll({
       where: { userId },
-      include: [{ model: model.roleModel, as: "userRole", attributes: ["roleId", "role"] }],
+      include: [{ model: model.roleModel, as: "userRole", attributes: ["roleId", "role", "scope"] }],
       raw: false,
     });
 
@@ -103,10 +149,20 @@ export async function getUserRoles(userId) {
     const rolesMap = new Map();
     entries.forEach((e) => {
       if (e.userRole) {
-        rolesMap.set(e.userRole.roleId, e.userRole.role);
+        if (!rolesMap.has(e.userRole.roleId)) {
+          rolesMap.set(e.userRole.roleId, {
+            roleId: e.userRole.roleId,
+            roleName: e.userRole.role,
+            scope: e.userRole.scope,
+            resourceIds: [],
+          });
+        }
+        if (e.resourceId) {
+          rolesMap.get(e.userRole.roleId).resourceIds.push(e.resourceId);
+        }
       }
     });
-    return Array.from(rolesMap.entries()).map(([roleId, roleName]) => ({ roleId, roleName }));
+    return Array.from(rolesMap.values());
   } catch (error) {
     console.error("Repository: Error in getUserRoles:", error);
     throw error;
@@ -120,12 +176,12 @@ export async function findDistinctRolesByUserIds(userIds) {
 
   const entries = await model.userRolePermissionModel.findAll({
     where: { userId: { [Op.in]: userIds } },
-    attributes: ["userId"],
+    attributes: ["userId", "resourceId"],
     include: [
       {
         model: model.roleModel,
         as: "userRole",
-        attributes: ["roleId", "role"],
+        attributes: ["roleId", "role", "scope"],
         required: true,
       },
     ],
@@ -142,10 +198,17 @@ export async function findDistinctRolesByUserIds(userIds) {
     }
 
     const userRoles = rolesByUserId.get(entry.userId);
-    userRoles.set(entry.userRole.roleId, {
-      roleId: entry.userRole.roleId,
-      roleName: entry.userRole.role,
-    });
+    if (!userRoles.has(entry.userRole.roleId)) {
+      userRoles.set(entry.userRole.roleId, {
+        roleId: entry.userRole.roleId,
+        roleName: entry.userRole.role,
+        scope: entry.userRole.scope,
+        resourceIds: [],
+      });
+    }
+    if (entry.resourceId) {
+      userRoles.get(entry.userRole.roleId).resourceIds.push(entry.resourceId);
+    }
   }
 
   const result = new Map();

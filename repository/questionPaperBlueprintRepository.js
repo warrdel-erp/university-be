@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
@@ -13,12 +14,31 @@ export async function addBlueprint(blueprintData) {
 
 export async function getBlueprints(filters = {}) {
     try {
-        const { subjectId, ownerId } = filters;
+        const { courseId, subjectId, ownerId } = filters;
 
         const whereClause = {
             ...(subjectId && { subjectId }),
             ...(ownerId && { createdBy: ownerId }),
         };
+
+        console.log(courseId,'dsadsadasd..........');
+        if (courseId) {
+            const subjects = await scoped(model.subjectModel).findAll({
+                where: { courseId },
+                attributes: ["subjectId"],
+                raw: true,
+            });
+
+    console.log(subjects);
+            const subjectIds = subjects.map((subject) => subject.subjectId);
+            if (!subjectIds.length) {
+                return [];
+            }
+
+            whereClause.subjectId = {
+                [Op.in]: subjectIds,
+            };
+        }
 
         const rows = await scoped(model.questionPaperBlueprintModel).findAll({
             where: whereClause,
@@ -35,7 +55,7 @@ export async function getBlueprints(filters = {}) {
                             attributes: ["duration", "maximumMarks", "examScheduleId"],
                             required: false,
                         }
-                    ]
+                    ],
                 },
                 {
                     model: model.userModel,

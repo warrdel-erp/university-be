@@ -25,6 +25,12 @@ const billingSchedulePaymentTermsModel = sequelize.define(
       allowNull: false,
       field: "installment",
     },
+    isDefault: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      field: "is_default",
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

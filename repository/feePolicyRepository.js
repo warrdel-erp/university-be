@@ -117,6 +117,7 @@ export async function findFeePolicies({
   term,
   studentId,
   search,
+  isStudentMapped,
   page,
   limit,
 } = {}, options = {}) {
@@ -132,6 +133,15 @@ export async function findFeePolicies({
 
   if (calculationType) {
     where.calculationType = calculationType;
+  }
+
+  if (isStudentMapped !== undefined) {
+    where.isStudentMapped = Boolean(
+      isStudentMapped === true ||
+      isStudentMapped === "true" ||
+      isStudentMapped === 1 ||
+      isStudentMapped === "1"
+    );
   }
 
   if (search && search.trim()) {
@@ -237,10 +247,11 @@ export async function bulkCreateFeePolicyStudents(rows, options = {}) {
   });
 }
 
-export async function findFeePolicyStudents({ feePolicyId, studentId, instituteId, universityId } = {}, options = {}) {
+export async function findFeePolicyStudents({ feePolicyId, studentId, effect, instituteId, universityId } = {}, options = {}) {
   const where = {};
   if (feePolicyId) where.feePolicyId = Number(feePolicyId);
   if (studentId) where.studentId = Number(studentId);
+  if (effect) where.effect = effect;
   if (instituteId) where.instituteId = Number(instituteId);
   if (universityId) where.universityId = Number(universityId);
 
@@ -276,14 +287,30 @@ export async function findFeePolicyStudents({ feePolicyId, studentId, instituteI
   });
 }
 
-export async function deleteFeePolicyStudents({ feePolicyId, studentId } = {}, options = {}) {
+export async function deleteFeePolicyStudents({ feePolicyId, studentId, effect } = {}, options = {}) {
   const where = {};
   if (feePolicyId) where.feePolicyId = Number(feePolicyId);
   if (studentId) where.studentId = Number(studentId);
+  if (effect) where.effect = effect;
   if (!Object.keys(where).length) return 0;
 
   return model.feePolicyStudentsModel.destroy({
     where,
+    transaction: options.transaction,
+  });
+}
+
+export async function countFeePolicyStudents(where = {}, options = {}) {
+  return model.feePolicyStudentsModel.count({
+    where,
+    transaction: options.transaction,
+  });
+}
+
+export async function updateFeePoliciesStatus(feePolicyIds, data, options = {}) {
+  if (!feePolicyIds || !feePolicyIds.length) return [0];
+  return scoped(model.feePolicyModel).update(data, {
+    where: { feePolicyId: { [Op.in]: feePolicyIds.map(Number) } },
     transaction: options.transaction,
   });
 }

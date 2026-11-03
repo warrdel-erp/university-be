@@ -17,8 +17,84 @@ function routineActiveOnDateWhere(currentDate) {
   };
 }
 
+function resolveVariantPeriodTiming(cellDate, routine, baseCreation) {
+  if (!baseCreation) return baseCreation;
+  const mapping = routine?.structureCourseMapping;
+  if (!mapping) return baseCreation;
+
+  const cellDateStr =
+    typeof cellDate === "string"
+      ? cellDate.slice(0, 10)
+      : cellDate instanceof Date
+        ? cellDate.toISOString().slice(0, 10)
+        : "";
+
+  const variantMappings = mapping.variantCourseMappings || [];
+
+  let matchedVariant = null;
+  let matchedPeriods = null;
+
+  if (cellDateStr && variantMappings.length > 0) {
+    const matchedVm = variantMappings.find((vm) => {
+      const s = vm.startingDate ? String(vm.startingDate).slice(0, 10) : "";
+      const e = vm.endingDate ? String(vm.endingDate).slice(0, 10) : "";
+      return s && e && cellDateStr >= s && cellDateStr <= e;
+    });
+
+    if (matchedVm?.variant) {
+      matchedVariant = matchedVm.variant;
+      matchedPeriods = matchedVm.variant.variantPeriods || [];
+    }
+  }
+
+  // Fallback to default variant if no date-range matched
+  if (!matchedPeriods || matchedPeriods.length === 0) {
+    const defaultVm = variantMappings.find((vm) => vm.variant?.isDefault);
+    if (defaultVm?.variant) {
+      matchedVariant = defaultVm.variant;
+      matchedPeriods = defaultVm.variant.variantPeriods || [];
+    } else {
+      const structureVariants =
+        mapping.timeTableStructure?.structureVariants || [];
+      const defaultSv =
+        structureVariants.find((sv) => sv.isDefault) || structureVariants[0];
+      if (defaultSv) {
+        matchedVariant = defaultSv;
+        matchedPeriods = defaultSv.variantPeriods || [];
+      }
+    }
+  }
+
+  if (Array.isArray(matchedPeriods) && matchedPeriods.length > 0) {
+    const targetPeriodId = Number(baseCreation.timeTableCreationId);
+    const vp = matchedPeriods.find(
+      (p) => Number(p.timeTableStructurePeriodsId) === targetPeriodId,
+    );
+
+    if (vp) {
+      return {
+        ...baseCreation,
+        startTime:
+          vp.startTime != null && vp.startTime !== ""
+            ? vp.startTime
+            : baseCreation.startTime,
+        endTime:
+          vp.endTime != null && vp.endTime !== ""
+            ? vp.endTime
+            : baseCreation.endTime,
+        isCourse: vp.isCourse ?? baseCreation.isCourse ?? true,
+        timeTableStructureVariantId:
+          matchedVariant?.timeTableStructureVariantId || null,
+        variantName: matchedVariant?.name || null,
+      };
+    }
+  }
+
+  return baseCreation;
+}
+
 function flattenDateWiseScheduleRow(row, viewerUserId = null) {
-  const plain = row.get({ plain: true });
+  const plain = row.get ? row.get({ plain: true }) : row;
   const cell = plain.timeTableCell || {};
   const dateWiseTeachers = plain.timeTableCellTeachersDateWise || [];
   const weekTeachers = cell.timeTableCellTeachers || [];
@@ -66,6 +142,12 @@ function flattenDateWiseScheduleRow(row, viewerUserId = null) {
   const timeTableElective =
     plain.timeTableElective || cell.timeTableElective || null;
 
+  const resolvedCreation = resolveVariantPeriodTiming(
+    plain.date,
+    routine,
+    cell.timeTablecreation,
+  );
+
   return {
     timeTableCellDateWiseId: plain.timeTableCellDateWiseId,
     timeTableCellId: plain.timeTableCellId,
@@ -79,7 +161,7 @@ function flattenDateWiseScheduleRow(row, viewerUserId = null) {
     timeTableNameId: cell.timeTableNameId,
     timeTableCreationId: cell.timeTableCreationId,
     timeTablecreate: routine,
-    timeTablecreation: cell.timeTablecreation,
+    timeTablecreation: resolvedCreation,
     subjectId,
     electiveSubjectId,
     timeTableTeacherSubject: cell.timeTableTeacherSubject,
@@ -285,6 +367,22 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
       required: false,
     },
     {
+      model: model.subjectModel,
+      as: "timeTableSubject",
+      attributes: ["subjectId", "subjectName", "subjectCode"],
+      required: false,
+    },
+    {
+      model: model.electiveSubjectModel,
+      as: "timeTableElective",
+      attributes: [
+        "electiveSubjectId",
+        "electiveSubjectName",
+        "electiveSubjectCode",
+      ],
+      required: false,
+    },
+    {
       model: model.timeTableCellModel,
       as: "timeTableCell",
       required: true,
@@ -366,6 +464,89 @@ function dateWiseScheduleIncludes({ sessionId, academicYearId } = {}) {
               as: "timeTableCourse",
               attributes: ["courseId", "courseName"],
               required: false,
+            },
+            {
+              model: model.timeTableStructureCourseModel,
+              as: "structureCourseMapping",
+              required: false,
+              attributes: [
+                "timetableStructureCourseMapperId",
+                "timeTableNameId",
+                "startingDate",
+                "endingDate",
+              ],
+              include: [
+                {
+                  model: model.timeTableStructureVariantCourseMappingModel,
+                  as: "variantCourseMappings",
+                  required: false,
+                  attributes: [
+                    "id",
+                    "timeTableStructureVariantId",
+                    "name",
+                    "startingDate",
+                    "endingDate",
+                  ],
+                  include: [
+                    {
+                      model: model.timeTableStructureVariantModel,
+                      as: "variant",
+                      required: false,
+                      attributes: [
+                        "timeTableStructureVariantId",
+                        "name",
+                        "isDefault",
+                      ],
+                      include: [
+                        {
+                          model: model.timeTableStructureVariantPeriodsModel,
+                          as: "variantPeriods",
+                          required: false,
+                          attributes: [
+                            "id",
+                            "timeTableStructurePeriodsId",
+                            "startTime",
+                            "endTime",
+                            "isCourse",
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  model: model.timeTableStructureModel,
+                  as: "timeTableStructure",
+                  required: false,
+                  attributes: ["timeTableNameId", "name"],
+                  include: [
+                    {
+                      model: model.timeTableStructureVariantModel,
+                      as: "structureVariants",
+                      required: false,
+                      attributes: [
+                        "timeTableStructureVariantId",
+                        "name",
+                        "isDefault",
+                      ],
+                      include: [
+                        {
+                          model: model.timeTableStructureVariantPeriodsModel,
+                          as: "variantPeriods",
+                          required: false,
+                          attributes: [
+                            "id",
+                            "timeTableStructurePeriodsId",
+                            "startTime",
+                            "endTime",
+                            "isCourse",
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
             timeTableRoutineClassSectionInclude({
               sectionRequired: Boolean(sessionId),
@@ -461,6 +642,11 @@ export async function getTodayClassScheduleForEmployee(
   const baseWhere = { date: currentDate, ...teacherWhere };
   const { page, limit } = pagination;
 
+  const total = await model.timeTableCellDateWiseModel.count({
+    where: baseWhere,
+  });
+  if (total === 0) return { rows: [], total: 0 };
+
   const findOptions = {
     where: baseWhere,
     attributes: [
@@ -473,19 +659,27 @@ export async function getTodayClassScheduleForEmployee(
     ],
     include: includes,
     order: [["date", "ASC"]],
-    subQuery: false,
   };
   if (page && limit) {
-    findOptions.limit = limit;
-    findOptions.offset = (page - 1) * limit;
+    const idRows = await model.timeTableCellDateWiseModel.findAll({
+      where: baseWhere,
+      attributes: ["timeTableCellDateWiseId"],
+      order: [["date", "ASC"]],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+    if (!idRows.length) return { rows: [], total };
+    findOptions.where = {
+      timeTableCellDateWiseId: {
+        [Op.in]: idRows.map((r) => r.timeTableCellDateWiseId),
+      },
+    };
   }
 
-  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
-    ...findOptions,
-    distinct: true,
-  });
-
-  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
+  const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
+  const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
+  result.sort((a, b) => ((Number(a.period) || 0) - (Number(b.period) || 0)));
   return { rows: result, total };
 }
 
@@ -526,6 +720,11 @@ export async function getPastClassSchedulesForEmployee(
   const baseWhere = { date: { [Op.lt]: currentDate }, ...teacherWhere };
   const { page, limit } = pagination;
 
+  const total = await model.timeTableCellDateWiseModel.count({
+    where: baseWhere,
+  });
+  if (total === 0) return { rows: [], total: 0 };
+
   const findOptions = {
     where: baseWhere,
     attributes: [
@@ -538,20 +737,28 @@ export async function getPastClassSchedulesForEmployee(
     ],
     include: dateWiseScheduleIncludes({ sessionId, academicYearId }),
     order: [["date", "DESC"]],
-    subQuery: false,
   };
   if (page && limit) {
-    findOptions.limit = limit;
-    findOptions.offset = (page - 1) * limit;
+    const idRows = await model.timeTableCellDateWiseModel.findAll({
+      where: baseWhere,
+      attributes: ["timeTableCellDateWiseId"],
+      order: [["date", "DESC"]],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+    if (!idRows.length) return { rows: [], total };
+    findOptions.where = {
+      timeTableCellDateWiseId: {
+        [Op.in]: idRows.map((r) => r.timeTableCellDateWiseId),
+      },
+    };
   }
 
-  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
-    ...findOptions,
-    distinct: true,
-  });
-
-  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
-  return { rows: result, total };
+  const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
+  const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
+  result.sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
+  return { rows: result, total: page && limit ? total : result.length };
 }
 
 export async function getUpcomingClassSchedulesForEmployee(
@@ -586,6 +793,11 @@ export async function getUpcomingClassSchedulesForEmployee(
   const baseWhere = { date: { [Op.gte]: currentDate }, ...teacherWhere };
   const { page, limit } = pagination;
 
+  const total = await model.timeTableCellDateWiseModel.count({
+    where: baseWhere,
+  });
+  if (total === 0) return { rows: [], total: 0 };
+
   const findOptions = {
     where: baseWhere,
     attributes: [
@@ -598,20 +810,28 @@ export async function getUpcomingClassSchedulesForEmployee(
     ],
     include: dateWiseScheduleIncludes({ academicYearId }),
     order: [["date", "ASC"]],
-    subQuery: false,
   };
   if (page && limit) {
-    findOptions.limit = limit;
-    findOptions.offset = (page - 1) * limit;
+    const idRows = await model.timeTableCellDateWiseModel.findAll({
+      where: baseWhere,
+      attributes: ["timeTableCellDateWiseId"],
+      order: [["date", "ASC"]],
+      limit,
+      offset: (page - 1) * limit,
+      raw: true,
+    });
+    if (!idRows.length) return { rows: [], total };
+    findOptions.where = {
+      timeTableCellDateWiseId: {
+        [Op.in]: idRows.map((r) => r.timeTableCellDateWiseId),
+      },
+    };
   }
 
-  const { count: total, rows } = await model.timeTableCellDateWiseModel.findAndCountAll({
-    ...findOptions,
-    distinct: true,
-  });
-
-  const result = rows.map(row => flattenDateWiseScheduleRow(row, Number(userId)));
-  return { rows: result, total };
+  const rows = await model.timeTableCellDateWiseModel.findAll(findOptions);
+  const result = rows.map((row) => flattenDateWiseScheduleRow(row, Number(userId)));
+  result.sort((a, b) => (new Date(a.date) - new Date(b.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
+  return { rows: result, total: page && limit ? total : result.length };
 }
 
 export async function getUniqueClassSectionSubjectsForEmployee(

@@ -90,6 +90,7 @@ const billingRunsQuerySchema = z.object({
   sessionId: positiveIntegerId.optional(),
   batchId: positiveIntegerId.optional(),
   year: positiveIntegerId.optional(),
+  term: positiveIntegerId.optional(),
   billingScheduleItemId: positiveIntegerId.optional(),
   search: z.string().trim().optional(),
 });
@@ -98,22 +99,73 @@ const batchOverviewQuerySchema = z.object({
   batchId: positiveIntegerId,
 });
 
-const batchYearQuerySchema = z.object({
-  batchId: positiveIntegerId,
-  year: positiveIntegerId,
-});
-
-const createFeePlanItemBodySchema = z
+const batchYearQuerySchema = z
   .object({
     batchId: positiveIntegerId,
-    year: positiveIntegerId,
+    year: positiveIntegerId.optional(),
+    term: positiveIntegerId.optional(),
+  })
+  .superRefine((q, ctx) => {
+    if (q.year === undefined && q.term === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Either year or term is required",
+      });
+    }
+  });
+
+const feePlanItemLineItemSchema = z
+  .object({
+    term: positiveIntegerId.optional(),
+    year: positiveIntegerId.optional(),
     name: z.string().trim().min(1),
     createDate: dateOnly,
     feePlanSubItems: z.array(feePlanSubItemLine).min(1),
   })
-  .superRefine((body, ctx) =>
-    assertUniqueFeeTypeCatalogIds(body.feePlanSubItems, ctx),
-  );
+  .superRefine((item, ctx) => {
+    assertUniqueFeeTypeCatalogIds(item.feePlanSubItems, ctx);
+  });
+
+const bulkCreateFeePlanItemBodySchema = z
+  .object({
+    batchId: positiveIntegerId,
+    year: positiveIntegerId.optional(),
+    items: z.array(feePlanItemLineItemSchema).min(1),
+  })
+  .superRefine((body, ctx) => {
+    const terms = body.items.map((it) => it.term).filter((t) => t != null);
+    if (new Set(terms).size !== terms.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Duplicate terms found in items array",
+        path: ["items"],
+      });
+    }
+  });
+
+const singleCreateFeePlanItemBodySchema = z
+  .object({
+    batchId: positiveIntegerId,
+    year: positiveIntegerId.optional(),
+    term: positiveIntegerId.optional(),
+    name: z.string().trim().min(1),
+    createDate: dateOnly,
+    feePlanSubItems: z.array(feePlanSubItemLine).min(1),
+  })
+  .superRefine((body, ctx) => {
+    if (body.year === undefined && body.term === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Either term or year is required",
+      });
+    }
+    assertUniqueFeeTypeCatalogIds(body.feePlanSubItems, ctx);
+  });
+
+const createFeePlanItemBodySchema = z.union([
+  bulkCreateFeePlanItemBodySchema,
+  singleCreateFeePlanItemBodySchema,
+]);
 
 const updateFeePlanItemBodySchema = z
   .object({
@@ -121,6 +173,7 @@ const updateFeePlanItemBodySchema = z
     name: z.string().trim().min(1).optional(),
     createDate: dateOnly.optional(),
     year: positiveIntegerId.optional(),
+    term: positiveIntegerId.optional(),
     feePlanSubItems: z.array(feePlanSubItemLine).min(1).optional(),
   })
   .superRefine((body, ctx) => {
@@ -128,6 +181,7 @@ const updateFeePlanItemBodySchema = z
       body.name !== undefined ||
       body.createDate !== undefined ||
       body.year !== undefined ||
+      body.term !== undefined ||
       body.feePlanSubItems !== undefined;
 
     if (!hasUpdate) {
@@ -166,14 +220,25 @@ const deleteFeePlanSubItemQuerySchema = z.object({
   feePlanSubitemId: positiveIntegerId,
 });
 
-const publishYearBodySchema = z.object({
-  batchId: positiveIntegerId,
-  year: positiveIntegerId,
-});
+const publishYearBodySchema = z
+  .object({
+    batchId: positiveIntegerId,
+    year: positiveIntegerId.optional(),
+    term: positiveIntegerId.optional(),
+  })
+  .superRefine((b, ctx) => {
+    if (b.year === undefined && b.term === undefined) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Either year or term is required to publish/unpublish",
+      });
+    }
+  });
 
 const publishHistoryQuerySchema = z.object({
   batchId: positiveIntegerId,
   year: positiveIntegerId.optional(),
+  term: positiveIntegerId.optional(),
 });
 
 const publishHistorySingleQuerySchema = z.object({

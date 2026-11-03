@@ -21,6 +21,7 @@ const installmentSchema = z.coerce
 const singleTermInputSchema = z.object({
   billingScheduleItemId: positiveIntegerId,
   installment: installmentSchema,
+  isDefault: z.boolean().optional().default(false),
 });
 
 const createPaymentTermSchema = z.union([
@@ -31,6 +32,7 @@ const createPaymentTermSchema = z.union([
 const listPaymentTermsQuerySchema = z.object({
   billingScheduleItemId: positiveIntegerId.optional(),
   installment: installmentSchema.optional(),
+  isDefault: z.coerce.boolean().optional(),
   page: positiveIntegerId.optional().default(1),
   limit: positiveIntegerId.optional().default(10),
 });
@@ -43,6 +45,7 @@ const updatePaymentTermSchema = z.object({
   billingSchedulePaymentTermsId: positiveIntegerId,
   billingScheduleItemId: positiveIntegerId.optional(),
   installment: installmentSchema.optional(),
+  isDefault: z.boolean().optional(),
 });
 
 const deletePaymentTermQuerySchema = z.object({

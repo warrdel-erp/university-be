@@ -1,3 +1,4 @@
+import subjectComponentMappingModel from "./subjectComponentMappingModel.js";
 import sequelize from "../database/sequelizeConfig.js";
 import { DataTypes } from 'sequelize';
 
@@ -44,6 +45,15 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
             references: {
                 model: 'subject',
                 key: 'subject_id'
+            }
+        },
+        subjectComponentMappingId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'subject_component_mapping_id',
+            references: {
+                model: subjectComponentMappingModel,
+                key: 'id'
             }
         },
         universityId: {
