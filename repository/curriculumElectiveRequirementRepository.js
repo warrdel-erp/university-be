@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
 import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import { scoped, buildScope } from "../utility/scoped.js";
 
 const defaultAttributes = [
   "id",
@@ -20,42 +20,55 @@ const defaultAttributes = [
   "updatedAt",
 ];
 
-const defaultIncludes = [
-  {
-    model: model.curriculumCategoryModel,
-    as: "curriculumCategory",
-    attributes: ["id", "categoryName", "code"],
-    required: false,
-  },
-  {
-    model: model.electivePoolModel,
-    as: "electivePool",
-    attributes: ["id", "name", "code", "scope", "isActive"],
-    include: [
-      {
-        model: model.electivePoolSubjectMappingModel,
-        as: "poolSubjectMappings",
-        attributes: ["id", "subjectId"],
-        required: false,
-      },
-    ],
-    required: false,
-  },
-  {
-    model: model.curriculumModel,
-    as: "curriculum",
-    attributes: ["curriculumId", "name", "courseId"],
-    include: [
-      {
-        model: model.courseModel,
-        as: "course",
-        attributes: ["courseId", "courseName", "courseCode", "totalTerms"],
-        required: false,
-      },
-    ],
-    required: false,
-  },
-];
+function buildDefaultIncludes(query = {}, options = {}) {
+  const curriculumScope = buildScope(model.curriculumModel, options);
+  const curriculumWhere = {
+    ...curriculumScope,
+    ...(query.courseId || query.programmeId ? { courseId: query.courseId || query.programmeId } : {}),
+    ...(query.instituteId ? { instituteId: query.instituteId } : {}),
+    ...(query.universityId ? { universityId: query.universityId } : {}),
+  };
+
+  const hasCurriculumFilter = Object.keys(curriculumWhere).length > 0;
+
+  return [
+    {
+      model: model.curriculumCategoryModel,
+      as: "curriculumCategory",
+      attributes: ["id", "categoryName", "code"],
+      required: false,
+    },
+    {
+      model: model.electivePoolModel,
+      as: "electivePool",
+      attributes: ["id", "name", "code", "scope", "isActive"],
+      include: [
+        {
+          model: model.electivePoolSubjectMappingModel,
+          as: "poolSubjectMappings",
+          attributes: ["id", "subjectId"],
+          required: false,
+        },
+      ],
+      required: false,
+    },
+    {
+      model: model.curriculumModel,
+      as: "curriculum",
+      attributes: ["curriculumId", "name", "courseId", "instituteId", "universityId"],
+      where: hasCurriculumFilter ? curriculumWhere : undefined,
+      required: hasCurriculumFilter,
+      include: [
+        {
+          model: model.courseModel,
+          as: "course",
+          attributes: ["courseId", "courseName", "courseCode", "totalTerms"],
+          required: false,
+        },
+      ],
+    },
+  ];
+}
 
 export async function createCurriculumElectiveRequirement(data, options = {}) {
   const { transaction } = options;
@@ -67,7 +80,7 @@ export async function findCurriculumElectiveRequirementById(id, options = {}) {
   return scoped(model.curriculumElectiveRequirementModel).findOne({
     where: { id },
     attributes: defaultAttributes,
-    include: defaultIncludes,
+    include: buildDefaultIncludes({}, options),
     transaction,
   });
 }
@@ -115,7 +128,7 @@ export async function findCurriculumElectiveRequirements(query = {}, options = {
     }
   }
 
-  if (query.search) {
+  if (query.search && query.search.trim()) {
     const searchVal = `%${query.search.trim()}%`;
     where[Op.or] = [
       { requirementCode: { [Op.like]: searchVal } },
@@ -126,7 +139,7 @@ export async function findCurriculumElectiveRequirements(query = {}, options = {
   const findOptions = {
     where,
     attributes: defaultAttributes,
-    include: defaultIncludes,
+    include: buildDefaultIncludes(query, options),
     order: [
       ["term", "ASC"],
       ["id", "ASC"],
@@ -166,6 +179,9 @@ export async function deleteCurriculumElectiveRequirement(id, options = {}) {
 
 export async function findRequirementForOverview(id, options = {}) {
   const { transaction } = options;
+  const curriculumScope = buildScope(model.curriculumModel, options);
+  const hasCurriculumFilter = Object.keys(curriculumScope).length > 0;
+
   const include = [
     {
       model: model.curriculumCategoryModel,
@@ -198,7 +214,9 @@ export async function findRequirementForOverview(id, options = {}) {
     {
       model: model.curriculumModel,
       as: "curriculum",
-      attributes: ["curriculumId", "name", "courseId"],
+      attributes: ["curriculumId", "name", "courseId", "instituteId", "universityId"],
+      where: hasCurriculumFilter ? curriculumScope : undefined,
+      required: hasCurriculumFilter,
       include: [
         {
           model: model.courseModel,
@@ -221,7 +239,6 @@ export async function findRequirementForOverview(id, options = {}) {
           required: false,
         },
       ],
-      required: false,
     },
   ];
 

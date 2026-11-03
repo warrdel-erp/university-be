@@ -4,6 +4,7 @@ import * as repo from "../repository/curriculumElectiveRequirementRepository.js"
 import * as assignmentRepo from "../repository/curriculumElectiveAssignmentRepository.js";
 import * as models from "../models/index.js";
 import { requestContext } from "../utility/requestContext.js";
+import { scoped, buildScope } from "../utility/scoped.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -99,7 +100,7 @@ export async function addCurriculumElectiveRequirement(body) {
   }
 
   // Validate curriculum exists and check totalTerms
-  const curriculum = await models.curriculumModel.findByPk(normalized.curriculumId, {
+  const curriculum = await scoped(models.curriculumModel).findByPk(normalized.curriculumId, {
     include: [{ model: models.courseModel, as: "course", attributes: ["totalTerms"] }],
   });
   if (!curriculum) {
@@ -113,13 +114,13 @@ export async function addCurriculumElectiveRequirement(body) {
   }
 
   // Validate curriculum category exists
-  const category = await models.curriculumCategoryModel.findByPk(normalized.curriculumCategoryId);
+  const category = await scoped(models.curriculumCategoryModel).findByPk(normalized.curriculumCategoryId);
   if (!category) {
     throw httpError(`Curriculum category with id '${normalized.curriculumCategoryId}' not found`, 404);
   }
 
   // Validate elective pool exists
-  const pool = await models.electivePoolModel.findByPk(normalized.electivePoolId);
+  const pool = await scoped(models.electivePoolModel).findByPk(normalized.electivePoolId);
   if (!pool) {
     throw httpError(`Elective pool with id '${normalized.electivePoolId}' not found`, 404);
   }
