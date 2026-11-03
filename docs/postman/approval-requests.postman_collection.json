@@ -1,0 +1,301 @@
+{
+  "info": {
+    "_postman_id": "c7a8b9e0-1234-5678-9abc-def012345678",
+    "name": "Approval Requests APIs",
+    "description": "Generic Approval System APIs for multi-model approvals (Leave, Question Bank, Examination, etc.).\n\nBase path: `/approval-requests`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Create Approval Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text",
+            "description": "JWT Bearer token or accessToken cookie"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"approvalFor\": \"leave\",\n  \"resourceId\": 101,\n  \"assignedToPositionId\": 3,\n  \"level\": 1,\n  \"description\": \"Applying for 3 days casual leave due to personal work\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/approval-requests",
+          "host": ["{{base_url}}"],
+          "path": ["approval-requests"]
+        },
+        "description": "Nayi approval request submit karne ke liye. requestedBy automatically logged-in user se set hota hai aur status default 'pending' rehta hai."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Pending Approvals (Assigned To Me)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/approval-requests/pending?page=1&limit=20&approvalFor=leave",
+          "host": ["{{base_url}}"],
+          "path": ["approval-requests", "pending"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (Default: 1)"
+            },
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "Number of items per page (Default: 20)"
+            },
+            {
+              "key": "approvalFor",
+              "value": "leave",
+              "description": "Optional filter by module type: 'leave', 'question_bank', etc."
+            },
+            {
+              "key": "resourceId",
+              "value": "",
+              "disabled": true,
+              "description": "Optional filter by resourceId"
+            }
+          ]
+        },
+        "description": "Logged-in user ke active positions (e.g. HOD, Dean) ke anusar unke liye pending approvals ki list fetch karta hai."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get My Submitted Requests",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/approval-requests/my?page=1&limit=20&status=pending",
+          "host": ["{{base_url}}"],
+          "path": ["approval-requests", "my"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number"
+            },
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "Items per page"
+            },
+            {
+              "key": "status",
+              "value": "pending",
+              "description": "Filter by status: pending, approved, rejected, skipped"
+            },
+            {
+              "key": "approvalFor",
+              "value": "leave",
+              "disabled": true,
+              "description": "Filter by entity: leave, question_bank, etc."
+            }
+          ]
+        },
+        "description": "Current logged-in user dwara initiate ki gayi requests ki list."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Action on Request (Approve / Reject / Skip)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": 1,\n  \"status\": \"approved\",\n  \"description\": \"Approved after reviewing details\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/approval-requests/action",
+          "host": ["{{base_url}}"],
+          "path": ["approval-requests", "action"]
+        },
+        "description": "Request par approver action lene ke liye. status: 'approved' | 'rejected' | 'skipped'. approvedById ya skippedByUserId automatically set hota hai."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get All Requests (Admin / Scoped Filter)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/approval-requests?page=1&limit=20&approvalFor=leave&status=pending",
+          "host": ["{{base_url}}"],
+          "path": ["approval-requests"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            },
+            {
+              "key": "approvalFor",
+              "value": "leave",
+              "description": "leave, question_bank, examination"
+            },
+            {
+              "key": "status",
+              "value": "pending",
+              "description": "pending, approved, rejected, skipped"
+            },
+            {
+              "key": "assignedToPositionId",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "requestedBy",
+              "value": "",
+              "disabled": true
+            },
+            {
+              "key": "resourceId",
+              "value": "",
+              "disabled": true
+            }
+          ]
+        },
+        "description": "Master list of all approval requests with multiple filter options."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Get Single Request (Query Param)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/approval-requests/single?id=1",
+          "host": ["{{base_url}}"],
+          "path": ["approval-requests", "single"],
+          "query": [
+            {
+              "key": "id",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Single request ka complete data with requester, position, approvedBy details."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Get Single Request (Path Param)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/approval-requests/:id",
+          "host": ["{{base_url}}"],
+          "path": ["approval-requests", ":id"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Path parameter se request fetch karna."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Apply Leave (Auto-creates approval_requests)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyId\": 1,\n  \"startDate\": \"2026-11-10\",\n  \"endDate\": \"2026-11-12\",\n  \"totalDays\": 3,\n  \"reason\": \"Applying for medical checkup\",\n  \"assignedToPositionId\": 3\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/leave-requests/my",
+          "host": ["{{base_url}}"],
+          "path": ["leave-requests", "my"]
+        },
+        "description": "Employee leave apply karega to automatically date-overlap check hoga, leave balance deduct hoga, leave_requests table me save hoga, aur sath hi sath approval_requests me pending entry ban jayegi."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "YOUR_JWT_ACCESS_TOKEN",
+      "type": "string"
+    }
+  ]
+}
+
