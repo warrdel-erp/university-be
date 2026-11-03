@@ -391,6 +391,7 @@ export async function getById(id) {
               }
             : null,
           components: componentItem ? [componentItem] : [],
+          isElective: false,
         });
       } else {
         const existing = subjectMap.get(sId);
@@ -400,10 +401,65 @@ export async function getById(id) {
       }
     }
 
-    const courses = Array.from(subjectMap.values());
     const termElectiveRequirements = formattedElectiveRequirements.filter(
       (r) => r.term === i,
     );
+
+    for (const req of termElectiveRequirements) {
+      for (const elCourse of req.courses || []) {
+        const sId = elCourse.subjectId || elCourse.id;
+        if (!sId) continue;
+
+        if (!subjectMap.has(sId)) {
+          const firstComp = elCourse.components?.[0] || null;
+          subjectMap.set(sId, {
+            id: sId,
+            subjectId: sId,
+            curriculumSubjectTermMappingId: null,
+            code: elCourse.code,
+            name: elCourse.name,
+            type: elCourse.type,
+            category: elCourse.category,
+            credit: req.minCredits ?? null,
+            syllabus: 'Configured',
+            curriculumCategoryId: req.curriculumCategoryId || null,
+            curriculumCategory: req.curriculumCategory || null,
+            subjectComponentMappingId: firstComp?.subjectComponentMappingId || null,
+            component: firstComp
+              ? {
+                  id: firstComp.componentId,
+                  componentName: firstComp.componentName,
+                  code: firstComp.code,
+                }
+              : null,
+            components: elCourse.components || [],
+            isElective: true,
+            electiveRequirementId: req.id,
+            electiveRequirementCode: req.requirementCode,
+            electiveRequirementName: req.requirementName,
+            electivePoolId: req.electivePoolId,
+            electivePoolName: req.electivePool?.name || null,
+          });
+        } else {
+          const existing = subjectMap.get(sId);
+          existing.isElective = true;
+          existing.electiveRequirementId = req.id;
+          existing.electiveRequirementCode = req.requirementCode;
+          existing.electiveRequirementName = req.requirementName;
+          existing.electivePoolId = req.electivePoolId;
+          existing.electivePoolName = req.electivePool?.name || null;
+          if (!existing.curriculumCategoryId && req.curriculumCategoryId) {
+            existing.curriculumCategoryId = req.curriculumCategoryId;
+            existing.curriculumCategory = req.curriculumCategory;
+          }
+          if ((existing.credit === null || existing.credit === undefined) && req.minCredits) {
+            existing.credit = req.minCredits;
+          }
+        }
+      }
+    }
+
+    const courses = Array.from(subjectMap.values());
 
     terms.push({
       id: i,
