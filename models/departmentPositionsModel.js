@@ -49,6 +49,12 @@ const departmentPositionsModel = sequelize.define(
             defaultValue: false,
             field: 'is_level_head'
         },
+        isDefault: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'is_default'
+        },
         sortOrder: {
             type: DataTypes.INTEGER,
             allowNull: false,

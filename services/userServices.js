@@ -1,3 +1,4 @@
+import { createDefaultDepartmentsForInstitute } from "../repository/departmentRepository.js";
 import * as registerRepository from "../repository/userRepository.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
 import { Op } from "sequelize";
@@ -743,6 +744,16 @@ export async function initialSetup(info) {
         createdBy: user.userId,
       },
       { transaction },
+    );
+
+    // 5a. Create Default Departments for new Institute
+    await createDefaultDepartmentsForInstitute(
+      {
+        instituteId: institute.instituteId,
+        universityId: university.universityId,
+        createdBy: user.userId,
+      },
+      transaction,
     );
 
     // 6. Create Academic Year
