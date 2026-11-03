@@ -21,28 +21,48 @@ async function assertDepartmentDeletable(departmentId, transaction) {
     if (dept && (dept.isDefault || ['Admin', 'Academic', 'Academics'].includes(dept.departmentName))) {
         throw new Error('Default department cannot be deleted');
     }
+
+    const employeeCount = await scoped(model.employeeModel).count({
+        where: { departmentId },
+        transaction,
+    });
+    if (employeeCount > 0) {
+        throw new Error(`Department has ${employeeCount} active employee(s) and cannot be deleted. Please reassign the employees first.`);
+    }
+
     const courseCount = await scoped(model.courseModel).count({
         where: { departmentId },
         transaction,
     });
     if (courseCount > 0) {
-        throw new Error('Department is used in course creation and cannot be deleted');
+        throw new Error(`Department has ${courseCount} linked program(s)/course(s) and cannot be deleted. Please reassign or delete the courses first.`);
     }
 
-    const jobCount = await scoped(model.jobModel).count({
+    const studentCount = await scoped(model.studentModel).count({
         where: { departmentId },
         transaction,
     });
-    if (jobCount > 0) {
-        throw new Error('Department is used in jobs and cannot be deleted');
+    if (studentCount > 0) {
+        throw new Error(`Department has ${studentCount} enrolled student(s) and cannot be deleted. Please reassign the students first.`);
     }
 
-    const staffCount = await scoped(model.staffModel).count({
+    const subjectCount = await scoped(model.subjectModel).count({
         where: { departmentId },
         transaction,
     });
-    if (staffCount > 0) {
-        throw new Error('Department is used in staff records and cannot be deleted');
+    if (subjectCount > 0) {
+        throw new Error(`Department has ${subjectCount} linked subject(s) and cannot be deleted. Please reassign or delete the subjects first.`);
+    }
+
+    const childCount = await scoped(model.departmentModel).count({
+        where: {
+            parentDepartmentId: departmentId,
+            departmentId: { [Op.ne]: departmentId },
+        },
+        transaction,
+    });
+    if (childCount > 0) {
+        throw new Error(`Department has ${childCount} active sub-department(s) and cannot be deleted. Please delete or reassign sub-departments first.`);
     }
 
     const positionCount = await scoped(model.departmentPositionsModel).count({
@@ -50,7 +70,23 @@ async function assertDepartmentDeletable(departmentId, transaction) {
         transaction,
     });
     if (positionCount > 0) {
-        throw new Error('Department is used in department positions and cannot be deleted');
+        throw new Error(`Department has ${positionCount} associated position(s) and cannot be deleted.`);
+    }
+
+    const jobCount = await scoped(model.jobModel).count({
+        where: { departmentId },
+        transaction,
+    });
+    if (jobCount > 0) {
+        throw new Error(`Department has ${jobCount} associated job posting(s) and cannot be deleted.`);
+    }
+
+    const staffCount = await scoped(model.staffModel).count({
+        where: { departmentId },
+        transaction,
+    });
+    if (staffCount > 0) {
+        throw new Error(`Department has ${staffCount} staff record(s) and cannot be deleted.`);
     }
 }
 
