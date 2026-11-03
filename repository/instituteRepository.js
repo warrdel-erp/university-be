@@ -1,3 +1,4 @@
+import { createDefaultDepartmentsForInstitute } from "./departmentRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 import { getTenantStore } from "../utility/requestContext.js";
@@ -10,6 +11,15 @@ export async function createInstitute(data, affiliatedUniversities = [], academi
   const transaction = await sequelize.transaction();
   try {
     const institute = await model.instituteModel.create(data, { transaction });
+
+    await createDefaultDepartmentsForInstitute(
+      {
+        instituteId: institute.instituteId,
+        universityId: institute.universityId,
+        createdBy: data.createdBy,
+      },
+      transaction,
+    );
 
     const affiliateRows = [];
     for (const item of affiliatedUniversities) {

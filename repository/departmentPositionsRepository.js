@@ -458,13 +458,17 @@ export async function deleteOrgPosition(departmentPositionId, updatedBy) {
     const transaction = await sequelize.transaction();
     try {
         const existing = await scoped(model.departmentPositionsModel).findOne({
-            attributes: ['departmentPositionId', 'departmentId', 'level'],
+            attributes: ['departmentPositionId', 'departmentId', 'level', 'positionName', 'isDefault'],
             where: { departmentPositionId: positionId },
             transaction,
         });
         if (!existing) {
             await transaction.rollback();
             return false;
+        }
+
+        if (existing.isDefault || ['Head of Department', 'HOD'].includes(existing.positionName)) {
+            throw new Error('Default HOD position cannot be deleted');
         }
 
         await scoped(model.userDepartmentPositionsModel).destroy({

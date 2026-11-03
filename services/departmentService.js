@@ -29,6 +29,7 @@ export async function updateDepartment(departmentId, departmentData, updatedBy) 
         instituteId: _instituteId,
         universityId: _universityId,
         departmentId: _departmentId,
+        isDefault: _isDefault,
         ...updateData
     } = departmentData;
     updateData.updatedBy = updatedBy;
@@ -43,3 +44,5 @@ export async function getDepartmentByIdEmployee(departmentId) {
 
     return await departmentCreationRepository.employeeDetail(departmentId);
 }
+
+export { createDefaultDepartmentsForInstitute } from '../repository/departmentRepository.js';

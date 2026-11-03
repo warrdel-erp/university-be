@@ -46,6 +46,7 @@ export async function updateOrgPosition(departmentPositionId, body, updatedBy) {
         departmentPositionId: _id,
         universityId: _universityId,
         instituteId: _instituteId,
+        isDefault: _isDefault,
         ...rest
     } = body;
 

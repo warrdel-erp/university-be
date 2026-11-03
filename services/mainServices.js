@@ -1,3 +1,4 @@
+import { createDefaultDepartmentsForInstitute } from '../repository/departmentRepository.js';
 import { syncSubjectComponents } from "./subjectComponentServices.js";
 import { Op } from 'sequelize';
 import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
@@ -132,7 +133,12 @@ export async function addInstitute(data, createdBy) {
             const result = await mainRepository.addInstitute({
                 ...institute,
                 campusId,
-                createdBy
+                createdBy,
+            });
+            await createDefaultDepartmentsForInstitute({
+                instituteId: result.instituteId,
+                universityId: result.universityId,
+                createdBy,
             });
             results.push(result);
         }
@@ -222,9 +228,10 @@ export async function addCourse(data, createdBy) {
             const courseDepartmentId =
                 coercePositiveInt(course.departmentId)
                 ?? coercePositiveInt(course.subAccountId);
-            if (courseDepartmentId != null) {
-                payload.departmentId = await resolveDepartmentId(courseDepartmentId);
+            if (!courseDepartmentId) {
+                throw new Error('departmentId is required for each course');
             }
+            payload.departmentId = await resolveDepartmentId(courseDepartmentId);
 
             const result = await mainRepository.addCourse(payload, transaction);
             results.push(result);
@@ -268,7 +275,10 @@ export async function updateCourse(data) {
             : subAccountIdInput;
 
     if (programId !== undefined) {
-        updateData.departmentId = programId == null ? null : await resolveDepartmentId(programId);
+        if (programId == null) {
+            throw new Error('departmentId cannot be null');
+        }
+        updateData.departmentId = await resolveDepartmentId(programId);
     }
 
     if (affiliatedUniversityIdInput !== undefined) {
