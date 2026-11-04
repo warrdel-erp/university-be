@@ -60,6 +60,44 @@ export async function resolveAcademicYearForFeePlanItem(feePlanItem, user = {}) 
   });
 }
 
+export function validatePlannedDateWithinBatch(plannedDate, batch, course, feePlanItem = null) {
+  if (!plannedDate || !batch) return;
+
+  const batchYear = Number(batch?.batch);
+  if (!batchYear) return;
+
+  const courseDuration = Number(course?.courseDuration) || 0;
+  const planYear = Number(feePlanItem?.year) || 0;
+  const duration = Math.max(courseDuration, planYear, 1);
+  const endYear = batchYear + duration;
+  const batchLabel = `${batchYear}–${String(endYear).slice(-2)}`;
+
+  const targetDate = String(plannedDate).slice(0, 10);
+  let startDate = `${batchYear}-01-01`;
+  let endDate = `${endYear}-12-31`;
+
+  const sessionStart = batch?.session?.sessionAcedmic?.startingDate
+    ? String(batch.session.sessionAcedmic.startingDate).slice(0, 10)
+    : null;
+  if (sessionStart && sessionStart < startDate) {
+    startDate = sessionStart;
+  }
+
+  if (targetDate < startDate) {
+    throw httpError(
+      `Planned date (${targetDate}) cannot be before batch (${batchLabel}) start date (${startDate})`,
+      400
+    );
+  }
+
+  if (targetDate > endDate) {
+    throw httpError(
+      `Planned date (${targetDate}) cannot be after batch (${batchLabel}) end date (${endDate})`,
+      400
+    );
+  }
+}
+
 export function validatePlannedDateWithinAcademicYear(plannedDate, academicYear) {
   if (!plannedDate || !academicYear) return;
 
@@ -110,7 +148,6 @@ export async function createBillingSchedule(payload, user = {}) {
   // 1. Validate that all fee plan items exist
   const planItemIds = [...new Set(scheduleItems.map((s) => s.feePlanItemId))];
   const planItemMap = new Map();
-  const academicYearMap = new Map();
 
   for (const id of planItemIds) {
     if (!id) {
@@ -121,7 +158,7 @@ export async function createBillingSchedule(payload, user = {}) {
       throw httpError(`Fee plan item with ID ${id} not found`, 404);
     }
     
-    // Fetch course details manually if not included by the repo function
+    // Fetch course and batch details manually if not included by the repo function
     const feePlanItemWithCourse = await feePlanItem.reload({
       include: [
         {
@@ -135,6 +172,10 @@ export async function createBillingSchedule(payload, user = {}) {
                 {
                   model: model.courseModel,
                   as: "course"
+                },
+                {
+                  model: model.acedmicYearModel,
+                  as: "sessionAcedmic"
                 }
               ]
             }
@@ -144,15 +185,15 @@ export async function createBillingSchedule(payload, user = {}) {
     });
     
     planItemMap.set(id, feePlanItemWithCourse);
-    const ay = await resolveAcademicYearForFeePlanItem(feePlanItemWithCourse, user);
-    academicYearMap.set(id, ay);
   }
 
-  // Validate plannedDate for each schedule item against academic year
+  // Validate plannedDate for each schedule item against batch lifecycle
   for (const item of scheduleItems) {
     if (item.plannedDate) {
-      const ay = academicYearMap.get(item.feePlanItemId);
-      validatePlannedDateWithinAcademicYear(item.plannedDate, ay);
+      const feePlan = planItemMap.get(item.feePlanItemId);
+      const batch = feePlan?.batch;
+      const course = batch?.session?.course;
+      validatePlannedDateWithinBatch(item.plannedDate, batch, course, feePlan);
     }
   }
 
@@ -348,15 +389,17 @@ export async function updateBillingSchedule(
                 model: model.sessionModel,
                 as: "session",
                 include: [
-                  { model: model.courseModel, as: "course" }
+                  { model: model.courseModel, as: "course" },
+                  { model: model.acedmicYearModel, as: "sessionAcedmic" }
                 ]
               }
             ]
           }
         ]
       });
-      const ay = await resolveAcademicYearForFeePlanItem(feePlanItemWithCourse, user);
-      validatePlannedDateWithinAcademicYear(payload.plannedDate, ay);
+      const batch = feePlanItemWithCourse?.batch;
+      const course = batch?.session?.course;
+      validatePlannedDateWithinBatch(payload.plannedDate, batch, course, feePlanItemWithCourse);
     }
   }
 

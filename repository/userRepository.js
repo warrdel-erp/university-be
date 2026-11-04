@@ -3,6 +3,7 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getTenantStore } from "../utility/requestContext.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
+import { getEffectiveScope } from "../utility/permissionUtility.js";
 
 export async function register(data) {
   return scoped(model.userModel).create(data);
@@ -153,45 +154,47 @@ export async function changePassword(email, data, transaction) {
   }
 }
 
-export async function saveToUserRolePermission(data, transaction) {
-  return model.userRolePermissionModel.bulkCreate(data, { transaction });
-}
-
 export async function getUserRoleAndPermissionsByUserId(userId) {
   try {
-    // Query all entries from user_role_permission_scope grouped by role
+    // The user only holds roles; their permissions come from role_permissions
     const entries = await model.userRolePermissionModel.findAll({
       where: { user_id: userId },
       include: [
-        { model: model.roleModel, as: 'userRole', attributes: ['roleId', 'role'] }
-      ]
+        {
+          model: model.roleModel,
+          as: 'userRole',
+          attributes: ['roleId', 'role', 'scope'],
+          include: [
+            {
+              model: model.rolePermissionsModel,
+              as: 'rolePermissions',
+              attributes: ['permission'],
+            },
+          ],
+        },
+      ],
     });
 
-    if (entries.length === 0) {
-      return [];
-    }
-
-    // Group by roleId
+    // A role can appear several times (one row per resource) -> group by role
     const roleMap = new Map();
     for (const entry of entries) {
       if (!entry.userRole) continue;
-      const roleId = entry.userRole.roleId;
+      const role = entry.userRole;
 
-      if (!roleMap.has(roleId)) {
-        roleMap.set(roleId, {
+      if (!roleMap.has(role.roleId)) {
+        roleMap.set(role.roleId, {
           user_id: userId,
-          userRole: {
-            roleId: entry.userRole.roleId,
-            role: entry.userRole.role
-          },
-          permissions: []
+          userRole: { roleId: role.roleId, role: role.role, scope: role.scope },
+          resourceIds: [],
+          permissions: (role.rolePermissions || []).map((p) => ({
+            permission: p.permission,
+            scope: getEffectiveScope(p.permission, role.scope),
+          })),
         });
       }
-
-      roleMap.get(roleId).permissions.push({
-        permission: entry.permission,
-        scope: entry.scope
-      });
+      if (entry.resourceId !== null && entry.resourceId !== undefined) {
+        roleMap.get(role.roleId).resourceIds.push(entry.resourceId);
+      }
     }
 
     return Array.from(roleMap.values());
@@ -200,6 +203,7 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
     throw error;
   }
 }
+
 
 export async function findStatusByUserId(userId) {
   return scoped(model.userModel).findOne({

@@ -14,6 +14,17 @@ const roleModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false,
         },
+        code: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            field: 'code'
+        },
+        scope: {
+            type: DataTypes.ENUM('MY', 'DEPARTMENT', 'INSTITUTE', 'CAMPUS', 'UNIVERSITY'),
+            allowNull: false,
+            defaultValue: 'INSTITUTE',
+            comment: 'Level the role operates at; resources are chosen when the role is assigned to a user'
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: true,

@@ -183,6 +183,8 @@ const subjectTermMappingAttributes = [
   'curriculumSubjectTermMappingId',
   'curriculumId',
   'subjectId',
+  'subjectComponentMappingId',
+  'curriculumCategoryId',
   'term',
   'credit',
   'createdAt',
@@ -205,6 +207,25 @@ export async function findSubjectTermMappingsByCurriculumId(curriculumId) {
           'subjectType',
           'subjectCategory',
         ],
+      },
+      {
+        model: model.subjectComponentMappingModel,
+        as: 'subjectComponentMapping',
+        attributes: ['id', 'subjectId', 'subjectComponentId'],
+        include: [
+          {
+            model: model.subjectComponentModel,
+            as: 'component',
+            attributes: ['id', 'componentName', 'code'],
+          },
+        ],
+        required: false,
+      },
+      {
+        model: model.curriculumCategoryModel,
+        as: 'curriculumCategory',
+        attributes: ['id', 'categoryName', 'code'],
+        required: false,
       },
     ],
     order: [
@@ -238,6 +259,25 @@ export async function findSubjectTermMappingById(curriculumSubjectTermMappingId)
             'subjectCategory',
           ],
         },
+        {
+          model: model.subjectComponentMappingModel,
+          as: 'subjectComponentMapping',
+          attributes: ['id', 'subjectId', 'subjectComponentId'],
+          include: [
+            {
+              model: model.subjectComponentModel,
+              as: 'component',
+              attributes: ['id', 'componentName', 'code'],
+            },
+          ],
+          required: false,
+        },
+      {
+        model: model.curriculumCategoryModel,
+        as: 'curriculumCategory',
+        attributes: ['id', 'categoryName', 'code'],
+        required: false,
+      },
       ],
     },
   );

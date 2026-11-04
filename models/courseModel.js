@@ -54,7 +54,7 @@ const courseModel = sequelize.define(
         },
         departmentId: {
             type: DataTypes.INTEGER,
-            allowNull: true,
+            allowNull: false,
             field: 'department_id',
             references: {
                 model: departmentModel,

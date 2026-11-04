@@ -297,7 +297,74 @@ export async function getGroupRoutinesWrappedInStructureRepository({ academicGro
   return group;
 }
 
-export async function getSubjectOptionsRepository({ classSectionTermId, academicGroupId }, options = {}) {
+function formatSubjectComponents(subject, directMapping) {
+  const mappings = Array.isArray(subject?.subjectComponentMappings)
+    ? subject.subjectComponentMappings
+    : [];
+
+  const components = mappings.map((m) => {
+    const comp = m.component || {};
+    return {
+      subjectComponentMappingId: m.id,
+      subject_component_mapping_id: m.id,
+      id: comp.id ?? m.subjectComponentId,
+      componentId: comp.id ?? m.subjectComponentId,
+      componentName: comp.componentName ?? null,
+      code: comp.code ?? null,
+      description: comp.description ?? null,
+    };
+  });
+
+  if (
+    directMapping &&
+    !components.some((c) => c.subjectComponentMappingId === directMapping.id)
+  ) {
+    const comp = directMapping.component || {};
+    components.unshift({
+      subjectComponentMappingId: directMapping.id,
+      subject_component_mapping_id: directMapping.id,
+      id: comp.id ?? directMapping.subjectComponentId,
+      componentId: comp.id ?? directMapping.subjectComponentId,
+      componentName: comp.componentName ?? null,
+      code: comp.code ?? null,
+      description: comp.description ?? null,
+    });
+  }
+
+  return components;
+}
+
+function buildSubjectTypeWhere(subjectType) {
+  if (!subjectType) return {};
+  if (Array.isArray(subjectType)) {
+    return { subjectType: { [Op.in]: subjectType } };
+  }
+  if (typeof subjectType === "string") {
+    const rawList = subjectType.split(",").map((s) => s.trim()).filter(Boolean);
+    if (rawList.length === 0) return {};
+    if (rawList.length === 1 && rawList[0].toLowerCase() === "all") {
+      return {};
+    }
+    const canonicalMap = {
+      core: "Core",
+      elective: "Elective",
+      "open elective": "Open Elective",
+      openelective: "Open Elective",
+      "department elective": "Department Elective",
+      departmentelective: "Department Elective",
+      foundation: "Foundation",
+    };
+    const resolved = rawList.map((item) => canonicalMap[item.toLowerCase()] || item);
+    if (resolved.length === 1) {
+      return { subjectType: resolved[0] };
+    }
+    return { subjectType: { [Op.in]: resolved } };
+  }
+  return {};
+}
+
+export async function getSubjectOptionsRepository({ classSectionTermId, academicGroupId, subjectType }, options = {}) {
+  const subjectTypeWhere = buildSubjectTypeWhere(subjectType);
   if (classSectionTermId) {
     const cst = await model.classSectionTermModel.findByPk(classSectionTermId, {
       include: [{
@@ -365,50 +432,115 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
         attributes: [
           'curriculumSubjectTermMappingId',
           'subjectId',
+          'subjectComponentMappingId',
           'term',
           'credit',
         ],
-        include: [{
-          model: model.subjectModel,
-          as: 'subject',
-          attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
-          where: { isActive: true },
-          required: true
-        }],
+        include: [
+          {
+            model: model.subjectModel,
+            as: 'subject',
+            attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+            where: {
+              isActive: true,
+              ...subjectTypeWhere,
+            },
+            required: true,
+            include: [
+              {
+                model: model.subjectComponentMappingModel,
+                as: 'subjectComponentMappings',
+                required: false,
+                attributes: ['id', 'subjectId', 'subjectComponentId'],
+                include: [
+                  {
+                    model: model.subjectComponentModel,
+                    as: 'component',
+                    required: false,
+                    attributes: ['id', 'componentName', 'code', 'description'],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            model: model.subjectComponentMappingModel,
+            as: 'subjectComponentMapping',
+            required: false,
+            attributes: ['id', 'subjectId', 'subjectComponentId'],
+            include: [
+              {
+                model: model.subjectComponentModel,
+                as: 'component',
+                required: false,
+                attributes: ['id', 'componentName', 'code', 'description'],
+              },
+            ],
+          },
+        ],
         order: [[{ model: model.subjectModel, as: 'subject' }, 'subjectName', 'ASC']],
         transaction: options.transaction
       });
 
-      if (mappings.length > 0) {
-        return mappings.map(m => ({
-          subjectId: m.subject.subjectId,
-          name: m.subject.subjectName,
-          subjectName: m.subject.subjectName,
-          subjectCode: m.subject.subjectCode,
-          subjectType: m.subject.subjectType,
-          subjectCategory: m.subject.subjectCategory,
-          credit: m.credit,
-          curriculumSubjectTermMappingId: m.curriculumSubjectTermMappingId,
-        }));
+      if (mappings.length > 0 || subjectType) {
+        return mappings.map((m) => {
+          const components = formatSubjectComponents(
+            m.subject,
+            m.subjectComponentMapping,
+          );
+          return {
+            subjectId: m.subject.subjectId,
+            name: m.subject.subjectName,
+            subjectName: m.subject.subjectName,
+            subjectCode: m.subject.subjectCode,
+            subjectType: m.subject.subjectType,
+            subjectCategory: m.subject.subjectCategory,
+            credit: m.credit,
+            curriculumSubjectTermMappingId: m.curriculumSubjectTermMappingId,
+            subjectComponentMappingId: m.subjectComponentMappingId ?? (components[0]?.subjectComponentMappingId || null),
+            components,
+          };
+        });
       }
     }
 
     // Fallback if curriculum mapping not yet set
     const subjects = await model.subjectModel.findAll({
-      where: { courseId, term, isActive: true },
+      where: { courseId, term, isActive: true, ...subjectTypeWhere },
       attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+      include: [
+        {
+          model: model.subjectComponentMappingModel,
+          as: 'subjectComponentMappings',
+          required: false,
+          attributes: ['id', 'subjectId', 'subjectComponentId'],
+          include: [
+            {
+              model: model.subjectComponentModel,
+              as: 'component',
+              required: false,
+              attributes: ['id', 'componentName', 'code', 'description'],
+            },
+          ],
+        },
+      ],
       order: [['subjectName', 'ASC']],
       transaction: options.transaction
     });
 
-    return subjects.map(s => ({
-      subjectId: s.subjectId,
-      name: s.subjectName,
-      subjectName: s.subjectName,
-      subjectCode: s.subjectCode,
-      subjectType: s.subjectType,
-      subjectCategory: s.subjectCategory
-    }));
+    return subjects.map((s) => {
+      const components = formatSubjectComponents(s);
+      return {
+        subjectId: s.subjectId,
+        name: s.subjectName,
+        subjectName: s.subjectName,
+        subjectCode: s.subjectCode,
+        subjectType: s.subjectType,
+        subjectCategory: s.subjectCategory,
+        subjectComponentMappingId: components[0]?.subjectComponentMappingId || null,
+        components,
+      };
+    });
   }
 
   // Academic Group support
@@ -420,19 +552,40 @@ export async function getSubjectOptionsRepository({ classSectionTermId, academic
     const scope = group?.scope;
     if (scope?.courseId && scope?.term) {
       const subjects = await model.subjectModel.findAll({
-        where: { courseId: scope.courseId, term: scope.term, isActive: true },
+        where: { courseId: scope.courseId, term: scope.term, isActive: true, ...subjectTypeWhere },
         attributes: ['subjectId', 'subjectName', 'subjectCode', 'subjectType', 'subjectCategory'],
+        include: [
+          {
+            model: model.subjectComponentMappingModel,
+            as: 'subjectComponentMappings',
+            required: false,
+            attributes: ['id', 'subjectId', 'subjectComponentId'],
+            include: [
+              {
+                model: model.subjectComponentModel,
+                as: 'component',
+                required: false,
+                attributes: ['id', 'componentName', 'code', 'description'],
+              },
+            ],
+          },
+        ],
         order: [['subjectName', 'ASC']],
         transaction: options.transaction
       });
-      return subjects.map(s => ({
-        subjectId: s.subjectId,
-        name: s.subjectName,
-        subjectName: s.subjectName,
-        subjectCode: s.subjectCode,
-        subjectType: s.subjectType,
-        subjectCategory: s.subjectCategory
-      }));
+      return subjects.map((s) => {
+        const components = formatSubjectComponents(s);
+        return {
+          subjectId: s.subjectId,
+          name: s.subjectName,
+          subjectName: s.subjectName,
+          subjectCode: s.subjectCode,
+          subjectType: s.subjectType,
+          subjectCategory: s.subjectCategory,
+          subjectComponentMappingId: components[0]?.subjectComponentMappingId || null,
+          components,
+        };
+      });
     }
   }
 

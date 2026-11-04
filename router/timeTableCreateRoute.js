@@ -192,6 +192,8 @@ const mappingBodySchema = z.object({
   userId: optionalPositiveId,
   employeeId: optionalPositiveId,
   subjectId: optionalPositiveId,
+  subjectComponentMappingId: optionalPositiveId,
+  subject_component_mapping_id: optionalPositiveId,
   electiveSubjectId: optionalPositiveId,
   teacherSubjectMappingId: optionalPositiveId,
   day: z.string().optional(),
@@ -238,6 +240,35 @@ const addTimeTableMappingSchema = mappingBodySchema.superRefine((body, ctx) => {
   }
 });
 
+const addTimeTableMappingPayloadSchema = z
+  .preprocess((val) => {
+    if (
+      val &&
+      typeof val === "object" &&
+      !Array.isArray(val) &&
+      Array.isArray(val.mappings)
+    ) {
+      return val.mappings;
+    }
+    return val;
+  }, z.any())
+  .superRefine((val, ctx) => {
+    if (Array.isArray(val)) {
+      const res = z
+        .array(addTimeTableMappingSchema)
+        .min(1, "Array must contain at least one mapping object")
+        .safeParse(val);
+      if (!res.success) {
+        res.error.issues.forEach((i) => ctx.addIssue(i));
+      }
+    } else {
+      const res = addTimeTableMappingSchema.safeParse(val);
+      if (!res.success) {
+        res.error.issues.forEach((i) => ctx.addIssue(i));
+      }
+    }
+  });
+
 const getTimeTableMappingBodySchema = z.object({
   timeTableRoutineId: positiveIntegerId,
 });
@@ -252,6 +283,8 @@ const updateTeacherMappingItemSchema = z.object({
   timeTableCellTeacherId: optionalPositiveId,
   userId: optionalPositiveId,
   subjectId: optionalPositiveId,
+  subjectComponentMappingId: optionalPositiveId,
+  subject_component_mapping_id: optionalPositiveId,
   electiveSubjectId: optionalPositiveId,
   teacherType: z.string().optional(),
   isAttendence: z.boolean().optional(),
@@ -470,7 +503,14 @@ router.post(
   "/mapping",
   userAuth,
   checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null),
-  validate({ body: addTimeTableMappingSchema }),
+  validate({ body: addTimeTableMappingPayloadSchema }),
+  addtimeTableMapping,
+);
+router.post(
+  "/mapping/bulk",
+  userAuth,
+  checkAccess(PERMISSIONS.CREATE_TIME_TABLE_CREATE_TIMETABLE.value, null),
+  validate({ body: addTimeTableMappingPayloadSchema }),
   addtimeTableMapping,
 );
 
