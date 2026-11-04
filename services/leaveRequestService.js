@@ -125,10 +125,10 @@ export async function updateRequestStatus(requestId, status, reviewerId, options
 
   const balance = await balanceRepo.getBalance(request.userId, request.policyId);
 
-  // If rejected, refund previously deducted leaves
-  if (status === "rejected" && balance) {
+  // If rejected or cancelled, refund previously deducted leaves
+  if ((status === "rejected" || status === "cancelled") && balance) {
     await balanceRepo.updateBalance(balance.balanceId, {
-      usedLeaves: balance.usedLeaves - request.totalDays,
+      usedLeaves: Math.max(0, balance.usedLeaves - request.totalDays),
       remainingLeaves: balance.remainingLeaves + request.totalDays,
     });
   }
@@ -141,24 +141,68 @@ export async function updateRequestStatus(requestId, status, reviewerId, options
 
   const updated = await repo.updateRequest(requestId, updateData);
 
-  // Synchronize approval_requests table if not triggered from approval service
+  // Synchronize or create entry in approval_requests table
   if (!options.skipApprovalSync) {
     const existingApproval = await scoped(model.approvalRequestModel).findOne({
       where: {
         approvalFor: "leave",
         resourceId: requestId,
-        status: "pending",
       },
     });
 
     if (existingApproval) {
-      await approvalRepo.updateApprovalRequest(existingApproval.id, {
+      const approvalUpdate = {
         status,
-        approvedById: reviewerId || null,
         actionAt: new Date(),
+      };
+      if (status === "approved" || status === "rejected") {
+        approvalUpdate.approvedById = reviewerId || null;
+      } else if (status === "cancelled") {
+        approvalUpdate.skippedByUserId = reviewerId || null;
+      }
+      if (options.description) {
+        approvalUpdate.description = options.description;
+      }
+      await approvalRepo.updateApprovalRequest(existingApproval.id, approvalUpdate);
+    } else {
+      // If no approval_requests row existed yet, create one now!
+      let targetPositionId = await repo.resolveApproverPosition(request.userId);
+      await approvalRepo.createApprovalRequest({
+        approvalFor: "leave",
+        resourceId: requestId,
+        requestedBy: request.userId,
+        assignedToPositionId: targetPositionId || 1,
+        level: 1,
+        status,
+        approvedById: (status === "approved" || status === "rejected") ? reviewerId : null,
+        skippedByUserId: status === "cancelled" ? reviewerId : null,
+        actionAt: new Date(),
+        description: options.description || request.reason || "Leave request",
+        universityId: request.universityId || null,
+        instituteId: request.instituteId || null,
+        campusId: request.campusId || null,
+        departmentId: request.departmentId || null,
       });
     }
   }
 
   return updated;
+}
+
+export async function getLeavesAssignedToMe(user, query = {}) {
+  const userId = user?.userId || user?.dataValues?.userId;
+  if (!userId) throw new Error("User not found");
+
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.max(1, Number(query.limit) || 20);
+  const offset = (page - 1) * limit;
+
+  const result = await repo.getLeavesAssignedToUserPositions(userId, query, { limit, offset });
+  return {
+    total: result.count,
+    page,
+    limit,
+    totalPages: Math.ceil(result.count / limit),
+    data: result.rows,
+  };
 }

@@ -23,19 +23,19 @@ export async function getApprovalRequests(filters = {}, options = {}) {
     {
       model: model.userModel,
       as: "requester",
-      attributes: ["userId", "fullName", "email"],
+      attributes: ["userId", "userName", "email"],
       required: false,
     },
     {
       model: model.userModel,
       as: "approvedBy",
-      attributes: ["userId", "fullName", "email"],
+      attributes: ["userId", "userName", "email"],
       required: false,
     },
     {
       model: model.userModel,
       as: "skippedBy",
-      attributes: ["userId", "fullName", "email"],
+      attributes: ["userId", "userName", "email"],
       required: false,
     },
     {
@@ -66,19 +66,19 @@ export async function getApprovalRequestById(id, options = {}) {
       {
         model: model.userModel,
         as: "requester",
-        attributes: ["userId", "fullName", "email"],
+        attributes: ["userId", "userName", "email"],
         required: false,
       },
       {
         model: model.userModel,
         as: "approvedBy",
-        attributes: ["userId", "fullName", "email"],
+        attributes: ["userId", "userName", "email"],
         required: false,
       },
       {
         model: model.userModel,
         as: "skippedBy",
-        attributes: ["userId", "fullName", "email"],
+        attributes: ["userId", "userName", "email"],
         required: false,
       },
       {
@@ -138,7 +138,7 @@ export async function getPendingApprovalsForPositions(positionIds = [], filters 
     {
       model: model.userModel,
       as: "requester",
-      attributes: ["userId", "fullName", "email"],
+      attributes: ["userId", "userName", "email"],
       required: false,
     },
     {

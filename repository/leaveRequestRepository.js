@@ -146,3 +146,78 @@ export async function updateRequest(requestId, data, options = {}) {
     transaction: options.transaction,
   });
 }
+
+export async function getLeavesAssignedToUserPositions(userId, filters = {}, options = {}) {
+  let positionIds = [];
+
+  if (filters.positionId) {
+    positionIds = [Number(filters.positionId)];
+  } else if (userId) {
+    const positions = await scoped(model.userDepartmentPositionsModel).findAll({
+      where: { userId, status: "ACTIVE" },
+      attributes: ["departmentPositionId"],
+      transaction: options.transaction,
+    });
+    positionIds = positions.map((p) => p.departmentPositionId);
+  }
+
+  if (!positionIds.length) {
+    return { count: 0, rows: [] };
+  }
+
+  const where = {
+    approvalFor: "leave",
+    assignedToPositionId: { [Op.in]: positionIds },
+  };
+
+  if (filters.status && filters.status !== "all") {
+    if (filters.status.includes(",")) {
+      where.status = { [Op.in]: filters.status.split(",").map((s) => s.trim()) };
+    } else {
+      where.status = filters.status;
+    }
+  }
+
+  const include = [
+    {
+      model: model.leaveRequestModel,
+      as: "leaveRequest",
+      required: true,
+      include: [
+        {
+          model: model.leavePolicyModel,
+          as: "leaveRequestsPolicy",
+          attributes: ["policyId", "policyName", "totalLeavesPerYear"],
+        },
+      ],
+    },
+    {
+      model: model.userModel,
+      as: "requester",
+      attributes: ["userId", "userName", "email"],
+    },
+    {
+      model: model.departmentPositionsModel,
+      as: "assignedPosition",
+      attributes: ["departmentPositionId", "positionName", "level"],
+    },
+    {
+      model: model.userModel,
+      as: "approvedBy",
+      attributes: ["userId", "userName", "email"],
+      required: false,
+    },
+  ];
+
+  const queryOptions = {
+    where,
+    include,
+    order: [["createdAt", "DESC"]],
+    transaction: options.transaction,
+  };
+
+  if (options.limit) queryOptions.limit = Number(options.limit);
+  if (options.offset) queryOptions.offset = Number(options.offset);
+
+  return scoped(model.approvalRequestModel).findAndCountAll(queryOptions);
+}

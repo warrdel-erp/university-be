@@ -1,7 +1,11 @@
 import { Router } from "express";
 const router = Router();
 import userAuth from "../middleware/authUser.js";
-import { addRequest, addMyRequest, getAllRequests, getMyRequests, getRequestById, updateRequestStatus, updateMyRequestStatus } from "../controllers/leaveRequestController.js";
+import { addRequest, addMyRequest, getAllRequests, getMyRequests, getRequestById, updateRequestStatus, updateMyRequestStatus, getLeavesAssignedToMe } from "../controllers/leaveRequestController.js";
+
+// HOD / Approver route: leaves assigned to logged-in user's position
+router.get("/approvals", userAuth, getLeavesAssignedToMe);
+router.get("/assigned-to-me", userAuth, getLeavesAssignedToMe);
 
 import { checkAccess, checkAccessAny } from "../middleware/checkAccess.js";
 import { PERMISSIONS } from "../const/permissions.js";

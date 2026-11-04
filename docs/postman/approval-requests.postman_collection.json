@@ -283,6 +283,49 @@
         "description": "Employee leave apply karega to automatically date-overlap check hoga, leave balance deduct hoga, leave_requests table me save hoga, aur sath hi sath approval_requests me pending entry ban jayegi."
       },
       "response": []
+    },
+    {
+      "name": "9. Get Leaves Assigned to My Position (HOD / Approver)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-requests/approvals?status=pending&page=1&limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["leave-requests", "approvals"],
+          "query": [
+            {
+              "key": "status",
+              "value": "pending",
+              "description": "pending, approved, rejected, or all (or comma-separated e.g. pending,approved)"
+            },
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number"
+            },
+            {
+              "key": "limit",
+              "value": "20",
+              "description": "Items per page"
+            },
+            {
+              "key": "positionId",
+              "value": "",
+              "disabled": true,
+              "description": "Optional: Admin/Override can pass specific positionId (e.g. 43, 48)"
+            }
+          ]
+        },
+        "description": "HOD ya Approver ke logged-in hone par unki active post/position ke according sabhi leaves (pending, approved, etc.) ki list laakar deta hai, requester profile aur policy details ke sath."
+      },
+      "response": []
     }
   ],
   "variable": [

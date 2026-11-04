@@ -53,7 +53,7 @@ const approvalRequestModel = sequelize.define(
       comment: "Hierarchy or sequence step (e.g. 1 = HOD, 2 = Dean)",
     },
     status: {
-      type: DataTypes.ENUM("pending", "approved", "rejected", "skipped"),
+      type: DataTypes.ENUM("pending", "approved", "rejected", "skipped", "cancelled"),
       allowNull: false,
       defaultValue: "pending",
       field: "status",
