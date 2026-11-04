@@ -125,8 +125,8 @@ export async function updateRequestStatus(requestId, status, reviewerId, options
 
   const balance = await balanceRepo.getBalance(request.userId, request.policyId);
 
-  // If rejected or cancelled, refund previously deducted leaves
-  if ((status === "rejected" || status === "cancelled") && balance) {
+  // If rejected, cancelled, or skipped, refund previously deducted leaves
+  if ((status === "rejected" || status === "cancelled" || status === "skipped") && balance) {
     await balanceRepo.updateBalance(balance.balanceId, {
       usedLeaves: Math.max(0, balance.usedLeaves - request.totalDays),
       remainingLeaves: balance.remainingLeaves + request.totalDays,
@@ -139,9 +139,10 @@ export async function updateRequestStatus(requestId, status, reviewerId, options
     updateData.reviewedAt = new Date();
   }
 
-  const updated = await repo.updateRequest(requestId, updateData);
+  await repo.updateRequest(requestId, updateData);
 
   // Synchronize or create entry in approval_requests table
+  let approvalData = null;
   if (!options.skipApprovalSync) {
     const existingApproval = await scoped(model.approvalRequestModel).findOne({
       where: {
@@ -157,17 +158,18 @@ export async function updateRequestStatus(requestId, status, reviewerId, options
       };
       if (status === "approved" || status === "rejected") {
         approvalUpdate.approvedById = reviewerId || null;
-      } else if (status === "cancelled") {
+      } else if (status === "cancelled" || status === "skipped") {
         approvalUpdate.skippedByUserId = reviewerId || null;
       }
       if (options.description) {
         approvalUpdate.description = options.description;
       }
       await approvalRepo.updateApprovalRequest(existingApproval.id, approvalUpdate);
+      approvalData = await approvalRepo.getApprovalRequestById(existingApproval.id);
     } else {
       // If no approval_requests row existed yet, create one now!
       let targetPositionId = await repo.resolveApproverPosition(request.userId);
-      await approvalRepo.createApprovalRequest({
+      approvalData = await approvalRepo.createApprovalRequest({
         approvalFor: "leave",
         resourceId: requestId,
         requestedBy: request.userId,
@@ -175,7 +177,7 @@ export async function updateRequestStatus(requestId, status, reviewerId, options
         level: 1,
         status,
         approvedById: (status === "approved" || status === "rejected") ? reviewerId : null,
-        skippedByUserId: status === "cancelled" ? reviewerId : null,
+        skippedByUserId: (status === "cancelled" || status === "skipped") ? reviewerId : null,
         actionAt: new Date(),
         description: options.description || request.reason || "Leave request",
         universityId: request.universityId || null,
@@ -186,7 +188,12 @@ export async function updateRequestStatus(requestId, status, reviewerId, options
     }
   }
 
-  return updated;
+  const freshLeave = await repo.getRequestById(requestId);
+  const plainLeave = freshLeave?.toJSON ? freshLeave.toJSON() : freshLeave;
+  return {
+    ...plainLeave,
+    approvalRequest: approvalData,
+  };
 }
 
 export async function getLeavesAssignedToMe(user, query = {}) {

@@ -88,12 +88,37 @@ export async function getRequestById(req, res) {
 
 export async function updateRequestStatus(req, res) {
   try {
-    const { requestId, status } = req.body;
+    const requestId = req.body.requestId || req.body.leaveRequestId || req.body.id;
+    const { status, description, remarks } = req.body;
     const reviewerId = req.body.reviewerId || req.user?.userId || req.user?.dataValues?.userId;
-    if (!requestId || !status) return res.status(400).json({ message: "requestId and status are required" });
 
-    const updated = await service.updateRequestStatus(requestId, status, reviewerId);
-    res.status(200).json({ message: "Request status updated", updated });
+    if (!requestId) {
+      return res.status(400).json({ message: "requestId (or leaveRequestId / id) is required" });
+    }
+    if (!status) {
+      return res.status(400).json({ message: "status is required" });
+    }
+
+    let normalizedStatus = String(status).trim().toLowerCase();
+    if (normalizedStatus === "approve") normalizedStatus = "approved";
+    if (normalizedStatus === "reject") normalizedStatus = "rejected";
+    if (normalizedStatus === "skip") normalizedStatus = "skipped";
+    if (normalizedStatus === "cancel") normalizedStatus = "cancelled";
+
+    const allowedStatuses = ["approved", "rejected", "skipped", "pending", "cancelled"];
+    if (!allowedStatuses.includes(normalizedStatus)) {
+      return res.status(400).json({
+        message: `Invalid status '${status}'. Supported statuses are: 'approve' (or 'approved'), 'reject' (or 'rejected'), 'skip' (or 'skipped')`,
+      });
+    }
+
+    const updated = await service.updateRequestStatus(requestId, normalizedStatus, reviewerId, {
+      description: description || remarks,
+    });
+    res.status(200).json({
+      message: `Leave request and approval status updated to '${normalizedStatus}' successfully`,
+      updated,
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
