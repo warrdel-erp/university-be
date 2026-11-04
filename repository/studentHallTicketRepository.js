@@ -808,9 +808,26 @@ export async function generateOrRegenerateStudentHallTicket(
 
 export async function publishHallTickets(examinationSessionId, studentIds = null, transaction = null) {
   const whereClause = { examinationSessionId, isBlocked: false };
-  if (studentIds && studentIds.length > 0) {
-    whereClause.studentId = { [Op.in]: studentIds };
-  }
+
+  const validStudents = await scoped(model.studentModel).findAll({
+    where: {
+      ...(studentIds && studentIds.length > 0 ? { studentId: { [Op.in]: studentIds } } : {}),
+      enrollNumber: {
+        [Op.and]: [
+          { [Op.ne]: null },
+          { [Op.ne]: "" },
+        ],
+      },
+    },
+    attributes: ["studentId"],
+    transaction,
+    raw: true,
+  });
+
+  const validStudentIds = validStudents.map((s) => s.studentId);
+  if (!validStudentIds.length) return 0;
+
+  whereClause.studentId = { [Op.in]: validStudentIds };
 
   const [updatedCount] = await scoped(model.studentHallTicketModel).update(
     { isPublished: true, publishedAt: new Date() },

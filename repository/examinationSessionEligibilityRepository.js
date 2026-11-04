@@ -13,6 +13,24 @@ export async function bulkApproveEligibility(
   userId,
   options = {},
 ) {
+  const eligibleStudents = await scoped(model.studentModel).findAll({
+    where: {
+      studentId: { [Op.in]: studentIds },
+      enrollNumber: {
+        [Op.and]: [
+          { [Op.ne]: null },
+          { [Op.ne]: "" },
+        ],
+      },
+    },
+    attributes: ["studentId"],
+    transaction: options.transaction,
+    raw: true,
+  });
+
+  const validStudentIds = eligibleStudents.map((s) => s.studentId);
+  if (!validStudentIds.length) return 0;
+
   const [affectedCount] = await scoped(
     model.examinationSessionEligibilityModel,
   ).update(
@@ -25,7 +43,7 @@ export async function bulkApproveEligibility(
     {
       where: {
         examinationSessionId,
-        studentId: { [Op.in]: studentIds },
+        studentId: { [Op.in]: validStudentIds },
         status: ELIGIBILITY_STATUS.REVIEW,
       },
       transaction: options.transaction,
@@ -56,6 +74,22 @@ export async function getEligibleStudentIdsForGeneration(
   const records = await scoped(model.examinationSessionEligibilityModel).findAll({
     where: whereClause,
     attributes: ["studentId"],
+    include: [
+      {
+        model: model.studentModel,
+        as: "student",
+        attributes: ["studentId", "enrollNumber"],
+        where: {
+          enrollNumber: {
+            [Op.and]: [
+              { [Op.ne]: null },
+              { [Op.ne]: "" },
+            ],
+          },
+        },
+        required: true,
+      },
+    ],
     transaction: options.transaction,
     raw: true,
   });

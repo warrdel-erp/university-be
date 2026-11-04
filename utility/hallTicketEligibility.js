@@ -38,9 +38,9 @@ export function evaluateReviewConditions(reason = "", reviewReasons = null) {
       codes.add(item.code);
     }
     return {
-      [HALL_TICKET_REVIEW_FILTER.REGISTRATION_PENDING]: codes.has(
-        ELIGIBILITY_REVIEW_REASON_CODE.REGISTRATION_PENDING,
-      ),
+      [HALL_TICKET_REVIEW_FILTER.REGISTRATION_PENDING]:
+        codes.has(ELIGIBILITY_REVIEW_REASON_CODE.REGISTRATION_PENDING) ||
+        codes.has(ELIGIBILITY_REVIEW_REASON_CODE.MISSING_ENROLLMENT_NUMBER),
       [HALL_TICKET_REVIEW_FILTER.PHOTOGRAPH_PENDING]: codes.has(
         ELIGIBILITY_REVIEW_REASON_CODE.MISSING_PHOTOGRAPH,
       ),

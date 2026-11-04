@@ -796,15 +796,19 @@ async function initializeEligibilityRecords(
         examinationSessionEligibilityServices.calculateStudentEligibility(raw);
       if (calculated.eligibilityStatus === ELIGIBILITY_STATUS_LABEL.READY) {
         initialStatus = ELIGIBILITY_STATUS.READY;
-      } else {
+      } else if (calculated.eligibilityStatus === ELIGIBILITY_STATUS_LABEL.BLOCKED) {
+        initialStatus = ELIGIBILITY_STATUS.BLOCKED;
         reviewReason = calculated.reasonText;
-        if (
-          !reviewReason &&
-          calculated.reviewReasons &&
-          calculated.reviewReasons.length > 0
-        ) {
-          reviewReason = calculated.reviewReasons[0].message;
-        }
+      } else {
+        initialStatus = ELIGIBILITY_STATUS.REVIEW;
+        reviewReason = calculated.reasonText;
+      }
+      if (
+        !reviewReason &&
+        calculated.reviewReasons &&
+        calculated.reviewReasons.length > 0
+      ) {
+        reviewReason = calculated.reviewReasons[0].message;
       }
     } catch (_error) {
       initialStatus = ELIGIBILITY_STATUS.REVIEW;

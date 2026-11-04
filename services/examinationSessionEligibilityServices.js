@@ -38,6 +38,20 @@ export function checkDocuments(st, reviewReasons) {
 }
 
 export function checkRegistration(st, reviewReasons) {
+  const isMissingEnroll =
+    st.enrollNumber === null ||
+    st.enrollNumber === undefined ||
+    String(st.enrollNumber).trim() === "";
+
+  if (isMissingEnroll) {
+    reviewReasons.push({
+      code: ELIGIBILITY_REVIEW_REASON_CODE.MISSING_ENROLLMENT_NUMBER,
+      title: "Missing enrollment number",
+      severity: "error",
+      message: "Student cannot be eligible for examination without an Enrollment Number.",
+    });
+  }
+
   const REQUIRED_FIELDS = [
     // Identity
     { field: "firstName",      label: "First name" },
@@ -49,7 +63,6 @@ export function checkRegistration(st, reviewReasons) {
     { field: "email",          label: "Email address" },
     // Academic
     { field: "scholarNumber",  label: "Scholar number" },
-    { field: "enrollNumber",   label: "Enrollment number" },
     { field: "admisssionDate", label: "Admission date" }, // model field has triple-s typo
     // Address
     { field: "pAddress",       label: "Permanent address" },

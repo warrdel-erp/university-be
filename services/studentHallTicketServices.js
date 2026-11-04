@@ -1,4 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
+import { Op } from "sequelize";
+import * as model from "../models/index.js";
+import { scoped } from "../utility/scoped.js";
 import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
@@ -28,8 +31,14 @@ function mapStudentRow(raw, dbStatus) {
       : null;
   const isGenerated = Boolean(hallTicket);
   const isPublished = hallTicket ? hallTicket.isPublished : false;
+  const hasEnrollNumber = Boolean(
+    student.enrollNumber && String(student.enrollNumber).trim() !== "",
+  );
+  const effectiveDbStatus = !hasEnrollNumber
+    ? ELIGIBILITY_STATUS.BLOCKED
+    : dbStatus;
   const isBlocked =
-    dbStatus === ELIGIBILITY_STATUS.BLOCKED
+    effectiveDbStatus === ELIGIBILITY_STATUS.BLOCKED
       ? true
       : hallTicket
         ? hallTicket.isBlocked
@@ -70,16 +79,20 @@ function mapStudentRow(raw, dbStatus) {
     isGenerated,
     isPublished,
     isBlocked,
-    markAsEligible: dbStatus === ELIGIBILITY_STATUS.APPROVED,
+    markAsEligible: hasEnrollNumber && effectiveDbStatus === ELIGIBILITY_STATUS.APPROVED,
     hallTicketStatus: resolveHallTicketStatus(hallTicket, isBlocked),
-    eligibilityStatus: mapEligibilityStatusToFrontend(dbStatus),
-    reasonText: eligibilityRecord ? eligibilityRecord.reviewReason : null,
+    eligibilityStatus: mapEligibilityStatusToFrontend(effectiveDbStatus),
+    reasonText: !hasEnrollNumber
+      ? "Student cannot be eligible for examination without an Enrollment Number."
+      : (eligibilityRecord ? eligibilityRecord.reviewReason : null),
     eligibilityReason:
-      dbStatus !== ELIGIBILITY_STATUS.READY &&
-      dbStatus !== ELIGIBILITY_STATUS.APPROVED &&
-      eligibilityRecord
-        ? eligibilityRecord.reviewReason
-        : null,
+      !hasEnrollNumber
+        ? "Student cannot be eligible for examination without an Enrollment Number."
+        : (effectiveDbStatus !== ELIGIBILITY_STATUS.READY &&
+           effectiveDbStatus !== ELIGIBILITY_STATUS.APPROVED &&
+           eligibilityRecord
+            ? eligibilityRecord.reviewReason
+            : null),
   };
 }
 
@@ -151,9 +164,14 @@ export async function getHallTicketEligibilityOverview(examinationSessionId, fil
     const eligibilityRecords = student.examinationSessionEligibilities;
     const eligibilityRecord =
       eligibilityRecords && eligibilityRecords.length > 0 ? eligibilityRecords[0] : null;
-    const dbStatus = eligibilityRecord
-      ? eligibilityRecord.status
-      : ELIGIBILITY_STATUS.REVIEW;
+    const hasEnrollNumber = Boolean(
+      student.enrollNumber && String(student.enrollNumber).trim() !== "",
+    );
+    const dbStatus = !hasEnrollNumber
+      ? ELIGIBILITY_STATUS.BLOCKED
+      : (eligibilityRecord
+          ? eligibilityRecord.status
+          : ELIGIBILITY_STATUS.REVIEW);
 
     if (dbStatus === ELIGIBILITY_STATUS.READY) ready++;
     else if (dbStatus === ELIGIBILITY_STATUS.APPROVED) approved++;
@@ -467,8 +485,17 @@ export async function getStudentEligibilityDetails(examinationSessionId, student
     throw error;
   }
 
+  const hasEnrollNumber = Boolean(
+    rawRecord.student?.enrollNumber &&
+    String(rawRecord.student.enrollNumber).trim() !== "",
+  );
   const storedStatus = eligibilityRecord.status;
-  const resolvedStatus = resolveEligibilityStatus(storedStatus, dynamicStatus);
+  const effectiveStoredStatus = !hasEnrollNumber
+    ? ELIGIBILITY_STATUS.BLOCKED
+    : storedStatus;
+  const resolvedStatus = !hasEnrollNumber
+    ? ELIGIBILITY_STATUS.BLOCKED
+    : resolveEligibilityStatus(storedStatus, dynamicStatus);
   const finalEligibilityStatus = mapEligibilityStatusToFrontend(resolvedStatus);
 
   const hallTickets = rawRecord.student.hallTickets;
@@ -478,26 +505,29 @@ export async function getStudentEligibilityDetails(examinationSessionId, student
   return {
     ...calculated.student,
     ...calculated.attendance,
-    storedStatus,
+    storedStatus: effectiveStoredStatus,
     dynamicStatus,
     eligibilityStatus: finalEligibilityStatus,
     eligibilityReason:
-      resolvedStatus !== ELIGIBILITY_STATUS.READY &&
-      resolvedStatus !== ELIGIBILITY_STATUS.APPROVED
-        ? calculated.reasonText || null
-        : null,
+      !hasEnrollNumber
+        ? "Student cannot be eligible for examination without an Enrollment Number."
+        : (resolvedStatus !== ELIGIBILITY_STATUS.READY &&
+           resolvedStatus !== ELIGIBILITY_STATUS.APPROVED
+            ? calculated.reasonText || null
+            : null),
     isGenerated: Boolean(hallTicketRecord),
     isPublished: hallTicketRecord ? hallTicketRecord.isPublished : false,
-    isBlocked: hallTicketRecord ? hallTicketRecord.isBlocked : false,
-    markAsEligible: storedStatus === ELIGIBILITY_STATUS.APPROVED,
+    isBlocked: !hasEnrollNumber || (hallTicketRecord ? hallTicketRecord.isBlocked : false),
+    markAsEligible: hasEnrollNumber && storedStatus === ELIGIBILITY_STATUS.APPROVED,
     hallTicketStatus: resolveHallTicketStatus(
       hallTicketRecord,
-      resolvedStatus === ELIGIBILITY_STATUS.BLOCKED,
+      !hasEnrollNumber || resolvedStatus === ELIGIBILITY_STATUS.BLOCKED,
     ),
     hallTicketId: hallTicketRecord ? hallTicketRecord.id : null,
     canGenerateHallTicket:
-      resolvedStatus === ELIGIBILITY_STATUS.READY ||
-      resolvedStatus === ELIGIBILITY_STATUS.APPROVED,
+      hasEnrollNumber &&
+      (resolvedStatus === ELIGIBILITY_STATUS.READY ||
+       resolvedStatus === ELIGIBILITY_STATUS.APPROVED),
   };
 }
 
@@ -546,6 +576,31 @@ export async function generateHallTickets({ examinationSessionId, studentIds, us
       throw error;
     }
 
+    if (studentIds && studentIds.length > 0) {
+      const studentsWithoutEnroll = await scoped(model.studentModel).findAll({
+        where: {
+          studentId: { [Op.in]: studentIds },
+          [Op.or]: [
+            { enrollNumber: null },
+            { enrollNumber: "" },
+          ],
+        },
+        attributes: ["studentId", "firstName", "lastName"],
+        transaction,
+      });
+
+      if (studentsWithoutEnroll.length > 0) {
+        const names = studentsWithoutEnroll
+          .map((s) => `${s.firstName || ""} ${s.lastName || ""}`.trim() || `ID ${s.studentId}`)
+          .join(", ");
+        const error = new Error(
+          `Cannot generate hall ticket: Student(s) without enrollment number cannot have a hall ticket generated (${names})`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     const effectiveAcademicYearId =
       getAcademicYearId() ||
       (user && user.academicYearId ? Number(user.academicYearId) : undefined) ||
@@ -586,6 +641,31 @@ export async function generateHallTickets({ examinationSessionId, studentIds, us
 
 export async function markAsEligible({ examinationSessionId, studentIds, user }) {
   return await sequelize.transaction(async (transaction) => {
+    if (studentIds && studentIds.length > 0) {
+      const studentsWithoutEnroll = await scoped(model.studentModel).findAll({
+        where: {
+          studentId: { [Op.in]: studentIds },
+          [Op.or]: [
+            { enrollNumber: null },
+            { enrollNumber: "" },
+          ],
+        },
+        attributes: ["studentId", "firstName", "lastName"],
+        transaction,
+      });
+
+      if (studentsWithoutEnroll.length > 0) {
+        const names = studentsWithoutEnroll
+          .map((s) => `${s.firstName || ""} ${s.lastName || ""}`.trim() || `ID ${s.studentId}`)
+          .join(", ");
+        const error = new Error(
+          `Cannot mark as eligible: Student(s) without enrollment number cannot be approved for examination (${names})`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     const requestedCount = studentIds.length;
     const approvedCount = await examinationSessionEligibilityRepo.bulkApproveEligibility(
       examinationSessionId,
@@ -608,6 +688,30 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
   return await sequelize.transaction(async (transaction) => {
     let targets = null;
     if (studentIds && studentIds.length > 0) {
+      const studentsWithoutEnroll = await scoped(model.studentModel).findAll({
+        where: {
+          studentId: { [Op.in]: studentIds },
+          [Op.or]: [
+            { enrollNumber: null },
+            { enrollNumber: "" },
+          ],
+        },
+        attributes: ["studentId", "firstName", "lastName"],
+        transaction,
+      });
+
+      if (studentsWithoutEnroll.length > 0) {
+        const names = studentsWithoutEnroll
+          .map((s) => `${s.firstName || ""} ${s.lastName || ""}`.trim() || `ID ${s.studentId}`)
+          .join(", ");
+        const error = new Error(
+          `Cannot publish hall ticket: Student(s) without enrollment number cannot be published (${names})`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      targets = studentIds;
       const membership =
         await studentHallTicketRepository.getStudentsByExaminationSessionId(
           examinationSessionId,
@@ -627,7 +731,6 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
         error.statusCode = 400;
         throw error;
       }
-      targets = studentIds;
     }
 
     const generatedCount = await studentHallTicketRepository.countHallTickets(
