@@ -280,11 +280,13 @@ export function applyGradingToStudents(evaluatedStudents, gradingScheme) {
   return evaluatedStudents.map((item) => {
     const pct = item.percentage != null ? Number(item.percentage) : 0;
 
-    // Normal Z-Score calculation
+    // Use pre-calculated Z-Score if available (e.g. TEACHER_WISE or SUBJECT_WISE), else normal calculation
     const calculatedZ =
-      classStdDev === 0
-        ? 0
-        : Number(zScore(pct, classMean, classStdDev).toFixed(4));
+      item.zScore != null
+        ? Number(item.zScore)
+        : (classStdDev === 0
+            ? 0
+            : Number(zScore(pct, classMean, classStdDev).toFixed(4)));
 
     let finalGrade = null;
     let finalGradePoint = null;
@@ -777,13 +779,25 @@ export async function createExaminationSessionResult(body) {
   const examinationSessionId = Number(body.examinationSessionId);
   const requestedGradingId = body.gradingId != null ? Number(body.gradingId) : null;
   const requestedBatchId = body.batchId != null ? Number(body.batchId) : null;
-  const studentIds = [];
-  const studentIdSeen = new Set();
-  for (const studentId of body.studentIds) {
-    const id = Number(studentId);
-    if (studentIdSeen.has(id)) continue;
-    studentIdSeen.add(id);
-    studentIds.push(id);
+  const calculationType = body.calculationType ? String(body.calculationType).toUpperCase() : null;
+  const teacherId =
+    body.teacherId != null
+      ? Number(body.teacherId)
+      : body.assignedToUserId != null
+        ? Number(body.assignedToUserId)
+        : null;
+  const subjectId = body.subjectId != null ? Number(body.subjectId) : null;
+
+  if (calculationType === "TEACHER_WISE" && !teacherId) {
+    const err = new Error("teacherId (or assignedToUserId) is required for TEACHER_WISE calculation.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (calculationType === "SUBJECT_WISE" && !subjectId) {
+    const err = new Error("subjectId is required for SUBJECT_WISE calculation.");
+    err.statusCode = 400;
+    throw err;
   }
 
   const context = await resolveContext({ examinationSessionId });
@@ -793,130 +807,314 @@ export async function createExaminationSessionResult(body) {
     throw err;
   }
 
+  // -------------------------------------------------------------
+  // STEP 1: Discover candidate students if not passed by frontend
+  // -------------------------------------------------------------
+  let studentIds = [];
+  const studentIdSeen = new Set();
+  if (Array.isArray(body.studentIds) && body.studentIds.length > 0) {
+    for (const studentId of body.studentIds) {
+      const id = Number(studentId);
+      if (studentIdSeen.has(id)) continue;
+      studentIdSeen.add(id);
+      studentIds.push(id);
+    }
+  } else if (calculationType === "TEACHER_WISE") {
+    const scheduleWhere = { examinationSessionId };
+    if (subjectId != null) scheduleWhere.subjectId = subjectId;
+    const schedules = await scoped(model.examScheduleModel).findAll({
+      where: scheduleWhere,
+      attributes: ["examScheduleId", "subjectId"],
+      raw: true,
+    });
+    const schedIds = schedules.map((s) => Number(s.examScheduleId));
+    if (!schedIds.length) {
+      const err = new Error("No exam schedules found for this examination session / teacher criteria.");
+      err.statusCode = 404;
+      throw err;
+    }
+    const sheets = await scoped(model.answerSheetQrModel).findAll({
+      where: {
+        examScheduleId: { [Op.in]: schedIds },
+        assignedToUser: teacherId,
+        studentId: { [Op.ne]: null },
+      },
+      attributes: ["studentId"],
+      raw: true,
+    });
+    studentIds = [...new Set(sheets.map((s) => Number(s.studentId)))];
+  } else if (calculationType === "SUBJECT_WISE") {
+    const schedules = await scoped(model.examScheduleModel).findAll({
+      where: { examinationSessionId, subjectId },
+      attributes: ["examScheduleId", "subjectId"],
+      raw: true,
+    });
+    const schedIds = schedules.map((s) => Number(s.examScheduleId));
+    if (!schedIds.length) {
+      const err = new Error("No exam schedules found for this subject in this examination session.");
+      err.statusCode = 404;
+      throw err;
+    }
+    const sheets = await scoped(model.answerSheetQrModel).findAll({
+      where: {
+        examScheduleId: { [Op.in]: schedIds },
+        studentId: { [Op.ne]: null },
+      },
+      attributes: ["studentId"],
+      raw: true,
+    });
+    studentIds = [...new Set(sheets.map((s) => Number(s.studentId)))];
+  }
+
+  if (!studentIds.length) {
+    return {
+      message: "No students found for this examination session and calculation criteria.",
+      generatedCount: 0,
+      alreadyGeneratedSkipped: 0,
+      notReadySkipped: 0,
+      examinationSession: context.examinationSession,
+      items: [],
+    };
+  }
+
+  // -------------------------------------------------------------
+  // STEP 2: Duplicate Check (Skip already generated / published)
+  // -------------------------------------------------------------
+  const existingResults = await examResultRepository.findStudentResultsByExaminationSessionAndStudentIds(
+    examinationSessionId,
+    studentIds,
+  );
+  const existingStudentIdSet = new Set(
+    existingResults.map((r) => Number(r.studentId)),
+  );
+  const alreadyGeneratedSkipped = existingStudentIdSet.size;
+  const eligibleStudentIds = studentIds.filter((id) => !existingStudentIdSet.has(id));
+
+  if (!eligibleStudentIds.length) {
+    return {
+      message: "All students already have results generated for this session.",
+      generatedCount: 0,
+      alreadyGeneratedSkipped,
+      notReadySkipped: 0,
+      examinationSession: context.examinationSession,
+      items: [],
+    };
+  }
+
+  // -------------------------------------------------------------
+  // STEP 3: Validate readiness & collect marks for eligible students
+  // -------------------------------------------------------------
+  const evaluatedStudents = [];
+  let notReadySkipped = 0;
+
+  for (const studentId of eligibleStudentIds) {
+    const row = await examResultRepository.findOneStudent({
+      studentId,
+      terms: context.terms,
+      classSectionOr: context.classSectionOr,
+    });
+    if (!row) {
+      continue;
+    }
+
+    const student = toStudentSummary(row);
+
+    const [schedules, sheets] = await Promise.all([
+      examResultRepository.findExamSchedulesByExaminationSessionId(
+        examinationSessionId,
+        {
+          courseIds: [student.courseId],
+          sessionIds: [student.sessionId],
+          terms: [student.term],
+        },
+      ),
+      examResultRepository.findAnswerSheetsByStudentsAndExaminationSession(
+        [student.studentId],
+        examinationSessionId,
+      ),
+    ]);
+
+    const applicable = schedulesForStudent(
+      schedules,
+      student.courseId,
+      student.sessionId,
+      student.term,
+    );
+
+    if (!applicable.length) {
+      notReadySkipped++;
+      continue;
+    }
+
+    const { readiness, exams } = calculateResultReadiness(
+      applicable,
+      sheetMapForStudent(sheets, student.studentId),
+    );
+
+    if (readiness.status !== "READY") {
+      notReadySkipped++;
+      continue;
+    }
+
+    const maximumByScheduleId = new Map();
+    for (const schedule of applicable) {
+      maximumByScheduleId.set(
+        Number(schedule.examScheduleId),
+        toMoneyNumber(schedule.maximumMarks),
+      );
+    }
+
+    let totalMarks = 0;
+    let obtainedMarks = 0;
+    for (const exam of exams) {
+      totalMarks = decimalAdd(
+        totalMarks,
+        maximumByScheduleId.get(exam.examScheduleId) || 0,
+      );
+      obtainedMarks = decimalAdd(
+        obtainedMarks,
+        toMoneyNumber(exam.obtainedMarks),
+      );
+    }
+
+    const percentage =
+      totalMarks === 0
+        ? null
+        : decimalMultiply(decimalDivide(obtainedMarks, totalMarks), 100);
+
+    evaluatedStudents.push({
+      student,
+      applicable,
+      readiness,
+      exams,
+      totalMarks,
+      obtainedMarks,
+      percentage: percentage == null ? null : toMoneyNumber(percentage),
+    });
+  }
+
+  if (!evaluatedStudents.length) {
+    return {
+      message: "No ready students found to generate results. Answer sheets may be pending evaluation.",
+      generatedCount: 0,
+      alreadyGeneratedSkipped,
+      notReadySkipped,
+      examinationSession: context.examinationSession,
+      items: [],
+    };
+  }
+
+  // -------------------------------------------------------------
+  // STEP 4: Calculate Z-Scores (Teacher-wise or Subject-wise)
+  // -------------------------------------------------------------
+  const allExamScheduleIds = [
+    ...new Set(
+      evaluatedStudents.flatMap((item) =>
+        (item.applicable || []).map((s) => Number(s.examScheduleId)),
+      ),
+    ),
+  ];
+
+  if (calculationType === "TEACHER_WISE") {
+    // Cohort: All submitted answer sheets evaluated by this teacher
+    const teacherWhere = {
+      examScheduleId: { [Op.in]: allExamScheduleIds },
+      assignedToUser: teacherId,
+      markingStatus: "submit",
+      studentId: { [Op.ne]: null },
+    };
+    const teacherSheets = await scoped(model.answerSheetQrModel).findAll({
+      where: teacherWhere,
+      attributes: ["examScheduleId", "studentId", "obtainedMarks"],
+      raw: true,
+    });
+
+    const sheetsBySchedule = new Map();
+    for (const ts of teacherSheets) {
+      const sId = Number(ts.examScheduleId);
+      if (!sheetsBySchedule.has(sId)) sheetsBySchedule.set(sId, []);
+      sheetsBySchedule.get(sId).push(ts);
+    }
+
+    const statsBySchedule = new Map();
+    for (const [schedId, sList] of sheetsBySchedule.entries()) {
+      const pcts = sList.map((s) => (s.obtainedMarks == null ? 0 : Number(s.obtainedMarks)));
+      const m = pcts.length > 0 ? mean(pcts) : 0;
+      const sd = pcts.length > 1 ? standardDeviation(pcts) : 0;
+      statsBySchedule.set(schedId, { mean: m, stdDev: sd });
+    }
+
+    for (const item of evaluatedStudents) {
+      const zScores = [];
+      for (const exam of item.exams) {
+        const schedId = Number(exam.examScheduleId);
+        const stats = statsBySchedule.get(schedId);
+        if (stats && exam.obtainedMarks != null) {
+          const obtained = Number(exam.obtainedMarks);
+          const z = stats.stdDev === 0 ? 0 : Number(zScore(obtained, stats.mean, stats.stdDev).toFixed(4));
+          zScores.push(z);
+        }
+      }
+      if (zScores.length > 0) {
+        const avgZ = zScores.reduce((a, b) => a + b, 0) / zScores.length;
+        item.zScore = Number(avgZ.toFixed(4));
+      } else {
+        item.zScore = null;
+      }
+    }
+  } else if (calculationType === "SUBJECT_WISE") {
+    // Cohort: All submitted answer sheets for these schedules across all teachers
+    const subjectSheets = await scoped(model.answerSheetQrModel).findAll({
+      where: {
+        examScheduleId: { [Op.in]: allExamScheduleIds },
+        markingStatus: "submit",
+        studentId: { [Op.ne]: null },
+      },
+      attributes: ["examScheduleId", "studentId", "obtainedMarks"],
+      raw: true,
+    });
+
+    const sheetsBySchedule = new Map();
+    for (const ss of subjectSheets) {
+      const sId = Number(ss.examScheduleId);
+      if (!sheetsBySchedule.has(sId)) sheetsBySchedule.set(sId, []);
+      sheetsBySchedule.get(sId).push(ss);
+    }
+
+    const statsBySchedule = new Map();
+    for (const [schedId, sList] of sheetsBySchedule.entries()) {
+      const pcts = sList.map((s) => (s.obtainedMarks == null ? 0 : Number(s.obtainedMarks)));
+      const m = pcts.length > 0 ? mean(pcts) : 0;
+      const sd = pcts.length > 1 ? standardDeviation(pcts) : 0;
+      statsBySchedule.set(schedId, { mean: m, stdDev: sd });
+    }
+
+    for (const item of evaluatedStudents) {
+      const zScores = [];
+      for (const exam of item.exams) {
+        const schedId = Number(exam.examScheduleId);
+        const stats = statsBySchedule.get(schedId);
+        if (stats && exam.obtainedMarks != null) {
+          const obtained = Number(exam.obtainedMarks);
+          const z = stats.stdDev === 0 ? 0 : Number(zScore(obtained, stats.mean, stats.stdDev).toFixed(4));
+          zScores.push(z);
+        }
+      }
+      if (zScores.length > 0) {
+        const avgZ = zScores.reduce((a, b) => a + b, 0) / zScores.length;
+        item.zScore = Number(avgZ.toFixed(4));
+      } else {
+        item.zScore = null;
+      }
+    }
+  }
+
+  // -------------------------------------------------------------
+  // STEP 5: Resolve Grading Scheme & Apply Grading
+  // -------------------------------------------------------------
   const transaction = await sequelize.transaction();
 
   try {
-    // -------------------------------------------------------------
-    // PASS 1: Validate readiness and collect marks for all students
-    // -------------------------------------------------------------
-    const evaluatedStudents = [];
-
-    for (const studentId of studentIds) {
-      const row = await examResultRepository.findOneStudent({
-        studentId,
-        terms: context.terms,
-        classSectionOr: context.classSectionOr,
-      });
-      if (!row) {
-        const err = new Error(
-          `Student not found for exam result. studentId=${studentId}`,
-        );
-        err.statusCode = 404;
-        throw err;
-      }
-
-      const student = toStudentSummary(row);
-
-      const [schedules, sheets] = await Promise.all([
-        examResultRepository.findExamSchedulesByExaminationSessionId(
-          examinationSessionId,
-          {
-            courseIds: [student.courseId],
-            sessionIds: [student.sessionId],
-            terms: [student.term],
-          },
-        ),
-        examResultRepository.findAnswerSheetsByStudentsAndExaminationSession(
-          [student.studentId],
-          examinationSessionId,
-        ),
-      ]);
-
-      const applicable = schedulesForStudent(
-        schedules,
-        student.courseId,
-        student.sessionId,
-        student.term,
-      );
-      const { readiness, exams } = calculateResultReadiness(
-        applicable,
-        sheetMapForStudent(sheets, student.studentId),
-      );
-
-      if (!applicable.length) {
-        const err = new Error(
-          `No applicable exams found for this student. studentId=${studentId}`,
-        );
-        err.statusCode = 400;
-        throw err;
-      }
-
-      if (readiness.status !== "READY") {
-        const err = new Error(
-          `Student result is not ready. All answer sheets must be submitted. studentId=${studentId}`,
-        );
-        err.statusCode = 400;
-        throw err;
-      }
-
-      const existing = await examResultRepository.findStudentResult(
-        {
-          examinationSessionId,
-          studentId: student.studentId,
-          courseId: student.courseId,
-          sessionId: student.sessionId,
-          term: student.term,
-        },
-        transaction,
-      );
-      if (existing) {
-        const err = new Error(
-          `Student result already exists for this examination session. studentId=${studentId}`,
-        );
-        err.statusCode = 409;
-        throw err;
-      }
-
-      const maximumByScheduleId = new Map();
-      for (const schedule of applicable) {
-        maximumByScheduleId.set(
-          Number(schedule.examScheduleId),
-          toMoneyNumber(schedule.maximumMarks),
-        );
-      }
-
-      let totalMarks = 0;
-      let obtainedMarks = 0;
-      for (const exam of exams) {
-        totalMarks = decimalAdd(
-          totalMarks,
-          maximumByScheduleId.get(exam.examScheduleId) || 0,
-        );
-        obtainedMarks = decimalAdd(
-          obtainedMarks,
-          toMoneyNumber(exam.obtainedMarks),
-        );
-      }
-
-      const percentage =
-        totalMarks === 0
-          ? null
-          : decimalMultiply(decimalDivide(obtainedMarks, totalMarks), 100);
-
-      evaluatedStudents.push({
-        student,
-        applicable,
-        readiness,
-        exams,
-        totalMarks,
-        obtainedMarks,
-        percentage: percentage == null ? null : toMoneyNumber(percentage),
-      });
-    }
-
-    // -------------------------------------------------------------
-    // RESOLVE GRADING SCHEME (Tareeqa 1: Academic Regulation)
-    // -------------------------------------------------------------
     const sampleStudent = evaluatedStudents[0]?.student;
     const studentWithBatch = evaluatedStudents.find(
       (e) => e.student?.batchId != null,
@@ -952,13 +1150,10 @@ export async function createExaminationSessionResult(body) {
       transaction,
     });
 
-    // -------------------------------------------------------------
-    // APPLY GRADING (Handles both ABSOLUTE and RELATIVE Z-score)
-    // -------------------------------------------------------------
     const gradedStudents = applyGradingToStudents(evaluatedStudents, gradingScheme);
 
     // -------------------------------------------------------------
-    // PASS 2: Save results to database
+    // STEP 6: Save results to database (student_result)
     // -------------------------------------------------------------
     const createdResults = [];
 
@@ -1010,6 +1205,10 @@ export async function createExaminationSessionResult(body) {
     await transaction.commit();
 
     return {
+      message: `Results generated successfully for ${createdResults.length} student(s).`,
+      generatedCount: createdResults.length,
+      alreadyGeneratedSkipped,
+      notReadySkipped,
       examinationSession: context.examinationSession,
       items: createdResults,
     };

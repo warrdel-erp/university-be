@@ -40,10 +40,24 @@ const skuQuery = z.object({
 
 const createExaminationSessionResultBody = z.object({
   examinationSessionId: id,
+  studentIds: z.array(id).optional().default([]),
+  calculationType: z.preprocess(
+    (val) => (typeof val === "string" ? val.trim().toUpperCase() : val),
+    z.enum(["SUBJECT_WISE", "TEACHER_WISE"]).optional().nullable(),
+  ),
+  teacherId: id.optional().nullable(),
+  assignedToUserId: id.optional().nullable(),
+  subjectId: id.optional().nullable(),
+  gradingId: id.optional().nullable(),
+  batchId: id.optional().nullable(),
+}).passthrough();
+
+const publishExaminationSessionResultBody = z.object({
+  examinationSessionId: id,
   studentIds: z.array(id).min(1),
   gradingId: id.optional().nullable(),
   batchId: id.optional().nullable(),
-});
+}).passthrough();
 
 const publishedResultQuery = z.object({
   examinationSessionId: id,
@@ -77,7 +91,7 @@ router.post(
 router.post(
   "/publish",
   userAuth,
-  validate({ body: createExaminationSessionResultBody }),
+  validate({ body: publishExaminationSessionResultBody }),
   examResultController.publishExaminationSessionResults,
 );
 router.get(

@@ -61,8 +61,17 @@ export async function getSku(req, res) {
 
 export async function createExaminationSessionResult(req, res) {
   try {
-    await examResultServices.createExaminationSessionResult(req.body);
-    return SuccessResponse(res, 201, "result is saved and submitted");
+    const payload = {
+      ...req.body,
+      teacherId: req.body?.teacherId ?? req.body?.assignedToUserId,
+    };
+    const result = await examResultServices.createExaminationSessionResult(payload);
+    return SuccessResponse(
+      res,
+      201,
+      result.message || "result is saved and submitted",
+      result,
+    );
   } catch (error) {
     return ErrorResponse(
       res,
