@@ -452,9 +452,18 @@ export const forgotChangePassword = async (req, res) => {
    const decoded = jwt.verify(token, tokenService.ACCESS_SECRET);
       const { email } = decoded;
 
+      const userDetail = await userRepository.findEmailByEmail(email);
+          if (!userDetail) {
+            return res.status(401).json({
+              status: false,
+              message: "Invalid user",
+              code: "USER_NOT_FOUND",
+            });
+          }
+
     const updatedUser = await userService.changePassword({ email, password });
 
-    await refreshTokenRepository.revokeAllUserTokens(req.user.userId, "PASSWORD_CHANGED");
+    await refreshTokenRepository.revokeAllUserTokens(userDetail.dataValues.userId, "PASSWORD_CHANGED");
 
     return res.status(200).json({
       message: "Password changed successfully",
