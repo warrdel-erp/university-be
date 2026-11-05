@@ -17,8 +17,11 @@ export async function addDepartment(req, res) {
 
     return SuccessResponse(res, 200, 'Data added successfully', result);
   } catch (error) {
-    if (error.message === 'Department not found') {
+    if (error.message === 'Department not found' || /cannot insert parent for a default department/i.test(error.message)) {
       return ErrorResponse(res, 404, error.message);
+    }
+    if (/cannot insert parent for a default department/i.test(error.message)) {
+      return ErrorResponse(res, 400, error.message);
     }
     return ErrorResponse(res, 500, 'Internal Server Error', error.message);
   }
@@ -72,6 +75,9 @@ export async function updateDepartment(req, res) {
     }
     return SuccessResponse(res, 200, "Department details updated successfully");
   } catch (error) {
+    if (/cannot be updated|not found|cannot be its own parent/i.test(error.message)) {
+      return ErrorResponse(res, 400, error.message);
+    }
     return ErrorResponse(res, 500, "Internal Server Error", error.message);
   }
 }

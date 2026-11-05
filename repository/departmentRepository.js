@@ -18,7 +18,7 @@ async function assertDepartmentDeletable(departmentId, transaction) {
         attributes: ['departmentId', 'departmentName', 'isDefault'],
         transaction,
     });
-    if (dept && (dept.isDefault || ['Admin', 'Academic', 'Academics'].includes(dept.departmentName))) {
+    if (dept && (dept.isDefault || ['Admin', 'Admin (Default)', 'Academic', 'Academics', 'Academic (Default)'].includes(dept.departmentName))) {
         throw new Error('Default department cannot be deleted');
     }
 
@@ -149,12 +149,16 @@ export async function addParentDepartment(childDepartmentId, departmentData) {
         const childId = Number(childDepartmentId);
 
         const childDepartment = await scoped(model.departmentModel).findOne({
-            attributes: ['departmentId', 'parentDepartmentId'],
+            attributes: ['departmentId', 'parentDepartmentId', 'departmentName', 'isDefault'],
             where: { departmentId: childId },
             transaction,
         });
         if (!childDepartment) {
             throw new Error('Department not found');
+        }
+
+        if (childDepartment.isDefault || ['Admin', 'Admin (Default)', 'Academic', 'Academics', 'Academic (Default)'].includes(childDepartment.departmentName)) {
+            throw new Error('Cannot insert parent for a default department');
         }
 
         departmentData.parentDepartmentId = childDepartment.parentDepartmentId ?? null;
@@ -223,7 +227,7 @@ export async function deleteDepartment(departmentId, transaction) {
     try {
         const existing = await scoped(model.departmentModel).findOne({
             where: { departmentId: id },
-            attributes: ['departmentId'],
+            attributes: ['departmentId', 'departmentName', 'isDefault'],
             transaction: txn,
         });
         if (!existing) {
@@ -240,7 +244,7 @@ export async function deleteDepartment(departmentId, transaction) {
                 parentDepartmentId: id,
                 departmentId: { [Op.ne]: id },
             },
-            attributes: ['departmentId'],
+            attributes: ['departmentId', 'departmentName', 'isDefault'],
             transaction: txn,
         });
 
@@ -274,10 +278,14 @@ export async function updateDepartment(departmentId, departmentData) {
     try {
         const existing = await scoped(model.departmentModel).findOne({
             where: { departmentId },
-            attributes: ['departmentId'],
+            attributes: ['departmentId', 'departmentName', 'isDefault'],
         });
         if (!existing) {
             return false;
+        }
+
+        if (existing.isDefault || ['Admin', 'Admin (Default)', 'Academic', 'Academics', 'Academic (Default)'].includes(existing.departmentName)) {
+            throw new Error('Default department cannot be updated');
         }
 
         if (departmentData.parentDepartmentId != null) {
@@ -287,7 +295,7 @@ export async function updateDepartment(departmentId, departmentData) {
             }
 
             const parentDepartment = await scoped(model.departmentModel).findOne({
-                attributes: ['departmentId'],
+                attributes: ['departmentId', 'departmentName', 'isDefault'],
                 where: { departmentId: parentId },
             });
             if (!parentDepartment) {
@@ -336,7 +344,7 @@ export async function createDefaultDepartmentsForInstitute(
             instituteId,
             [Op.or]: [
                 { departmentType: 'Academic' },
-                { departmentName: ['Academic', 'Academics'] },
+                { departmentName: ['Academic', 'Academics', 'Academic (Default)'] },
             ],
         },
         transaction,
@@ -347,7 +355,7 @@ export async function createDefaultDepartmentsForInstitute(
             instituteId,
             [Op.or]: [
                 { departmentType: 'Admin' },
-                { departmentName: 'Admin' },
+                { departmentName: ['Admin', 'Admin (Default)'] },
             ],
         },
         transaction,
@@ -357,7 +365,7 @@ export async function createDefaultDepartmentsForInstitute(
 
     if (!existingAcademic) {
         departmentsToCreate.push({
-            departmentName: 'Academic',
+            departmentName: 'Academic (Default)',
             departmentCode: 'ACAD',
             departmentType: 'Academic',
             description: 'Default Academic Department',
@@ -371,7 +379,7 @@ export async function createDefaultDepartmentsForInstitute(
 
     if (!existingAdmin) {
         departmentsToCreate.push({
-            departmentName: 'Admin',
+            departmentName: 'Admin (Default)',
             departmentCode: 'ADMIN',
             departmentType: 'Admin',
             description: 'Default Administrative Department',
