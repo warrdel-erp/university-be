@@ -48,7 +48,31 @@ const questionBankModel = sequelize.define(
         content: {
             type: DataTypes.JSON,
             allowNull: true,
-            field: 'content'
+            field: 'content',
+            get() {
+                const rawValue = this.getDataValue('content');
+                if (typeof rawValue === 'string') {
+                    try {
+                        return JSON.parse(rawValue);
+                    } catch (e) {
+                        return rawValue;
+                    }
+                }
+                return rawValue;
+            },
+            set(value) {
+                if (typeof value === 'object' && value !== null) {
+                    this.setDataValue('content', value);
+                } else if (typeof value === 'string') {
+                    try {
+                        this.setDataValue('content', JSON.parse(value));
+                    } catch (e) {
+                        this.setDataValue('content', value);
+                    }
+                } else {
+                    this.setDataValue('content', value);
+                }
+            }
         },
         subjectId: {
             type: DataTypes.INTEGER,
