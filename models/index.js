@@ -147,6 +147,7 @@ import teacherAttendeceModel from "./teacherAttendenceModel.js";
 import leavePolicyModel from "./leavePolicyModel.js";
 import leaveBalanceModel from "./leaveBalanceModel.js";
 import leaveRequestModel from "./leaveRequestModel.js";
+import approvalRequestModel from "./approvalRequestModel.js";
 import examScheduleModel from "./examScheduleModel.js";
 import libraryFloorModel from "./libraryFloorModel.js";
 import libraryAisleModel from "./libraryAisleModel.js";
@@ -3129,6 +3130,16 @@ leavePolicyModel.hasMany(leaveBalanceModel, {
   as: "leaveBalance",
 });
 
+// Approval Request Associations
+approvalRequestModel.belongsTo(userModel, { foreignKey: "requested_by", as: "requester" });
+approvalRequestModel.belongsTo(userModel, { foreignKey: "approved_by_id", as: "approvedBy" });
+approvalRequestModel.belongsTo(userModel, { foreignKey: "skipped_by_user_id", as: "skippedBy" });
+approvalRequestModel.belongsTo(departmentPositionsModel, { foreignKey: "assigned_to_position_id", as: "assignedPosition" });
+approvalRequestModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+approvalRequestModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+approvalRequestModel.belongsTo(leaveRequestModel, { foreignKey: "resource_id", constraints: false, as: "leaveRequest" });
+leaveRequestModel.hasMany(approvalRequestModel, { foreignKey: "resource_id", constraints: false, as: "approvalRequests" });
+
 examScheduleModel.belongsTo(subjectModel, {
   foreignKey: "subjectId",
   as: "subjectSchedule",
@@ -4326,6 +4337,7 @@ export {
   leaveBalanceModel,
   leavePolicyModel,
   leaveRequestModel,
+  approvalRequestModel,
   examScheduleModel,
   libraryFloorModel,
   libraryAisleModel,
