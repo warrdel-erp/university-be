@@ -1,5 +1,6 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
+import { requestContext } from "../utility/requestContext.js";
 import { Op } from "sequelize";
 
 export async function checkOverlappingLeave(userId, startDate, endDate, excludeRequestId = null, options = {}) {
@@ -147,34 +148,152 @@ export async function updateRequest(requestId, data, options = {}) {
   });
 }
 
-export async function getLeavesAssignedToUserPositions(userId, filters = {}, options = {}) {
-  let positionIds = [];
+async function isUniversityLogin(user, userId, transaction) {
+  if (!user && !userId) return false;
 
-  if (filters.positionId) {
-    positionIds = [Number(filters.positionId)];
-  } else if (userId) {
-    const positions = await scoped(model.userDepartmentPositionsModel).findAll({
-      where: { userId, status: "ACTIVE" },
-      attributes: ["departmentPositionId"],
-      transaction: options.transaction,
+  const resolvedUserId = userId || user?.userId || user?.dataValues?.userId;
+
+  // 1. Direct role check on user or dataValues
+  const defaultRole = (
+    user?.defaultRole ||
+    user?.dataValues?.defaultRole ||
+    user?.role ||
+    user?.dataValues?.role ||
+    ""
+  ).toUpperCase();
+
+  if (["CLIENT_ADMIN", "ADMIN", "SYS_CLIENT_ADMIN", "SUPERADMIN"].includes(defaultRole)) {
+    return true;
+  }
+
+  // 2. Check defaultRoleRef
+  const roleRef = user?.defaultRoleRef || user?.dataValues?.defaultRoleRef;
+  if (roleRef) {
+    const refRole = (roleRef.role || "").toUpperCase();
+    const refCode = (roleRef.code || "").toUpperCase();
+    const refScope = (roleRef.scope || "").toUpperCase();
+    if (
+      refScope === "UNIVERSITY" ||
+      refCode === "SYS_CLIENT_ADMIN" ||
+      ["CLIENT_ADMIN", "ADMIN"].includes(refRole)
+    ) {
+      return true;
+    }
+  }
+
+  // 3. Request context check
+  const store = requestContext.getStore();
+  if (
+    store?.defaultRole &&
+    ["CLIENT_ADMIN", "ADMIN", "SYS_CLIENT_ADMIN"].includes(String(store.defaultRole).toUpperCase())
+  ) {
+    return true;
+  }
+
+  // 4. Database check for role scope
+  if (resolvedUserId) {
+    const defaultRoleId = user?.defaultRoleId || user?.dataValues?.defaultRoleId;
+    if (defaultRoleId) {
+      const role = await model.roleModel.findByPk(defaultRoleId, { transaction });
+      if (
+        role &&
+        (role.scope === "UNIVERSITY" ||
+          role.code === "SYS_CLIENT_ADMIN" ||
+          ["CLIENT_ADMIN", "ADMIN"].includes(String(role.role).toUpperCase()))
+      ) {
+        return true;
+      }
+    }
+
+    const hasUniversityAssignment = await model.userRolePermissionModel.findOne({
+      where: { userId: resolvedUserId },
+      include: [
+        {
+          model: model.roleModel,
+          as: "userRole",
+          where: {
+            [Op.or]: [
+              { scope: "UNIVERSITY" },
+              { code: "SYS_CLIENT_ADMIN" },
+              { role: ["CLIENT_ADMIN", "Admin", "admin"] },
+            ],
+          },
+          required: true,
+        },
+      ],
+      transaction,
     });
-    positionIds = positions.map((p) => p.departmentPositionId);
+    if (hasUniversityAssignment) {
+      return true;
+    }
   }
 
-  if (!positionIds.length) {
-    return { count: 0, rows: [] };
-  }
+  return false;
+}
 
+export async function getLeavesAssignedToUserPositions(userId, filters = {}, options = {}) {
+  const user = options.user;
+  const isUniversity = await isUniversityLogin(user, userId, options.transaction);
   const where = {
     approvalFor: "leave",
-    assignedToPositionId: { [Op.in]: positionIds },
   };
 
+  const store = requestContext.getStore();
+  const universityId =
+    filters.universityId ||
+    user?.universityId ||
+    user?.dataValues?.universityId ||
+    store?.universityId;
+
+  if (universityId) {
+    where.universityId = universityId;
+  }
+
+  if (filters.instituteId) {
+    where.instituteId = Number(filters.instituteId);
+  }
+
+  if (isUniversity) {
+    // If university user is logged in, show leaves across all departments
+    if (filters.positionId) {
+      where.assignedToPositionId = Number(filters.positionId);
+    }
+    if (filters.departmentId) {
+      where.departmentId = Number(filters.departmentId);
+    }
+  } else {
+    // Normal user: restricted to their active assigned positions
+    let positionIds = [];
+    if (filters.positionId) {
+      positionIds = [Number(filters.positionId)];
+    } else if (userId) {
+      const positions = await scoped(model.userDepartmentPositionsModel).findAll({
+        where: { userId, status: "ACTIVE" },
+        attributes: ["departmentPositionId"],
+        transaction: options.transaction,
+      });
+      positionIds = positions.map((p) => p.departmentPositionId);
+    }
+
+    if (!positionIds.length) {
+      return { count: 0, rows: [] };
+    }
+
+    where.assignedToPositionId = { [Op.in]: positionIds };
+  }
+
   if (filters.status && filters.status !== "all") {
+    const normalizeStatus = (s) => {
+      const lower = String(s).trim().toLowerCase();
+      if (lower === "skip") return "skipped";
+      return lower;
+    };
+
     if (filters.status.includes(",")) {
-      where.status = { [Op.in]: filters.status.split(",").map((s) => s.trim()) };
+      where.status = { [Op.in]: filters.status.split(",").map(normalizeStatus) };
     } else {
-      where.status = filters.status;
+      const normalized = normalizeStatus(filters.status);
+      where.status = normalized === "skipped" ? { [Op.in]: ["skipped", "skip"] } : normalized;
     }
   }
 
@@ -188,6 +307,13 @@ export async function getLeavesAssignedToUserPositions(userId, filters = {}, opt
           model: model.leavePolicyModel,
           as: "leaveRequestsPolicy",
           attributes: ["policyId", "policyName", "totalLeavesPerYear"],
+          required: false,
+        },
+        {
+          model: model.departmentModel,
+          as: "department",
+          attributes: ["departmentId", "departmentName"],
+          required: false,
         },
       ],
     },
@@ -195,11 +321,27 @@ export async function getLeavesAssignedToUserPositions(userId, filters = {}, opt
       model: model.userModel,
       as: "requester",
       attributes: ["userId", "userName", "email"],
+      required: false,
     },
     {
       model: model.departmentPositionsModel,
       as: "assignedPosition",
-      attributes: ["departmentPositionId", "positionName", "level"],
+      attributes: ["departmentPositionId", "positionName", "level", "departmentId"],
+      required: false,
+      include: [
+        {
+          model: model.departmentModel,
+          as: "department",
+          attributes: ["departmentId", "departmentName"],
+          required: false,
+        },
+      ],
+    },
+    {
+      model: model.departmentModel,
+      as: "department",
+      attributes: ["departmentId", "departmentName"],
+      required: false,
     },
     {
       model: model.userModel,
@@ -219,5 +361,6 @@ export async function getLeavesAssignedToUserPositions(userId, filters = {}, opt
   if (options.limit) queryOptions.limit = Number(options.limit);
   if (options.offset) queryOptions.offset = Number(options.offset);
 
-  return scoped(model.approvalRequestModel).findAndCountAll(queryOptions);
+  const targetModel = isUniversity ? model.approvalRequestModel : scoped(model.approvalRequestModel);
+  return targetModel.findAndCountAll(queryOptions);
 }

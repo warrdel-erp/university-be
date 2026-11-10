@@ -204,7 +204,7 @@ export async function getLeavesAssignedToMe(user, query = {}) {
   const limit = Math.max(1, Number(query.limit) || 20);
   const offset = (page - 1) * limit;
 
-  const result = await repo.getLeavesAssignedToUserPositions(userId, query, { limit, offset });
+  const result = await repo.getLeavesAssignedToUserPositions(userId, query, { limit, offset, user });
   return {
     total: result.count,
     page,

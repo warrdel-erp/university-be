@@ -24,7 +24,7 @@ import {
   getCampusCode,
   getInstituteCode,
 } from "../repository/collegeRepository.js";
-import * as libraryRepository from "../repository/libraryCreationRepository.js";
+import * as libraryRepository from "../modules/library/repository/libraryCreationRepository.js";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 import * as employeeScheduleRepository from "../repository/employeeScheduleRepository.js";
 import * as attendanceRepository from "../repository/attendanceRepository.js";
