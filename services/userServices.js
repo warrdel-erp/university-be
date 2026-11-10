@@ -1,4 +1,4 @@
-import { createDefaultDepartmentsForInstitute } from "../repository/departmentRepository.js";
+import { createDefaultDepartmentsForInstitute } from "../modules/organization/repository/departmentRepository.js";
 import * as registerRepository from "../repository/userRepository.js";
 import * as userRoleRepository from "../repository/userRoleRepository.js";
 import { Op } from "sequelize";

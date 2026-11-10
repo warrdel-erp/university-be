@@ -23,7 +23,7 @@ import * as sessionRepository from "../repository/sessionRepository.js";
 import * as roleRepository from "../repository/roleRepository.js";
 import * as studentFeeInvoiceRepo from "../repository/studentFeeInvoiceRepository.js";
 import * as libraryRepository from "../modules/library/repository/libraryCreationRepository.js";
-import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
+import * as timeTableCreateRepository from "../modules/timetable/repository/timeTablecreateRepository.js";
 import * as model from "../models/index.js";
 import { Op } from "sequelize";
 import {

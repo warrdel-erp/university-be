@@ -1,10 +1,9 @@
-import { createDefaultDepartmentsForInstitute } from '../repository/departmentRepository.js';
+import { createDefaultDepartmentsForInstitute, getSingleDepartmentDetails } from '../modules/organization/repository/departmentRepository.js';
 import { syncSubjectComponents } from "./subjectComponentServices.js";
 import { Op } from 'sequelize';
 import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
-import * as instituteRepository from '../repository/instituteRepository.js';
-import { getSingleDepartmentDetails } from '../repository/departmentRepository.js';
+import * as instituteRepository from '../modules/organization/repository/instituteRepository.js';
 import * as batchRepository from '../repository/batchRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
