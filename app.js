@@ -13,51 +13,28 @@ import setting from "./router/settingRoute.js";
 import student from "./router/studentRoute.js";
 import download from "./router/downloadRoute.js";
 import codeMaster from "./router/codeMasterRoute.js";
-import campus from "./router/campusRoute.js";
-import institute from "./router/instituteRoute.js";
+import organizationModule from "./modules/organization/index.js";
 import specialization from "./router/specializationRoute.js";
 import course from "./router/courseRoute.js";
 import user from "./router/auth/userRoute.js";
-import employee from "./router/employeeRoute.js";
-import teacher from "./router/teacherMappingRoute.js";
-import libraryCreation from "./router/libraryCreationRoute.js";
-import timeTable from "./router/timeTableRoute.js";
-import faculityLoad from "./router/faculityLoadRoute.js";
-import timeTableCreate from "./router/timeTableCreateRoute.js";
-import attendance from "./router/attendanceRoute.js";
-import classRoom from "./router/classRoomRoute.js";
+import hrmsModule from "./modules/hrms/index.js";
+import timetableModule from "./modules/timetable/index.js";
+import libraryModule from "./modules/library/index.js";
 import feeTypeCategory from "./router/feeTypeCategoryRoute.js";
 import feeTypeCatalog from "./router/feeTypeCatalogRoute.js";
 import feePolicy from "./router/feePolicyRoute.js";
-import assetCategory from "./router/assetCategoryRoute.js";
-import asset from "./router/assetRoute.js";
-import assetIssue from "./router/assetIssueRoute.js";
-import amcVendor from "./router/amcVendorRoute.js";
-import amcContract from "./router/amcContractRoute.js";
-import amcServiceTicket from "./router/amcServiceTicketRoute.js";
+import assetManagementModule from "./modules/asset-management/index.js";
 import role from "./router/roleRoute.js";
 import permission from "./router/permissionRoute.js";
 import rolePermissions from "./router/rolePermissionsRoute.js";
 import userRolePermission from "./router/userRolePermissionRoute.js";
-import dormitoryRoomType from "./router/roomTypeRoute.js";
-import dormitoryList from "./router/dormitoryListRoute.js";
-import addDormitory from "./router/addDormitoryRoute.js";
+import dormitoryModule from "./modules/dormitory/index.js";
 
 import examAttendance from "./router/examAttendanceRoute.js";
 import examRoomMaterialBundle from "./router/examRoomMaterialBundleRoute.js";
-import transportRoute from "./router/transportRoute.js";
-import vehicleRoute from "./router/vehicleRoute.js";
-import assignVehicleRoute from "./router/assignVehicleRoute.js";
+import transportModule from "./modules/transport/index.js";
 import acedmicYear from "./router/acedmicYearRoute.js";
-import holiday from "./router/holidayRoute.js";
 import electiveSubject from "./router/electiveSubjectRoute.js";
-import building from "./router/buildingRoute.js";
-import governanceBody from "./router/governanceBodyRoute.js";
-import floor from "./router/floorRoute.js";
-import head from "./router/headRoute.js";
-import department from "./router/departmentRoute.js";
-import staff from "./router/staffRoute.js";
-import departmentPositions from "./router/departmentPositionsRoute.js";
 import syllabus from "./router/syllabusRoute.js";
 import session from "./router/sessionRoute.js";
 import po from "./router/poRoute.js";
@@ -72,13 +49,7 @@ import lesson from "./router/lessonRoute.js";
 import lecture from "./router/lectureRoute.js";
 import notice from "./router/noticeRoute.js";
 import examStructure from "./router/examStructureRoute.js";
-import schedule from "./router/scheduleRoute.js";
-import leavePolicy from "./router/leavePolicyRouter.js";
-import leaveRequest from "./router/leaveRequestRouter.js";
-import approvalRequest from "./router/approvalRequestRouter.js";
-import leaveBalance from "./router/leaveBalanceRouter.js";
 import examScheduleMapping from "./router/examStructureScheduleMappingRoute.js";
-import libraryStructure from "./router/libraryStructureRoute.js";
 import internalAssessment from "./router/internalAssessmentRoute.js";
 import jobSetting from "./router/jobSettingsRoutes.js";
 import jobs from "./router/jobRoutes.js";
@@ -102,7 +73,6 @@ import questionBank from "./router/questionBankRoute.js";
 import classSection from "./router/classSectionRoute.js";
 import dashboard from "./router/dashboardRoute.js";
 import teacherExamAssignment from "./router/teacherExamAssignmentRoute.js";
-import teacherSubstitute from "./router/teacherSubstituteRoute.js";
 import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
 import examinationSession from "./router/examinationSessionRoute.js";
 import examinationSessionSlot from "./router/examinationSessionSlotRoute.js";
@@ -112,9 +82,7 @@ import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
 import academicGroup from "./router/academicGroupRoute.js";
-import timetableAcademicGroup from "./router/timetableAcademicGroupRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
-import libraryIssueBookTransaction from "./router/libraryIssueBookTransactionRoute.js";
 import answerSheetQr from "./router/answerSheetQrRoute.js";
 import examResult from "./router/examResultRoute.js";
 import examOperations from "./router/examOperationsRoute.js";
@@ -160,8 +128,7 @@ app.use("/api/logs", logsRoute);
 //routes
 
 // Tenant setup — campus, institute, and academic year use explicit scoped() in repositories
-app.use("/campus", campus);
-app.use("/institute", institute);
+app.use(organizationModule);
 app.use("/specialization", specialization);
 app.use("/acedmicYear", acedmicYear);
 // Institute + University scoped (X-Institute-Id via authUser; no academic year on core models)
@@ -185,24 +152,10 @@ app.use("/billingSchedule", billingSchedule);
 app.use("/billingSchedulePaymentTerms", billingSchedulePaymentTerms);
 app.use("/feePolicy", feePolicy);
 app.use("/authorization", userPermission);
-app.use("/libraryCreation", libraryCreation);
-app.use("/libraryStructure", libraryStructure);
-app.use("/head", head);
-app.use("/building", building);
-app.use("/governanceBody", governanceBody);
-app.use("/floor", floor);
-app.use("/department", department);
-app.use("/staff", staff);
+app.use(libraryModule);
 
-app.use("/departmentPosition", departmentPositions);
 
-app.use("/assetCategory", assetCategory);
-app.use("/asset", asset);
-app.use("/assetIssue", assetIssue);
-
-app.use("/amcVendor", amcVendor);
-app.use("/amcContract", amcContract);
-app.use("/serviceTicket", amcServiceTicket);
+app.use(assetManagementModule);
 
 // Institute + University + Academic Year scoped (X-Institute-Id + X-Academic-Year-Id via authUser)
 app.use("/session", session);
@@ -213,7 +166,6 @@ app.use("/resultStudent", resultStudent);
 app.use("/classSections", classSection);
 app.use("/dashboard", dashboard);
 app.use("/teacherExamAssignment", teacherExamAssignment);
-app.use("/teacherSubstitute", teacherSubstitute);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
 
 app.use("/examinationSession", examinationSession);
@@ -236,33 +188,23 @@ app.use("/academicGroup", academicGroup);
 app.use("/subjectWeightage", subjectWeightage);
 app.use("/electiveSubject", electiveSubject);
 app.use("/student", student);
-app.use("/employee", employee);
-app.use("/teacher", teacher);
+app.use(hrmsModule);
 
 // ---------------------------------------------------------------------------
-// Schedule date-wise stack (structure → week cells → date instances → consumers)
+// Timetable & Attendance Module
 // ---------------------------------------------------------------------------
-app.use("/timeTable", timeTable); // structure + courseMapping + periods
-app.use("/timeTableCreate", timeTableCreate); // week cells + teachers; publish → date-wise
-app.use("/timetableAcademicGroup", timetableAcademicGroup);
-app.use("/faculityLoad", faculityLoad);
-app.use("/attendance", attendance); // keys: timeTableCellDateWiseId
+app.use(timetableModule);
 app.use("/lesson", lesson); // mapping keys: timeTableCellDateWiseId
 app.use("/lecture", lecture);
 
 app.use("/studentFeeInvoice", studentFeeInvoice);
 app.use("/studentFeePayment", studentFeePayment);
 app.use("/studentBillingBreakdown", studentBillingBreakdown);
-app.use("/libraryIssueBook", libraryIssueBookTransaction);
-app.use("/holiday", holiday);
 app.use("/notice", notice);
-app.use("/schedule", schedule);
 app.use("/po", po);
 app.use("/co", co);
-app.use("/dormitoryRoomType", dormitoryRoomType);
-app.use("/dormitoryList", dormitoryList);
-app.use("/addDormitory", addDormitory);
-app.use("/transportRoute", transportRoute);
+app.use(dormitoryModule);
+app.use(transportModule);
 app.use("/answerSheetQr", answerSheetQr);
 
 app.use("/examResult", examResult);
@@ -275,17 +217,10 @@ app.use("/setting", setting);
 app.use("/download", download);
 app.use("/codeMaster", codeMaster);
 app.use("/user", user);
-app.use("/classRoom", classRoom);
 app.use("/role", role);
 app.use("/permission", permission);
 app.use("/rolePermissions", rolePermissions);
 app.use("/userRolePermission", userRolePermission);
-app.use("/vehicle", vehicleRoute);
-app.use("/assignVehicle", assignVehicleRoute);
-app.use("/leave-policies", leavePolicy);
-app.use("/leave-requests", leaveRequest);
-app.use("/approval-requests", approvalRequest);
-app.use("/leave-balance", leaveBalance);
 app.use("/jobSetting", jobSetting);
 app.use("/jobs", jobs);
 app.use("/api/curriculums", curriculumRoute);

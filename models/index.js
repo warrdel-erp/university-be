@@ -3139,6 +3139,8 @@ approvalRequestModel.belongsTo(universityModel, { foreignKey: "university_id", a
 approvalRequestModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
 approvalRequestModel.belongsTo(leaveRequestModel, { foreignKey: "resource_id", constraints: false, as: "leaveRequest" });
 leaveRequestModel.hasMany(approvalRequestModel, { foreignKey: "resource_id", constraints: false, as: "approvalRequests" });
+approvalRequestModel.belongsTo(departmentModel, { foreignKey: "department_id", as: "department" });
+leaveRequestModel.belongsTo(departmentModel, { foreignKey: "department_id", as: "department" });
 
 examScheduleModel.belongsTo(subjectModel, {
   foreignKey: "subjectId",
