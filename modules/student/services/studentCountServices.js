@@ -1,10 +1,10 @@
 import { Op } from "sequelize";
-import * as model from "../models/index.js";
+import * as model from "../../../models/index.js";
 import * as studentCountRepository from "../repository/studentCountRepository.js";
 import {
   buildTermCohortGroupKey,
   normalizeTermCohortGroup,
-} from "../utility/studentCount.js";
+} from "../../../utility/studentCount.js";
 
 async function enrichTermCohortGroups(groups, options = {}) {
   const cstmIds = [];

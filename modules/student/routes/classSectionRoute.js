@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { getClassSectionsByFilter } from '../controllers/mainController.js';
+import { getClassSectionsByFilter } from '../../../controllers/mainController.js';
 import {
   deleteClassSectionTerm,
   getBatchAcademicProgression,
   getClassSectionBatches,
   renameClassSection,
 } from '../controllers/classSectionController.js';
-import { getBatchFullDetails } from '../controllers/batchController.js';
-import userAuth from '../middleware/authUser.js';
-import { checkAccess } from '../middleware/checkAccess.js';
-import { PERMISSIONS } from '../const/permissions.js';
-import { validate } from '../utility/validation.js';
+import { getBatchFullDetails } from '../../../controllers/batchController.js';
+import userAuth from '../../../middleware/authUser.js';
+import { checkAccess } from '../../../middleware/checkAccess.js';
+import { PERMISSIONS } from '../../../const/permissions.js';
+import { validate } from '../../../utility/validation.js';
 
 const router = Router();
 

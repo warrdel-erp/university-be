@@ -1,30 +1,30 @@
 import {
   getCourseCode,
   getInstituteCode,
-} from "../repository/collegeRepository.js";
+} from "../../../repository/collegeRepository.js";
 import * as studentRepository from "../repository/studentRepository.js";
 import * as historyRepository from "../repository/studentClassSectionsHistoryRepository.js";
-import * as fileHandler from "../utility/fileHandler.js";
+import * as fileHandler from "../../../utility/fileHandler.js";
 import moment from "moment";
-import { uploadFile } from "../utility/awsServices.js";
-import sequelize from "../database/sequelizeConfig.js";
-import { getSettingValue } from "../repository/settingRepository.js";
-import { getEmployeeCodesTypesForStudentImport } from "../repository/codeMasterRepository.js";
+import { uploadFile } from "../../../utility/awsServices.js";
+import sequelize from "../../../database/sequelizeConfig.js";
+import { getSettingValue } from "../../../repository/settingRepository.js";
+import { getEmployeeCodesTypesForStudentImport } from "../../../repository/codeMasterRepository.js";
 import {
   getCourseByName,
   getClassByName,
   getCourseByCourseId,
-} from "../repository/courseRepository.js";
+} from "../../../repository/courseRepository.js";
 import { findClassSectionTermById } from "../repository/classSectionTermRepository.js";
-import { buildTermName } from "../utility/courseTerms.js";
-import { studentRegister } from "../services/userServices.js";
-import * as acedmicYearCreationService from "../repository/acedmicYearRepository.js";
-import * as sessionRepository from "../repository/sessionRepository.js";
-import * as roleRepository from "../repository/roleRepository.js";
-import * as studentFeeInvoiceRepo from "../repository/studentFeeInvoiceRepository.js";
-import * as libraryRepository from "../modules/library/repository/libraryCreationRepository.js";
-import * as timeTableCreateRepository from "../modules/timetable/repository/timeTablecreateRepository.js";
-import * as model from "../models/index.js";
+import { buildTermName } from "../../../utility/courseTerms.js";
+import { studentRegister } from "../../../services/userServices.js";
+import * as acedmicYearCreationService from "../../../repository/acedmicYearRepository.js";
+import * as sessionRepository from "../../../repository/sessionRepository.js";
+import * as roleRepository from "../../../repository/roleRepository.js";
+import * as studentFeeInvoiceRepo from "../../../repository/studentFeeInvoiceRepository.js";
+import * as libraryRepository from "../../library/repository/libraryCreationRepository.js";
+import * as timeTableCreateRepository from "../../timetable/repository/timeTablecreateRepository.js";
+import * as model from "../../../models/index.js";
 import { Op } from "sequelize";
 import {
   classSectionTermsInclude,
@@ -36,12 +36,12 @@ import {
   timeTableRoutineClassSectionInclude,
   resolveTimeTableRoutineSection,
   studentClassSectionTermWithSectionInclude,
-} from "../utility/classSectionIncludes.js";
+} from "../../../utility/classSectionIncludes.js";
 import {
   resolveSourcePeriodByDateWiseId,
   resolveSourcePeriodsByDateWiseIds,
-} from "../utility/attendancePlacement.js";
-import { parseCustomDate } from "../utility/dateFormat.js";
+} from "../../../utility/attendancePlacement.js";
+import { parseCustomDate } from "../../../utility/dateFormat.js";
 
 function normalizeAffiliatedUniversityId(value) {
   if (value == null || value === "") return null;

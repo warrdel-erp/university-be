@@ -1,5 +1,5 @@
-import * as model from '../models/index.js';
-import { buildScope, scoped } from '../utility/scoped.js';
+import * as model from '../../../models/index.js';
+import { buildScope, scoped } from '../../../utility/scoped.js';
 import { Op } from 'sequelize';
 
 export async function getCascadingGroupRoutinesRepository({

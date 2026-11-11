@@ -9,7 +9,7 @@ import {
   countStudentsForTermCohort,
   findStudentsForExamGroup,
   countStudentsForExamGroup,
-} from "./studentCountServices.js";
+} from "../modules/student/services/studentCountServices.js";
 import { decimalSubtract } from "../utility/decimalMoney.js";
 import * as model from "../models/index.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";

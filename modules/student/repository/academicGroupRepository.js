@@ -1,6 +1,6 @@
 import { Op, Sequelize } from 'sequelize';
-import * as model from '../models/index.js';
-import { scoped, buildScope } from '../utility/scoped.js';
+import * as model from '../../../models/index.js';
+import { scoped, buildScope } from '../../../utility/scoped.js';
 
 const scopeListAttributes = [
     'academicGroupScopeId',

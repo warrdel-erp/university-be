@@ -17,7 +17,7 @@ import {
   buildStudentGroupFromSchedule,
   lookupStudentCount,
 } from "../utility/studentCount.js";
-import { getStudentCountMapByGroups, countStudentsForExamGroup } from "./studentCountServices.js";
+import { getStudentCountMapByGroups, countStudentsForExamGroup } from "../modules/student/services/studentCountServices.js";
 
 const studentListFields = [
   "studentId",

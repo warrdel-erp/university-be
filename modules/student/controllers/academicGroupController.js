@@ -1,5 +1,5 @@
 import * as academicGroupService from '../services/academicGroupService.js';
-import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import { SuccessResponse, ErrorResponse } from '../../../utility/response.js';
 
 function statusFromError(error) {
     if (/not found|already|required|exceed|allowed|exists/i.test(error.message)) {

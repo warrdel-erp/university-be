@@ -28,7 +28,7 @@ import * as libraryRepository from "../../../modules/library/repository/libraryC
 import * as timeTableCreateRepository from "../../timetable/repository/timeTablecreateRepository.js";
 import * as employeeScheduleRepository from "../repository/employeeScheduleRepository.js";
 import * as attendanceRepository from "../../timetable/repository/attendanceRepository.js";
-import * as classSectionTermRepository from "../../../repository/classSectionTermRepository.js";
+import * as classSectionTermRepository from "../../student/repository/classSectionTermRepository.js";
 import * as evaluationRepository from "../../../repository/evalutionRepository.js";
 import { getSingleRoleDetails } from "../../../repository/roleRepository.js";
 import { addHead } from "../../../modules/organization/repository/headRepository.js";

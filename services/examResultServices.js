@@ -9,7 +9,7 @@ import {
   buildStudentGroupFromSchedule,
   lookupStudentCount,
 } from "../utility/studentCount.js";
-import { getStudentCountMapByGroups } from "./studentCountServices.js";
+import { getStudentCountMapByGroups } from "../modules/student/services/studentCountServices.js";
 import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
 import {
   decimalAdd,

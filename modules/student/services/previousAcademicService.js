@@ -1,6 +1,6 @@
 import * as previousAcademicRepository from '../repository/previousAcademicRepository.js';
-import { buildTermName, resolveTotalTerms, termsForYear, termsPerYear } from '../utility/courseTerms.js';
-import sequelize from '../database/sequelizeConfig.js';
+import { buildTermName, resolveTotalTerms, termsForYear, termsPerYear } from '../../../utility/courseTerms.js';
+import sequelize from '../../../database/sequelizeConfig.js';
 import xlsx from 'xlsx';
 import {
   decimalAdd,
@@ -17,8 +17,8 @@ import {
   parseMoneyInput,
   toIntegerNumber,
   toMoneyNumber,
-} from '../utility/decimalMoney.js';
-import { getTenantStore } from '../utility/requestContext.js';
+} from '../../../utility/decimalMoney.js';
+import { getTenantStore } from '../../../utility/requestContext.js';
 
 function emptyBatchesResponse() {
   return {

@@ -1,6 +1,6 @@
 import * as timeTableServices from '../services/timeTableServices.js';
 import * as timeTableCreateServices from '../services/timeTableCreateServices.js';
-import * as academicGroupScopeService from '../../../services/academicGroupScopeService.js';
+import * as academicGroupScopeService from '../../student/services/academicGroupScopeService.js';
 import { ErrorResponse, SuccessResponse } from '../../../utility/response.js';
 
 export const addStructureScopeMapping = async (req, res) => {

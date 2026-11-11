@@ -1,6 +1,6 @@
 import * as timeTableCreateServices from "../services/timeTableCreateServices.js";
 import * as timeTableServices from "../services/timeTableServices.js";
-import * as academicGroupScopeService from "../../../services/academicGroupScopeService.js";
+import * as academicGroupScopeService from "../../student/services/academicGroupScopeService.js";
 import { ErrorResponse, SuccessResponse } from "../../../utility/response.js";
 import { validateEmployeeUser } from "../../../utility/employeeValidation.js";
 

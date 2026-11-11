@@ -2,7 +2,7 @@ import { Op, Sequelize } from "sequelize";
 import * as model from "../../../models/index.js";
 import { buildScope, scoped } from "../../../utility/scoped.js";
 
-import { getCascadingGroupRoutinesRepository } from "../../../repository/academicGroupScopeRepository.js";
+import { getCascadingGroupRoutinesRepository } from "../../student/repository/academicGroupScopeRepository.js";
 import {
   classSectionTermsInclude,
   studentClassSectionTermWithSectionInclude,

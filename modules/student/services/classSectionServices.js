@@ -1,11 +1,11 @@
 import { Op } from 'sequelize';
-import sequelize from '../database/sequelizeConfig.js';
-import * as model from '../models/index.js';
-import { scoped } from '../utility/scoped.js';
+import sequelize from '../../../database/sequelizeConfig.js';
+import * as model from '../../../models/index.js';
+import { scoped } from '../../../utility/scoped.js';
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
-import * as batchRepository from '../repository/batchRepository.js';
-import * as courseRepository from '../repository/courseRepository.js';
-import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
+import * as batchRepository from '../../../repository/batchRepository.js';
+import * as courseRepository from '../../../repository/courseRepository.js';
+import { resolveActiveAcademicYearContext } from '../../../utility/curriculumSubjectsByActiveYear.js';
 import {
   buildTermName,
   monthsPerTermFromTermType,
@@ -13,7 +13,7 @@ import {
   termsForYear,
   termsPerYear,
   yearFromTerm,
-} from '../utility/courseTerms.js';
+} from '../../../utility/courseTerms.js';
 
 function formatAcademicYearLabel(calendarYear) {
   const start = Number(calendarYear);

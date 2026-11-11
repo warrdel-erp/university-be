@@ -2,7 +2,7 @@ import { Router } from 'express'
 const router = Router();
 import { addSession, getAllSession, getSingleSessionDetails, updateSession, deleteSession } from "../controllers/sessionController.js";
 import * as batchController from "../controllers/batchController.js";
-import { getBatchAcademicProgression } from "../controllers/classSectionController.js";
+import { getBatchAcademicProgression } from "../modules/student/controllers/classSectionController.js";
 import userAuth from "../middleware/authUser.js"
 import { z } from 'zod';
 import { validate } from '../utility/validation.js';
