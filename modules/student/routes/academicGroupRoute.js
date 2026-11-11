@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import * as academicGroupController from '../controllers/academicGroupController.js';
-import userAuth from '../middleware/authUser.js';
-import { validate } from '../utility/validation.js';
+import userAuth from '../../../middleware/authUser.js';
+import { validate } from '../../../utility/validation.js';
 import {
     ACADEMIC_GROUP_TYPES,
     ACADEMIC_GROUP_SELECTION_SCOPES,
     ACADEMIC_GROUP_CONTEXT_TYPES,
     ACADEMIC_GROUP_PUBLISH_STATUSES,
     ACADEMIC_GROUP_USER_ROLES,
-} from '../constant.js';
+} from '../../../constant.js';
 
 const router = Router();
 

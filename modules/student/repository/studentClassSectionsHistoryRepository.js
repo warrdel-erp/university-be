@@ -1,5 +1,5 @@
-import * as model from "../models/index.js";
-import { scoped } from "../utility/scoped.js";
+import * as model from "../../../models/index.js";
+import { scoped } from "../../../utility/scoped.js";
 
 async function assertStudentInScope(studentId, transaction) {
     return scoped(model.studentModel).findOne({

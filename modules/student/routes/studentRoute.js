@@ -25,15 +25,15 @@ import {
   getStudentsByElectiveSubject,
   getAllAnswerSheets,
 } from "../controllers/studentController.js";
-import { checkAccess } from "../middleware/checkAccess.js";
-import { PERMISSIONS } from "../const/permissions.js";
-import userAuth from "../middleware/authUser.js";
-import { validate } from "../utility/validation.js";
+import { checkAccess } from "../../../middleware/checkAccess.js";
+import { PERMISSIONS } from "../../../const/permissions.js";
+import userAuth from "../../../middleware/authUser.js";
+import { validate } from "../../../utility/validation.js";
 import { z } from "zod";
 import { Router } from "express";
-import { ROLES } from "../const/roles.js";
-import { studentAdmissionStatus, studentStatus } from "../constant.js";
-import { ErrorResponse } from "../utility/response.js";
+import { ROLES } from "../../../const/roles.js";
+import { studentAdmissionStatus, studentStatus } from "../../../constant.js";
+import { ErrorResponse } from "../../../utility/response.js";
 
 const router = Router();
 

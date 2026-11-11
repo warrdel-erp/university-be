@@ -12,14 +12,14 @@
 | Metric | Status | Details |
 |---|:---:|---|
 | 🎯 **Total Modules** | **13** | Total planned independent domain modules |
-| ✅ **Completed Modules** | **7** | `dormitory`, `transport`, `library`, `asset-management`, `organization`, `hrms`, `timetable` |
-| ⏳ **Remaining Modules** | **6** | `iam`, `finance`, `student`, `academics`, `examination`, `shared` |
-| 📈 **Overall Completion** | **54%** | **7 / 13 modules separated & verified in `app.js`** |
-| 🚀 **Next In Queue** | **`08. iam`** | Auth, Users, Roles, Permissions, SubAccounts |
+| ✅ **Completed Modules** | **8** | `dormitory`, `transport`, `library`, `asset-management`, `organization`, `hrms`, `timetable`, `student` |
+| ⏳ **Remaining Modules** | **5** | `iam`, `finance`, `academics`, `examination`, `shared` |
+| 📈 **Overall Completion** | **62%** | **8 / 13 modules separated & verified in `app.js`** |
+| 🚀 **Next In Queue** | **`09. iam`** | Auth, Users, Roles, Permissions, SubAccounts |
 
 ### Visual Progress:
 ```text
-[█████████████░░░░░░░░░░░] 54% (7 of 13 Modules Completed)
+[████████████████░░░░░░░░] 62% (8 of 13 Modules Completed)
 ```
 
 ---
@@ -36,10 +36,10 @@
    - [05. Organization & Campus Setup](#05-modulesorganization-)
    - [06. HRMS (Staff, Faculty & Leaves)](#06-moduleshrms-)
    - [07. Timetable & Attendance](#07-modulestimetable-)
+   - [08. Student Lifecycle](#08-modulesstudent-)
 5. [Upcoming Modules (Target File Mapping)](#5-upcoming-modules-target-file-mapping)
-   - [08. IAM & Security (Auth, Users, Roles)](#08-modulesiam-upcoming)
-   - [09. Finance & Fee Management](#09-modulesfinance-upcoming)
-   - [10. Student Lifecycle](#10-modulesstudent-upcoming)
+   - [09. IAM & Security (Auth, Users, Roles)](#09-modulesiam-upcoming)
+   - [10. Finance & Fee Management](#10-modulesfinance-upcoming)
    - [11. Academics & Curriculum](#11-modulesacademics-upcoming)
    - [12. Examination & Evaluation](#12-modulesexamination-upcoming)
    - [13. Shared & Infrastructure](#13-modulesshared-upcoming)
@@ -120,9 +120,9 @@ app.use(customModule);
 
 ## 3. Module Migration Status
 
-> 📌 **Summary Stats:** **Total Modules: 13** | **Completed: 7 (54%)** | **Remaining: 6 (46%)**  
-> 🟢 **Completed (7):** `dormitory`, `transport`, `library`, `asset-management`, `organization`, `hrms`, `timetable`  
-> 🟡 **Remaining (6):** `iam` *(next in queue)*, `finance`, `student`, `academics`, `examination`, `shared`
+> 📌 **Summary Stats:** **Total Modules: 13** | **Completed: 8 (62%)** | **Remaining: 5 (38%)**  
+> 🟢 **Completed (8):** `dormitory`, `transport`, `library`, `asset-management`, `organization`, `hrms`, `timetable`, `student`  
+> 🟡 **Remaining (5):** `iam` *(next in queue)*, `finance`, `academics`, `examination`, `shared`
 
 | # | Module Name | Scope / Responsibility | Files Count | Status |
 |---|---|---|---|---|
@@ -133,9 +133,9 @@ app.use(customModule);
 | **05** | `organization` | Campus, institutes, buildings, rooms, departments | 40 files | ✅ **Completed** |
 | **06** | `hrms` | Staff, faculty load, leave policies & approvals | 50 files | ✅ **Completed** |
 | **07** | `timetable` | Timetable generation, periods, attendance | 24 files | ✅ **Completed** |
-| **08** | `iam` | Authentication, users, roles, permissions | 30 files | ⏳ *Next in queue* |
-| **09** | `finance` | Fees, billing schedule, invoices, payments | 36 files | ⏳ *Pending* |
-| **10** | `student` | Admissions, profiles, academic groups | 24 files | ⏳ *Pending* |
+| **08** | `student` | Admissions, profiles, academic groups, class sections | 22 files | ✅ **Completed** |
+| **09** | `iam` | Authentication, users, roles, permissions | 30 files | ⏳ *Next in queue* |
+| **10** | `finance` | Fees, billing schedule, invoices, payments | 36 files | ⏳ *Pending* |
 | **11** | `academics` | Courses, subjects, syllabus, curriculum, electives | 80+ files | ⏳ *Pending* |
 | **12** | `examination` | Exam sessions, papers, evaluation, results | 75+ files | ⏳ *Pending* |
 | **13** | `shared` | CodeMaster, settings, S3 files, BullMQ jobs | 20+ files | ⏳ *Pending* |
@@ -247,24 +247,32 @@ app.use(customModule);
 
 ---
 
+### 08. `modules/student/` ✅
+- **Responsibility:** Student admission lifecycle, personal profiles, Excel imports, fee plan mapping, academic groups & cascading routines, class sections & academic progression, previous academic records, and cohort student counts.
+- **Endpoints Mounted:** `/student`, `/academicGroup`, `/classSections`, `/previousAcademic`
+
+| Layer | Files |
+|---|---|
+| **Routes** | `routes/studentRoute.js`, `routes/academicGroupRoute.js`, `routes/classSectionRoute.js`, `routes/previousAcademicRoute.js` |
+| **Controllers** | `controllers/studentController.js`, `controllers/academicGroupController.js`, `controllers/classSectionController.js`, `controllers/previousAcademicController.js` |
+| **Services** | `services/studentService.js`, `services/academicGroupService.js`, `services/academicGroupScopeService.js`, `services/classSectionServices.js`, `services/previousAcademicService.js`, `services/studentCountServices.js` |
+| **Repository** | `repository/studentRepository.js`, `repository/academicGroupRepository.js`, `repository/academicGroupScopeRepository.js`, `repository/classSectionTermRepository.js`, `repository/previousAcademicRepository.js`, `repository/studentClassSectionsHistoryRepository.js`, `repository/studentCountRepository.js` |
+| **Aggregator** | `index.js` |
+
+---
+
 ## 5. Upcoming Modules (Target File Mapping)
 
-### 08. `modules/iam/` (Next in queue)
+### 09. `modules/iam/` (Next in queue)
 - **Responsibility:** Authentication, login/logout, JWT sessions, users, roles, permissions, authorization checks.
 - **Endpoints:** `/user`, `/role`, `/permission`, `/rolePermissions`, `/userRolePermission`, `/authorization`, `/subAccount`
 - **Routes:** `auth/userRoute.js`, `roleRoute.js`, `permissionRoute.js`, `rolePermissionsRoute.js`, `userRolePermissionRoute.js`, `userPermissionRoute.js`, `subAccountRoute.js`
 
 ---
 
-### 09. `modules/finance/` (Upcoming)
+### 10. `modules/finance/` (Upcoming)
 - **Responsibility:** Fee structures, catalog, fee policies, billing schedules, payment terms, student invoices, fee receipts.
 - **Endpoints:** `/feeTypeCategory`, `/feeTypeCatalog`, `/feePlanItem`, `/feePolicy`, `/billingSchedule`, `/billingSchedulePaymentTerms`, `/studentFeeInvoice`, `/studentFeePayment`, `/studentBillingBreakdown`
-
----
-
-### 10. `modules/student/` (Upcoming)
-- **Responsibility:** Student admission, records, sections, academic groups, previous academic history.
-- **Endpoints:** `/student`, `/academicGroup`, `/classSections`, `/previousAcademic`, `/studentHallTicket`, `/resultStudent`
 
 ---
 

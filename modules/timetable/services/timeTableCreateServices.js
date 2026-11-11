@@ -1,7 +1,7 @@
 import * as model from "../../../models/index.js";
 import { Op } from "sequelize";
 import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import * as academicGroupRepository from "../../../repository/academicGroupRepository.js";
+import * as academicGroupRepository from "../../student/repository/academicGroupRepository.js";
 import {
   getTimeTableStructureById,
   getStructureCourseMappingById,
@@ -18,7 +18,7 @@ import {
   resolveTimeTableRoutineSection,
   stripRoutinePersistPayload,
 } from "../../../utility/classSectionIncludes.js";
-import { findClassSectionTermById } from "../../../repository/classSectionTermRepository.js";
+import { findClassSectionTermById } from "../../student/repository/classSectionTermRepository.js";
 import {
   getCourseByCourseId,
   getSessionSummaryById,
@@ -6440,7 +6440,7 @@ export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
   }
 }
 
-import { getCascadingGroupRoutinesService } from "../../../services/academicGroupScopeService.js";
+import { getCascadingGroupRoutinesService } from "../../student/services/academicGroupScopeService.js";
 export { getCascadingGroupRoutinesService };
 
 export const fillMissingSubjectsService = async (data, updatedBy) => {

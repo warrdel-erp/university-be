@@ -1,9 +1,9 @@
 import { Op } from 'sequelize';
-import sequelize from '../database/sequelizeConfig.js';
-import * as models from '../models/index.js';
-import { buildScope, scoped } from '../utility/scoped.js';
-import { decimalAdd, decimalSubtract, toIntegerNumber } from '../utility/decimalMoney.js';
-import { studentClassSectionTermWithSectionInclude } from '../utility/classSectionIncludes.js';
+import sequelize from '../../../database/sequelizeConfig.js';
+import * as models from '../../../models/index.js';
+import { buildScope, scoped } from '../../../utility/scoped.js';
+import { decimalAdd, decimalSubtract, toIntegerNumber } from '../../../utility/decimalMoney.js';
+import { studentClassSectionTermWithSectionInclude } from '../../../utility/classSectionIncludes.js';
 
 export async function findProgrammesWithSessions(filters = {}) {
   const courseWhere = { isActive: true };
@@ -494,7 +494,7 @@ export async function ensureCurriculumBatchTermMappings(
     return existing;
   }
 
-  const { resolveTotalTerms, yearFromTerm } = await import('../utility/courseTerms.js');
+  const { resolveTotalTerms, yearFromTerm } = await import('../../../utility/courseTerms.js');
   const totalTerms = resolveTotalTerms(course) || 0;
   if (!totalTerms || batchYear == null) {
     return [];

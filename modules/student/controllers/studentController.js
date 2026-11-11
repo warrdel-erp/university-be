@@ -1,11 +1,11 @@
 import * as studentService from "../services/studentService.js";
-import * as fileHandler from "../utility/fileHandler.js";
-import { SuccessResponse, ErrorResponse } from "../utility/response.js";
-import { getAcademicYearId } from "../utility/requestContext.js";
+import * as fileHandler from "../../../utility/fileHandler.js";
+import { SuccessResponse, ErrorResponse } from "../../../utility/response.js";
+import { getAcademicYearId } from "../../../utility/requestContext.js";
 import {
   validateEmployeeUser,
   assertTeacherAssignedToDateWiseIds,
-} from "../utility/employeeValidation.js";
+} from "../../../utility/employeeValidation.js";
 
 function buildClassSectionStudentsResponse(result) {
   let count = 0;

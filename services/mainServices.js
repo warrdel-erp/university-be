@@ -9,7 +9,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
-import * as studentRepository from '../repository/studentRepository.js';
+import * as studentRepository from '../modules/student/repository/studentRepository.js';
 import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
 import { buildTermName, termsForYear, resolveTotalTerms } from '../utility/courseTerms.js';
 

@@ -1,6 +1,6 @@
 import { Op } from 'sequelize';
 import * as model from '../models/index.js';
-import { findClassSectionTermById } from '../repository/classSectionTermRepository.js';
+import { findClassSectionTermById } from '../modules/student/repository/classSectionTermRepository.js';
 import {
   resolveTimeTableRoutineSection,
   timeTableRoutineClassSectionInclude,

@@ -10,7 +10,7 @@ const app = express();
 
 import main from "./router/mainRoute.js";
 import setting from "./router/settingRoute.js";
-import student from "./router/studentRoute.js";
+import studentModule from "./modules/student/index.js";
 import download from "./router/downloadRoute.js";
 import codeMaster from "./router/codeMasterRoute.js";
 import organizationModule from "./modules/organization/index.js";
@@ -70,7 +70,6 @@ import userPermission from "./router/userPermissionRoute.js";
 import resultStudent from "./router/resultStudentRoutes.js";
 import questionPaper from "./router/questionPaperRoute.js";
 import questionBank from "./router/questionBankRoute.js";
-import classSection from "./router/classSectionRoute.js";
 import dashboard from "./router/dashboardRoute.js";
 import teacherExamAssignment from "./router/teacherExamAssignmentRoute.js";
 import questionPaperBlueprint from "./router/questionPaperBlueprintRoute.js";
@@ -81,13 +80,11 @@ import examSetupType from "./router/examSetupTypeRoute.js";
 import examSchedule from "./router/examScheduleRoute.js";
 import studentHallTicket from "./router/studentHallTicketRoute.js";
 import options from "./router/optionsRoute.js";
-import academicGroup from "./router/academicGroupRoute.js";
 import subjectWeightage from "./router/subjectWeightageRoute.js";
 import answerSheetQr from "./router/answerSheetQrRoute.js";
 import examResult from "./router/examResultRoute.js";
 import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
-import previousAcademic from "./router/previousAcademicRoute.js";
 import logsRoute from "./router/logsRoute.js";
 
 // middleware
@@ -163,7 +160,6 @@ app.use("/subject", subjects);
 app.use("/terms", terms);
 app.use("/syllabus", syllabus);
 app.use("/resultStudent", resultStudent);
-app.use("/classSections", classSection);
 app.use("/dashboard", dashboard);
 app.use("/teacherExamAssignment", teacherExamAssignment);
 app.use("/questionPaperBlueprint", questionPaperBlueprint);
@@ -184,10 +180,9 @@ app.use("/examAttendance", examAttendance);
 app.use("/examRoomMaterialBundle", examRoomMaterialBundle);
 app.use("/studentHallTicket", studentHallTicket);
 app.use("/options", options);
-app.use("/academicGroup", academicGroup);
 app.use("/subjectWeightage", subjectWeightage);
 app.use("/electiveSubject", electiveSubject);
-app.use("/student", student);
+app.use(studentModule);
 app.use(hrmsModule);
 
 // ---------------------------------------------------------------------------
@@ -235,7 +230,6 @@ app.use("/curriculumElectiveRequirement", curriculumElectiveRequirement);
 app.use("/api/curriculum-elective-requirements", curriculumElectiveRequirement);
 app.use("/curriculumElectiveAssignment", curriculumElectiveAssignment);
 app.use("/api/curriculum-elective-assignments", curriculumElectiveAssignment);
-app.use("/previousAcademic", previousAcademic);
 
 export { app };
 export default app;

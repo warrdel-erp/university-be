@@ -1,6 +1,6 @@
 import * as timeTableRepository from '../repository/timeTableRepository.js';
 import * as model from '../../../models/index.js';
-import * as academicGroupRepository from '../../../repository/academicGroupRepository.js';
+import * as academicGroupRepository from '../../student/repository/academicGroupRepository.js';
 import sequelize from '../../../database/sequelizeConfig.js';
 import { formatQueryDate } from '../../../utility/helper.js';
 

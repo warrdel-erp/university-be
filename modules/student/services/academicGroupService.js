@@ -1,4 +1,4 @@
-import sequelize from '../database/sequelizeConfig.js';
+import sequelize from '../../../database/sequelizeConfig.js';
 import { Op } from 'sequelize';
 import * as academicGroupRepository from '../repository/academicGroupRepository.js';
 import * as studentRepository from '../repository/studentRepository.js';

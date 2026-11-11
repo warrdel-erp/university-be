@@ -1,6 +1,6 @@
-import * as model from '../models/index.js';
+import * as model from '../../../models/index.js';
 import { Op, fn, col } from 'sequelize';
-import { buildScope, scoped } from '../utility/scoped.js';
+import { buildScope, scoped } from '../../../utility/scoped.js';
 
 export async function findClassSectionTermBySectionAndTerm(
   classSectionsId,

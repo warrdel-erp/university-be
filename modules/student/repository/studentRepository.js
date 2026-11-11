@@ -1,17 +1,17 @@
-import * as model from '../models/index.js';
+import * as model from '../../../models/index.js';
 import { Op, Sequelize, fn, col } from 'sequelize';
-import { buildScope, scoped } from '../utility/scoped.js';
-import { getAcademicYearId } from '../utility/requestContext.js';
+import { buildScope, scoped } from '../../../utility/scoped.js';
+import { getAcademicYearId } from '../../../utility/requestContext.js';
 import {
     classSectionTermsInclude,
     resolveProgramTerm,
     resolveProgramYear,
     studentClassSectionTermWithSectionInclude,
-} from '../utility/classSectionIncludes.js';
-import * as batchRepository from './batchRepository.js';
-import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
-import { buildCourseTermOptions, buildTermName, termsForYear } from '../utility/courseTerms.js';
-import { toMoneyNumber } from '../utility/decimalMoney.js';
+} from '../../../utility/classSectionIncludes.js';
+import * as batchRepository from '../../../repository/batchRepository.js';
+import { resolveActiveAcademicYearContext } from '../../../utility/curriculumSubjectsByActiveYear.js';
+import { buildCourseTermOptions, buildTermName, termsForYear } from '../../../utility/courseTerms.js';
+import { toMoneyNumber } from '../../../utility/decimalMoney.js';
 
 function omitAcademicYearScope(scopeWhere = {}) {
     const { academicYearId, ...rest } = scopeWhere;

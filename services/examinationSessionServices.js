@@ -11,7 +11,7 @@ import {
 import {
   getStudentCountMapByGroups,
   countStudentsForExamGroup,
-} from "./studentCountServices.js";
+} from "../modules/student/services/studentCountServices.js";
 import {
   capacityMapFromRows,
   deriveScheduleRoomFlags,

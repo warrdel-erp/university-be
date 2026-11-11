@@ -1,4 +1,4 @@
-import { SuccessResponse, ErrorResponse } from '../utility/response.js';
+import { SuccessResponse, ErrorResponse } from '../../../utility/response.js';
 import * as previousAcademicService from '../services/previousAcademicService.js';
 
 export const getPreviousAcademicBatches = async (req, res) => {

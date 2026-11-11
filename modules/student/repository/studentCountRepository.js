@@ -1,6 +1,6 @@
 import { Op } from "sequelize";
-import * as model from "../models/index.js";
-import { scoped, buildScope } from "../utility/scoped.js";
+import * as model from "../../../models/index.js";
+import { scoped, buildScope } from "../../../utility/scoped.js";
 
 async function resolveClassSectionTermIdsForCohort(group, options = {}) {
   if (!group) return { term: null, classSectionTermIds: [] };

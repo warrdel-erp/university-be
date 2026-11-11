@@ -1,6 +1,6 @@
 import express from 'express';
-import useAuth from '../middleware/authUser.js';
-import { validate } from '../utility/validation.js';
+import useAuth from '../../../middleware/authUser.js';
+import { validate } from '../../../utility/validation.js';
 import { z } from 'zod';
 import * as controller from '../controllers/previousAcademicController.js';
 
