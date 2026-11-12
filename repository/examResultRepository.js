@@ -584,3 +584,98 @@ export async function findStudentResultsByBatchId(publishBatchId) {
   });
 }
 
+export async function findSubjectZScoreCalculations({ examinationSessionId, subjectId }) {
+  const where = {
+    examinationSessionId,
+    subjectId,
+  };
+  return scoped(model.subjectZScoreCalculationModel).findAll({
+    where,
+    attributes: [
+      "id",
+      "examinationSessionId",
+      "subjectId",
+      "examScheduleId",
+      "teacherId",
+      "calculationType",
+      "evaluatedStudentsCount",
+      "classMean",
+      "standardDev",
+      "gradingId",
+      "createdBy",
+      "createdAt",
+      "updatedAt",
+    ],
+    raw: true,
+  });
+}
+
+export async function saveSubjectZScoreCalculation(data, transaction) {
+  const where = {
+    examinationSessionId: data.examinationSessionId,
+    subjectId: data.subjectId,
+  };
+  if (data.teacherId != null) {
+    where.teacherId = data.teacherId;
+    where.calculationType = "TEACHER";
+  } else {
+    where.calculationType = "SUBJECT";
+  }
+
+  const existing = await scoped(model.subjectZScoreCalculationModel).findOne({
+    where,
+    transaction,
+  });
+
+  if (existing) {
+    await scoped(model.subjectZScoreCalculationModel).update(
+      {
+        examScheduleId: data.examScheduleId ?? existing.examScheduleId,
+        evaluatedStudentsCount: data.evaluatedStudentsCount ?? existing.evaluatedStudentsCount,
+        classMean: data.classMean ?? existing.classMean,
+        standardDev: data.standardDev ?? existing.standardDev,
+        gradingId: data.gradingId ?? existing.gradingId,
+        createdBy: data.createdBy ?? existing.createdBy,
+        updatedAt: new Date(),
+      },
+      {
+        where: { id: existing.id },
+        transaction,
+      },
+    );
+    return existing.id;
+  }
+
+  const created = await scoped(model.subjectZScoreCalculationModel).create(
+    {
+      examinationSessionId: data.examinationSessionId,
+      subjectId: data.subjectId,
+      examScheduleId: data.examScheduleId || null,
+      teacherId: data.teacherId || null,
+      calculationType: data.calculationType || (data.teacherId ? "TEACHER" : "SUBJECT"),
+      evaluatedStudentsCount: data.evaluatedStudentsCount || 0,
+      classMean: data.classMean != null ? data.classMean : null,
+      standardDev: data.standardDev != null ? data.standardDev : null,
+      gradingId: data.gradingId || null,
+      createdBy: data.createdBy || null,
+    },
+    { transaction },
+  );
+  return created.id;
+}
+
+export async function deleteSubjectZScoreCalculation({ examinationSessionId, subjectId, teacherId }, transaction) {
+  const where = {
+    examinationSessionId,
+    subjectId,
+  };
+  if (teacherId != null) {
+    where.teacherId = teacherId;
+  }
+  return scoped(model.subjectZScoreCalculationModel).destroy({
+    where,
+    transaction,
+  });
+}
+
+

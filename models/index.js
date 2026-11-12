@@ -145,6 +145,9 @@ import scheduleModel from "./scheduleModel.js";
 import scheduleAssignModel from "./ScheduleAssignModel.js";
 import teacherAttendeceModel from "./teacherAttendenceModel.js";
 import leavePolicyModel from "./leavePolicyModel.js";
+import leavePolicyEntitlementModel from "./leavePolicyEntitlementModel.js";
+import leavePolicyRoleModel from "./leavePolicyRoleModel.js";
+import leavePolicyEmployeeModel from "./leavePolicyEmployeeModel.js";
 import leaveBalanceModel from "./leaveBalanceModel.js";
 import leaveRequestModel from "./leaveRequestModel.js";
 import approvalRequestModel from "./approvalRequestModel.js";
@@ -202,6 +205,7 @@ import studentResultItemModel from "./studentResultItemModel.js";
 import previousAcademicUploadLogModel from "./previousAcademicUploadLogModel.js";
 import eventModel from "./eventModel.js";
 import eventLogModel from "./eventLogModel.js";
+import subjectZScoreCalculationModel from "./subjectZScoreCalculationModel.js";
 
 // Student Result Item associations
 studentResultItemModel.belongsTo(studentModel, { foreignKey: "studentId", as: "student" });
@@ -215,6 +219,22 @@ assessmentPlanComponentModel.hasMany(studentResultItemModel, { foreignKey: "asse
 
 studentResultItemModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
 studentResultItemModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+
+// Subject Z-Score Calculation associations
+subjectZScoreCalculationModel.belongsTo(examinationSessionModel, { foreignKey: "examinationSessionId", as: "examinationSession" });
+examinationSessionModel.hasMany(subjectZScoreCalculationModel, { foreignKey: "examinationSessionId", as: "zScoreCalculations" });
+
+subjectZScoreCalculationModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
+subjectModel.hasMany(subjectZScoreCalculationModel, { foreignKey: "subjectId", as: "zScoreCalculations" });
+
+subjectZScoreCalculationModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
+examScheduleModel.hasMany(subjectZScoreCalculationModel, { foreignKey: "examScheduleId", as: "zScoreCalculations" });
+
+subjectZScoreCalculationModel.belongsTo(userModel, { foreignKey: "teacherId", as: "teacher" });
+subjectZScoreCalculationModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
+
+subjectZScoreCalculationModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+subjectZScoreCalculationModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
 
 previousAcademicUploadLogModel.belongsTo(curriculumBatchTermMappingModel, {
   foreignKey: "curriculumBatchTermMappingId",
@@ -3130,6 +3150,53 @@ leavePolicyModel.hasMany(leaveBalanceModel, {
   as: "leaveBalance",
 });
 
+// Leave Policy Entitlements Associations
+leavePolicyModel.hasMany(leavePolicyEntitlementModel, {
+  foreignKey: "policy_id",
+  as: "entitlements",
+});
+leavePolicyEntitlementModel.belongsTo(leavePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+// Leave Policy Roles Associations
+leavePolicyModel.hasMany(leavePolicyRoleModel, {
+  foreignKey: "policy_id",
+  as: "roleAssignments",
+});
+leavePolicyRoleModel.belongsTo(leavePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+leavePolicyRoleModel.belongsTo(roleModel, {
+  foreignKey: "role_id",
+  as: "role",
+});
+roleModel.hasMany(leavePolicyRoleModel, {
+  foreignKey: "role_id",
+  as: "leavePolicyRoles",
+});
+
+// Leave Policy Selected Employees Associations
+leavePolicyRoleModel.hasMany(leavePolicyEmployeeModel, {
+  foreignKey: "policy_role_id",
+  as: "selectedEmployees",
+});
+leavePolicyEmployeeModel.belongsTo(leavePolicyRoleModel, {
+  foreignKey: "policy_role_id",
+  as: "policyRole",
+});
+leavePolicyEmployeeModel.belongsTo(userModel, {
+  foreignKey: "user_id",
+  as: "user",
+});
+leavePolicyEmployeeModel.belongsTo(employeeModel, {
+  foreignKey: "user_id",
+  targetKey: "userId",
+  as: "employee",
+});
+
 // Approval Request Associations
 approvalRequestModel.belongsTo(userModel, { foreignKey: "requested_by", as: "requester" });
 approvalRequestModel.belongsTo(userModel, { foreignKey: "approved_by_id", as: "approvedBy" });
@@ -4338,6 +4405,9 @@ export {
   teacherAttendeceModel,
   leaveBalanceModel,
   leavePolicyModel,
+  leavePolicyEntitlementModel,
+  leavePolicyRoleModel,
+  leavePolicyEmployeeModel,
   leaveRequestModel,
   approvalRequestModel,
   examScheduleModel,
@@ -4387,6 +4457,7 @@ export {
   examRoomMaterialItemModel,
   studentResultModel,
   studentResultItemModel,
+  subjectZScoreCalculationModel,
   previousAcademicUploadLogModel,
   eventModel,
   eventLogModel,
