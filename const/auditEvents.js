@@ -1,5 +1,10 @@
 // Canonical business event type names (stored in event.event_type)
 export const AUDIT_EVENTS = Object.freeze({
+    // ─── Campus ────────────────────────────────────────────────────────
+    CAMPUS_CREATE:            "CAMPUS_CREATE",
+    CAMPUS_UPDATE:            "CAMPUS_UPDATE",
+    CAMPUS_DELETE:            "CAMPUS_DELETE",
+
     // ─── Student ──────────────────────────────────────────────────────
     STUDENT_CREATE:           "STUDENT_CREATE",
     STUDENT_UPDATE:           "STUDENT_UPDATE",

@@ -21,10 +21,11 @@ export const createCampus = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in Create Campus Controller:", error);
-    return res.status(500).json({
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
       status: "error",
-      message: "Internal Server Error",
-      error: error,
+      message: statusCode === 500 ? "Internal Server Error" : error.message,
+      ...(statusCode === 500 && { error: error.message }),
     });
   }
 };

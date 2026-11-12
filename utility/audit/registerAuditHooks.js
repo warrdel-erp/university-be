@@ -1,5 +1,6 @@
 import { AUDIT_ACTIONS } from "../../const/auditActions.js";
 import { getCurrentEventId } from "./auditContext.js";
+import { requestContext } from "../requestContext.js";
 import {
   isAuditModelExcluded,
   isModelAuditEnabled,
@@ -21,6 +22,28 @@ async function writeAuditLog(model, instance, action, oldData, newData, transact
   if (eventId == null) return;
 
   const tableName = model.tableName;
+  const store = requestContext.getStore();
+
+  const universityId =
+    instance.universityId ??
+    instance.get?.("universityId") ??
+    instance.dataValues?.universityId ??
+    store?.universityId ??
+    null;
+
+  const instituteId =
+    instance.instituteId ??
+    instance.get?.("instituteId") ??
+    instance.dataValues?.instituteId ??
+    store?.instituteId ??
+    null;
+
+  const academicYearId =
+    instance.academicYearId ??
+    instance.get?.("academicYearId") ??
+    instance.dataValues?.academicYearId ??
+    store?.academicYearId ??
+    null;
 
   await createEventLog(
     {
@@ -30,9 +53,9 @@ async function writeAuditLog(model, instance, action, oldData, newData, transact
       action,
       oldData,
       newData,
-      universityId: instance.universityId ?? null,
-      instituteId: instance.instituteId ?? null,
-      academicYearId: instance.academicYearId ?? null,
+      universityId,
+      instituteId,
+      academicYearId,
     },
     { transaction },
   );

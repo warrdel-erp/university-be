@@ -235,6 +235,14 @@ previousAcademicUploadLogModel.belongsTo(sessionModel, {
 // Event / EventLog associations
 eventModel.hasMany(eventLogModel, { foreignKey: "eventId", as: "eventLogs" });
 eventLogModel.belongsTo(eventModel, { foreignKey: "eventId", as: "event" });
+eventModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+userModel.hasMany(eventModel, { foreignKey: "userId", as: "events" });
+eventModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+eventModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+eventModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "academicYear" });
+eventLogModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+eventLogModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+eventLogModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "academicYear" });
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, {
