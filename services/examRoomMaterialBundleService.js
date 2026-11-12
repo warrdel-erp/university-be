@@ -5,7 +5,7 @@ import {
   buildStudentGroupFromSchedule,
   lookupStudentCount,
 } from "../utility/studentCount.js";
-import { getStudentCountMapByGroups } from "./studentCountServices.js";
+import { getStudentCountMapByGroups } from "../modules/student/services/studentCountServices.js";
 import { toIntegerNumber, decimalAdd } from "../utility/decimalMoney.js";
 
 function generateBundleCode(roomNumber, seqId) {

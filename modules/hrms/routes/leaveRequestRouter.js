@@ -1,0 +1,21 @@
+import { Router } from "express";
+const router = Router();
+import userAuth from "../../../middleware/authUser.js";
+import { addRequest, addMyRequest, getAllRequests, getMyRequests, getRequestById, updateRequestStatus, updateMyRequestStatus, getLeavesAssignedToMe } from "../controllers/leaveRequestController.js";
+
+// HOD / Approver route: leaves assigned to logged-in user's position
+router.get("/approvals", userAuth, getLeavesAssignedToMe);
+router.get("/assigned-to-me", userAuth, getLeavesAssignedToMe);
+
+import { checkAccess, checkAccessAny } from "../../../middleware/checkAccess.js";
+import { PERMISSIONS } from "../../../const/permissions.js";
+
+router.post("/", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE_ADD.value], null), addRequest);
+router.post("/my", userAuth, addMyRequest);
+router.get("/my", userAuth, getMyRequests);
+router.get("/", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getAllRequests);
+router.get("/single", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPLY_LEAVE.value], null), getRequestById);
+router.patch("/status", userAuth, checkAccessAny([PERMISSIONS.PENDING_LEAVE_REQUEST.value, PERMISSIONS.APPROVE_LEAVE_REQUEST.value], null), updateRequestStatus);
+router.patch("/my/status", userAuth, updateMyRequestStatus);
+
+export default router;

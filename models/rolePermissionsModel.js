@@ -25,18 +25,6 @@ const rolePermissionsModel = sequelize.define(
       allowNull: false,
       comment: "Permission key from const/permissions.js (e.g. perm_3pvhh7qk)",
     },
-    scope: {
-      type: DataTypes.ENUM("OWN", "CLASS", "DEPARTMENT", "INSTITUTE", "CAMPUS", "UNIVERSITY"),
-      allowNull: false,
-      defaultValue: "INSTITUTE",
-      comment: "Scope level from const/scopes.js",
-    },
-    resourceId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: "resource_id",
-      comment: "The specific ID of the resource (Institute ID, Department ID, etc.) determined by the scope.",
-    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

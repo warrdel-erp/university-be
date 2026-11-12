@@ -2,7 +2,7 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as examRoomCapacityRepository from "../repository/examScheduleRoomCapacityRepository.js";
 import * as examScheduleServices from "./examScheduleServices.js";
 import * as examinationSessionServices from "./examinationSessionServices.js";
-import { countStudentsForExamGroup } from "./studentCountServices.js";
+import { countStudentsForExamGroup } from "../modules/student/services/studentCountServices.js";
 import * as model from "../models/index.js";
 import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";

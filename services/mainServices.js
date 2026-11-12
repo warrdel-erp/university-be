@@ -1,14 +1,15 @@
+import { createDefaultDepartmentsForInstitute, getSingleDepartmentDetails } from '../modules/organization/repository/departmentRepository.js';
+import { syncSubjectComponents } from "./subjectComponentServices.js";
 import { Op } from 'sequelize';
 import { getCourseByCourseId, updateCourseById, changeCourseStatuss, assertCourseIsActive } from '../repository/courseRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
-import * as instituteRepository from '../repository/instituteRepository.js';
-import { getSingleDepartmentDetails } from '../repository/departmentRepository.js';
+import * as instituteRepository from '../modules/organization/repository/instituteRepository.js';
 import * as batchRepository from '../repository/batchRepository.js';
 import sequelize from "../database/sequelizeConfig.js";
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
-import * as studentRepository from '../repository/studentRepository.js';
+import * as studentRepository from '../modules/student/repository/studentRepository.js';
 import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
 import { buildTermName, termsForYear, resolveTotalTerms } from '../utility/courseTerms.js';
 
@@ -131,7 +132,12 @@ export async function addInstitute(data, createdBy) {
             const result = await mainRepository.addInstitute({
                 ...institute,
                 campusId,
-                createdBy
+                createdBy,
+            });
+            await createDefaultDepartmentsForInstitute({
+                instituteId: result.instituteId,
+                universityId: result.universityId,
+                createdBy,
             });
             results.push(result);
         }
@@ -221,9 +227,10 @@ export async function addCourse(data, createdBy) {
             const courseDepartmentId =
                 coercePositiveInt(course.departmentId)
                 ?? coercePositiveInt(course.subAccountId);
-            if (courseDepartmentId != null) {
-                payload.departmentId = await resolveDepartmentId(courseDepartmentId);
+            if (!courseDepartmentId) {
+                throw new Error('departmentId is required for each course');
             }
+            payload.departmentId = await resolveDepartmentId(courseDepartmentId);
 
             const result = await mainRepository.addCourse(payload, transaction);
             results.push(result);
@@ -267,7 +274,10 @@ export async function updateCourse(data) {
             : subAccountIdInput;
 
     if (programId !== undefined) {
-        updateData.departmentId = programId == null ? null : await resolveDepartmentId(programId);
+        if (programId == null) {
+            throw new Error('departmentId cannot be null');
+        }
+        updateData.departmentId = await resolveDepartmentId(programId);
     }
 
     if (affiliatedUniversityIdInput !== undefined) {
@@ -329,26 +339,56 @@ export async function addSpecialization(data, createdBy) {
 }
 
 export async function addSubject(data, createdBy) {
-    const { courseId, specializationId, ...subject } = data;
+    const { courseId, specializationId, componentIds, subjectComponentIds, ...subject } = data;
     await assertCourseIsActive(courseId, 'have new subjects added');
 
-    return mainRepository.addSubject({
+    const created = await mainRepository.addSubject({
         ...subject,
         courseId,
         specializationId,
         createdBy,
         isActive: subject.isActive ?? true,
     });
+
+    const targetComponentIds = componentIds || subjectComponentIds;
+    let mappedComponents = [];
+    if (Array.isArray(targetComponentIds) && targetComponentIds.length > 0) {
+        await syncSubjectComponents(created.subjectId, targetComponentIds);
+        const mappings = await model.subjectComponentMappingModel.findAll({
+            where: { subjectId: created.subjectId },
+            include: [{ model: model.subjectComponentModel, as: 'component' }]
+        });
+        mappedComponents = mappings.map(m => m.component);
+    } else if (subject.subjectCategory) {
+        const comp = await model.subjectComponentModel.findOne({
+            where: { componentName: subject.subjectCategory.trim() }
+        });
+        if (comp) {
+            await syncSubjectComponents(created.subjectId, [comp.id]);
+            mappedComponents = [comp];
+        }
+    }
+
+    const plain = created.get ? created.get({ plain: true }) : { ...created };
+    plain.components = mappedComponents;
+    return plain;
 }
 
 export async function updateSubject(data) {
-    const { subjectId, ...payload } = data;
+    const { subjectId, componentIds, subjectComponentIds, ...payload } = data;
 
     if (payload.courseId != null) {
         await assertCourseIsActive(payload.courseId, 'receive subject updates');
     }
 
-    return mainRepository.updateSubject(subjectId, payload);
+    const result = await mainRepository.updateSubject(subjectId, payload);
+
+    const targetComponentIds = componentIds || subjectComponentIds;
+    if (Array.isArray(targetComponentIds)) {
+        await syncSubjectComponents(subjectId, targetComponentIds);
+    }
+
+    return result;
 }
 
 export async function addClassSections(data, createdBy) {

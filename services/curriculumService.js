@@ -223,36 +223,256 @@ export async function getById(id) {
   const mappings =
     await curriculumRepository.findSubjectTermMappingsByCurriculumId(id);
 
+  // Fetch elective requirements with elective pool courses and components
+  let formattedElectiveRequirements = [];
+  try {
+    const electiveRequirements = await models.curriculumElectiveRequirementModel.findAll({
+      where: { curriculumId: id },
+      include: [
+        {
+          model: models.curriculumCategoryModel,
+          as: 'curriculumCategory',
+          attributes: ['id', 'categoryName', 'code'],
+          required: false,
+        },
+        {
+          model: models.electivePoolModel,
+          as: 'electivePool',
+          attributes: ['id', 'name', 'code', 'description', 'scope', 'isActive'],
+          include: [
+            {
+              model: models.electivePoolSubjectMappingModel,
+              as: 'poolSubjectMappings',
+              attributes: ['id', 'subjectId'],
+              include: [
+                {
+                  model: models.subjectModel,
+                  as: 'subject',
+                  attributes: [
+                    'subjectId',
+                    'subjectCode',
+                    'subjectName',
+                    'subjectType',
+                    'subjectCategory',
+                  ],
+                  include: [
+                    {
+                      model: models.subjectComponentMappingModel,
+                      as: 'subjectComponentMappings',
+                      attributes: ['id', 'subjectId', 'subjectComponentId'],
+                      include: [
+                        {
+                          model: models.subjectComponentModel,
+                          as: 'component',
+                          attributes: ['id', 'componentName', 'code', 'description'],
+                        },
+                      ],
+                      required: false,
+                    },
+                  ],
+                  required: false,
+                },
+              ],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+      order: [
+        ['term', 'ASC'],
+        ['id', 'ASC'],
+      ],
+    });
+
+    formattedElectiveRequirements = electiveRequirements.map((r) => {
+      const raw = r.toJSON();
+      const pool = raw.electivePool || {};
+      const poolMappings = pool.poolSubjectMappings || [];
+
+      const courses = poolMappings.map((pm) => {
+        const subj = pm.subject || {};
+        const scmMappings = subj.subjectComponentMappings || [];
+        const components = scmMappings.map((scm) => ({
+          subjectComponentMappingId: scm.id,
+          componentId: scm.component?.id || scm.subjectComponentId,
+          componentName: scm.component?.componentName || null,
+          code: scm.component?.code || null,
+          description: scm.component?.description || null,
+        }));
+
+        return {
+          id: subj.subjectId,
+          subjectId: subj.subjectId,
+          mappingId: pm.id,
+          code: subj.subjectCode,
+          name: subj.subjectName,
+          type: subj.subjectType,
+          category: subj.subjectCategory,
+          components,
+        };
+      });
+
+      return {
+        id: raw.id,
+        curriculumId: raw.curriculumId,
+        term: raw.term,
+        requirementCode: raw.requirementCode,
+        requirementName: raw.requirementName,
+        curriculumCategoryId: raw.curriculumCategoryId,
+        curriculumCategory: raw.curriculumCategory || null,
+        courseCount: raw.courseCount,
+        coursesRequired: raw.coursesRequired,
+        minCredits: raw.minCredits,
+        electivePoolId: raw.electivePoolId,
+        isActive: raw.isActive,
+        electivePool: {
+          id: pool.id,
+          name: pool.name,
+          code: pool.code,
+          description: pool.description,
+          scope: pool.scope,
+          isActive: pool.isActive,
+          eligibleCoursesCount: courses.length,
+        },
+        courses,
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching elective requirements for curriculum:', error);
+  }
+
   const course = curriculum.course;
   const totalTerms = course?.totalTerms || 8;
 
   const terms = [];
   for (let i = 1; i <= totalTerms; i++) {
-    const courses = [];
-    for (const mapping of mappings) {
-      if (mapping.term !== i) continue;
-      courses.push({
-        id: mapping.subject?.subjectId,
-        curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
-        code: mapping.subject?.subjectCode,
-        name: mapping.subject?.subjectName,
-        type: mapping.subject?.subjectType,
-        category: mapping.subject?.subjectCategory,
-        credit: mapping.credit,
-        syllabus: 'Configured',
-      });
+    const termMappings = mappings.filter((m) => m.term === i);
+    const subjectMap = new Map();
+
+    for (const mapping of termMappings) {
+      const sId = mapping.subject?.subjectId || mapping.subjectId;
+      if (!sId) continue;
+
+      const comp = mapping.subjectComponentMapping?.component;
+      const componentItem = mapping.subjectComponentMappingId
+        ? {
+            curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+            subjectComponentMappingId: mapping.subjectComponentMappingId,
+            componentId:
+              comp?.id ||
+              mapping.subjectComponentMapping?.subjectComponentId ||
+              null,
+            componentName: comp?.componentName || null,
+            code: comp?.code || null,
+            credit: mapping.credit,
+          }
+        : null;
+
+      if (!subjectMap.has(sId)) {
+        subjectMap.set(sId, {
+          id: sId,
+          subjectId: sId,
+          curriculumSubjectTermMappingId: mapping.curriculumSubjectTermMappingId,
+          code: mapping.subject?.subjectCode,
+          name: mapping.subject?.subjectName,
+          type: mapping.subject?.subjectType,
+          category: mapping.subject?.subjectCategory,
+          credit: mapping.credit,
+          syllabus: 'Configured',
+          curriculumCategoryId: mapping.curriculumCategoryId || null,
+          curriculumCategory: mapping.curriculumCategory || null,
+          subjectComponentMappingId: mapping.subjectComponentMappingId || null,
+          component: comp
+            ? {
+                id: comp.id,
+                componentName: comp.componentName,
+                code: comp.code,
+              }
+            : null,
+          components: componentItem ? [componentItem] : [],
+          isElective: false,
+        });
+      } else {
+        const existing = subjectMap.get(sId);
+        if (componentItem) {
+          existing.components.push(componentItem);
+        }
+      }
     }
+
+    const termElectiveRequirements = formattedElectiveRequirements.filter(
+      (r) => r.term === i,
+    );
+
+    for (const req of termElectiveRequirements) {
+      for (const elCourse of req.courses || []) {
+        const sId = elCourse.subjectId || elCourse.id;
+        if (!sId) continue;
+
+        if (!subjectMap.has(sId)) {
+          const firstComp = elCourse.components?.[0] || null;
+          subjectMap.set(sId, {
+            id: sId,
+            subjectId: sId,
+            curriculumSubjectTermMappingId: null,
+            code: elCourse.code,
+            name: elCourse.name,
+            type: elCourse.type,
+            category: elCourse.category,
+            credit: req.minCredits ?? null,
+            syllabus: 'Configured',
+            curriculumCategoryId: req.curriculumCategoryId || null,
+            curriculumCategory: req.curriculumCategory || null,
+            subjectComponentMappingId: firstComp?.subjectComponentMappingId || null,
+            component: firstComp
+              ? {
+                  id: firstComp.componentId,
+                  componentName: firstComp.componentName,
+                  code: firstComp.code,
+                }
+              : null,
+            components: elCourse.components || [],
+            isElective: true,
+            electiveRequirementId: req.id,
+            electiveRequirementCode: req.requirementCode,
+            electiveRequirementName: req.requirementName,
+            electivePoolId: req.electivePoolId,
+            electivePoolName: req.electivePool?.name || null,
+          });
+        } else {
+          const existing = subjectMap.get(sId);
+          existing.isElective = true;
+          existing.electiveRequirementId = req.id;
+          existing.electiveRequirementCode = req.requirementCode;
+          existing.electiveRequirementName = req.requirementName;
+          existing.electivePoolId = req.electivePoolId;
+          existing.electivePoolName = req.electivePool?.name || null;
+          if (!existing.curriculumCategoryId && req.curriculumCategoryId) {
+            existing.curriculumCategoryId = req.curriculumCategoryId;
+            existing.curriculumCategory = req.curriculumCategory;
+          }
+          if ((existing.credit === null || existing.credit === undefined) && req.minCredits) {
+            existing.credit = req.minCredits;
+          }
+        }
+      }
+    }
+
+    const courses = Array.from(subjectMap.values());
 
     terms.push({
       id: i,
       term_number: i,
       courses,
+      electiveRequirements: termElectiveRequirements,
     });
   }
 
   return {
     ...curriculum.toJSON(),
     terms,
+    electiveRequirements: formattedElectiveRequirements,
   };
 }
 
@@ -421,7 +641,7 @@ export async function remove(curriculumId) {
   }
 }
 
-export async function getAvailableSubjects(curriculumId) {
+export async function getAvailableSubjects(curriculumId, query = {}) {
   const curriculum = await curriculumRepository.findById(curriculumId);
   if (!curriculum) {
     httpError('Curriculum not found', 404);
@@ -429,16 +649,32 @@ export async function getAvailableSubjects(curriculumId) {
 
   const mappedRows = await models.curriculumSubjectTermMappingModel.findAll({
     where: { curriculumId },
-    attributes: ['subjectId'],
+    attributes: ['subjectId', 'subjectComponentMappingId', 'term'],
   });
-  const mappedSubjectIds = mappedRows.map((r) => r.subjectId);
 
-  const where = { courseId: curriculum.courseId, isActive: true };
-  if (mappedSubjectIds.length > 0) {
-    where.subjectId = { [Op.notIn]: mappedSubjectIds };
+  const mappedScmIds = new Set();
+  const scmTermMap = new Map();
+  const mappedSubjectIdsWithoutComponent = new Set();
+
+  for (const r of mappedRows) {
+    if (r.subjectComponentMappingId) {
+      mappedScmIds.add(r.subjectComponentMappingId);
+      scmTermMap.set(r.subjectComponentMappingId, r.term);
+    } else {
+      mappedSubjectIdsWithoutComponent.add(r.subjectId);
+    }
   }
 
-  return scoped(models.subjectModel).findAll({
+  const where = { courseId: curriculum.courseId, isActive: true };
+  if (query.search) {
+    const s = `%${query.search.trim()}%`;
+    where[Op.or] = [
+      { subjectCode: { [Op.like]: s } },
+      { subjectName: { [Op.like]: s } },
+    ];
+  }
+
+  const subjects = await scoped(models.subjectModel).findAll({
     where,
     order: [['subjectCode', 'ASC']],
     attributes: [
@@ -448,22 +684,137 @@ export async function getAvailableSubjects(curriculumId) {
       'subjectType',
       'subjectCategory',
     ],
+    include: [
+      {
+        model: models.subjectComponentMappingModel,
+        as: 'subjectComponentMappings',
+        attributes: ['id', 'subjectId', 'subjectComponentId'],
+        include: [
+          {
+            model: models.subjectComponentModel,
+            as: 'component',
+            attributes: ['id', 'componentName', 'code'],
+          },
+        ],
+        required: false,
+      },
+    ],
+  });
+
+  return subjects.map((subj) => {
+    const json = subj.toJSON();
+    const mappings = Array.isArray(json.subjectComponentMappings)
+      ? json.subjectComponentMappings
+      : [];
+
+    const components = mappings.map((m) => {
+      const isMapped = mappedScmIds.has(m.id);
+      return {
+        subjectComponentMappingId: m.id,
+        componentId: m.component ? m.component.id : m.subjectComponentId,
+        componentName: m.component ? m.component.componentName : null,
+        code: m.component ? m.component.code : null,
+        isMapped,
+        mappedTerm: isMapped ? scmTermMap.get(m.id) : null,
+      };
+    });
+
+    const isSubjectMappedWithoutComponent = mappedSubjectIdsWithoutComponent.has(json.subjectId);
+    const hasUnmappedComponent = components.length > 0
+      ? components.some((c) => !c.isMapped)
+      : !isSubjectMappedWithoutComponent;
+
+    delete json.subjectComponentMappings;
+
+    return {
+      ...json,
+      isMapped: components.length > 0 ? !hasUnmappedComponent : isSubjectMappedWithoutComponent,
+      hasAvailableComponents: hasUnmappedComponent,
+      components,
+    };
   });
 }
 
-export async function mapSubjects(curriculumId, subjects) {
+function normalizeSubjectMappings(input) {
+  let list = [];
+  if (Array.isArray(input)) {
+    list = input;
+  } else if (input && Array.isArray(input.subjects)) {
+    list = input.subjects;
+  } else if (input && typeof input === 'object') {
+    list = [input];
+  }
+
+  const flattened = [];
+  for (const item of list) {
+    if (!item) continue;
+    const {
+      subjectId,
+      subjectComponentMappingId,
+      subjectComponentMappingIds,
+      curriculumCategoryId,
+      term,
+      termNumber,
+      credit,
+      credits,
+    } = item;
+
+    const resolvedTerm = term ?? termNumber;
+
+    const componentIds =
+      Array.isArray(subjectComponentMappingIds) && subjectComponentMappingIds.length > 0
+        ? subjectComponentMappingIds
+        : Array.isArray(subjectComponentMappingId) && subjectComponentMappingId.length > 0
+        ? subjectComponentMappingId
+        : null;
+
+    if (componentIds) {
+      for (const scmId of componentIds) {
+        const itemCredit =
+          credits && scmId != null && credits[scmId] !== undefined
+            ? credits[scmId]
+            : (credit ?? null);
+        flattened.push({
+          subjectId,
+          subjectComponentMappingId: scmId,
+          curriculumCategoryId: curriculumCategoryId ?? null,
+          term: resolvedTerm,
+          credit: itemCredit,
+        });
+      }
+    } else {
+      flattened.push({
+        subjectId,
+        subjectComponentMappingId:
+          typeof subjectComponentMappingId === 'number' ? subjectComponentMappingId : null,
+        curriculumCategoryId: curriculumCategoryId ?? null,
+        term: resolvedTerm,
+        credit: credit ?? null,
+      });
+    }
+  }
+
+  return flattened;
+}
+
+export async function mapSubjects(curriculumId, payload) {
   const curriculum = await curriculumRepository.findById(curriculumId);
   if (!curriculum) {
     httpError('Curriculum not found', 404);
   }
 
-  if (!subjects?.length) {
+  const subjects = normalizeSubjectMappings(payload);
+
+  if (!subjects.length) {
     httpError('At least one subject is required', 400);
   }
 
-  const subjectIds = subjects.map((s) => s.subjectId);
-  if (new Set(subjectIds).size !== subjectIds.length) {
-    httpError('Duplicate subjects are not allowed in the same request', 400);
+  // Duplicate check: Allow same subjectId if subjectComponentMappingId is different
+  const requestKeys = subjects.map(
+    (s) => `${s.subjectId}_${s.subjectComponentMappingId ?? 'none'}`
+  );
+  if (new Set(requestKeys).size !== requestKeys.length) {
+    httpError('Duplicate subject component mappings are not allowed in the same request', 400);
   }
 
   const terms = subjects.map((s) => s.term ?? s.termNumber);
@@ -483,20 +834,30 @@ export async function mapSubjects(curriculumId, subjects) {
     }
   }
 
+  // Check if any subject + component mapping is already mapped to this curriculum
+  const existingConditions = subjects.map((s) => ({
+    subjectId: s.subjectId,
+    subjectComponentMappingId: s.subjectComponentMappingId ?? null,
+  }));
+
   const existingMappings = await models.curriculumSubjectTermMappingModel.findAll({
-    where: { curriculumId, subjectId: { [Op.in]: subjectIds } },
-    attributes: ['subjectId'],
+    where: {
+      curriculumId,
+      [Op.or]: existingConditions,
+    },
+    attributes: ['subjectId', 'subjectComponentMappingId'],
   });
   if (existingMappings.length > 0) {
-    httpError('One or more subjects are already mapped to this curriculum', 409);
+    httpError('One or more subject component mappings are already mapped to this curriculum', 409);
   }
 
+  const uniqueSubjectIds = [...new Set(subjects.map((s) => s.subjectId))];
   const subjectRecords = await scoped(models.subjectModel).findAll({
-    where: { subjectId: { [Op.in]: subjectIds } },
+    where: { subjectId: { [Op.in]: uniqueSubjectIds } },
     attributes: ['subjectId', 'subjectCode', 'courseId'],
   });
 
-  if (subjectRecords.length !== subjectIds.length) {
+  if (subjectRecords.length !== uniqueSubjectIds.length) {
     httpError('One or more subjects were not found', 404);
   }
 
@@ -511,9 +872,56 @@ export async function mapSubjects(curriculumId, subjects) {
     );
   }
 
+  // Validate subjectComponentMappingId belongs to subjectId
+  const scmIds = subjects
+    .map((s) => s.subjectComponentMappingId)
+    .filter((id) => id != null);
+
+  if (scmIds.length > 0) {
+    const scmMappings = await models.subjectComponentMappingModel.findAll({
+      where: { id: { [Op.in]: scmIds } },
+      attributes: ['id', 'subjectId'],
+    });
+    const scmMap = new Map(scmMappings.map((m) => [m.id, m.subjectId]));
+
+    for (const s of subjects) {
+      if (s.subjectComponentMappingId != null) {
+        if (!scmMap.has(s.subjectComponentMappingId)) {
+          httpError(`Subject component mapping id ${s.subjectComponentMappingId} not found`, 404);
+        }
+        if (scmMap.get(s.subjectComponentMappingId) !== s.subjectId) {
+          httpError(
+            `Subject component mapping id ${s.subjectComponentMappingId} does not belong to subject ${s.subjectId}`,
+            400,
+          );
+        }
+      }
+    }
+  }
+
+  // Validate curriculumCategoryId exists if provided
+  const categoryIds = subjects
+    .map((s) => s.curriculumCategoryId)
+    .filter((id) => id != null);
+
+  if (categoryIds.length > 0) {
+    const categories = await models.curriculumCategoryModel.findAll({
+      where: { id: { [Op.in]: categoryIds } },
+      attributes: ['id'],
+    });
+    const catSet = new Set(categories.map((c) => c.id));
+    for (const s of subjects) {
+      if (s.curriculumCategoryId != null && !catSet.has(s.curriculumCategoryId)) {
+        httpError(`Curriculum category with id ${s.curriculumCategoryId} not found`, 404);
+      }
+    }
+  }
+
   const mappings = subjects.map((s) => ({
     curriculumId,
     subjectId: s.subjectId,
+    subjectComponentMappingId: s.subjectComponentMappingId ?? null,
+    curriculumCategoryId: s.curriculumCategoryId ?? null,
     term: s.term ?? s.termNumber,
     credit: s.credit,
   }));
@@ -543,6 +951,26 @@ export async function updateSubjectTermMapping(
         `Term ${data.term} exceeds programme total terms (${curriculum.course.totalTerms})`,
         400,
       );
+    }
+  }
+
+  if (data.subjectComponentMappingId !== undefined && data.subjectComponentMappingId !== null) {
+    const scm = await models.subjectComponentMappingModel.findByPk(data.subjectComponentMappingId);
+    if (!scm) {
+      httpError(`Subject component mapping id ${data.subjectComponentMappingId} not found`, 404);
+    }
+    if (scm.subjectId !== mapping.subjectId) {
+      httpError(
+        `Subject component mapping id ${data.subjectComponentMappingId} does not belong to subject ${mapping.subjectId}`,
+        400,
+      );
+    }
+  }
+
+  if (data.curriculumCategoryId !== undefined && data.curriculumCategoryId !== null) {
+    const cat = await models.curriculumCategoryModel.findByPk(data.curriculumCategoryId);
+    if (!cat) {
+      httpError(`Curriculum category with id ${data.curriculumCategoryId} not found`, 404);
     }
   }
 

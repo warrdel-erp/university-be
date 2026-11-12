@@ -66,6 +66,12 @@ const departmentModel = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        isDefault: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'is_default'
+        },
         createdBy: {
             type: DataTypes.INTEGER,
             allowNull: false,
@@ -105,5 +111,23 @@ const departmentModel = sequelize.define(
 );
 
 departmentModel.scopeConfig = { university: true, institute: true, academicYear: false };
+
+departmentModel.addHook('beforeDestroy', (department) => {
+    if (department.isDefault || ['Admin', 'Admin (Default)', 'Academic', 'Academics', 'Academic (Default)'].includes(department.departmentName)) {
+        throw new Error('Default department cannot be deleted');
+    }
+});
+
+departmentModel.addHook('beforeUpdate', (department) => {
+    if (
+        department.isDefault ||
+        ['Admin', 'Admin (Default)', 'Academic', 'Academics', 'Academic (Default)'].includes(department.departmentName) ||
+        department._previousDataValues?.isDefault ||
+        ['Admin', 'Admin (Default)', 'Academic', 'Academics', 'Academic (Default)'].includes(department._previousDataValues?.departmentName)
+    ) {
+        throw new Error('Default department cannot be updated');
+    }
+});
+
 
 export default departmentModel;

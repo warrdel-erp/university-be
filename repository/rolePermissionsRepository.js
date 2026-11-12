@@ -121,7 +121,7 @@ export async function updateRolePermissions(rolePermissionsId, RolePermissionsDa
 export async function getPermissionByRole(roleId) {
   try {
     return scoped(model.rolePermissionsModel).findAll({
-      attributes: ["role_id", "permission", "scope"],
+      attributes: ["role_id", "permission"],
       where: { roleId },
     });
   } catch (error) {

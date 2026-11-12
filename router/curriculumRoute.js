@@ -34,21 +34,58 @@ const mapBatchSchema = z.object({
   batchId: z.number().int().positive({ message: "batchId is required" }),
 });
 
-const mapSubjectsSchema = z.object({
+const singleSubjectMapSchema = z.object({
+  subjectId: z.number().int().positive({ message: 'subjectId is required' }),
+  subjectComponentMappingIds: z
+    .array(z.number().int().positive())
+    .optional()
+    .nullable(),
+  subjectComponentMappingId: z
+    .union([
+      z.number().int().positive(),
+      z.array(z.number().int().positive()),
+    ])
+    .nullable()
+    .optional(),
+  curriculumCategoryId: z.number().int().positive().nullable().optional(),
+  term: z.number().int().positive({ message: 'term is required' }),
+  credit: z.number().nonnegative().nullable().optional(),
+  credits: z.record(z.string(), z.number().nonnegative().nullable()).optional(),
+});
+
+const legacySubjectsMapSchema = z.object({
   subjects: z
-    .array(
-      z.object({
-        subjectId: z.number().int().positive(),
-        term: z.number().int().positive(),
-        credit: z.number().nonnegative().nullable().optional(),
-      }),
-    )
-    .min(1),
+    .array(singleSubjectMapSchema)
+    .min(1, { message: 'At least one subject is required' }),
+});
+
+const mapSubjectsSchema = z.any().superRefine((val, ctx) => {
+  if (!val || typeof val !== 'object') {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Invalid payload: request body must be an object or array',
+    });
+    return;
+  }
+  if (Array.isArray(val)) {
+    const res = z.array(singleSubjectMapSchema).min(1).safeParse(val);
+    if (!res.success) res.error.issues.forEach((i) => ctx.addIssue(i));
+    return;
+  }
+  if (val.subjects !== undefined) {
+    const res = legacySubjectsMapSchema.safeParse(val);
+    if (!res.success) res.error.issues.forEach((i) => ctx.addIssue(i));
+    return;
+  }
+  const res = singleSubjectMapSchema.safeParse(val);
+  if (!res.success) res.error.issues.forEach((i) => ctx.addIssue(i));
 });
 
 const updateSubjectTermMappingSchema = z.object({
-  credit: z.number().nonnegative().nullable(),
+  credit: z.number().nonnegative().nullable().optional(),
   term: z.number().int().positive().optional(),
+  subjectComponentMappingId: z.number().int().positive().nullable().optional(),
+  curriculumCategoryId: z.number().int().positive().nullable().optional(),
 });
 
 const idParamSchema = z.object({

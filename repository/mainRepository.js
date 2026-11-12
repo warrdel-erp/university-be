@@ -2,7 +2,7 @@ import * as model from '../models/index.js';
 import sequelize, { Op } from "sequelize";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getTenantStore } from "../utility/requestContext.js";
-import { getCampusIdByInstituteId } from "./buildingRepository.js";
+import { getCampusIdByInstituteId } from "../modules/organization/repository/buildingRepository.js";
 import { classSectionTermsInclude } from "../utility/classSectionIncludes.js";
 
 function omitAcademicYearScope(scopeWhere = {}) {

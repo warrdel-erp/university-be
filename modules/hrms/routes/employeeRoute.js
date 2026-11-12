@@ -1,0 +1,414 @@
+import { Router } from "express";
+import { z } from "zod";
+const router = Router();
+import {
+  addEmployee,
+  getAllEmployee,
+  getSingleEmployeeDetails,
+  deleteEmployeeDetail,
+  importEmployeeData,
+  updateEmployee,
+  getBooksIssuedToEmployee,
+  getTeacherTimeTable,
+  getTeacherSubject,
+  getSubjectEvalution,
+  getTeacherCourses,
+  getEmployeeSectionDates,
+  getTeacherSubjectsFromSchedule,
+} from "../controllers/employeeController.js";
+import userAuth from "../../../middleware/authUser.js";
+import { checkAccess } from "../../../middleware/checkAccess.js";
+import { PERMISSIONS } from "../../../const/permissions.js";
+import {
+  getTodayClassSchedule,
+  getPastClassSchedules,
+  getUpcomingClassSchedules,
+  getUniqueClassSectionSubjects,
+  getSectionCounts,
+} from "../controllers/employeeController.js";
+import {
+  getMyUniqueClassSectionSubjects,
+  getMyTodayClassSchedule,
+  getMyPastClassSchedules,
+  getMyUpcomingClassSchedules,
+  getMySectionCounts,
+  getMyEmployeeSectionDates,
+  getMyEmployeeDetails,
+  getMyTeacherSubjectsFromSchedule,
+} from "../controllers/employeeController.js";
+import { validate } from "../../../utility/validation.js";
+
+const positiveIntegerId = z.coerce
+  .number()
+  .int("id must be an integer")
+  .positive("id must be greater than 0");
+
+const sectionDatesQuerySchema = z.object({
+  classSectionTermId: positiveIntegerId,
+  subjectId: z
+    .string()
+    .regex(/^\d+$/, "subjectId must be a number")
+    .transform((val) => parseInt(val)),
+  userId: z
+    .string()
+    .regex(/^\d+$/, "userId must be a number")
+    .transform((val) => parseInt(val)),
+});
+
+const sectionDatesQuerySchemaWithoutUserId = z.object({
+  classSectionTermId: positiveIntegerId,
+  subjectId: z
+    .string()
+    .regex(/^\d+$/, "subjectId must be a number")
+    .transform((val) => parseInt(val)),
+});
+
+const optionalPositiveId = z.preprocess(
+  (val) => (val === "" || val == null ? undefined : val),
+  z.coerce.number().int().positive().optional(),
+);
+
+// Today schedule returns all entries for the day (no page/limit).
+const todayScheduleQuerySchema = z
+  .object({
+    userId: z.coerce.number().int().positive(),
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+  })
+  .passthrough();
+
+const todayScheduleQuerySchemaWithoutUserId = z
+  .object({
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+  })
+  .passthrough();
+
+// Shared query schema for GET /employee/pastSchedule, GET /employee/upcomingSchedule and GET /employee/uniqueClassSectionSubjects.
+const scheduleQuerySchema = z
+  .object({
+    userId: z.coerce.number().int().positive(),
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+  })
+  .passthrough();
+
+const scheduleQuerySchemaWithoutUserId = z
+  .object({
+    date: z.string().optional(),
+    sessionId: optionalPositiveId,
+    groupPeriods: z.enum(["false", "sessional", "consecutive"]).optional(),
+    instituteId: optionalPositiveId,
+    universityId: optionalPositiveId,
+    page: z.coerce.number().int().min(1).optional(),
+    limit: z.coerce.number().int().min(1).max(100).optional(),
+  })
+  .passthrough();
+
+const uniqueClassSectionSubjectsQuerySchema = z.object({
+  userId: positiveIntegerId,
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+const uniqueClassSectionSubjectsQuerySchemaWithoutUserId = z
+  .object({})
+  .passthrough();
+
+const teacherSubjectQuerySchema = z
+  .object({
+    userId: positiveIntegerId,
+    sessionId: optionalPositiveId,
+    term: optionalPositiveId,
+  })
+  .strict();
+
+const employeeIdParamSchema = z.object({
+  id: positiveIntegerId,
+});
+
+const s3FileIdSchema = z.preprocess(
+  (val) => {
+    if (val === "" || val == null || val === "null" || val === 0 || val === "0") return null;
+    if (typeof val === "object" && val !== null) {
+      if ("id" in val) return val.id;
+      if ("fileUploadId" in val) return val.fileUploadId;
+    }
+    return val;
+  },
+  z.coerce.number().int().positive().nullable().optional(),
+);
+
+const employeeDocumentItemSchema = z
+  .object({
+    document: z.preprocess(
+      (val) => (val === "" || val == null ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    receivedDate: z.any().optional().nullable(),
+    returnedDate: z.any().optional().nullable(),
+    attachment: s3FileIdSchema,
+  })
+  .passthrough();
+
+const employeeDocumentsListSchema = z.preprocess(
+  (val) => {
+    if (typeof val === "string") {
+      try {
+        return JSON.parse(val);
+      } catch {
+        return val;
+      }
+    }
+    return val;
+  },
+  z.array(employeeDocumentItemSchema).optional().nullable(),
+);
+
+const addEmployeeBodySchema = z
+  .object({
+    roleId: positiveIntegerId,
+    employeeName: z
+      .string({ required_error: "employeeName is required" })
+      .trim()
+      .min(1, "employeeName cannot be empty"),
+    departmentId: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    employeePhoto: s3FileIdSchema,
+    employeeSignature: s3FileIdSchema,
+    documents: employeeDocumentsListSchema,
+    employmentType: z.string().optional().nullable(),
+    dateOfBirth: z.string().optional().nullable(),
+    fatherName: z.string().optional().nullable(),
+    motherName: z.string().optional().nullable(),
+    pickColor: z.string().optional().nullable(),
+    officialEmailId: z.string().optional().nullable(),
+    officialMobileNumber: z.string().optional().nullable(),
+    designation: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    salutation: z.string().optional().nullable(),
+  })
+  .passthrough();
+
+const updateEmployeeBodySchema = z
+  .object({
+    roleId: positiveIntegerId,
+    employeeName: z.string().trim().min(1).optional(),
+    departmentId: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    employeePhoto: s3FileIdSchema,
+    employeeSignature: s3FileIdSchema,
+    documents: employeeDocumentsListSchema,
+    employmentType: z.string().optional().nullable(),
+    dateOfBirth: z.string().optional().nullable(),
+    fatherName: z.string().optional().nullable(),
+    motherName: z.string().optional().nullable(),
+    pickColor: z.string().optional().nullable(),
+    officialEmailId: z.string().optional().nullable(),
+    officialMobileNumber: z.string().optional().nullable(),
+    designation: z.preprocess(
+      (val) => (val === "" || val === "null" || val === 0 ? null : val),
+      z.coerce.number().int().positive().nullable().optional(),
+    ),
+    salutation: z.string().optional().nullable(),
+  })
+  .passthrough();
+
+const getAllEmployeeQuerySchema = z.object({
+  search: z.string().optional(),
+  page: z.union([z.string(), z.number()]).optional(),
+  limit: z.union([z.string(), z.number()]).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// 1. Date-wise schedule — time_table_cell_date_wise + teachers
+// ---------------------------------------------------------------------------
+router.get(
+  "/schedule",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: todayScheduleQuerySchema }),
+  getTodayClassSchedule,
+);
+router.get(
+  "/pastSchedule",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: scheduleQuerySchema }),
+  getPastClassSchedules,
+);
+router.get(
+  "/upcomingSchedule",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: scheduleQuerySchema }),
+  getUpcomingClassSchedules,
+);
+router.get(
+  "/sectionDates",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: sectionDatesQuerySchema }),
+  getEmployeeSectionDates,
+);
+router.get(
+  "/sectionCounts",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  getSectionCounts,
+);
+router.get("/my", userAuth, getMyEmployeeDetails);
+
+router.get(
+  "/my/uniqueClassSectionSubjects",
+  userAuth,
+  validate({ query: uniqueClassSectionSubjectsQuerySchemaWithoutUserId }),
+  getMyUniqueClassSectionSubjects,
+);
+
+router.get(
+  "/my/schedule",
+  userAuth,
+  validate({ query: todayScheduleQuerySchemaWithoutUserId }),
+  getMyTodayClassSchedule,
+);
+
+router.get(
+  "/my/pastSchedule",
+  userAuth,
+  validate({ query: scheduleQuerySchemaWithoutUserId }),
+  getMyPastClassSchedules,
+);
+
+router.get(
+  "/my/upcomingSchedule",
+  userAuth,
+  validate({ query: scheduleQuerySchemaWithoutUserId }),
+  getMyUpcomingClassSchedules,
+);
+
+router.get("/my/sectionCounts", userAuth, getMySectionCounts);
+
+router.get(
+  "/my/sectionDates",
+  userAuth,
+  validate({ query: sectionDatesQuerySchemaWithoutUserId }),
+  getMyEmployeeSectionDates,
+);
+
+router.get(
+  "/my/coursesFromSchedule",
+  userAuth,
+  getMyTeacherSubjectsFromSchedule,
+);
+
+// ---------------------------------------------------------------------------
+// 2. Week-cell subjects / courses (time_table_cell + teachers)
+// ---------------------------------------------------------------------------
+router.get(
+  "/uniqueClassSectionSubjects",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: scheduleQuerySchema }),
+  getUniqueClassSectionSubjects,
+);
+router.get(
+  "/coursesFromSchedule",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  getTeacherSubjectsFromSchedule,
+);
+router.get(
+  "/courses",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  getTeacherCourses,
+);
+router.get(
+  "/cellData",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  getTeacherTimeTable,
+);
+router.get(
+  "/subject",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: teacherSubjectQuerySchema }),
+  getTeacherSubject,
+);
+router.get(
+  "/evaluation",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  getSubjectEvalution,
+);
+
+// ---------------------------------------------------------------------------
+// 3. Staff directory CRUD
+// ---------------------------------------------------------------------------
+router.get(
+  "/issuedBook",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  getBooksIssuedToEmployee,
+);
+router.post(
+  "/addEmp",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY_ADD.value, null),
+  validate({ body: addEmployeeBodySchema }),
+  addEmployee,
+);
+router.get(
+  "/",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ query: getAllEmployeeQuerySchema }),
+  getAllEmployee,
+);
+router.get(
+  "/:id",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY.value, null),
+  validate({ params: employeeIdParamSchema }),
+  getSingleEmployeeDetails,
+);
+router.patch(
+  "/:id",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY_EDIT.value, null),
+  validate({ params: employeeIdParamSchema, body: updateEmployeeBodySchema }),
+  updateEmployee,
+);
+router.delete(
+  "/:id",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_DIRECTORY_DELETE.value, null),
+  deleteEmployeeDetail,
+);
+router.post(
+  "/import",
+  userAuth,
+  checkAccess(PERMISSIONS.STAFF_PROFILES_IMPORT.value, null),
+  importEmployeeData,
+);
+
+export default router;
