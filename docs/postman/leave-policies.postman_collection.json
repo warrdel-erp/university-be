@@ -1,0 +1,248 @@
+{
+  "info": {
+    "_postman_id": "8f3e2b10-leave-policy-v2-collection-001",
+    "name": "Leave Policy Management APIs",
+    "description": "Comprehensive Leave Policy APIs including Multi-Leave Entitlements (CL, SL, EL) and Role/Employee Assignments.\n\nBase path: `/leave-policies`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. UI Helper: Get Roles Summary (Role Assignment Table)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text",
+            "description": "User JWT token cookie"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-policies/roles-summary",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies", "roles-summary"]
+        },
+        "description": "Fetches all roles (Teacher, Admin, HR, Accountant, etc.) with total employees count, current policy assignment summary, and assignment mode for rendering the 'ROLE ASSIGNMENT' table in Create Leave Policy UI."
+      },
+      "response": []
+    },
+    {
+      "name": "2. UI Helper: Get Role Employees (Select Employees Drawer)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-policies/role-employees/12?policyId=1&search=",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies", "role-employees", "12"],
+          "query": [
+            {
+              "key": "policyId",
+              "value": "1",
+              "description": "Optional: ID of current policy being edited to mark isSelected"
+            },
+            {
+              "key": "search",
+              "value": "",
+              "description": "Optional: Filter employees by name or employee code"
+            }
+          ]
+        },
+        "description": "Fetches all employees belonging to a specific roleId (e.g. Teacher = 12) for the right side drawer. Returns total count, selected count, and list of employees with current policy status."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Leave Policy (Full Payload with Entitlements & Roles)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyName\": \"Teaching Staff Leave Policy\",\n  \"policyCode\": \"LPS-001\",\n  \"leaveYearType\": \"Academic Year (Jul - Jun)\",\n  \"description\": \"Leave entitlement and rules for all teaching staff.\",\n  \"effectiveFrom\": \"2026-07-01\",\n  \"effectiveTo\": null,\n  \"status\": \"Published\",\n  \"leaveEntitlements\": [\n    {\n      \"leaveType\": \"Casual Leave (CL)\",\n      \"leaveCode\": \"CL\",\n      \"entitlementAnnual\": 12,\n      \"creditMethod\": \"Monthly\",\n      \"carryForward\": true,\n      \"maxCarryForwardDays\": 6,\n      \"maximumConsecutiveDays\": 3,\n      \"keyRules\": [\n        \"Probation\",\n        \"Notice\",\n        \"Half-day\"\n      ],\n      \"status\": \"Configured\"\n    },\n    {\n      \"leaveType\": \"Sick Leave (SL)\",\n      \"leaveCode\": \"SL\",\n      \"entitlementAnnual\": 10,\n      \"creditMethod\": \"Monthly\",\n      \"carryForward\": true,\n      \"maxCarryForwardDays\": 10,\n      \"maximumConsecutiveDays\": 5,\n      \"keyRules\": [\n        \"Notice\",\n        \"Document Required\",\n        \"Max Limit\"\n      ],\n      \"status\": \"Configured\"\n    },\n    {\n      \"leaveType\": \"Earned Leave (EL)\",\n      \"leaveCode\": \"EL\",\n      \"entitlementAnnual\": 15,\n      \"creditMethod\": \"Monthly\",\n      \"carryForward\": true,\n      \"maxCarryForwardDays\": 30,\n      \"keyRules\": [\n        \"Encashment\",\n        \"Carry Forward\",\n        \"Min/Max\"\n      ],\n      \"status\": \"Configured\"\n    }\n  ],\n  \"roleAssignments\": [\n    {\n      \"roleId\": 12,\n      \"assignmentMode\": \"SELECTED\",\n      \"effectiveFrom\": \"2026-07-01\",\n      \"selectedUserIds\": [46, 47, 48]\n    },\n    {\n      \"roleId\": 14,\n      \"assignmentMode\": \"ALL\",\n      \"effectiveFrom\": \"2026-07-01\",\n      \"selectedUserIds\": []\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/leave-policies",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies"]
+        },
+        "description": "Creates a complete Leave Policy in a single atomic transaction:\n1. Main policy details (Name, Code, Leave Year, Effective Dates, Status: Draft/Published)\n2. Child table `leave_policy_entitlements` (CL, SL, EL with rules)\n3. Child table `leave_policy_roles` (Role assignments with ALL or SELECTED mode)\n4. Child table `leave_policy_employees` (Explicitly selected user IDs for SELECTED mode)\n5. If status is 'Published', automatically initializes leave_balance for assigned employees."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Get Leave Policies (Filtered by Role / Hybrid)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-policies?roleId=&all=false&ignoreEmployeeFilter=false",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies"],
+          "query": [
+            {
+              "key": "roleId",
+              "value": "",
+              "description": "Optional: Filter by specific role ID. If omitted, defaults to logged-in user's role."
+            },
+            {
+              "key": "all",
+              "value": "false",
+              "description": "Optional: Set true for Admin to view all policies across all roles."
+            },
+            {
+              "key": "ignoreEmployeeFilter",
+              "value": "false",
+              "description": "Optional: Set true to view all policies of the role ignoring individual employee selection."
+            }
+          ]
+        },
+        "description": "Fetches leave policies assigned to a role. Automatically applies hybrid filter (assignment_mode = ALL OR user exists in selectedEmployees). If all=true, returns unfiltered list for Admin."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Get Single Leave Policy by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-policies/single?policyId={{policyId}}",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies", "single"],
+          "query": [
+            {
+              "key": "policyId",
+              "value": "{{policyId}}",
+              "description": "Policy ID to fetch"
+            }
+          ]
+        },
+        "description": "Returns full details of a specific policy along with its entitlements (CL, SL, EL), role assignments, and selected employees."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Get My Active Policies (For Logged-in User)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-policies/my",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies", "my"]
+        },
+        "description": "Returns active leave policies accessible to the logged-in user."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Update Leave Policy",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyId\": {{policyId}},\n  \"policyName\": \"Updated Teaching Staff Leave Policy\",\n  \"status\": \"Published\",\n  \"description\": \"Updated description\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/leave-policies",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies"]
+        },
+        "description": "Updates master leave policy fields (e.g. changing status from Draft to Published, updating description or dates)."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Delete Leave Policy",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-policies?policyId={{policyId}}",
+          "host": ["{{base_url}}"],
+          "path": ["leave-policies"],
+          "query": [
+            {
+              "key": "policyId",
+              "value": "{{policyId}}",
+              "description": "Policy ID to delete"
+            }
+          ]
+        },
+        "description": "Soft-deletes a leave policy."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "policyId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}
+

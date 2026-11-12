@@ -145,6 +145,9 @@ import scheduleModel from "./scheduleModel.js";
 import scheduleAssignModel from "./ScheduleAssignModel.js";
 import teacherAttendeceModel from "./teacherAttendenceModel.js";
 import leavePolicyModel from "./leavePolicyModel.js";
+import leavePolicyEntitlementModel from "./leavePolicyEntitlementModel.js";
+import leavePolicyRoleModel from "./leavePolicyRoleModel.js";
+import leavePolicyEmployeeModel from "./leavePolicyEmployeeModel.js";
 import leaveBalanceModel from "./leaveBalanceModel.js";
 import leaveRequestModel from "./leaveRequestModel.js";
 import approvalRequestModel from "./approvalRequestModel.js";
@@ -3147,6 +3150,53 @@ leavePolicyModel.hasMany(leaveBalanceModel, {
   as: "leaveBalance",
 });
 
+// Leave Policy Entitlements Associations
+leavePolicyModel.hasMany(leavePolicyEntitlementModel, {
+  foreignKey: "policy_id",
+  as: "entitlements",
+});
+leavePolicyEntitlementModel.belongsTo(leavePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+// Leave Policy Roles Associations
+leavePolicyModel.hasMany(leavePolicyRoleModel, {
+  foreignKey: "policy_id",
+  as: "roleAssignments",
+});
+leavePolicyRoleModel.belongsTo(leavePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+leavePolicyRoleModel.belongsTo(roleModel, {
+  foreignKey: "role_id",
+  as: "role",
+});
+roleModel.hasMany(leavePolicyRoleModel, {
+  foreignKey: "role_id",
+  as: "leavePolicyRoles",
+});
+
+// Leave Policy Selected Employees Associations
+leavePolicyRoleModel.hasMany(leavePolicyEmployeeModel, {
+  foreignKey: "policy_role_id",
+  as: "selectedEmployees",
+});
+leavePolicyEmployeeModel.belongsTo(leavePolicyRoleModel, {
+  foreignKey: "policy_role_id",
+  as: "policyRole",
+});
+leavePolicyEmployeeModel.belongsTo(userModel, {
+  foreignKey: "user_id",
+  as: "user",
+});
+leavePolicyEmployeeModel.belongsTo(employeeModel, {
+  foreignKey: "user_id",
+  targetKey: "userId",
+  as: "employee",
+});
+
 // Approval Request Associations
 approvalRequestModel.belongsTo(userModel, { foreignKey: "requested_by", as: "requester" });
 approvalRequestModel.belongsTo(userModel, { foreignKey: "approved_by_id", as: "approvedBy" });
@@ -4355,6 +4405,9 @@ export {
   teacherAttendeceModel,
   leaveBalanceModel,
   leavePolicyModel,
+  leavePolicyEntitlementModel,
+  leavePolicyRoleModel,
+  leavePolicyEmployeeModel,
   leaveRequestModel,
   approvalRequestModel,
   examScheduleModel,
