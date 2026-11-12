@@ -36,6 +36,7 @@ import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
 import sequelize from "../database/sequelizeConfig.js";
 
 import {
+  DEFAULT_PAGES_PER_STUDENT,
   PAGES_PER_STUDENT,
   BATCH_CONCURRENCY,
   AWS_BUCKET_NAME,
@@ -58,15 +59,20 @@ async function processBatchJob(bullmqJob) {
     batchIndex,
     totalBatches,
     totalStudents,
+    totalPages,
+    pagesPerStudent = DEFAULT_PAGES_PER_STUDENT,
     segments,
     instituteId,
     universityId,
     createdBy,
   } = bullmqJob.data;
 
+  const step =
+    Number(pagesPerStudent) > 0 ? Number(pagesPerStudent) : DEFAULT_PAGES_PER_STUDENT;
+
   console.log(
     `[BatchWorker] Job ${bullmqJob.id} — parent ${jobDbId}, ` +
-      `batch ${batchIndex + 1}/${totalBatches} (${segments.length} students)`
+      `batch ${batchIndex + 1}/${totalBatches} (${segments.length} students, pagesPerStudent=${step})`
   );
 
   await pdfSplitJobRepository.appendLog(jobDbId, {
@@ -102,7 +108,8 @@ async function processBatchJob(bullmqJob) {
   try {
     for (const { pageIndex, qrValue, dbRowId, studentId, examScheduleId } of segments) {
       const startPage = pageIndex + 1;               // qpdf is 1-indexed
-      const endPage = startPage + PAGES_PER_STUDENT - 1;
+      const rawEndPage = startPage + step - 1;
+      const endPage = totalPages ? Math.min(rawEndPage, totalPages) : rawEndPage;
       const splitPath = getTempSplitPath(jobDbId, qrValue);
 
       // Extract page range — qpdf only reads the bytes it needs from the large file

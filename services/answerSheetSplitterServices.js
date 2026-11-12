@@ -73,9 +73,18 @@ export async function checkDiskSpace(requiredBytes) {
  * @param {string} s3Key
  * @param {number} createdBy
  * @param {number|null} [examSessionAnswerSheetId]  - Links this attempt to the answer-sheet row.
+ * @param {number} [pagesPerStudent=2]             - Number of pages per student (gap between QR codes).
  * @returns {Promise<{ jobId: string, jobDbId: string }>}
  */
-export async function enqueuePdfSplitJob(s3Key, createdBy, examSessionAnswerSheetId = null) {
+export async function enqueuePdfSplitJob(
+  s3Key,
+  createdBy,
+  examSessionAnswerSheetId = null,
+  pagesPerStudent = 2
+) {
+  const parsedPagesPerStudent =
+    Number(pagesPerStudent) > 0 ? Number(pagesPerStudent) : 2;
+
   const dbJob = await pdfSplitJobRepository.createJob({
     s3Key,
     createdBy,
@@ -94,6 +103,7 @@ export async function enqueuePdfSplitJob(s3Key, createdBy, examSessionAnswerShee
       instituteId: dbJob.instituteId,
       universityId: dbJob.universityId,
       createdBy,
+      pagesPerStudent: parsedPagesPerStudent,
     },
     { jobId: uuidv4() }
   );
@@ -185,9 +195,10 @@ async function getPdfPageCount(pdfBuffer) {
   return { srcPdfBytes, totalPages };
 }
 
-async function scanQrCodesFromPdf(srcPdfBytes, totalPages) {
+async function scanQrCodesFromPdf(srcPdfBytes, totalPages, pagesPerStudent = PAGES_PER_STUDENT) {
+  const step = Number(pagesPerStudent) > 0 ? Number(pagesPerStudent) : PAGES_PER_STUDENT;
   const qrPageIndices = [];
-  for (let i = 0; i < totalPages; i += PAGES_PER_STUDENT) {
+  for (let i = 0; i < totalPages; i += step) {
     qrPageIndices.push(i);
   }
 
@@ -216,7 +227,7 @@ async function scanQrCodesFromPdf(srcPdfBytes, totalPages) {
         page: humanPage,
         reason:
           `No QR code was detected on page ${humanPage}. ` +
-          `Please ensure a valid QR code is printed at the top-right quarter of every ${PAGES_PER_STUDENT}th page (pages 1, 31, 61, …).`,
+          `Please ensure a valid QR code is printed at the top-right quarter of every ${step}th page.`,
       });
     } else {
       if (qrValue.includes("/")) {
@@ -318,15 +329,16 @@ async function validateScannedQrsAgainstDb(scannedQrs, instituteId, universityId
   return dbMap;
 }
 
-async function splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, instituteId, universityId, createdBy) {
+async function splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, instituteId, universityId, createdBy, pagesPerStudent = PAGES_PER_STUDENT) {
   const transaction = await sequelize.transaction();
   const results = [];
+  const step = Number(pagesPerStudent) > 0 ? Number(pagesPerStudent) : PAGES_PER_STUDENT;
 
   try {
     for (let seg = 0; seg < scannedQrs.length; seg++) {
       const { pageIndex, qrValue } = scannedQrs[seg];
       const startPage = pageIndex;
-      const endPage = startPage + PAGES_PER_STUDENT - 1;
+      const endPage = startPage + step - 1;
 
       const fileName = `${qrValue}.pdf`;
       const pdfBuffer = await extractPageRangeToBuffer(srcPdfBytes, startPage, endPage);
@@ -383,12 +395,12 @@ async function splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, institut
  * @deprecated Use enqueuePdfSplitJob for large PDFs.
  * Legacy synchronous split — suitable only for small PDFs.
  */
-export async function splitAnswerSheetPdf(pdfBuffer, instituteId, universityId, createdBy) {
+export async function splitAnswerSheetPdf(pdfBuffer, instituteId, universityId, createdBy, pagesPerStudent = PAGES_PER_STUDENT) {
   try {
     const { srcPdfBytes, totalPages } = await getPdfPageCount(pdfBuffer);
-    const scannedQrs = await scanQrCodesFromPdf(srcPdfBytes, totalPages);
+    const scannedQrs = await scanQrCodesFromPdf(srcPdfBytes, totalPages, pagesPerStudent);
     const dbMap = await validateScannedQrsAgainstDb(scannedQrs, instituteId, universityId);
-    return await splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, instituteId, universityId, createdBy);
+    return await splitAndSaveAnswerSheets(srcPdfBytes, scannedQrs, dbMap, instituteId, universityId, createdBy, pagesPerStudent);
   } catch (err) {
     throw err;
   }
