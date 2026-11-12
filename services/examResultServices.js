@@ -2155,7 +2155,7 @@ export async function getSubjectCalculationBreakdown(body) {
     };
   }
 
-  const shouldSave = body.save === true || (body.isPost && body.save !== false);
+  const shouldSave = body.save === true || body.save === "true";
   if (shouldSave && isRelative) {
     try {
       await examResultRepository.saveSubjectZScoreCalculation({
