@@ -225,6 +225,41 @@
         "description": "Soft-deletes a leave policy."
       },
       "response": []
+    },
+    {
+      "name": "9. Get Leaves Assigned to Me (Approval List with Workload Impact)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-requests/approval?page=1&limit=20&status=pending",
+          "host": ["{{base_url}}"],
+          "path": ["leave-requests", "approval"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "20"
+            },
+            {
+              "key": "status",
+              "value": "pending",
+              "description": "pending, approved, rejected, cancelled, skipped, all"
+            }
+          ]
+        },
+        "description": "HOD / Approver route. Returns pending leave requests assigned to the logged-in user's position, with `workloadImpact` attached for each leave (including scheduled classes, subjects, rooms, timings, exam invigilation duties, deadlines, and assigned substitute)."
+      },
+      "response": []
     }
   ],
   "variable": [

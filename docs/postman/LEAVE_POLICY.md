@@ -205,3 +205,61 @@ Fetches policies assigned to a role. Automatically applies hybrid filter (assign
 - **URL:** `{{base_url}}/leave-policies?policyId=1`
 - **Headers:** `Cookie: accessToken={{token}}`
 
+---
+
+## 8. Get Leaves Assigned to Me (Approval with Workload Impact)
+Returns pending leave requests for the logged-in HOD/Approver with employee workload details during their leave dates.
+
+- **Method:** `GET`
+- **URL:** `{{base_url}}/leave-requests/approval?page=1&limit=20&status=pending`
+- **Headers:** `Cookie: accessToken={{token}}`
+
+### Response includes `workloadImpact`:
+```json
+{
+  "success": true,
+  "total": 1,
+  "data": [
+    {
+      "id": 10,
+      "approvalFor": "leave",
+      "status": "pending",
+      "leaveRequest": {
+        "requestId": 15,
+        "startDate": "2026-07-07",
+        "endDate": "2026-07-08",
+        "totalDays": 2,
+        "reason": "Personal work"
+      },
+      "workloadImpact": {
+        "hasConflicts": true,
+        "summary": "2 lecture(s) scheduled, 1 exam duty(ies)",
+        "totalScheduledLectures": 2,
+        "totalExamDuties": 1,
+        "totalExamDeadlines": 0,
+        "pendingApprovalsCount": 0,
+        "scheduledLectures": [
+          {
+            "date": "2026-07-07",
+            "subjectName": "WORKSHOP",
+            "subjectCode": "1AR8",
+            "roomNumber": "A-202 Studio",
+            "periodName": "Period1",
+            "startTime": "08:30",
+            "endTime": "09:30"
+          }
+        ],
+        "examDuties": [
+          {
+            "examDate": "2026-07-08",
+            "role": "Invigilator",
+            "roomNumber": "Exam Hall 1"
+          }
+        ],
+        "assignedSubstitutes": []
+      }
+    }
+  ]
+}
+```
+

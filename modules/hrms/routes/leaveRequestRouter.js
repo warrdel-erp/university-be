@@ -5,6 +5,7 @@ import { addRequest, addMyRequest, getAllRequests, getMyRequests, getRequestById
 
 // HOD / Approver route: leaves assigned to logged-in user's position
 router.get("/approvals", userAuth, getLeavesAssignedToMe);
+router.get("/approval", userAuth, getLeavesAssignedToMe);
 router.get("/assigned-to-me", userAuth, getLeavesAssignedToMe);
 
 import { checkAccess, checkAccessAny } from "../../../middleware/checkAccess.js";
