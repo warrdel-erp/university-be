@@ -109,6 +109,14 @@ function mapAssessmentPlanMapping(mapping) {
       ? {
           assessmentPlanId: plan.assessmentPlanId,
           planName: plan.planName,
+          regulationId: plan.regulationId || null,
+          academicRegulation: plan.academicRegulation
+            ? {
+                academicRegulationId: plan.academicRegulation.academicRegulationId,
+                regulationCode: plan.academicRegulation.regulationCode,
+                regulationName: plan.academicRegulation.regulationName,
+              }
+            : null,
         }
       : null,
   };
@@ -211,6 +219,9 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
     });
   }
 
+  const regMapping = batch?.regulationBatchMappings?.[0] || null;
+  const reg = regMapping?.academicRegulation || null;
+
   return {
     curriculumBatchMappingId: batchMapping.curriculumBatchMappingId,
     curriculumId: curriculum.curriculumId,
@@ -218,6 +229,17 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
     batch: batchYear,
     batchEndYear,
     batchName: buildBatchName(batchYear, batchEndYear),
+    academicRegulationId: reg?.academicRegulationId || null,
+    academicRegulation: reg
+      ? {
+          academicRegulationId: reg.academicRegulationId,
+          regulationCode: reg.regulationCode,
+          regulationName: reg.regulationName,
+          version: reg.version,
+          status: reg.status,
+          isActive: reg.isActive,
+        }
+      : null,
     sessionId: batch?.sessionId || null,
     session: session
       ? {

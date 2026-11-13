@@ -14,18 +14,73 @@ export async function findAcademicRegulationByCode(regulationCode, universityId,
   return await scoped(model.academicRegulationModel).findOne({ where, transaction: options.transaction });
 }
 
+export async function findActiveBatchRegulationMappings(batchIds, excludeAcademicRegulationId = null, options = {}) {
+  const ids = (Array.isArray(batchIds) ? batchIds : [batchIds])
+    .map(Number)
+    .filter((id) => Number.isInteger(id) && id > 0);
+
+  if (ids.length === 0) return [];
+
+  const where = {
+    batchId: { [Op.in]: ids },
+  };
+  if (excludeAcademicRegulationId) {
+    where.academicRegulationId = { [Op.ne]: Number(excludeAcademicRegulationId) };
+  }
+
+  return await scoped(model.academicRegulationCourseMappingModel).findAll({
+    where,
+    include: [
+      {
+        model: model.academicRegulationModel,
+        as: "academicRegulation",
+        attributes: ["academicRegulationId", "regulationCode", "regulationName"],
+        required: false,
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch"],
+        required: false,
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
 export async function createAcademicRegulation(data, options = {}) {
   const { courseMappings, batchMappings, ...regulationData } = data;
   const mappings = batchMappings || courseMappings;
+
+  const submittedBatchIds = Array.isArray(mappings)
+    ? [...new Set(mappings.map((item) => Number(item?.batchId ?? item)).filter((id) => Number.isInteger(id) && id > 0))]
+    : [];
+
+  if (submittedBatchIds.length > 0) {
+    const conflictingMappings = await findActiveBatchRegulationMappings(submittedBatchIds, null, options);
+    if (conflictingMappings.length > 0) {
+      const details = conflictingMappings.map((c) => {
+        const batchLabel = c.batch?.batch ? `Batch '${c.batch.batch}' (ID: ${c.batchId})` : `Batch ID ${c.batchId}`;
+        const regLabel = c.academicRegulation?.regulationName
+          ? `'${c.academicRegulation.regulationName}' (${c.academicRegulation.regulationCode || c.academicRegulationId})`
+          : `Regulation ID ${c.academicRegulationId}`;
+        return `${batchLabel} is already mapped to ${regLabel}`;
+      }).join("; ");
+      const error = new Error(`Cannot map batch: ${details}. A batch can only be mapped to one academic regulation.`);
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
   const record = await scoped(model.academicRegulationModel).create({
     ...regulationData,
     version: 1.0,
   }, options);
 
-  if (Array.isArray(mappings) && mappings.length > 0) {
-    const mappingsToCreate = mappings.map((item) => ({
+  if (submittedBatchIds.length > 0) {
+    const mappingsToCreate = submittedBatchIds.map((bId) => ({
       academicRegulationId: record.academicRegulationId,
-      batchId: Number(item.batchId ?? item),
+      batchId: bId,
       instituteId: record.instituteId,
       universityId: record.universityId,
       createdBy: data.createdBy,
@@ -241,20 +296,43 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
   }
 
   if (Array.isArray(mappings)) {
+    const submittedBatchIds = [
+      ...new Set(mappings.map((m) => Number(m?.batchId ?? m)).filter((id) => Number.isInteger(id) && id > 0)),
+    ];
+
+    if (submittedBatchIds.length > 0) {
+      const conflictingMappings = await findActiveBatchRegulationMappings(
+        submittedBatchIds,
+        academicRegulationId,
+        options
+      );
+      if (conflictingMappings.length > 0) {
+        const details = conflictingMappings.map((c) => {
+          const batchLabel = c.batch?.batch ? `Batch '${c.batch.batch}' (ID: ${c.batchId})` : `Batch ID ${c.batchId}`;
+          const regLabel = c.academicRegulation?.regulationName
+            ? `'${c.academicRegulation.regulationName}' (${c.academicRegulation.regulationCode || c.academicRegulationId})`
+            : `Regulation ID ${c.academicRegulationId}`;
+          return `${batchLabel} is already mapped to ${regLabel}`;
+        }).join("; ");
+        const error = new Error(`Cannot map batch: ${details}. A batch can only be mapped to one academic regulation.`);
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     const existingMappings = await scoped(model.academicRegulationCourseMappingModel).findAll({
       where: { academicRegulationId: Number(academicRegulationId) },
       paranoid: false,
       transaction: options.transaction,
     });
 
-    const submittedBatchIds = new Set(mappings.map(m => Number(m.batchId ?? m)));
     const activeExistingBatchIds = new Set(
-      existingMappings.filter(m => !m.deletedAt).map(m => Number(m.batchId))
+      existingMappings.filter((m) => !m.deletedAt).map((m) => Number(m.batchId))
     );
 
     const toDeleteIds = existingMappings
-      .filter(m => !m.deletedAt && !submittedBatchIds.has(Number(m.batchId)))
-      .map(m => m.academicRegulationCourseMappingId);
+      .filter((m) => !m.deletedAt && !submittedBatchIds.includes(Number(m.batchId)))
+      .map((m) => m.academicRegulationCourseMappingId);
 
     if (toDeleteIds.length > 0) {
       await scoped(model.academicRegulationCourseMappingModel).destroy({
@@ -264,10 +342,9 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
       });
     }
 
-    for (const item of mappings) {
-      const bId = Number(item.batchId ?? item);
+    for (const bId of submittedBatchIds) {
       if (!activeExistingBatchIds.has(bId)) {
-        const softDeleted = existingMappings.find(m => Number(m.batchId) === bId && m.deletedAt);
+        const softDeleted = existingMappings.find((m) => Number(m.batchId) === bId && m.deletedAt);
         if (softDeleted) {
           await softDeleted.restore({ transaction: options.transaction });
           await softDeleted.update(
@@ -337,33 +414,73 @@ export async function findCourseMapping(academicRegulationId, batchId, options =
 }
 
 export async function createCourseMapping(data, options = {}) {
-  const existing = await scoped(model.academicRegulationCourseMappingModel).findOne({
+  const targetBatchId = Number(data.batchId);
+  const targetRegulationId = Number(data.academicRegulationId);
+
+  // 1. Check if the batch is already actively mapped to ANY academic regulation
+  const activeExisting = await scoped(model.academicRegulationCourseMappingModel).findOne({
     where: {
-      academicRegulationId: Number(data.academicRegulationId),
-      batchId: Number(data.batchId),
+      batchId: targetBatchId,
+    },
+    include: [
+      {
+        model: model.academicRegulationModel,
+        as: "academicRegulation",
+        attributes: ["academicRegulationId", "regulationCode", "regulationName"],
+        required: false,
+      },
+      {
+        model: model.batchModel,
+        as: "batch",
+        attributes: ["batchId", "batch"],
+        required: false,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  if (activeExisting) {
+    if (Number(activeExisting.academicRegulationId) === targetRegulationId) {
+      const error = new Error("This batch is already mapped to this academic regulation");
+      error.statusCode = 400;
+      throw error;
+    } else {
+      const batchLabel = activeExisting.batch?.batch
+        ? `Batch '${activeExisting.batch.batch}' (ID: ${targetBatchId})`
+        : `Batch ID ${targetBatchId}`;
+      const regLabel = activeExisting.academicRegulation?.regulationName
+        ? `'${activeExisting.academicRegulation.regulationName}' (${activeExisting.academicRegulation.regulationCode || activeExisting.academicRegulationId})`
+        : `Regulation ID ${activeExisting.academicRegulationId}`;
+      const error = new Error(
+        `${batchLabel} is already mapped to ${regLabel}. A batch can only be mapped to one academic regulation.`
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+  }
+
+  // 2. If not actively mapped anywhere, check if there is a soft-deleted mapping for THIS regulation to restore
+  const softDeleted = await scoped(model.academicRegulationCourseMappingModel).findOne({
+    where: {
+      academicRegulationId: targetRegulationId,
+      batchId: targetBatchId,
     },
     paranoid: false,
     transaction: options.transaction,
   });
 
   let mappingId;
-  if (existing) {
-    if (existing.deletedAt) {
-      await existing.restore({ transaction: options.transaction });
-      await existing.update(
-        {
-          universityId: data.universityId,
-          instituteId: data.instituteId,
-          updatedBy: data.updatedBy,
-        },
-        { transaction: options.transaction }
-      );
-      mappingId = existing.academicRegulationCourseMappingId;
-    } else {
-      const error = new Error("This batch is already mapped to the academic regulation");
-      error.statusCode = 400;
-      throw error;
-    }
+  if (softDeleted && softDeleted.deletedAt) {
+    await softDeleted.restore({ transaction: options.transaction });
+    await softDeleted.update(
+      {
+        universityId: data.universityId,
+        instituteId: data.instituteId,
+        updatedBy: data.updatedBy,
+      },
+      { transaction: options.transaction }
+    );
+    mappingId = softDeleted.academicRegulationCourseMappingId;
   } else {
     const record = await scoped(model.academicRegulationCourseMappingModel).create(data, options);
     mappingId = record.academicRegulationCourseMappingId;

@@ -612,6 +612,33 @@ export async function findOverviewByCurriculumBatchMappingId({
             attributes: ["sessionId", "sessionName", "courseId"],
             required: false,
           },
+          {
+            model: model.academicRegulationCourseMappingModel,
+            as: "regulationBatchMappings",
+            attributes: [
+              "academicRegulationCourseMappingId",
+              "academicRegulationId",
+              "batchId",
+            ],
+            required: false,
+            separate: true,
+            order: [["academicRegulationCourseMappingId", "DESC"]],
+            include: [
+              {
+                model: model.academicRegulationModel,
+                as: "academicRegulation",
+                attributes: [
+                  "academicRegulationId",
+                  "regulationCode",
+                  "regulationName",
+                  "version",
+                  "status",
+                  "isActive",
+                ],
+                required: false,
+              },
+            ],
+          },
         ],
       },
       {
@@ -758,6 +785,18 @@ export async function findOverviewByCurriculumBatchMappingId({
                 where:
                   Object.keys(planWhere).length > 0 ? planWhere : undefined,
                 required: Object.keys(planWhere).length > 0,
+                include: [
+                  {
+                    model: model.academicRegulationModel,
+                    as: "academicRegulation",
+                    attributes: [
+                      "academicRegulationId",
+                      "regulationCode",
+                      "regulationName",
+                    ],
+                    required: false,
+                  },
+                ],
               },
             ],
           },
