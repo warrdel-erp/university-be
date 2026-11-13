@@ -45,6 +45,12 @@ const assessmentPlanComponentModel = sequelize.define(
             field: 'duration',
             comment: 'Duration in minutes'
         },
+        assessmentType: {
+            type: DataTypes.ENUM('INTERNAL', 'EXTERNAL'),
+            allowNull: true,
+            defaultValue: null,
+            field: 'assessment_type'
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,

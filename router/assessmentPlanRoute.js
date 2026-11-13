@@ -76,6 +76,13 @@ export const componentSchema = z.object({
   weightagePercentage: z.coerce.number().nonnegative(),
   maxAssessments: z.coerce.number().int().positive().optional().default(1),
   duration: z.coerce.number().int().positive().optional().nullable(),
+  assessmentType: z
+    .preprocess(
+      (val) => (typeof val === "string" ? val.toUpperCase().trim() : val),
+      z.enum(["INTERNAL", "EXTERNAL"]).optional().nullable(),
+    )
+    .optional()
+    .nullable(),
 });
 
 export const createAssessmentPlanBody = z.object({
