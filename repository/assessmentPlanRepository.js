@@ -627,15 +627,29 @@ export async function findOverviewByCurriculumBatchMappingId({
               {
                 model: model.academicRegulationModel,
                 as: "academicRegulation",
-                attributes: [
-                  "academicRegulationId",
-                  "regulationCode",
-                  "regulationName",
-                  "version",
-                  "status",
-                  "isActive",
-                ],
+                attributes: {
+                  exclude: [
+                    "createdAt",
+                    "updatedAt",
+                    "deletedAt",
+                    "createdBy",
+                    "updatedBy",
+                  ],
+                },
                 required: false,
+                include: [
+                  {
+                    model: model.gradingModel,
+                    as: "gradingScheme",
+                    attributes: [
+                      "gradingId",
+                      "gradingName",
+                      "gradingCode",
+                      "gradingMethod",
+                    ],
+                    required: false,
+                  },
+                ],
               },
             ],
           },
@@ -789,12 +803,29 @@ export async function findOverviewByCurriculumBatchMappingId({
                   {
                     model: model.academicRegulationModel,
                     as: "academicRegulation",
-                    attributes: [
-                      "academicRegulationId",
-                      "regulationCode",
-                      "regulationName",
-                    ],
+                    attributes: {
+                      exclude: [
+                        "createdAt",
+                        "updatedAt",
+                        "deletedAt",
+                        "createdBy",
+                        "updatedBy",
+                      ],
+                    },
                     required: false,
+                    include: [
+                      {
+                        model: model.gradingModel,
+                        as: "gradingScheme",
+                        attributes: [
+                          "gradingId",
+                          "gradingName",
+                          "gradingCode",
+                          "gradingMethod",
+                        ],
+                        required: false,
+                      },
+                    ],
                   },
                 ],
               },
