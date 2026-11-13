@@ -392,4 +392,72 @@ router.get(
   examinationSessionController.getExaminationSessionOverview,
 );
 
+const getSubjectStudentsSchema = {
+  query: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+    subjectId: positiveIntegerQueryId,
+    batchId: positiveIntegerQueryId.optional(),
+    term: z.coerce.number().int().positive().optional(),
+    courseId: positiveIntegerQueryId.optional(),
+    sessionId: positiveIntegerQueryId.optional(),
+    curriculumSubjectTermMappingId: positiveIntegerQueryId.optional(),
+    assessmentPlanComponentId: positiveIntegerQueryId.optional(),
+    marksStatus: z
+      .enum(["ALL", "ENTERED", "PENDING", "all", "entered", "pending"])
+      .optional()
+      .default("ALL"),
+    search: z.string().trim().optional(),
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.preprocess(
+      (val) => (val === "" || val === undefined ? undefined : val),
+      z
+        .union([z.coerce.number().int().positive(), z.literal("all")])
+        .optional()
+        .default(10),
+    ),
+  }),
+};
+
+const saveSubjectMarksSchema = {
+  body: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+    subjectId: positiveIntegerQueryId,
+    curriculumSubjectTermMappingId: positiveIntegerQueryId.optional(),
+    assessmentPlanComponentId: positiveIntegerQueryId.optional(),
+    maximumMarks: z.coerce.number().positive().optional().default(100),
+    term: z.coerce.number().int().positive().optional(),
+    marks: z
+      .array(
+        z.object({
+          studentId: z.coerce
+            .number()
+            .int()
+            .positive("studentId must be a positive integer"),
+          obtainedMarks: z.coerce
+            .number()
+            .min(0, "obtainedMarks must be at least 0")
+            .nullable()
+            .optional(),
+          isAbsent: z.boolean().optional().default(false),
+          remarks: z.string().trim().optional(),
+        }),
+      )
+      .min(1, "marks array must contain at least one student"),
+  }),
+};
+
+router.get(
+  "/subjectStudents",
+  userAuth,
+  validate(getSubjectStudentsSchema),
+  examinationSessionController.getExaminationSessionSubjectStudents,
+);
+
+router.post(
+  "/subjectMarks",
+  userAuth,
+  validate(saveSubjectMarksSchema),
+  examinationSessionController.saveExaminationSessionSubjectMarks,
+);
+
 export default router;

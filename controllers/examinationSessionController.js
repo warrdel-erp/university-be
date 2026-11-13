@@ -315,3 +315,54 @@ export const getExaminationSessionOverview = async (req, res) => {
   }
 };
 
+export const getExaminationSessionSubjectStudents = async (req, res) => {
+  try {
+    const result =
+      await examinationSessionServices.getExaminationSessionSubjectStudents(
+        req.query,
+        { user: req.user },
+      );
+    return SuccessResponse(
+      res,
+      200,
+      "Subject students fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error(
+      "Error fetching examination session subject students:",
+      error,
+    );
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to fetch subject students",
+    );
+  }
+};
+
+export const saveExaminationSessionSubjectMarks = async (req, res) => {
+  try {
+    const result =
+      await examinationSessionServices.saveExaminationSessionSubjectMarks(
+        req.body,
+        { user: req.user },
+      );
+    return SuccessResponse(
+      res,
+      200,
+      "Subject marks saved successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error saving examination session subject marks:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to save subject marks",
+    );
+  }
+};
+
