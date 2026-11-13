@@ -86,8 +86,6 @@ const updateCampusSchema = z
 router.post("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_ADD.value, 'campus'), validate({ body: campusItemSchema }), campusController.createCampus);
 router.patch("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION_EDIT.value, 'campus'), validate({ body: updateCampusSchema }), campusController.updateCampus);
 router.get("/hierarchy", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), campusController.getCampusHierarchy);
-router.get("/audit-logs", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), campusController.getCampusAuditLogs);
-router.get("/:campusId/audit-logs", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), campusController.getCampusAuditLogs);
 router.get("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), campusController.listCampuses);
 
 export default router;
