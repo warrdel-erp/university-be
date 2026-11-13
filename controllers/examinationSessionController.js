@@ -113,7 +113,7 @@ export const deleteExaminationSessionTerm = async (req, res) => {
 
 export const getClassSectionTermsBySetupType = async (req, res) => {
   try {
-    const { examSetupTypeId, examinationSessionId, academicYearId } = req.query;
+    const { examSetupTypeId, examinationSessionId, academicYearId, evaluationPattern } = req.query;
     const resolvedAcademicYearId =
       academicYearId ||
       req.headers?.["academic-year-id"] ||
@@ -123,6 +123,7 @@ export const getClassSectionTermsBySetupType = async (req, res) => {
       {
         examinationSessionId,
         academicYearId: resolvedAcademicYearId ? Number(resolvedAcademicYearId) : undefined,
+        evaluationPattern,
       }
     );
     return SuccessResponse(res, 200, "Mapped class section terms fetched successfully", result);

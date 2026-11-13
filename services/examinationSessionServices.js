@@ -1297,6 +1297,30 @@ export async function deleteExaminationSessionTerm(
   });
 }
 
+function matchesEvaluationPattern(targetPattern, filter) {
+  if (!filter) return true;
+  const normalizedFilter = String(filter).toUpperCase().trim();
+  const normalizedTarget = targetPattern ? String(targetPattern).toUpperCase().trim() : null;
+
+  if (!normalizedTarget) return false;
+
+  if (normalizedFilter === "INTERNAL") {
+    return (
+      normalizedTarget === "INTERNAL_ONLY" ||
+      normalizedTarget === "INTERNAL_EXTERNAL"
+    );
+  }
+
+  if (normalizedFilter === "EXTERNAL") {
+    return (
+      normalizedTarget === "EXTERNAL_ONLY" ||
+      normalizedTarget === "INTERNAL_EXTERNAL"
+    );
+  }
+
+  return normalizedTarget === normalizedFilter;
+}
+
 /**
  * Courses / terms for an exam setup type.
  * Terms = curriculum (batch from curriculum_batch_mapping); counts from assessment plan mapping.
@@ -1574,6 +1598,56 @@ export async function getClassSectionTermsBySetupType(
     sessionBatchMap.set(`${b.sessionId}_${b.batch}`, b.batchId);
   }
 
+  // Pre-fetch Academic Regulation for all candidate batches across groups
+  const candidateBatchIds = [];
+  for (const b of batchRecords) {
+    if (b.batchId) candidateBatchIds.push(b.batchId);
+  }
+  for (const group of groups) {
+    const groupKey = groupKeyOf(group.courseId, group.sessionId);
+    const termMap = termsByGroup.get(groupKey);
+    if (termMap) {
+      for (const bucket of termMap.values()) {
+        const resolvedBatchId =
+          bucket.batchId ||
+          (group.sessionId
+            ? sessionBatchMap.get(`${group.sessionId}_${bucket.batch}`) || null
+            : null);
+        if (resolvedBatchId) candidateBatchIds.push(resolvedBatchId);
+      }
+    }
+  }
+
+  const allBatchIds = uniqueValues(candidateBatchIds).filter(Boolean);
+  const batchRegulationMap = new Map();
+
+  if (allBatchIds.length > 0) {
+    const regMappings = await model.academicRegulationCourseMappingModel.findAll({
+      where: { batchId: { [Op.in]: allBatchIds } },
+      include: [
+        {
+          model: model.academicRegulationModel,
+          as: "academicRegulation",
+          attributes: [
+            "academicRegulationId",
+            "regulationCode",
+            "regulationName",
+            "evaluationPattern",
+          ],
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    });
+
+    for (const rm of regMappings) {
+      const plain = rm.get ? rm.get({ plain: true }) : rm;
+      if (plain.academicRegulation) {
+        batchRegulationMap.set(Number(plain.batchId), plain.academicRegulation);
+      }
+    }
+  }
+
   const result = [];
   for (const group of groups) {
     const course = courseMap.get(group.courseId);
@@ -1593,6 +1667,24 @@ export async function getClassSectionTermsBySetupType(
 
     const termDetails = [];
     for (const bucket of terms) {
+      const resolvedBatchId =
+        bucket.batchId ||
+        (group.sessionId
+          ? sessionBatchMap.get(`${group.sessionId}_${bucket.batch}`) || null
+          : null);
+
+      const reg = resolvedBatchId
+        ? batchRegulationMap.get(Number(resolvedBatchId)) || null
+        : null;
+      const evalPattern = reg?.evaluationPattern || null;
+
+      if (
+        options.evaluationPattern &&
+        !matchesEvaluationPattern(evalPattern, options.evaluationPattern)
+      ) {
+        continue;
+      }
+
       const mappedSubjects = new Set();
       const byBatchTerm = mappedBatchTermForGroup
         ? mappedBatchTermForGroup.get(`${bucket.batch}_${bucket.term}`)
@@ -1608,12 +1700,6 @@ export async function getClassSectionTermsBySetupType(
           decimalAdd(mappedSubjectCount, 1),
         );
       }
-
-      const resolvedBatchId =
-        bucket.batchId ||
-        (group.sessionId
-          ? sessionBatchMap.get(`${group.sessionId}_${bucket.batch}`) || null
-          : null);
 
       const cohortContext = {
         courseId: group.courseId,
@@ -1659,8 +1745,19 @@ export async function getClassSectionTermsBySetupType(
         mappedSubjectCount,
         totalSubjects: toIntegerNumber(bucket.subjectIds.size),
         studentCount,
+        evaluationPattern: evalPattern,
+        academicRegulation: reg
+          ? {
+              academicRegulationId: reg.academicRegulationId,
+              regulationCode: reg.regulationCode,
+              regulationName: reg.regulationName,
+              evaluationPattern: reg.evaluationPattern,
+            }
+          : null,
       });
     }
+
+    if (!termDetails.length) continue;
 
     const yearsMap = new Map();
     for (const td of termDetails) {

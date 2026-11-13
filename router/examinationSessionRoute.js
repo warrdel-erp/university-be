@@ -182,6 +182,18 @@ const getClassSectionTermsBySetupTypeSchema = {
     examSetupTypeId: positiveIntegerQueryId.optional(),
     examinationSessionId: positiveIntegerQueryId.optional(),
     academicYearId: positiveIntegerQueryId.optional(),
+    evaluationPattern: z
+      .preprocess(
+        (val) => (typeof val === "string" ? val.toUpperCase().trim() : val),
+        z.enum([
+          "INTERNAL",
+          "EXTERNAL",
+          "INTERNAL_EXTERNAL",
+          "INTERNAL_ONLY",
+          "EXTERNAL_ONLY",
+        ])
+      )
+      .optional(),
   }),
 };
 
