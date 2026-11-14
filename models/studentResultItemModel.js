@@ -52,6 +52,12 @@ const studentResultItemModel = sequelize.define(
       allowNull: false,
       field: 'obtained_marks',
     },
+    status: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: 'DRAFT',
+      field: 'status',
+    },
     creditEarned: {
       type: DataTypes.DECIMAL(6, 2),
       allowNull: true,

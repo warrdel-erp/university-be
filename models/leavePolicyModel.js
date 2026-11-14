@@ -36,9 +36,41 @@ const leavePolicyModel = sequelize.define(
       allowNull: false,
       field: "policy_name"
     },
+    policyCode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: "policy_code"
+    },
+    leaveYearType: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      defaultValue: "Academic Year",
+      field: "leave_year_type"
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      field: "description"
+    },
+    effectiveFrom: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: "effective_from"
+    },
+    effectiveTo: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      field: "effective_to"
+    },
+    status: {
+      type: DataTypes.ENUM("Draft", "Published", "Archived"),
+      defaultValue: "Draft",
+      field: "status"
+    },
     totalLeavesPerYear: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
+      defaultValue: 0,
       field: "total_leaves_per_year"
     },
     maximumNumberOfDays: {

@@ -56,7 +56,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"evaluationPattern\": \"SEMESTER\",\n  \"internalWeightage\": 40,\n  \"externalWeightage\": 60,\n  \"maximumInternalMarks\": 40,\n  \"maximumExternalMarks\": 60,\n  \"isInternalAssessmentMandatory\": true,\n  \"isExternalAssessmentMandatory\": true\n}",
+          "raw": "{\n  \"evaluationPattern\": \"INTERNAL_EXTERNAL\",\n  \"internalWeightage\": 40,\n  \"externalWeightage\": 60,\n  \"maximumInternalMarks\": 40,\n  \"maximumExternalMarks\": 60,\n  \"isInternalAssessmentMandatory\": true,\n  \"isExternalAssessmentMandatory\": true\n}",
           "options": {
             "raw": {
               "language": "json"

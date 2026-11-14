@@ -223,16 +223,16 @@ async function assertNoTermOverlap(
 
   const overlap = excludeSessionId
     ? await examinationSessionRepository.findOverlapTermForAssessmentTypeExcludingSession(
-        assessmentTypeId,
-        excludeSessionId,
-        terms,
-        options,
-      )
+      assessmentTypeId,
+      excludeSessionId,
+      terms,
+      options,
+    )
     : await examinationSessionRepository.findOverlapTermForAssessmentType(
-        assessmentTypeId,
-        terms,
-        options,
-      );
+      assessmentTypeId,
+      terms,
+      options,
+    );
 
   if (overlap) {
     throw createBadRequestError(
@@ -489,8 +489,8 @@ async function countMappedCoursesForSessionTerms(
       plain.batchId != null
         ? Number(plain.batchId)
         : plain.batch?.batchId != null
-        ? Number(plain.batch.batchId)
-        : null;
+          ? Number(plain.batch.batchId)
+          : null;
     const subjectId =
       cstm?.subjectId || subject?.subjectId || plain.subjectId;
 
@@ -1297,6 +1297,30 @@ export async function deleteExaminationSessionTerm(
   });
 }
 
+function matchesEvaluationPattern(targetPattern, filter) {
+  if (!filter) return true;
+  const normalizedFilter = String(filter).toUpperCase().trim();
+  const normalizedTarget = targetPattern ? String(targetPattern).toUpperCase().trim() : null;
+
+  if (!normalizedTarget) return false;
+
+  if (normalizedFilter === "INTERNAL") {
+    return (
+      normalizedTarget === "INTERNAL_ONLY" ||
+      normalizedTarget === "INTERNAL_EXTERNAL"
+    );
+  }
+
+  if (normalizedFilter === "EXTERNAL") {
+    return (
+      normalizedTarget === "EXTERNAL_ONLY" ||
+      normalizedTarget === "INTERNAL_EXTERNAL"
+    );
+  }
+
+  return normalizedTarget === normalizedFilter;
+}
+
 /**
  * Courses / terms for an exam setup type.
  * Terms = curriculum (batch from curriculum_batch_mapping); counts from assessment plan mapping.
@@ -1550,10 +1574,10 @@ export async function getClassSectionTermsBySetupType(
     ),
     uniqueValues(sessionIdsOut).length > 0
       ? model.batchModel.findAll({
-          where: { sessionId: { [Op.in]: uniqueValues(sessionIdsOut) } },
-          attributes: ["batchId", "sessionId", "batch"],
-          transaction: options.transaction,
-        })
+        where: { sessionId: { [Op.in]: uniqueValues(sessionIdsOut) } },
+        attributes: ["batchId", "sessionId", "batch"],
+        transaction: options.transaction,
+      })
       : Promise.resolve([]),
   ]);
 
@@ -1572,6 +1596,56 @@ export async function getClassSectionTermsBySetupType(
   const sessionBatchMap = new Map();
   for (const b of batchRecords) {
     sessionBatchMap.set(`${b.sessionId}_${b.batch}`, b.batchId);
+  }
+
+  // Pre-fetch Academic Regulation for all candidate batches across groups
+  const candidateBatchIds = [];
+  for (const b of batchRecords) {
+    if (b.batchId) candidateBatchIds.push(b.batchId);
+  }
+  for (const group of groups) {
+    const groupKey = groupKeyOf(group.courseId, group.sessionId);
+    const termMap = termsByGroup.get(groupKey);
+    if (termMap) {
+      for (const bucket of termMap.values()) {
+        const resolvedBatchId =
+          bucket.batchId ||
+          (group.sessionId
+            ? sessionBatchMap.get(`${group.sessionId}_${bucket.batch}`) || null
+            : null);
+        if (resolvedBatchId) candidateBatchIds.push(resolvedBatchId);
+      }
+    }
+  }
+
+  const allBatchIds = uniqueValues(candidateBatchIds).filter(Boolean);
+  const batchRegulationMap = new Map();
+
+  if (allBatchIds.length > 0) {
+    const regMappings = await model.academicRegulationCourseMappingModel.findAll({
+      where: { batchId: { [Op.in]: allBatchIds } },
+      include: [
+        {
+          model: model.academicRegulationModel,
+          as: "academicRegulation",
+          attributes: [
+            "academicRegulationId",
+            "regulationCode",
+            "regulationName",
+            "evaluationPattern",
+          ],
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    });
+
+    for (const rm of regMappings) {
+      const plain = rm.get ? rm.get({ plain: true }) : rm;
+      if (plain.academicRegulation) {
+        batchRegulationMap.set(Number(plain.batchId), plain.academicRegulation);
+      }
+    }
   }
 
   const result = [];
@@ -1593,6 +1667,24 @@ export async function getClassSectionTermsBySetupType(
 
     const termDetails = [];
     for (const bucket of terms) {
+      const resolvedBatchId =
+        bucket.batchId ||
+        (group.sessionId
+          ? sessionBatchMap.get(`${group.sessionId}_${bucket.batch}`) || null
+          : null);
+
+      const reg = resolvedBatchId
+        ? batchRegulationMap.get(Number(resolvedBatchId)) || null
+        : null;
+      const evalPattern = reg?.evaluationPattern || null;
+
+      if (
+        options.evaluationPattern &&
+        !matchesEvaluationPattern(evalPattern, options.evaluationPattern)
+      ) {
+        continue;
+      }
+
       const mappedSubjects = new Set();
       const byBatchTerm = mappedBatchTermForGroup
         ? mappedBatchTermForGroup.get(`${bucket.batch}_${bucket.term}`)
@@ -1608,12 +1700,6 @@ export async function getClassSectionTermsBySetupType(
           decimalAdd(mappedSubjectCount, 1),
         );
       }
-
-      const resolvedBatchId =
-        bucket.batchId ||
-        (group.sessionId
-          ? sessionBatchMap.get(`${group.sessionId}_${bucket.batch}`) || null
-          : null);
 
       const cohortContext = {
         courseId: group.courseId,
@@ -1659,8 +1745,19 @@ export async function getClassSectionTermsBySetupType(
         mappedSubjectCount,
         totalSubjects: toIntegerNumber(bucket.subjectIds.size),
         studentCount,
+        evaluationPattern: evalPattern,
+        academicRegulation: reg
+          ? {
+            academicRegulationId: reg.academicRegulationId,
+            regulationCode: reg.regulationCode,
+            regulationName: reg.regulationName,
+            evaluationPattern: reg.evaluationPattern,
+          }
+          : null,
       });
     }
+
+    if (!termDetails.length) continue;
 
     const yearsMap = new Map();
     for (const td of termDetails) {
@@ -1787,7 +1884,7 @@ export async function getExaminationStructure(
       [...groupMap.values()].map((g) => g.sessionId).filter((id) => id != null),
     );
 
-    const [courses, sessions, batchTermMappings, allBatches] = await Promise.all([
+    const [courses, sessions, batchTermMappings, allBatches, mappedSubjects] = await Promise.all([
       examinationSessionRepository.findCoursesByIds(allCourseIds, options),
       examinationSessionRepository.findSessionsByIds(allSessionIds, options),
       model.curriculumBatchTermMappingModel.findAll({
@@ -1821,12 +1918,16 @@ export async function getExaminationStructure(
       }),
       allSessionIds.length > 0
         ? model.batchModel.findAll({
-            where: { sessionId: { [Op.in]: allSessionIds } },
-            attributes: ["batchId", "sessionId", "batch"],
-            order: [["batch", "DESC"]],
-            transaction: options.transaction,
-          })
+          where: { sessionId: { [Op.in]: allSessionIds } },
+          attributes: ["batchId", "sessionId", "batch"],
+          order: [["batch", "DESC"]],
+          transaction: options.transaction,
+        })
         : Promise.resolve([]),
+      getMappedSubjectsBySessionAndTerm(
+        { examinationSessionId },
+        { skipTeacherAndPaperEnrichment: true, ...options },
+      ).catch(() => []),
     ]);
 
     const batchMapByCourseSessionTerm = new Map();
@@ -1863,6 +1964,7 @@ export async function getExaminationStructure(
         : null;
       group.terms.sort((a, b) => a.term - b.term);
 
+      let totalSubjects = 0;
       for (const t of group.terms) {
         const resolvedBatchId =
           batchMapByCourseSessionTerm.get(`${group.courseId}_${group.sessionId}_${t.term}`) ||
@@ -1871,6 +1973,42 @@ export async function getExaminationStructure(
           null;
         t.batchId = resolvedBatchId;
         t.termTitle = `${course?.termType === "Year" ? "Year" : "Semester"} ${t.term}`;
+
+        const seenSub = new Set();
+        const termSubjects = [];
+        for (const sub of mappedSubjects || []) {
+          if (Number(sub.courseId) !== Number(group.courseId)) continue;
+          if (Number(sub.term) !== Number(t.term)) continue;
+          if (
+            group.sessionId != null &&
+            sub.sessionId != null &&
+            Number(sub.sessionId) !== Number(group.sessionId)
+          ) {
+            continue;
+          }
+          if (seenSub.has(Number(sub.subjectId))) continue;
+          seenSub.add(Number(sub.subjectId));
+
+          termSubjects.push({
+            subjectId: Number(sub.subjectId),
+            subjectName: sub.subjectName || null,
+            subjectCode: sub.subjectCode || null,
+            subjectType: sub.subjectType || null,
+            subjectCategory: sub.subjectCategory || null,
+            term: Number(t.term),
+            courseId: group.courseId,
+            sessionId: group.sessionId,
+            batchId: t.batchId || (sub.batchId != null ? Number(sub.batchId) : null),
+            curriculumSubjectTermMappingId:
+              sub.curriculumSubjectTermMappingId != null
+                ? Number(sub.curriculumSubjectTermMappingId)
+                : null,
+          });
+        }
+
+        t.subjectCount = termSubjects.length;
+        t.subjects = termSubjects;
+        totalSubjects += termSubjects.length;
       }
 
       return {
@@ -1883,6 +2021,7 @@ export async function getExaminationStructure(
         sessionId: group.sessionId,
         sessionName: session?.sessionName || null,
         batchId: group.terms.length > 0 ? group.terms[0].batchId : null,
+        totalSubjects,
         terms: group.terms,
       };
     });
@@ -2423,8 +2562,8 @@ export async function getMappedSubjectsBySessionAndTerm(
         plain.batchId != null
           ? Number(plain.batchId)
           : plain.batch?.batchId != null
-          ? Number(plain.batch.batchId)
-          : null;
+            ? Number(plain.batch.batchId)
+            : null;
       const batchYear =
         plain.batch?.batch != null ? Number(plain.batch.batch) : null;
       const subjectId =
@@ -2433,8 +2572,8 @@ export async function getMappedSubjectsBySessionAndTerm(
         plain.curriculumSubjectTermMappingId != null
           ? Number(plain.curriculumSubjectTermMappingId)
           : cstm?.curriculumSubjectTermMappingId != null
-          ? Number(cstm.curriculumSubjectTermMappingId)
-          : null;
+            ? Number(cstm.curriculumSubjectTermMappingId)
+            : null;
 
       if (!courseId || !term || !subjectId) continue;
       const matchesSessionTerm =
@@ -2593,11 +2732,10 @@ export async function getMappedSubjectsBySessionAndTerm(
   }
 
   function subjectCbtmKey(subjectId, mappingId) {
-    return `${Number(subjectId)}_${
-      mappingId != null
+    return `${Number(subjectId)}_${mappingId != null
         ? Number(mappingId)
         : 0
-    }`;
+      }`;
   }
 
   for (const sched of allSchedules) {
@@ -2712,14 +2850,14 @@ export async function getMappedSubjectsBySessionAndTerm(
           null,
         curriculumSubjectTermMapping:
           subject.curriculumSubjectTermMappingId ||
-          subject.curriculumBatchTermMappingId
+            subject.curriculumBatchTermMappingId
             ? {
-                curriculumSubjectTermMappingId:
-                  subject.curriculumSubjectTermMappingId ||
-                  subject.curriculumBatchTermMappingId,
-                term: subject.term,
-                subjectId: subject.subjectId,
-              }
+              curriculumSubjectTermMappingId:
+                subject.curriculumSubjectTermMappingId ||
+                subject.curriculumBatchTermMappingId,
+              term: subject.term,
+              subjectId: subject.subjectId,
+            }
             : null,
         subjectName: subject.subjectName,
         subjectCode: subject.subjectCode,
@@ -2822,12 +2960,12 @@ export async function getMappedSubjectsBySessionAndTerm(
         user:
           plainTa.teacherEmployee && plainTa.teacherEmployee.user
             ? {
-                userId: plainTa.teacherEmployee.user.userId,
-                userName: plainTa.teacherEmployee.user.userName,
-                email: plainTa.teacherEmployee.user.email,
-                phone: plainTa.teacherEmployee.user.phone,
-                employeeCode: plainTa.teacherEmployee.employeeCode,
-              }
+              userId: plainTa.teacherEmployee.user.userId,
+              userName: plainTa.teacherEmployee.user.userName,
+              email: plainTa.teacherEmployee.user.email,
+              phone: plainTa.teacherEmployee.user.phone,
+              employeeCode: plainTa.teacherEmployee.employeeCode,
+            }
             : null,
       });
       teacherAssignmentByScheduleId.set(schedId, list);
@@ -3056,13 +3194,13 @@ export async function getMappedSubjectsBySessionAndTerm(
 
     const resolvedCstmId = hasSchedule
       ? schedInfo?.curriculumSubjectTermMappingId ||
-        schedInfo?.curriculumBatchTermMappingId ||
-        subject.curriculumSubjectTermMappingId ||
-        subject.curriculumBatchTermMappingId ||
-        null
+      schedInfo?.curriculumBatchTermMappingId ||
+      subject.curriculumSubjectTermMappingId ||
+      subject.curriculumBatchTermMappingId ||
+      null
       : subject.curriculumSubjectTermMappingId ||
-        subject.curriculumBatchTermMappingId ||
-        null;
+      subject.curriculumBatchTermMappingId ||
+      null;
 
     finalResponse.push({
       subjectId: subject.subjectId,
@@ -3071,10 +3209,10 @@ export async function getMappedSubjectsBySessionAndTerm(
       curriculumBatchTermMappingId: resolvedCstmId,
       curriculumSubjectTermMapping: resolvedCstmId
         ? {
-            curriculumSubjectTermMappingId: resolvedCstmId,
-            term: subject.term,
-            subjectId: subject.subjectId,
-          }
+          curriculumSubjectTermMappingId: resolvedCstmId,
+          term: subject.term,
+          subjectId: subject.subjectId,
+        }
         : null,
       subjectName: subject.subjectName,
       subjectCode: subject.subjectCode,
@@ -3098,26 +3236,26 @@ export async function getMappedSubjectsBySessionAndTerm(
       deadline: deadline ? deadline.toISOString() : null,
       examDetails: hasSchedule
         ? {
-            batchId: resolvedBatchId,
-            curriculumSubjectTermMappingId: resolvedCstmId,
-            curriculumBatchTermMappingId:
-              schedInfo.curriculumBatchTermMappingId || resolvedCstmId || null,
-            curriculumSubjectTermMapping: resolvedCstmId
-              ? {
-                  curriculumSubjectTermMappingId: resolvedCstmId,
-                  term: subject.term,
-                  subjectId: subject.subjectId,
-                }
-              : null,
-            examDate: schedInfo.examDate,
-            examTime: schedInfo.examTime,
-            duration: schedInfo.duration,
-            maximumMarks: schedInfo.maximumMarks,
-            type: schedInfo.type,
-            examinationSessionSlot: schedInfo.examinationSessionSlot,
-            questionPapers:
-              questionPapersByScheduleId.get(schedInfo.examScheduleId) || [],
-          }
+          batchId: resolvedBatchId,
+          curriculumSubjectTermMappingId: resolvedCstmId,
+          curriculumBatchTermMappingId:
+            schedInfo.curriculumBatchTermMappingId || resolvedCstmId || null,
+          curriculumSubjectTermMapping: resolvedCstmId
+            ? {
+              curriculumSubjectTermMappingId: resolvedCstmId,
+              term: subject.term,
+              subjectId: subject.subjectId,
+            }
+            : null,
+          examDate: schedInfo.examDate,
+          examTime: schedInfo.examTime,
+          duration: schedInfo.duration,
+          maximumMarks: schedInfo.maximumMarks,
+          type: schedInfo.type,
+          examinationSessionSlot: schedInfo.examinationSessionSlot,
+          questionPapers:
+            questionPapersByScheduleId.get(schedInfo.examScheduleId) || [],
+        }
         : null,
       teacherAssignment: hasSchedule ? schedInfo.teacherAssignment : [],
     });
@@ -3488,9 +3626,9 @@ export async function getExaminationSessionAnswerSheets(examinationSessionId) {
         ...plain,
         s3File: plain.s3File
           ? {
-              ...plain.s3File,
-              downloadUrl,
-            }
+            ...plain.s3File,
+            downloadUrl,
+          }
           : null,
       };
     })
@@ -3986,5 +4124,1413 @@ export async function getExaminationSessionOverview(examinationSessionId) {
       ),
     },
   };
+}
+
+export async function getExaminationSessionSubjectStudents(
+  filters = {},
+  options = {},
+) {
+  const examinationSessionId = Number(filters.examinationSessionId);
+  const subjectId = Number(filters.subjectId);
+  let batchId = filters.batchId ? Number(filters.batchId) : null;
+  let term = filters.term ? Number(filters.term) : null;
+  let courseId = filters.courseId ? Number(filters.courseId) : null;
+  let sessionId = filters.sessionId ? Number(filters.sessionId) : null;
+  const search = filters.search ? String(filters.search).trim() : null;
+  const page = filters.page ? Math.max(1, Number(filters.page)) : 1;
+  const limit =
+    filters.limit === "all" ? "all" : Math.max(1, Number(filters.limit) || 10);
+
+  if (!examinationSessionId || Number.isNaN(examinationSessionId)) {
+    const error = new Error("Valid examinationSessionId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!subjectId || Number.isNaN(subjectId)) {
+    const error = new Error("Valid subjectId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  // 1. Fetch Examination Session
+  const sessionRecord = await scoped(model.examinationSessionModel).findByPk(
+    examinationSessionId,
+    {
+      include: [
+        {
+          model: model.examSetupTypeModel,
+          as: "assessmentType",
+          attributes: [
+            "examSetupTypeId",
+            "examName",
+            "examCode",
+            "examCategory",
+            "managedBy",
+          ],
+          required: false,
+        },
+        {
+          model: model.examinationSessionTermModel,
+          as: "examinationSessionTerms",
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    },
+  );
+
+  if (!sessionRecord) {
+    const error = new Error(
+      `Examination session with ID ${examinationSessionId} not found`,
+    );
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // 2. Fetch Subject
+  const subjectRecord = await scoped(model.subjectModel).findByPk(subjectId, {
+    include: [
+      {
+        model: model.courseModel,
+        as: "course",
+        attributes: [
+          "courseId",
+          "courseName",
+          "courseCode",
+          "termType",
+          "totalTerms",
+        ],
+        required: false,
+      },
+    ],
+    transaction: options.transaction,
+  });
+
+  if (!subjectRecord) {
+    const error = new Error(`Subject with ID ${subjectId} not found`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (!courseId && subjectRecord.courseId) {
+    courseId = Number(subjectRecord.courseId);
+  }
+  if (!term && subjectRecord.term) {
+    term = Number(subjectRecord.term);
+  }
+
+  // 3. Resolve Batch & Session
+  let batchRecord = null;
+  if (batchId) {
+    batchRecord = await scoped(model.batchModel).findByPk(batchId, {
+      include: [
+        {
+          model: model.sessionModel,
+          as: "session",
+          attributes: ["sessionId", "sessionName", "courseId"],
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    });
+    if (batchRecord) {
+      if (!sessionId && batchRecord.sessionId) {
+        sessionId = Number(batchRecord.sessionId);
+      }
+      if (!courseId && batchRecord.session?.courseId) {
+        courseId = Number(batchRecord.session.courseId);
+      }
+    }
+  } else if (sessionRecord.examinationSessionTerms?.length) {
+    const matchedTerm = sessionRecord.examinationSessionTerms.find(
+      (t) =>
+        (term == null || Number(t.term) === Number(term)) &&
+        (courseId == null ||
+          !t.courseId ||
+          Number(t.courseId) === Number(courseId)) &&
+        t.batchId,
+    );
+    if (matchedTerm?.batchId) {
+      batchId = Number(matchedTerm.batchId);
+      if (!term) term = Number(matchedTerm.term);
+      batchRecord = await scoped(model.batchModel).findByPk(batchId, {
+        include: [
+          {
+            model: model.sessionModel,
+            as: "session",
+            attributes: ["sessionId", "sessionName", "courseId"],
+            required: false,
+          },
+        ],
+        transaction: options.transaction,
+      });
+      if (batchRecord?.sessionId && !sessionId) {
+        sessionId = Number(batchRecord.sessionId);
+      }
+    }
+  }
+
+  let sessionData = null;
+  if (sessionId) {
+    sessionData =
+      batchRecord?.session ||
+      (await scoped(model.sessionModel).findByPk(sessionId, {
+        attributes: ["sessionId", "sessionName", "courseId"],
+        raw: true,
+        transaction: options.transaction,
+      }));
+  }
+
+  // 4. Resolve Class Section Terms
+  let classSectionTermIds = [];
+  if (batchId && term) {
+    const cstRows = await model.classSectionTermModel.findAll({
+      attributes: ["classSectionTermId"],
+      where: { term: Number(term) },
+      include: [
+        {
+          model: model.classSectionModel,
+          as: "classSection",
+          attributes: ["classSectionsId", "batchId"],
+          required: true,
+          where: {
+            batchId: Number(batchId),
+            ...buildScope(model.classSectionModel),
+          },
+        },
+      ],
+      raw: true,
+      transaction: options.transaction,
+    });
+    classSectionTermIds = cstRows
+      .map((r) => Number(r.classSectionTermId))
+      .filter(Boolean);
+  }
+
+  if (!classSectionTermIds.length && sessionId && term) {
+    const cstRows = await model.classSectionTermModel.findAll({
+      attributes: ["classSectionTermId"],
+      where: { term: Number(term) },
+      include: [
+        {
+          model: model.classSectionModel,
+          as: "classSection",
+          attributes: ["classSectionsId", "sessionId"],
+          required: true,
+          where: {
+            sessionId: Number(sessionId),
+            ...buildScope(model.classSectionModel),
+          },
+        },
+      ],
+      raw: true,
+      transaction: options.transaction,
+    });
+    classSectionTermIds = cstRows
+      .map((r) => Number(r.classSectionTermId))
+      .filter(Boolean);
+  }
+
+  // 5. Check student class sections history
+  let historyStudentIds = [];
+  if (classSectionTermIds.length > 0) {
+    const historyRows = await model.studentClassSectionsHistoryModel.findAll({
+      attributes: ["studentId"],
+      where: { classSectionTermId: { [Op.in]: classSectionTermIds } },
+      raw: true,
+      transaction: options.transaction,
+    });
+    historyStudentIds = historyRows
+      .map((r) => Number(r.studentId))
+      .filter(Boolean);
+  }
+
+  // 6. Query Students
+  const studentWhere = {
+    ...buildScope(model.studentModel),
+  };
+  if (batchId) {
+    studentWhere.batchId = Number(batchId);
+  } else if (courseId) {
+    studentWhere.courseId = Number(courseId);
+  }
+
+  if (classSectionTermIds.length > 0) {
+    const termOr = [{ classSectionTermId: { [Op.in]: classSectionTermIds } }];
+    if (historyStudentIds.length > 0) {
+      termOr.push({ studentId: { [Op.in]: historyStudentIds } });
+    }
+    studentWhere[Op.or] = termOr;
+  }
+
+  if (search) {
+    const query = `%${search}%`;
+    const searchClause = {
+      [Op.or]: [
+        { scholarNumber: { [Op.like]: query } },
+        { enrollNumber: { [Op.like]: query } },
+        { admissionNumber: { [Op.like]: query } },
+        { firstName: { [Op.like]: query } },
+        { middleName: { [Op.like]: query } },
+        { lastName: { [Op.like]: query } },
+        { fatherName: { [Op.like]: query } },
+      ],
+    };
+    if (studentWhere[Op.or]) {
+      studentWhere[Op.and] = [{ [Op.or]: studentWhere[Op.or] }, searchClause];
+      delete studentWhere[Op.or];
+    } else {
+      studentWhere[Op.or] = searchClause[Op.or];
+    }
+  }
+
+  // Resolve curriculumSubjectTermMappingId & assessmentPlanComponentId
+  let curriculumSubjectTermMappingId = filters.curriculumSubjectTermMappingId
+    ? Number(filters.curriculumSubjectTermMappingId)
+    : null;
+  if (!curriculumSubjectTermMappingId) {
+    const cstmWhere = { subjectId: Number(subjectId) };
+    if (term) cstmWhere.term = Number(term);
+    const cstm = await scoped(
+      model.curriculumSubjectTermMappingModel,
+    ).findOne({
+      where: cstmWhere,
+      attributes: ["curriculumSubjectTermMappingId", "term"],
+      raw: true,
+      transaction: options.transaction,
+    });
+    if (cstm) {
+      curriculumSubjectTermMappingId = Number(
+        cstm.curriculumSubjectTermMappingId,
+      );
+    }
+  }
+
+  let assessmentPlanComponentId = filters.assessmentPlanComponentId
+    ? Number(filters.assessmentPlanComponentId)
+    : null;
+
+  // Resolve Assessment Plan and Component for this Subject, Batch/CSTM & Examination Session
+  const apsmWhere = { subjectId: Number(subjectId) };
+  if (batchId) {
+    apsmWhere.batchId = Number(batchId);
+  }
+  if (curriculumSubjectTermMappingId) {
+    apsmWhere.curriculumSubjectTermMappingId = Number(curriculumSubjectTermMappingId);
+  }
+
+  const apsmInclude = [
+    {
+      model: model.assessmentPlanModel,
+      as: "assessmentPlan",
+      where: { isActive: true },
+      required: true,
+      include: [
+        {
+          model: model.assessmentPlanComponentModel,
+          as: "components",
+          include: [
+            {
+              model: model.examSetupTypeModel,
+              as: "examSetupType",
+              attributes: [
+                "examSetupTypeId",
+                "examName",
+                "examCode",
+                "examCategory",
+                "managedBy",
+              ],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+    },
+  ];
+
+  let mappedPlanRecord = await scoped(
+    model.assessmentPlanSubjectMappingModel,
+  ).findOne({
+    where: apsmWhere,
+    include: apsmInclude,
+    transaction: options.transaction,
+  });
+
+  if (!mappedPlanRecord && batchId && apsmWhere.curriculumSubjectTermMappingId) {
+    delete apsmWhere.curriculumSubjectTermMappingId;
+    mappedPlanRecord = await scoped(
+      model.assessmentPlanSubjectMappingModel,
+    ).findOne({
+      where: apsmWhere,
+      include: apsmInclude,
+      transaction: options.transaction,
+    });
+  }
+
+  if (!mappedPlanRecord) {
+    mappedPlanRecord = await scoped(
+      model.assessmentPlanSubjectMappingModel,
+    ).findOne({
+      where: { subjectId: Number(subjectId) },
+      include: apsmInclude,
+      transaction: options.transaction,
+    });
+  }
+
+  const assessmentPlan = mappedPlanRecord?.assessmentPlan || null;
+  const planComponents = assessmentPlan?.components || [];
+
+  const subjectTotalMarks =
+    planComponents.length > 0
+      ? planComponents.reduce(
+          (sum, c) => sum + Number(c.weightagePercentage || 0),
+          0,
+        )
+      : 100;
+
+  let matchedComponent = null;
+  if (sessionRecord.assessmentTypeId) {
+    matchedComponent = planComponents.find(
+      (c) =>
+        Number(c.examSetupTypeId) === Number(sessionRecord.assessmentTypeId),
+    );
+  }
+
+  if (filters.assessmentPlanComponentId) {
+    const compById = planComponents.find(
+      (c) =>
+        Number(c.assessmentPlanComponentId) ===
+        Number(filters.assessmentPlanComponentId),
+    );
+    if (compById) {
+      matchedComponent = compById;
+    }
+  }
+
+  if (matchedComponent) {
+    assessmentPlanComponentId = Number(
+      matchedComponent.assessmentPlanComponentId,
+    );
+  } else if (!assessmentPlanComponentId && planComponents.length > 0) {
+    matchedComponent = planComponents[0];
+    assessmentPlanComponentId = Number(
+      matchedComponent.assessmentPlanComponentId,
+    );
+  } else if (!assessmentPlanComponentId) {
+    if (sessionRecord.assessmentTypeId) {
+      const apc = await scoped(model.assessmentPlanComponentModel).findOne({
+        where: { examSetupTypeId: Number(sessionRecord.assessmentTypeId) },
+        attributes: [
+          "assessmentPlanComponentId",
+          "weightagePercentage",
+          "assessmentType",
+        ],
+        raw: true,
+        transaction: options.transaction,
+      });
+      if (apc) {
+        assessmentPlanComponentId = Number(apc.assessmentPlanComponentId);
+        matchedComponent = apc;
+      }
+    }
+    if (!assessmentPlanComponentId) {
+      const fallbackComp = await scoped(
+        model.assessmentPlanComponentModel,
+      ).findOne({
+        attributes: [
+          "assessmentPlanComponentId",
+          "weightagePercentage",
+          "assessmentType",
+        ],
+        raw: true,
+        transaction: options.transaction,
+      });
+      if (fallbackComp) {
+        assessmentPlanComponentId = Number(
+          fallbackComp.assessmentPlanComponentId,
+        );
+        matchedComponent = fallbackComp;
+      }
+    }
+  }
+
+  const componentWeightage =
+    matchedComponent?.weightagePercentage != null
+      ? Number(matchedComponent.weightagePercentage)
+      : 100;
+  const componentAssessmentType = matchedComponent?.assessmentType || null;
+
+  // Calculate total students in cohort (matching studentWhere before marksStatus filter)
+  const totalCohortCount = await scoped(model.studentModel).count({
+    where: studentWhere,
+    transaction: options.transaction,
+  });
+
+  let enteredCount = 0;
+  let draftCount = 0;
+  let submittedCount = 0;
+
+  if (curriculumSubjectTermMappingId) {
+    try {
+      const allCohortItemRecords = await scoped(
+        model.studentResultItemModel,
+      ).findAll({
+        attributes: ["studentId", "status"],
+        where: {
+          curriculumSubjectTermMappingId,
+          ...(assessmentPlanComponentId ? { assessmentPlanComponentId } : {}),
+        },
+        include: [
+          {
+            model: model.studentModel,
+            as: "student",
+            attributes: [],
+            required: true,
+            where: studentWhere,
+          },
+        ],
+        raw: true,
+        transaction: options.transaction,
+      });
+
+      const enteredStudentIds = [];
+      const draftStudentIds = [];
+      const submittedStudentIds = [];
+
+      for (const row of allCohortItemRecords) {
+        const sId = Number(row.studentId);
+        enteredStudentIds.push(sId);
+        const st = (row.status || "DRAFT").toUpperCase();
+        if (st === "SUBMITTED") {
+          submittedCount++;
+          submittedStudentIds.push(sId);
+        } else {
+          draftCount++;
+          draftStudentIds.push(sId);
+        }
+      }
+      enteredCount = enteredStudentIds.length;
+
+      // Filter by marksStatus if requested
+      const filterMarksStatus = filters.marksStatus?.toUpperCase();
+      if (filterMarksStatus && filterMarksStatus !== "ALL") {
+        if (filterMarksStatus === "ENTERED") {
+          studentWhere.studentId = {
+            [Op.in]: enteredStudentIds.length ? enteredStudentIds : [-1],
+          };
+        } else if (filterMarksStatus === "DRAFT") {
+          studentWhere.studentId = {
+            [Op.in]: draftStudentIds.length ? draftStudentIds : [-1],
+          };
+        } else if (filterMarksStatus === "SUBMITTED") {
+          studentWhere.studentId = {
+            [Op.in]: submittedStudentIds.length ? submittedStudentIds : [-1],
+          };
+        } else if (filterMarksStatus === "PENDING") {
+          if (enteredStudentIds.length > 0) {
+            studentWhere.studentId = { [Op.notIn]: enteredStudentIds };
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error computing cohort status breakdown:", e);
+    }
+  }
+
+  const pendingCount = Math.max(0, totalCohortCount - enteredCount);
+
+  let subjectMarksStatus = "PENDING";
+  if (enteredCount === 0) {
+    subjectMarksStatus = "PENDING";
+  } else if (draftCount > 0) {
+    subjectMarksStatus = "DRAFT";
+  } else if (submittedCount > 0 && pendingCount === 0) {
+    subjectMarksStatus = "SUBMITTED";
+  } else if (submittedCount > 0 && pendingCount > 0) {
+    subjectMarksStatus = "PARTIALLY_SUBMITTED";
+  }
+
+  const isSubjectLocked =
+    submittedCount > 0 && draftCount === 0 && pendingCount === 0;
+
+  const isAll = limit === "all";
+  const limitNum = isAll ? undefined : Number(limit);
+  const offsetNum = isAll ? undefined : (page - 1) * limitNum;
+
+  const { count, rows: studentRows } = await scoped(
+    model.studentModel,
+  ).findAndCountAll({
+    where: studentWhere,
+    attributes: [
+      "studentId",
+      "scholarNumber",
+      "enrollNumber",
+      "admissionNumber",
+      "firstName",
+      "middleName",
+      "lastName",
+      "fatherName",
+      "email",
+      "batchId",
+      "courseId",
+      "classSectionTermId",
+    ],
+    order: [
+      ["scholarNumber", "ASC"],
+      ["firstName", "ASC"],
+      ["lastName", "ASC"],
+      ["studentId", "ASC"],
+    ],
+    limit: limitNum,
+    offset: offsetNum,
+    distinct: true,
+    transaction: options.transaction,
+  });
+
+  // 7. Fetch Eligibility Statuses & Saved Marks
+  const studentIds = studentRows.map((s) => Number(s.studentId));
+  const eligibilityMap = new Map();
+  const marksMap = new Map();
+
+  if (studentIds.length > 0) {
+    const [eligibilityRecords, marksRecords] = await Promise.all([
+      scoped(model.examinationSessionEligibilityModel).findAll({
+        where: {
+          examinationSessionId,
+          studentId: { [Op.in]: studentIds },
+        },
+        attributes: ["studentId", "status", "reviewReason"],
+        raw: true,
+        transaction: options.transaction,
+      }),
+      curriculumSubjectTermMappingId
+        ? scoped(model.studentResultItemModel).findAll({
+            where: {
+              studentId: { [Op.in]: studentIds },
+              curriculumSubjectTermMappingId,
+              ...(assessmentPlanComponentId
+                ? { assessmentPlanComponentId }
+                : {}),
+            },
+            attributes: [
+              "studentResultItemId",
+              "studentId",
+              "maximumMarks",
+              "obtainedMarks",
+              "status",
+            ],
+            raw: true,
+            transaction: options.transaction,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    for (const rec of eligibilityRecords) {
+      eligibilityMap.set(Number(rec.studentId), rec);
+    }
+    for (const m of marksRecords) {
+      marksMap.set(Number(m.studentId), m);
+    }
+  }
+
+  // 8. Build student response
+  const students = studentRows.map((s) => {
+    const elig = eligibilityMap.get(Number(s.studentId));
+    const status = elig ? elig.status : "REVIEW";
+    const isEligible = status === "READY" || status === "APPROVED";
+    const fullName = [s.firstName, s.middleName, s.lastName]
+      .filter(Boolean)
+      .join(" ");
+
+    const mItem = marksMap.get(Number(s.studentId));
+    const isMarksEntered = Boolean(mItem && mItem.obtainedMarks != null);
+    const mStatus = isMarksEntered
+      ? (mItem.status || "DRAFT").toUpperCase()
+      : null;
+    const studentMarksStatus = isMarksEntered ? mStatus : "PENDING";
+    const isLocked = isMarksEntered && mStatus === "SUBMITTED";
+
+    return {
+      studentId: Number(s.studentId),
+      firstName: s.firstName || null,
+      middleName: s.middleName || null,
+      lastName: s.lastName || null,
+      fullName: fullName || null,
+      scholarNumber: s.scholarNumber || null,
+      enrollNumber: s.enrollNumber || null,
+      admissionNumber: s.admissionNumber || null,
+      fatherName: s.fatherName || null,
+      email: s.email || null,
+      batchId: s.batchId ? Number(s.batchId) : null,
+      courseId: s.courseId ? Number(s.courseId) : null,
+      classSectionTermId: s.classSectionTermId
+        ? Number(s.classSectionTermId)
+        : null,
+      eligibilityStatus: status,
+      reviewReason: elig?.reviewReason || null,
+      isEligible,
+      studentResultItemId: mItem ? Number(mItem.studentResultItemId) : null,
+      maximumMarks:
+        mItem && mItem.maximumMarks != null
+          ? Number(mItem.maximumMarks)
+          : componentWeightage,
+      obtainedMarks: mItem ? Number(mItem.obtainedMarks) : null,
+      status: mStatus,
+      marksStatus: studentMarksStatus,
+      isLocked,
+    };
+  });
+
+  const termType = subjectRecord.course?.termType || "Semester";
+  const termTitle = term
+    ? `${termType === "Year" ? "Year" : "Semester"} ${term}`
+    : null;
+
+  return {
+    examinationSession: {
+      examinationSessionId: Number(sessionRecord.examinationSessionId),
+      sessionName: sessionRecord.sessionName,
+      executionType: sessionRecord.executionType || null,
+      executionProfile: sessionRecord.executionProfile || null,
+      status: sessionRecord.status,
+      assessmentTypeId: Number(sessionRecord.assessmentTypeId),
+      assessmentType: sessionRecord.assessmentType
+        ? {
+            examSetupTypeId: Number(
+              sessionRecord.assessmentType.examSetupTypeId,
+            ),
+            examName: sessionRecord.assessmentType.examName,
+            examCode: sessionRecord.assessmentType.examCode,
+            examCategory: sessionRecord.assessmentType.examCategory,
+            managedBy: sessionRecord.assessmentType.managedBy,
+          }
+        : null,
+      examStartDate: sessionRecord.examStartDate || null,
+      examEndDate: sessionRecord.examEndDate || null,
+      resultPublicationDate: sessionRecord.resultPublicationDate || null,
+    },
+    subject: {
+      subjectId: Number(subjectRecord.subjectId),
+      curriculumSubjectTermMappingId,
+      assessmentPlanId: assessmentPlan
+        ? Number(assessmentPlan.assessmentPlanId)
+        : null,
+      assessmentPlanComponentId,
+      weightagePercentage: componentWeightage,
+      maximumMarks: componentWeightage,
+      subjectTotalMarks,
+      assessmentType: componentAssessmentType,
+      subjectName: subjectRecord.subjectName,
+      subjectCode: subjectRecord.subjectCode,
+      subjectType: subjectRecord.subjectType,
+      subjectCategory: subjectRecord.subjectCategory,
+      term: term ? Number(term) : null,
+      termTitle,
+      courseId: courseId ? Number(courseId) : Number(subjectRecord.courseId),
+      courseName: subjectRecord.course?.courseName || null,
+      courseCode: subjectRecord.course?.courseCode || null,
+      sessionId: sessionId ? Number(sessionId) : null,
+      sessionName: sessionData?.sessionName || null,
+      batchId: batchId ? Number(batchId) : null,
+      batch: batchRecord?.batch || null,
+      marksStatus: subjectMarksStatus,
+      isLocked: isSubjectLocked,
+    },
+    summary: {
+      totalStudents: totalCohortCount,
+      enteredCount,
+      draftCount,
+      submittedCount,
+      pendingCount,
+    },
+    pagination: {
+      totalRecords: count,
+      totalPages: isAll ? 1 : Math.ceil(count / (limitNum || 10)),
+      currentPage: isAll ? 1 : Number(page),
+      pageSize: isAll ? count : Number(limitNum),
+    },
+    students,
+  };
+}
+
+export async function saveExaminationSessionSubjectMarks(
+  payload = {},
+  options = {},
+) {
+  const {
+    examinationSessionId: rawSessionId,
+    subjectId: rawSubjectId,
+    batchId: rawBatchId,
+    curriculumSubjectTermMappingId: rawCstmId,
+    assessmentPlanComponentId: rawApComponentId,
+    maximumMarks: rawMaxMarks,
+    term: rawTerm,
+    status: rawStatus = "DRAFT",
+    marks = [],
+  } = payload;
+
+  const examinationSessionId = Number(rawSessionId);
+  const subjectId = Number(rawSubjectId);
+  const batchId = rawBatchId ? Number(rawBatchId) : null;
+  let term = rawTerm ? Number(rawTerm) : null;
+  let curriculumSubjectTermMappingId = rawCstmId ? Number(rawCstmId) : null;
+  let assessmentPlanComponentId = rawApComponentId
+    ? Number(rawApComponentId)
+    : null;
+  const payloadStatus = String(rawStatus || "DRAFT").toUpperCase();
+
+  if (payloadStatus !== "DRAFT" && payloadStatus !== "SUBMITTED") {
+    const error = new Error("status must be either 'DRAFT' or 'SUBMITTED'");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!examinationSessionId || Number.isNaN(examinationSessionId)) {
+    const error = new Error("Valid examinationSessionId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!subjectId || Number.isNaN(subjectId)) {
+    const error = new Error("Valid subjectId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!Array.isArray(marks) || marks.length === 0) {
+    const error = new Error("marks array must contain at least one student");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return sequelize.transaction(async (transaction) => {
+    // 1. Validate Examination Session
+    const sessionRecord = await scoped(model.examinationSessionModel).findByPk(
+      examinationSessionId,
+      { transaction },
+    );
+    if (!sessionRecord) {
+      const error = new Error(
+        `Examination session with ID ${examinationSessionId} not found`,
+      );
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // 2. Validate Subject
+    const subjectRecord = await scoped(model.subjectModel).findByPk(subjectId, {
+      transaction,
+    });
+    if (!subjectRecord) {
+      const error = new Error(`Subject with ID ${subjectId} not found`);
+      error.statusCode = 404;
+      throw error;
+    }
+    if (!term && subjectRecord.term) {
+      term = Number(subjectRecord.term);
+    }
+
+    // 3. Resolve curriculumSubjectTermMappingId
+    if (!curriculumSubjectTermMappingId) {
+      const cstmWhere = { subjectId: Number(subjectId) };
+      if (term) cstmWhere.term = Number(term);
+      const cstm = await scoped(
+        model.curriculumSubjectTermMappingModel,
+      ).findOne({
+        where: cstmWhere,
+        attributes: ["curriculumSubjectTermMappingId", "term"],
+        raw: true,
+        transaction,
+      });
+      if (cstm) {
+        curriculumSubjectTermMappingId = Number(
+          cstm.curriculumSubjectTermMappingId,
+        );
+      }
+    }
+
+    if (!curriculumSubjectTermMappingId) {
+      const error = new Error(
+        `Curriculum mapping not found for subject ID ${subjectId}. Please provide curriculumSubjectTermMappingId.`,
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 4. Resolve assessmentPlanComponentId & matchedComponent
+    let matchedComponent = null;
+
+    if (assessmentPlanComponentId) {
+      matchedComponent = await scoped(
+        model.assessmentPlanComponentModel,
+      ).findByPk(assessmentPlanComponentId, {
+        attributes: [
+          "assessmentPlanComponentId",
+          "weightagePercentage",
+          "assessmentType",
+        ],
+        raw: true,
+        transaction,
+      });
+    }
+
+    if (!matchedComponent) {
+      const apsmWhere = { subjectId: Number(subjectId) };
+      if (batchId) {
+        apsmWhere.batchId = Number(batchId);
+      }
+      if (curriculumSubjectTermMappingId) {
+        apsmWhere.curriculumSubjectTermMappingId = Number(
+          curriculumSubjectTermMappingId,
+        );
+      }
+
+      const apsmInclude = [
+        {
+          model: model.assessmentPlanModel,
+          as: "assessmentPlan",
+          where: { isActive: true },
+          required: true,
+          include: [
+            {
+              model: model.assessmentPlanComponentModel,
+              as: "components",
+              required: false,
+            },
+          ],
+        },
+      ];
+
+      let mappedPlanRecord = await scoped(
+        model.assessmentPlanSubjectMappingModel,
+      ).findOne({
+        where: apsmWhere,
+        include: apsmInclude,
+        transaction,
+      });
+
+      if (!mappedPlanRecord && batchId && apsmWhere.curriculumSubjectTermMappingId) {
+        delete apsmWhere.curriculumSubjectTermMappingId;
+        mappedPlanRecord = await scoped(
+          model.assessmentPlanSubjectMappingModel,
+        ).findOne({
+          where: apsmWhere,
+          include: apsmInclude,
+          transaction,
+        });
+      }
+
+      if (!mappedPlanRecord) {
+        mappedPlanRecord = await scoped(
+          model.assessmentPlanSubjectMappingModel,
+        ).findOne({
+          where: { subjectId: Number(subjectId) },
+          include: apsmInclude,
+          transaction,
+        });
+      }
+
+      const planComponents = mappedPlanRecord?.assessmentPlan?.components || [];
+
+      if (sessionRecord.assessmentTypeId) {
+        matchedComponent = planComponents.find(
+          (c) =>
+            Number(c.examSetupTypeId) === Number(sessionRecord.assessmentTypeId),
+        );
+      }
+
+      if (assessmentPlanComponentId) {
+        const compById = planComponents.find(
+          (c) =>
+            Number(c.assessmentPlanComponentId) ===
+            Number(assessmentPlanComponentId),
+        );
+        if (compById) matchedComponent = compById;
+      }
+
+      if (!matchedComponent && planComponents.length > 0) {
+        matchedComponent = planComponents[0];
+      }
+
+      if (matchedComponent) {
+        assessmentPlanComponentId = Number(
+          matchedComponent.assessmentPlanComponentId,
+        );
+      }
+    }
+
+    if (!assessmentPlanComponentId) {
+      if (sessionRecord.assessmentTypeId) {
+        const apc = await scoped(model.assessmentPlanComponentModel).findOne({
+          where: { examSetupTypeId: Number(sessionRecord.assessmentTypeId) },
+          attributes: [
+            "assessmentPlanComponentId",
+            "weightagePercentage",
+            "assessmentType",
+          ],
+          raw: true,
+          transaction,
+        });
+        if (apc) {
+          assessmentPlanComponentId = Number(apc.assessmentPlanComponentId);
+          matchedComponent = apc;
+        }
+      }
+      if (!assessmentPlanComponentId) {
+        const fallbackComp = await scoped(
+          model.assessmentPlanComponentModel,
+        ).findOne({
+          attributes: [
+            "assessmentPlanComponentId",
+            "weightagePercentage",
+            "assessmentType",
+          ],
+          raw: true,
+          transaction,
+        });
+        if (fallbackComp) {
+          assessmentPlanComponentId = Number(
+            fallbackComp.assessmentPlanComponentId,
+          );
+          matchedComponent = fallbackComp;
+        }
+      }
+    }
+
+    if (!assessmentPlanComponentId) {
+      const error = new Error(
+        "Assessment plan component could not be determined for this examination session.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const maxMarks =
+      rawMaxMarks != null
+        ? Number(rawMaxMarks)
+        : matchedComponent?.weightagePercentage != null
+          ? Number(matchedComponent.weightagePercentage)
+          : 100;
+
+    // 5. Upsert Marks for each student
+    const savedResults = [];
+    for (const item of marks) {
+      const sId = Number(item.studentId);
+      const isAbsent = Boolean(item.isAbsent);
+      const obtMarks = isAbsent ? 0 : Number(item.obtainedMarks);
+      const itemStatus = String(item.status || payloadStatus).toUpperCase();
+
+      if (itemStatus !== "DRAFT" && itemStatus !== "SUBMITTED") {
+        const error = new Error(
+          `Invalid status '${itemStatus}' for student ID ${sId}. Must be 'DRAFT' or 'SUBMITTED'`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (!isAbsent && (obtMarks < 0 || Number.isNaN(obtMarks))) {
+        const error = new Error(`Invalid obtained marks for student ID ${sId}`);
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (!isAbsent && obtMarks > maxMarks) {
+        const error = new Error(
+          `Obtained marks (${obtMarks}) cannot exceed maximum marks (${maxMarks}) for student ID ${sId}`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const existing = await scoped(model.studentResultItemModel).findOne({
+        where: {
+          studentId: sId,
+          curriculumSubjectTermMappingId: Number(
+            curriculumSubjectTermMappingId,
+          ),
+          assessmentPlanComponentId: Number(assessmentPlanComponentId),
+        },
+        raw: true,
+        transaction,
+      });
+
+      if (existing) {
+        const existingStatus = (existing.status || "DRAFT").toUpperCase();
+        if (existingStatus === "SUBMITTED") {
+          const isMarksChanged =
+            Number(existing.obtainedMarks) !== Number(obtMarks);
+          const isStatusChangeAttempted = itemStatus !== "SUBMITTED";
+
+          if (isMarksChanged || isStatusChangeAttempted) {
+            const error = new Error(
+              `Marks for student ID ${sId} are already SUBMITTED and locked. They cannot be modified.`,
+            );
+            error.statusCode = 400;
+            throw error;
+          }
+
+          // Same marks & still SUBMITTED -> skip updating
+          savedResults.push({
+            studentResultItemId: Number(existing.studentResultItemId),
+            studentId: sId,
+            maximumMarks: Number(existing.maximumMarks),
+            obtainedMarks: Number(existing.obtainedMarks),
+            isAbsent: Number(existing.obtainedMarks) === 0,
+            status: "SUBMITTED",
+            action: "LOCKED_SKIPPED",
+            marksStatus: "SUBMITTED",
+            isLocked: true,
+          });
+          continue;
+        }
+
+        // Existing status is DRAFT -> updating is allowed!
+        await scoped(model.studentResultItemModel).update(
+          {
+            maximumMarks: maxMarks,
+            obtainedMarks: obtMarks,
+            status: itemStatus,
+            updatedAt: new Date(),
+          },
+          {
+            where: { studentResultItemId: existing.studentResultItemId },
+            transaction,
+          },
+        );
+
+        savedResults.push({
+          studentResultItemId: Number(existing.studentResultItemId),
+          studentId: sId,
+          maximumMarks: maxMarks,
+          obtainedMarks: obtMarks,
+          isAbsent,
+          status: itemStatus,
+          action: "UPDATED",
+          marksStatus: itemStatus,
+          isLocked: itemStatus === "SUBMITTED",
+        });
+      } else {
+        const student = await scoped(model.studentModel).findByPk(sId, {
+          attributes: ["studentId", "universityId", "instituteId"],
+          raw: true,
+          transaction,
+        });
+
+        const created = await scoped(model.studentResultItemModel).create(
+          {
+            studentId: sId,
+            curriculumSubjectTermMappingId: Number(
+              curriculumSubjectTermMappingId,
+            ),
+            assessmentPlanComponentId: Number(assessmentPlanComponentId),
+            maximumMarks: maxMarks,
+            obtainedMarks: obtMarks,
+            status: itemStatus,
+            creditEarned: 0,
+            attempt: 1,
+            universityId: student?.universityId || sessionRecord.universityId,
+            instituteId: student?.instituteId || sessionRecord.instituteId,
+          },
+          { transaction },
+        );
+
+        savedResults.push({
+          studentResultItemId: Number(created.studentResultItemId),
+          studentId: sId,
+          maximumMarks: maxMarks,
+          obtainedMarks: obtMarks,
+          isAbsent,
+          status: itemStatus,
+          action: "CREATED",
+          marksStatus: itemStatus,
+          isLocked: itemStatus === "SUBMITTED",
+        });
+      }
+    }
+
+    const totalSaved = savedResults.filter(
+      (r) => r.action !== "LOCKED_SKIPPED",
+    ).length;
+    const totalSkipped = savedResults.filter(
+      (r) => r.action === "LOCKED_SKIPPED",
+    ).length;
+
+    return {
+      examinationSessionId,
+      subjectId,
+      curriculumSubjectTermMappingId,
+      assessmentPlanComponentId,
+      status: payloadStatus,
+      maximumMarks: maxMarks,
+      totalProcessed: savedResults.length,
+      totalSaved,
+      totalSkipped,
+      marks: savedResults,
+    };
+  });
+}
+
+export async function updateExaminationSessionSubjectMarksStatus(
+  payload = {},
+  options = {},
+) {
+  const {
+    examinationSessionId: rawSessionId,
+    subjectId: rawSubjectId,
+    status: rawStatus,
+    studentIds = null,
+    studentResultItemIds = null,
+    curriculumSubjectTermMappingId: rawCstmId,
+    assessmentPlanComponentId: rawApComponentId,
+    term: rawTerm,
+    batchId: rawBatchId,
+  } = payload;
+
+  const targetStatus = String(rawStatus || "").toUpperCase();
+  if (targetStatus !== "DRAFT" && targetStatus !== "SUBMITTED") {
+    const error = new Error("status must be either 'DRAFT' or 'SUBMITTED'");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const examinationSessionId = Number(rawSessionId);
+  const subjectId = Number(rawSubjectId);
+  let term = rawTerm ? Number(rawTerm) : null;
+  let curriculumSubjectTermMappingId = rawCstmId ? Number(rawCstmId) : null;
+  let assessmentPlanComponentId = rawApComponentId
+    ? Number(rawApComponentId)
+    : null;
+
+  if (!examinationSessionId || Number.isNaN(examinationSessionId)) {
+    const error = new Error("Valid examinationSessionId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!subjectId || Number.isNaN(subjectId)) {
+    const error = new Error("Valid subjectId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return sequelize.transaction(async (transaction) => {
+    // 1. Validate Examination Session
+    const sessionRecord = await scoped(model.examinationSessionModel).findByPk(
+      examinationSessionId,
+      { transaction },
+    );
+    if (!sessionRecord) {
+      const error = new Error(
+        `Examination session with ID ${examinationSessionId} not found`,
+      );
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // 2. Validate Subject
+    const subjectRecord = await scoped(model.subjectModel).findByPk(subjectId, {
+      transaction,
+    });
+    if (!subjectRecord) {
+      const error = new Error(`Subject with ID ${subjectId} not found`);
+      error.statusCode = 404;
+      throw error;
+    }
+    if (!term && subjectRecord.term) {
+      term = Number(subjectRecord.term);
+    }
+
+    // 3. Resolve curriculumSubjectTermMappingId
+    if (!curriculumSubjectTermMappingId) {
+      const cstmWhere = { subjectId: Number(subjectId) };
+      if (term) cstmWhere.term = Number(term);
+      const cstm = await scoped(
+        model.curriculumSubjectTermMappingModel,
+      ).findOne({
+        where: cstmWhere,
+        attributes: ["curriculumSubjectTermMappingId", "term"],
+        raw: true,
+        transaction,
+      });
+      if (cstm) {
+        curriculumSubjectTermMappingId = Number(
+          cstm.curriculumSubjectTermMappingId,
+        );
+      }
+    }
+
+    if (!curriculumSubjectTermMappingId) {
+      const error = new Error(
+        `Curriculum mapping not found for subject ID ${subjectId}. Please provide curriculumSubjectTermMappingId.`,
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 4. Resolve assessmentPlanComponentId
+    if (!assessmentPlanComponentId) {
+      if (sessionRecord.assessmentTypeId) {
+        const apc = await scoped(model.assessmentPlanComponentModel).findOne({
+          where: { examSetupTypeId: Number(sessionRecord.assessmentTypeId) },
+          attributes: ["assessmentPlanComponentId"],
+          raw: true,
+          transaction,
+        });
+        if (apc) {
+          assessmentPlanComponentId = Number(apc.assessmentPlanComponentId);
+        }
+      }
+      if (!assessmentPlanComponentId) {
+        const fallbackComp = await scoped(
+          model.assessmentPlanComponentModel,
+        ).findOne({
+          attributes: ["assessmentPlanComponentId"],
+          raw: true,
+          transaction,
+        });
+        if (fallbackComp) {
+          assessmentPlanComponentId = Number(
+            fallbackComp.assessmentPlanComponentId,
+          );
+        }
+      }
+    }
+
+    // 5. Build Where Clause
+    const itemWhere = {
+      curriculumSubjectTermMappingId: Number(curriculumSubjectTermMappingId),
+    };
+    if (assessmentPlanComponentId) {
+      itemWhere.assessmentPlanComponentId = Number(assessmentPlanComponentId);
+    }
+
+    if (
+      Array.isArray(studentResultItemIds) &&
+      studentResultItemIds.length > 0
+    ) {
+      itemWhere.studentResultItemId = {
+        [Op.in]: studentResultItemIds.map(Number),
+      };
+    } else if (Array.isArray(studentIds) && studentIds.length > 0) {
+      itemWhere.studentId = {
+        [Op.in]: studentIds.map(Number),
+      };
+    } else if (rawBatchId) {
+      const batchStudents = await scoped(model.studentModel).findAll({
+        where: {
+          batchId: Number(rawBatchId),
+          ...buildScope(model.studentModel),
+        },
+        attributes: ["studentId"],
+        raw: true,
+        transaction,
+      });
+      const bStudentIds = batchStudents.map((s) => Number(s.studentId));
+      itemWhere.studentId = {
+        [Op.in]: bStudentIds.length ? bStudentIds : [-1],
+      };
+    }
+
+    // 6. Fetch Existing Items
+    const existingItems = await scoped(model.studentResultItemModel).findAll({
+      where: itemWhere,
+      attributes: [
+        "studentResultItemId",
+        "studentId",
+        "status",
+        "obtainedMarks",
+        "maximumMarks",
+      ],
+      raw: true,
+      transaction,
+    });
+
+    if (Array.isArray(studentIds) && studentIds.length > 0) {
+      const foundStudentIds = new Set(
+        existingItems.map((it) => Number(it.studentId)),
+      );
+      const missingStudentIds = studentIds
+        .map(Number)
+        .filter((sId) => !foundStudentIds.has(sId));
+      if (missingStudentIds.length > 0 && targetStatus === "SUBMITTED") {
+        const error = new Error(
+          `Cannot submit marks: Student ID(s) [${missingStudentIds.join(", ")}] do not have marks entered yet. Please enter marks before submitting.`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    if (existingItems.length === 0) {
+      const error = new Error(
+        "No entered marks found to update status for the given criteria.",
+      );
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // 7. Update status
+    const toUpdateIds = [];
+    const records = [];
+    let updatedCount = 0;
+    let alreadyInStatusCount = 0;
+
+    for (const item of existingItems) {
+      const prevStatus = (item.status || "DRAFT").toUpperCase();
+      const sId = Number(item.studentId);
+      const rId = Number(item.studentResultItemId);
+
+      if (prevStatus !== targetStatus) {
+        toUpdateIds.push(rId);
+        updatedCount++;
+        records.push({
+          studentResultItemId: rId,
+          studentId: sId,
+          previousStatus: prevStatus,
+          currentStatus: targetStatus,
+          isLocked: targetStatus === "SUBMITTED",
+        });
+      } else {
+        alreadyInStatusCount++;
+        records.push({
+          studentResultItemId: rId,
+          studentId: sId,
+          previousStatus: prevStatus,
+          currentStatus: targetStatus,
+          isLocked: targetStatus === "SUBMITTED",
+        });
+      }
+    }
+
+    if (toUpdateIds.length > 0) {
+      await scoped(model.studentResultItemModel).update(
+        {
+          status: targetStatus,
+          updatedAt: new Date(),
+        },
+        {
+          where: {
+            studentResultItemId: { [Op.in]: toUpdateIds },
+          },
+          transaction,
+        },
+      );
+    }
+
+    return {
+      examinationSessionId,
+      subjectId,
+      curriculumSubjectTermMappingId,
+      assessmentPlanComponentId,
+      status: targetStatus,
+      isLocked: targetStatus === "SUBMITTED",
+      totalRecords: existingItems.length,
+      updatedCount,
+      alreadyInStatusCount,
+      records,
+    };
+  });
 }
 

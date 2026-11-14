@@ -467,6 +467,12 @@ const splitPdfSchema = z.object({
     .number({ required_error: "answerSheetS3FileId is required." })
     .int("answerSheetS3FileId must be an integer.")
     .positive("answerSheetS3FileId must be a positive integer."),
+  pagesPerStudent: z
+    .number({ invalid_type_error: "pagesPerStudent must be a number." })
+    .int("pagesPerStudent must be an integer.")
+    .positive("pagesPerStudent must be at least 1.")
+    .default(2)
+    .optional(),
 });
 
 router.post(

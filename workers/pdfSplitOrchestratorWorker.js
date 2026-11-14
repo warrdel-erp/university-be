@@ -28,7 +28,9 @@ import AnswerSheetQrModel from "../models/answerSheetQrModel.js";
 import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
 
 import {
+  DEFAULT_PAGES_PER_STUDENT,
   PAGES_PER_STUDENT,
+  getBatchSizeStudents,
   BATCH_SIZE_STUDENTS,
   BATCH_CONCURRENCY,
   SPLIT_BATCH_SIZE_PAGES,
@@ -48,9 +50,16 @@ async function getPdfPageCount(pdfFilePath) {
   return pdfinfoGetPageCount(pdfFilePath);
 }
 
-async function scanQrCodesFromFile(tempPdfPath, totalPages, jobDbId) {
+async function scanQrCodesFromFile(
+  tempPdfPath,
+  totalPages,
+  jobDbId,
+  pagesPerStudent = DEFAULT_PAGES_PER_STUDENT
+) {
+  const step =
+    Number(pagesPerStudent) > 0 ? Number(pagesPerStudent) : DEFAULT_PAGES_PER_STUDENT;
   const qrPageIndices = [];
-  for (let i = 0; i < totalPages; i += PAGES_PER_STUDENT) {
+  for (let i = 0; i < totalPages; i += step) {
     qrPageIndices.push(i);
   }
 
@@ -80,7 +89,7 @@ async function scanQrCodesFromFile(tempPdfPath, totalPages, jobDbId) {
         page: humanPage,
         reason:
           `No QR code detected on page ${humanPage}. ` +
-          `Ensure a valid QR is printed at the top-right of every ${PAGES_PER_STUDENT}th page.`,
+          `Ensure a valid QR is printed at the top-right of every ${step}th page.`,
       });
     } else {
       if (qrValue.includes("/")) qrValue = qrValue.split("/").pop();
@@ -150,11 +159,18 @@ async function validateScannedQrs(scannedQrs, instituteId, universityId) {
 // ─── Processor ────────────────────────────────────────────────────────────────
 
 async function processOrchestratorJob(bullmqJob) {
-  const { s3Key, jobDbId, instituteId, universityId, createdBy } = bullmqJob.data;
+  const {
+    s3Key,
+    jobDbId,
+    instituteId,
+    universityId,
+    createdBy,
+    pagesPerStudent = DEFAULT_PAGES_PER_STUDENT,
+  } = bullmqJob.data;
   // Named by jobDbId — stable, predictable path shared with all batch workers
   const tempPdfPath = getTempPdfPath(jobDbId);
 
-  console.log(`[Orchestrator] Job ${bullmqJob.id} (DB: ${jobDbId}) starting — s3Key: ${s3Key}`);
+  console.log(`[Orchestrator] Job ${bullmqJob.id} (DB: ${jobDbId}) starting — s3Key: ${s3Key}, pagesPerStudent: ${pagesPerStudent}`);
 
   try {
     // ── Stage 1: DOWNLOADING ─────────────────────────────────────────────────
@@ -172,11 +188,11 @@ async function processOrchestratorJob(bullmqJob) {
     // ── Stage 2: SCANNING_QR ─────────────────────────────────────────────────
     await pdfSplitJobRepository.updateJob(jobDbId, { status: "SCANNING_QR", progress: 5 });
     await bullmqJob.updateProgress({ stage: "SCANNING_QR", percent: 5 });
-    console.log(`[Orchestrator] ${jobDbId}: Scanning QR codes...`);
+    console.log(`[Orchestrator] ${jobDbId}: Scanning QR codes with step ${pagesPerStudent}...`);
     const scanStart = Date.now();
     const totalPages = await getPdfPageCount(tempPdfPath);
-    await pdfSplitJobRepository.appendLog(jobDbId, { event: "SCANNING_QR_START", totalPages });
-    const scannedQrs = await scanQrCodesFromFile(tempPdfPath, totalPages, jobDbId);
+    await pdfSplitJobRepository.appendLog(jobDbId, { event: "SCANNING_QR_START", totalPages, pagesPerStudent });
+    const scannedQrs = await scanQrCodesFromFile(tempPdfPath, totalPages, jobDbId, pagesPerStudent);
     const totalStudents = scannedQrs.length;
     console.log(`[Orchestrator] ${jobDbId}: Found ${totalStudents} student segments.`);
     await pdfSplitJobRepository.updateJob(jobDbId, { totalStudents, progress: 20 });
@@ -184,6 +200,7 @@ async function processOrchestratorJob(bullmqJob) {
       event: "SCANNING_QR_DONE",
       totalPages,
       totalStudents,
+      pagesPerStudent,
       durationMs: Date.now() - scanStart,
     });
 
@@ -201,9 +218,10 @@ async function processOrchestratorJob(bullmqJob) {
     });
 
     // ── Stage 4: FAN-OUT → Enqueue independent batch jobs ────────────────────
+    const batchSizeStudents = getBatchSizeStudents(pagesPerStudent);
     const batches = [];
-    for (let i = 0; i < scannedQrs.length; i += BATCH_SIZE_STUDENTS) {
-      batches.push(scannedQrs.slice(i, i + BATCH_SIZE_STUDENTS));
+    for (let i = 0; i < scannedQrs.length; i += batchSizeStudents) {
+      batches.push(scannedQrs.slice(i, i + batchSizeStudents));
     }
     const totalBatches = batches.length;
 
@@ -231,6 +249,8 @@ async function processOrchestratorJob(bullmqJob) {
           batchIndex,
           totalBatches,
           totalStudents,
+          totalPages,
+          pagesPerStudent,
           segments,
           instituteId,
           universityId,

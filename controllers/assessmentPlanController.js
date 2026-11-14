@@ -165,3 +165,22 @@ export async function getBatchCoursesWithSessions(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch batch courses with sessions");
   }
 }
+
+export async function getMappedAssessmentTypes(req, res) {
+  try {
+    const result = await assessmentPlanService.getMappedAssessmentTypes(req.query);
+    return SuccessResponse(
+      res,
+      200,
+      "Mapped assessment types fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in getMappedAssessmentTypes:", error.message);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch mapped assessment types",
+    );
+  }
+}

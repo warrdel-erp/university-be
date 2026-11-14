@@ -95,6 +95,129 @@ function buildAssignmentStatus(totalSubjects, assignedSubjects) {
   return "Partially Assigned";
 }
 
+export function formatAcademicRegulationDetails(reg) {
+  if (!reg) return null;
+  const raw = reg.get ? reg.get({ plain: true }) : reg;
+  return {
+    academicRegulationId: raw.academicRegulationId,
+    regulationCode: raw.regulationCode,
+    regulationName: raw.regulationName,
+    description: raw.description ?? null,
+    academicYearRange: raw.academicYearRange ?? null,
+    applicableBatch: raw.applicableBatch ?? null,
+    effectiveFrom: raw.effectiveFrom ?? null,
+    effectiveUntil: raw.effectiveUntil ?? null,
+    version: raw.version ?? null,
+    status: raw.status ?? null,
+    isActive: raw.isActive ?? null,
+
+    // Linked Grading Scheme
+    gradingSchemeId: raw.gradingSchemeId ?? null,
+    gradingScheme: raw.gradingScheme
+      ? {
+          gradingId: raw.gradingScheme.gradingId,
+          gradingName: raw.gradingScheme.gradingName,
+          gradingCode: raw.gradingScheme.gradingCode,
+          gradingMethod: raw.gradingScheme.gradingMethod,
+        }
+      : null,
+
+    // Step 2: Evaluation Pattern & Weightage
+    evaluationPattern: raw.evaluationPattern ?? null,
+    internalWeightage: raw.internalWeightage ?? null,
+    externalWeightage: raw.externalWeightage ?? null,
+    maximumInternalMarks: raw.maximumInternalMarks ?? null,
+    maximumExternalMarks: raw.maximumExternalMarks ?? null,
+    isInternalAssessmentMandatory: raw.isInternalAssessmentMandatory ?? null,
+    isExternalAssessmentMandatory: raw.isExternalAssessmentMandatory ?? null,
+
+    // Step 3: Passing Rules & Eligibility Criteria
+    minimumAttendance: raw.minimumAttendance ?? null,
+    isAssessmentCompletionRequired: raw.isAssessmentCompletionRequired ?? null,
+    isPracticalCompletionRequired: raw.isPracticalCompletionRequired ?? null,
+    isProjectSubmissionRequired: raw.isProjectSubmissionRequired ?? null,
+    isInternshipCompletionRequired: raw.isInternshipCompletionRequired ?? null,
+    minimumOverallMarks: raw.minimumOverallMarks ?? null,
+    minimumOverallPercentage: raw.minimumOverallPercentage ?? null,
+    minimumInternalMarks: raw.minimumInternalMarks ?? null,
+    minimumExternalMarks: raw.minimumExternalMarks ?? null,
+    mandatoryComponents: raw.mandatoryComponents ?? null,
+
+    // Step 4: GPA & Ranking Rules
+    calculateSGPA: raw.calculateSGPA ?? null,
+    calculateCGPA: raw.calculateCGPA ?? null,
+    calculatePercentage: raw.calculatePercentage ?? null,
+    generateClass: raw.generateClass ?? null,
+    generateRank: raw.generateRank ?? null,
+    tieBreakingMethod: raw.tieBreakingMethod ?? null,
+
+    // Step 5: Moderation, Grace Marks & Result Rules
+    isModerationEnabled: raw.isModerationEnabled ?? null,
+    isScalingEnabled: raw.isScalingEnabled ?? null,
+    isNormalizationEnabled: raw.isNormalizationEnabled ?? null,
+    isGraceMarksEnabled: raw.isGraceMarksEnabled ?? null,
+    maximumGraceMarks: raw.maximumGraceMarks ?? null,
+    graceApplicableTo: raw.graceApplicableTo ?? null,
+    allowWithheldResult: raw.allowWithheldResult ?? null,
+    resultFreeze: raw.resultFreeze ?? null,
+    allowResultRevision: raw.allowResultRevision ?? null,
+    publishAutomatically: raw.publishAutomatically ?? null,
+    approvalRequired: raw.approvalRequired ?? null,
+
+    // Step 6: Credit Requirements
+    totalCredits: raw.totalCredits ?? null,
+    coreCredits: raw.coreCredits ?? null,
+    electiveCredits: raw.electiveCredits ?? null,
+    openElectiveCredits: raw.openElectiveCredits ?? null,
+    internshipCredits: raw.internshipCredits ?? null,
+    projectCredits: raw.projectCredits ?? null,
+
+    // Step 7: Promotion & ATKT Rules
+    isAtktEnabled: raw.isAtktEnabled ?? null,
+    maximumAtktSubjects: raw.maximumAtktSubjects ?? null,
+    isCarryForwardEnabled: raw.isCarryForwardEnabled ?? null,
+    maximumCarryForwardSubjects: raw.maximumCarryForwardSubjects ?? null,
+    promotionMethod: raw.promotionMethod ?? null,
+
+    // Step 8: Improvement Rules
+    isImprovementAllowed: raw.isImprovementAllowed ?? null,
+    maximumImprovementAttempts: raw.maximumImprovementAttempts ?? null,
+    improvementMarksConsidered: raw.improvementMarksConsidered ?? null,
+
+    // Step 9: Backlog & Supplementary Rules
+    isBacklogAllowed: raw.isBacklogAllowed ?? null,
+    maximumBacklogAttempts: raw.maximumBacklogAttempts ?? null,
+    isSupplementaryAllowed: raw.isSupplementaryAllowed ?? null,
+    backlogValidityYears: raw.backlogValidityYears ?? null,
+
+    // Step 10: Graduation & Degree Completion Requirements
+    totalCreditsRequired: raw.totalCreditsRequired ?? null,
+    minimumCgpa: raw.minimumCgpa ?? null,
+    isInternshipMandatory: raw.isInternshipMandatory ?? null,
+    isProjectMandatory: raw.isProjectMandatory ?? null,
+    isCapstoneMandatory: raw.isCapstoneMandatory ?? null,
+    isExitExaminationRequired: raw.isExitExaminationRequired ?? null,
+    isNoActiveBacklogsRequired: raw.isNoActiveBacklogsRequired ?? null,
+    isNoPendingFeesRequired: raw.isNoPendingFeesRequired ?? null,
+    isNoDisciplinaryHoldRequired: raw.isNoDisciplinaryHoldRequired ?? null,
+    minimumDegreeAttendancePercentage: raw.minimumDegreeAttendancePercentage ?? null,
+
+    // Step 12: Certificates & Transcript Generation Rules
+    marksheetTemplateId: raw.marksheetTemplateId ?? null,
+    transcriptTemplateId: raw.transcriptTemplateId ?? null,
+    degreeCertificateTemplateId: raw.degreeCertificateTemplateId ?? null,
+    provisionalCertificateTemplateId: raw.provisionalCertificateTemplateId ?? null,
+    isGenerateTranscriptAutomatically: raw.isGenerateTranscriptAutomatically ?? null,
+    isGenerateMarksheetAutomatically: raw.isGenerateMarksheetAutomatically ?? null,
+    isDigitalSignatureRequired: raw.isDigitalSignatureRequired ?? null,
+    isQrVerificationEnabled: raw.isQrVerificationEnabled ?? null,
+    marksheetPrefix: raw.marksheetPrefix ?? null,
+    transcriptPrefix: raw.transcriptPrefix ?? null,
+    degreePrefix: raw.degreePrefix ?? null,
+    isAutoNumberingEnabled: raw.isAutoNumberingEnabled ?? null,
+  };
+}
+
 function mapAssessmentPlanMapping(mapping) {
   const plain = mapping.get ? mapping.get({ plain: true }) : mapping;
   const plan = plain.assessmentPlan;
@@ -109,6 +232,10 @@ function mapAssessmentPlanMapping(mapping) {
       ? {
           assessmentPlanId: plan.assessmentPlanId,
           planName: plan.planName,
+          regulationId: plan.regulationId || null,
+          academicRegulation: formatAcademicRegulationDetails(
+            plan.academicRegulation,
+          ),
         }
       : null,
   };
@@ -211,6 +338,9 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
     });
   }
 
+  const regMapping = batch?.regulationBatchMappings?.[0] || null;
+  const reg = regMapping?.academicRegulation || null;
+
   return {
     curriculumBatchMappingId: batchMapping.curriculumBatchMappingId,
     curriculumId: curriculum.curriculumId,
@@ -218,6 +348,8 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
     batch: batchYear,
     batchEndYear,
     batchName: buildBatchName(batchYear, batchEndYear),
+    academicRegulationId: reg?.academicRegulationId || null,
+    academicRegulation: formatAcademicRegulationDetails(reg),
     sessionId: batch?.sessionId || null,
     session: session
       ? {
@@ -889,4 +1021,24 @@ export async function getBatchCoursesWithSessions(query = {}) {
     await assessmentPlanRepo.findAssignedSubjectMappings(batchIds);
 
   return nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear);
+}
+
+export async function getMappedAssessmentTypes(queryParams = {}) {
+  const {
+    assessmentType,
+    batchId,
+    courseId,
+    term,
+    subjectId,
+    search,
+  } = queryParams;
+
+  return await assessmentPlanRepo.getMappedAssessmentTypes({
+    assessmentType,
+    batchId: parsePositiveId(batchId),
+    courseId: parsePositiveId(courseId),
+    term: parsePositiveId(term),
+    subjectId: parsePositiveId(subjectId),
+    search: search ? String(search).trim() : undefined,
+  });
 }

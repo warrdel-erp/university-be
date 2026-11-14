@@ -19,6 +19,7 @@ import {
   getAssessmentPlanSubjectMappings,
   deleteAssessmentPlanSubjectMapping,
   getBatchCoursesWithSessions,
+  getMappedAssessmentTypes,
 } from "../controllers/assessmentPlanController.js";
 
 const router = express.Router();
@@ -71,11 +72,35 @@ export const overviewQuerySchema = z.object({
   search: z.string().optional(),
 });
 
+export const mappedAssessmentTypesQuerySchema = z.object({
+  assessmentType: z
+    .preprocess(
+      (val) => (typeof val === "string" && val.trim() !== "" ? val.toUpperCase().trim() : val),
+      z.enum(["INTERNAL", "EXTERNAL"]).optional().nullable(),
+    )
+    .optional()
+    .nullable(),
+  batchId: z.coerce.number().int().positive().optional(),
+  courseId: z.coerce.number().int().positive().optional(),
+  term: z.coerce.number().int().positive().optional(),
+  subjectId: z.coerce.number().int().positive().optional(),
+  search: z.string().optional(),
+});
+
 export const componentSchema = z.object({
   examSetupTypeId: z.coerce.number().int().positive().optional().nullable(),
   weightagePercentage: z.coerce.number().nonnegative(),
   maxAssessments: z.coerce.number().int().positive().optional().default(1),
   duration: z.coerce.number().int().positive().optional().nullable(),
+  assessmentType: z
+    .preprocess(
+      (val) => (typeof val === "string" && val.trim() !== "" ? val.toUpperCase().trim() : val),
+      z.enum(["INTERNAL", "EXTERNAL"]).optional().nullable(),
+    )
+    .optional()
+    .nullable(),
+  evaluationType: z.string().optional().nullable(),
+  assessmentScope: z.string().optional().nullable(),
 });
 
 export const createAssessmentPlanBody = z.object({
@@ -160,6 +185,14 @@ router.get(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   getAssessmentPlanStats,
+);
+
+router.get(
+  "/mappedAssessmentTypes",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: mappedAssessmentTypesQuerySchema }),
+  getMappedAssessmentTypes,
 );
 
 // ==========================================
