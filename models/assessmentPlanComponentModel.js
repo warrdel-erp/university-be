@@ -51,6 +51,12 @@ const assessmentPlanComponentModel = sequelize.define(
             defaultValue: null,
             field: 'assessment_type'
         },
+        assessmentTypeId: {
+            type: DataTypes.VIRTUAL,
+            get() {
+                return this.examSetupTypeId;
+            }
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,

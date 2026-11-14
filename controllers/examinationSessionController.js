@@ -366,3 +366,30 @@ export const saveExaminationSessionSubjectMarks = async (req, res) => {
   }
 };
 
+export const updateExaminationSessionSubjectMarksStatus = async (req, res) => {
+  try {
+    const result =
+      await examinationSessionServices.updateExaminationSessionSubjectMarksStatus(
+        req.body,
+        { user: req.user },
+      );
+    return SuccessResponse(
+      res,
+      200,
+      `Subject marks status updated successfully to ${result.status}`,
+      result,
+    );
+  } catch (error) {
+    console.error(
+      "Error updating examination session subject marks status:",
+      error,
+    );
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to update subject marks status",
+    );
+  }
+};
+

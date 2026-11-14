@@ -403,7 +403,18 @@ const getSubjectStudentsSchema = {
     curriculumSubjectTermMappingId: positiveIntegerQueryId.optional(),
     assessmentPlanComponentId: positiveIntegerQueryId.optional(),
     marksStatus: z
-      .enum(["ALL", "ENTERED", "PENDING", "all", "entered", "pending"])
+      .enum([
+        "ALL",
+        "ENTERED",
+        "PENDING",
+        "DRAFT",
+        "SUBMITTED",
+        "all",
+        "entered",
+        "pending",
+        "draft",
+        "submitted",
+      ])
       .optional()
       .default("ALL"),
     search: z.string().trim().optional(),
@@ -426,6 +437,10 @@ const saveSubjectMarksSchema = {
     assessmentPlanComponentId: positiveIntegerQueryId.optional(),
     maximumMarks: z.coerce.number().positive().optional().default(100),
     term: z.coerce.number().int().positive().optional(),
+    status: z
+      .enum(["DRAFT", "SUBMITTED", "draft", "submitted"])
+      .optional()
+      .default("DRAFT"),
     marks: z
       .array(
         z.object({
@@ -439,10 +454,41 @@ const saveSubjectMarksSchema = {
             .nullable()
             .optional(),
           isAbsent: z.boolean().optional().default(false),
+          status: z
+            .enum(["DRAFT", "SUBMITTED", "draft", "submitted"])
+            .optional(),
           remarks: z.string().trim().optional(),
         }),
       )
       .min(1, "marks array must contain at least one student"),
+  }),
+};
+
+const updateSubjectMarksStatusSchema = {
+  body: z.object({
+    examinationSessionId: positiveIntegerQueryId,
+    subjectId: positiveIntegerQueryId,
+    status: z.enum(["DRAFT", "SUBMITTED", "draft", "submitted"]),
+    studentIds: z
+      .array(
+        z.coerce
+          .number()
+          .int()
+          .positive("studentId must be a positive integer"),
+      )
+      .optional(),
+    studentResultItemIds: z
+      .array(
+        z.coerce
+          .number()
+          .int()
+          .positive("studentResultItemId must be a positive integer"),
+      )
+      .optional(),
+    curriculumSubjectTermMappingId: positiveIntegerQueryId.optional(),
+    assessmentPlanComponentId: positiveIntegerQueryId.optional(),
+    term: z.coerce.number().int().positive().optional(),
+    batchId: positiveIntegerQueryId.optional(),
   }),
 };
 
@@ -458,6 +504,20 @@ router.post(
   userAuth,
   validate(saveSubjectMarksSchema),
   examinationSessionController.saveExaminationSessionSubjectMarks,
+);
+
+router.patch(
+  "/subjectMarks/status",
+  userAuth,
+  validate(updateSubjectMarksStatusSchema),
+  examinationSessionController.updateExaminationSessionSubjectMarksStatus,
+);
+
+router.patch(
+  "/subjectMarksStatus",
+  userAuth,
+  validate(updateSubjectMarksStatusSchema),
+  examinationSessionController.updateExaminationSessionSubjectMarksStatus,
 );
 
 export default router;

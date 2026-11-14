@@ -1022,3 +1022,23 @@ export async function getBatchCoursesWithSessions(query = {}) {
 
   return nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear);
 }
+
+export async function getMappedAssessmentTypes(queryParams = {}) {
+  const {
+    assessmentType,
+    batchId,
+    courseId,
+    term,
+    subjectId,
+    search,
+  } = queryParams;
+
+  return await assessmentPlanRepo.getMappedAssessmentTypes({
+    assessmentType,
+    batchId: parsePositiveId(batchId),
+    courseId: parsePositiveId(courseId),
+    term: parsePositiveId(term),
+    subjectId: parsePositiveId(subjectId),
+    search: search ? String(search).trim() : undefined,
+  });
+}
