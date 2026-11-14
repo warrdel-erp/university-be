@@ -4410,31 +4410,157 @@ export async function getExaminationSessionSubjectStudents(
   let assessmentPlanComponentId = filters.assessmentPlanComponentId
     ? Number(filters.assessmentPlanComponentId)
     : null;
-  if (!assessmentPlanComponentId && sessionRecord.assessmentTypeId) {
-    const apc = await scoped(model.assessmentPlanComponentModel).findOne({
-      where: { examSetupTypeId: Number(sessionRecord.assessmentTypeId) },
-      attributes: ["assessmentPlanComponentId"],
-      raw: true,
-      transaction: options.transaction,
-    });
-    if (apc) {
-      assessmentPlanComponentId = Number(apc.assessmentPlanComponentId);
-    }
+
+  // Resolve Assessment Plan and Component for this Subject, Batch/CSTM & Examination Session
+  const apsmWhere = { subjectId: Number(subjectId) };
+  if (batchId) {
+    apsmWhere.batchId = Number(batchId);
   }
-  if (!assessmentPlanComponentId) {
-    const fallbackComp = await scoped(
-      model.assessmentPlanComponentModel,
+  if (curriculumSubjectTermMappingId) {
+    apsmWhere.curriculumSubjectTermMappingId = Number(curriculumSubjectTermMappingId);
+  }
+
+  const apsmInclude = [
+    {
+      model: model.assessmentPlanModel,
+      as: "assessmentPlan",
+      where: { isActive: true },
+      required: true,
+      include: [
+        {
+          model: model.assessmentPlanComponentModel,
+          as: "components",
+          include: [
+            {
+              model: model.examSetupTypeModel,
+              as: "examSetupType",
+              attributes: [
+                "examSetupTypeId",
+                "examName",
+                "examCode",
+                "examCategory",
+                "managedBy",
+              ],
+              required: false,
+            },
+          ],
+          required: false,
+        },
+      ],
+    },
+  ];
+
+  let mappedPlanRecord = await scoped(
+    model.assessmentPlanSubjectMappingModel,
+  ).findOne({
+    where: apsmWhere,
+    include: apsmInclude,
+    transaction: options.transaction,
+  });
+
+  if (!mappedPlanRecord && batchId && apsmWhere.curriculumSubjectTermMappingId) {
+    delete apsmWhere.curriculumSubjectTermMappingId;
+    mappedPlanRecord = await scoped(
+      model.assessmentPlanSubjectMappingModel,
     ).findOne({
-      attributes: ["assessmentPlanComponentId"],
-      raw: true,
+      where: apsmWhere,
+      include: apsmInclude,
       transaction: options.transaction,
     });
-    if (fallbackComp) {
-      assessmentPlanComponentId = Number(
-        fallbackComp.assessmentPlanComponentId,
-      );
+  }
+
+  if (!mappedPlanRecord) {
+    mappedPlanRecord = await scoped(
+      model.assessmentPlanSubjectMappingModel,
+    ).findOne({
+      where: { subjectId: Number(subjectId) },
+      include: apsmInclude,
+      transaction: options.transaction,
+    });
+  }
+
+  const assessmentPlan = mappedPlanRecord?.assessmentPlan || null;
+  const planComponents = assessmentPlan?.components || [];
+
+  const subjectTotalMarks =
+    planComponents.length > 0
+      ? planComponents.reduce(
+          (sum, c) => sum + Number(c.weightagePercentage || 0),
+          0,
+        )
+      : 100;
+
+  let matchedComponent = null;
+  if (sessionRecord.assessmentTypeId) {
+    matchedComponent = planComponents.find(
+      (c) =>
+        Number(c.examSetupTypeId) === Number(sessionRecord.assessmentTypeId),
+    );
+  }
+
+  if (filters.assessmentPlanComponentId) {
+    const compById = planComponents.find(
+      (c) =>
+        Number(c.assessmentPlanComponentId) ===
+        Number(filters.assessmentPlanComponentId),
+    );
+    if (compById) {
+      matchedComponent = compById;
     }
   }
+
+  if (matchedComponent) {
+    assessmentPlanComponentId = Number(
+      matchedComponent.assessmentPlanComponentId,
+    );
+  } else if (!assessmentPlanComponentId && planComponents.length > 0) {
+    matchedComponent = planComponents[0];
+    assessmentPlanComponentId = Number(
+      matchedComponent.assessmentPlanComponentId,
+    );
+  } else if (!assessmentPlanComponentId) {
+    if (sessionRecord.assessmentTypeId) {
+      const apc = await scoped(model.assessmentPlanComponentModel).findOne({
+        where: { examSetupTypeId: Number(sessionRecord.assessmentTypeId) },
+        attributes: [
+          "assessmentPlanComponentId",
+          "weightagePercentage",
+          "assessmentType",
+        ],
+        raw: true,
+        transaction: options.transaction,
+      });
+      if (apc) {
+        assessmentPlanComponentId = Number(apc.assessmentPlanComponentId);
+        matchedComponent = apc;
+      }
+    }
+    if (!assessmentPlanComponentId) {
+      const fallbackComp = await scoped(
+        model.assessmentPlanComponentModel,
+      ).findOne({
+        attributes: [
+          "assessmentPlanComponentId",
+          "weightagePercentage",
+          "assessmentType",
+        ],
+        raw: true,
+        transaction: options.transaction,
+      });
+      if (fallbackComp) {
+        assessmentPlanComponentId = Number(
+          fallbackComp.assessmentPlanComponentId,
+        );
+        matchedComponent = fallbackComp;
+      }
+    }
+  }
+
+  const componentWeightage =
+    matchedComponent?.weightagePercentage != null
+      ? Number(matchedComponent.weightagePercentage)
+      : 100;
+  const componentAssessmentType = matchedComponent?.assessmentType || null;
 
   // Calculate total students in cohort (matching studentWhere before marksStatus filter)
   const totalCohortCount = await scoped(model.studentModel).count({
@@ -4646,7 +4772,10 @@ export async function getExaminationSessionSubjectStudents(
       reviewReason: elig?.reviewReason || null,
       isEligible,
       studentResultItemId: mItem ? Number(mItem.studentResultItemId) : null,
-      maximumMarks: mItem ? Number(mItem.maximumMarks) : 100,
+      maximumMarks:
+        mItem && mItem.maximumMarks != null
+          ? Number(mItem.maximumMarks)
+          : componentWeightage,
       obtainedMarks: mItem ? Number(mItem.obtainedMarks) : null,
       status: mStatus,
       marksStatus: studentMarksStatus,
@@ -4685,7 +4814,14 @@ export async function getExaminationSessionSubjectStudents(
     subject: {
       subjectId: Number(subjectRecord.subjectId),
       curriculumSubjectTermMappingId,
+      assessmentPlanId: assessmentPlan
+        ? Number(assessmentPlan.assessmentPlanId)
+        : null,
       assessmentPlanComponentId,
+      weightagePercentage: componentWeightage,
+      maximumMarks: componentWeightage,
+      subjectTotalMarks,
+      assessmentType: componentAssessmentType,
       subjectName: subjectRecord.subjectName,
       subjectCode: subjectRecord.subjectCode,
       subjectType: subjectRecord.subjectType,
@@ -4726,9 +4862,10 @@ export async function saveExaminationSessionSubjectMarks(
   const {
     examinationSessionId: rawSessionId,
     subjectId: rawSubjectId,
+    batchId: rawBatchId,
     curriculumSubjectTermMappingId: rawCstmId,
     assessmentPlanComponentId: rawApComponentId,
-    maximumMarks = 100,
+    maximumMarks: rawMaxMarks,
     term: rawTerm,
     status: rawStatus = "DRAFT",
     marks = [],
@@ -4736,12 +4873,12 @@ export async function saveExaminationSessionSubjectMarks(
 
   const examinationSessionId = Number(rawSessionId);
   const subjectId = Number(rawSubjectId);
+  const batchId = rawBatchId ? Number(rawBatchId) : null;
   let term = rawTerm ? Number(rawTerm) : null;
   let curriculumSubjectTermMappingId = rawCstmId ? Number(rawCstmId) : null;
   let assessmentPlanComponentId = rawApComponentId
     ? Number(rawApComponentId)
     : null;
-  const maxMarks = Number(maximumMarks) || 100;
   const payloadStatus = String(rawStatus || "DRAFT").toUpperCase();
 
   if (payloadStatus !== "DRAFT" && payloadStatus !== "SUBMITTED") {
@@ -4822,24 +4959,134 @@ export async function saveExaminationSessionSubjectMarks(
       throw error;
     }
 
-    // 4. Resolve assessmentPlanComponentId
+    // 4. Resolve assessmentPlanComponentId & matchedComponent
+    let matchedComponent = null;
+
+    if (assessmentPlanComponentId) {
+      matchedComponent = await scoped(
+        model.assessmentPlanComponentModel,
+      ).findByPk(assessmentPlanComponentId, {
+        attributes: [
+          "assessmentPlanComponentId",
+          "weightagePercentage",
+          "assessmentType",
+        ],
+        raw: true,
+        transaction,
+      });
+    }
+
+    if (!matchedComponent) {
+      const apsmWhere = { subjectId: Number(subjectId) };
+      if (batchId) {
+        apsmWhere.batchId = Number(batchId);
+      }
+      if (curriculumSubjectTermMappingId) {
+        apsmWhere.curriculumSubjectTermMappingId = Number(
+          curriculumSubjectTermMappingId,
+        );
+      }
+
+      const apsmInclude = [
+        {
+          model: model.assessmentPlanModel,
+          as: "assessmentPlan",
+          where: { isActive: true },
+          required: true,
+          include: [
+            {
+              model: model.assessmentPlanComponentModel,
+              as: "components",
+              required: false,
+            },
+          ],
+        },
+      ];
+
+      let mappedPlanRecord = await scoped(
+        model.assessmentPlanSubjectMappingModel,
+      ).findOne({
+        where: apsmWhere,
+        include: apsmInclude,
+        transaction,
+      });
+
+      if (!mappedPlanRecord && batchId && apsmWhere.curriculumSubjectTermMappingId) {
+        delete apsmWhere.curriculumSubjectTermMappingId;
+        mappedPlanRecord = await scoped(
+          model.assessmentPlanSubjectMappingModel,
+        ).findOne({
+          where: apsmWhere,
+          include: apsmInclude,
+          transaction,
+        });
+      }
+
+      if (!mappedPlanRecord) {
+        mappedPlanRecord = await scoped(
+          model.assessmentPlanSubjectMappingModel,
+        ).findOne({
+          where: { subjectId: Number(subjectId) },
+          include: apsmInclude,
+          transaction,
+        });
+      }
+
+      const planComponents = mappedPlanRecord?.assessmentPlan?.components || [];
+
+      if (sessionRecord.assessmentTypeId) {
+        matchedComponent = planComponents.find(
+          (c) =>
+            Number(c.examSetupTypeId) === Number(sessionRecord.assessmentTypeId),
+        );
+      }
+
+      if (assessmentPlanComponentId) {
+        const compById = planComponents.find(
+          (c) =>
+            Number(c.assessmentPlanComponentId) ===
+            Number(assessmentPlanComponentId),
+        );
+        if (compById) matchedComponent = compById;
+      }
+
+      if (!matchedComponent && planComponents.length > 0) {
+        matchedComponent = planComponents[0];
+      }
+
+      if (matchedComponent) {
+        assessmentPlanComponentId = Number(
+          matchedComponent.assessmentPlanComponentId,
+        );
+      }
+    }
+
     if (!assessmentPlanComponentId) {
       if (sessionRecord.assessmentTypeId) {
         const apc = await scoped(model.assessmentPlanComponentModel).findOne({
           where: { examSetupTypeId: Number(sessionRecord.assessmentTypeId) },
-          attributes: ["assessmentPlanComponentId"],
+          attributes: [
+            "assessmentPlanComponentId",
+            "weightagePercentage",
+            "assessmentType",
+          ],
           raw: true,
           transaction,
         });
         if (apc) {
           assessmentPlanComponentId = Number(apc.assessmentPlanComponentId);
+          matchedComponent = apc;
         }
       }
       if (!assessmentPlanComponentId) {
         const fallbackComp = await scoped(
           model.assessmentPlanComponentModel,
         ).findOne({
-          attributes: ["assessmentPlanComponentId"],
+          attributes: [
+            "assessmentPlanComponentId",
+            "weightagePercentage",
+            "assessmentType",
+          ],
           raw: true,
           transaction,
         });
@@ -4847,6 +5094,7 @@ export async function saveExaminationSessionSubjectMarks(
           assessmentPlanComponentId = Number(
             fallbackComp.assessmentPlanComponentId,
           );
+          matchedComponent = fallbackComp;
         }
       }
     }
@@ -4858,6 +5106,13 @@ export async function saveExaminationSessionSubjectMarks(
       error.statusCode = 400;
       throw error;
     }
+
+    const maxMarks =
+      rawMaxMarks != null
+        ? Number(rawMaxMarks)
+        : matchedComponent?.weightagePercentage != null
+          ? Number(matchedComponent.weightagePercentage)
+          : 100;
 
     // 5. Upsert Marks for each student
     const savedResults = [];
