@@ -113,7 +113,7 @@ export const deleteExaminationSessionTerm = async (req, res) => {
 
 export const getClassSectionTermsBySetupType = async (req, res) => {
   try {
-    const { examSetupTypeId, examinationSessionId, academicYearId } = req.query;
+    const { examSetupTypeId, examinationSessionId, academicYearId, evaluationPattern } = req.query;
     const resolvedAcademicYearId =
       academicYearId ||
       req.headers?.["academic-year-id"] ||
@@ -123,6 +123,7 @@ export const getClassSectionTermsBySetupType = async (req, res) => {
       {
         examinationSessionId,
         academicYearId: resolvedAcademicYearId ? Number(resolvedAcademicYearId) : undefined,
+        evaluationPattern,
       }
     );
     return SuccessResponse(res, 200, "Mapped class section terms fetched successfully", result);
@@ -310,6 +311,84 @@ export const getExaminationSessionOverview = async (req, res) => {
       res,
       statusCode,
       error.message || "Failed to fetch examination session overview",
+    );
+  }
+};
+
+export const getExaminationSessionSubjectStudents = async (req, res) => {
+  try {
+    const result =
+      await examinationSessionServices.getExaminationSessionSubjectStudents(
+        req.query,
+        { user: req.user },
+      );
+    return SuccessResponse(
+      res,
+      200,
+      "Subject students fetched successfully",
+      result,
+    );
+  } catch (error) {
+    console.error(
+      "Error fetching examination session subject students:",
+      error,
+    );
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to fetch subject students",
+    );
+  }
+};
+
+export const saveExaminationSessionSubjectMarks = async (req, res) => {
+  try {
+    const result =
+      await examinationSessionServices.saveExaminationSessionSubjectMarks(
+        req.body,
+        { user: req.user },
+      );
+    return SuccessResponse(
+      res,
+      200,
+      "Subject marks saved successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error saving examination session subject marks:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to save subject marks",
+    );
+  }
+};
+
+export const updateExaminationSessionSubjectMarksStatus = async (req, res) => {
+  try {
+    const result =
+      await examinationSessionServices.updateExaminationSessionSubjectMarksStatus(
+        req.body,
+        { user: req.user },
+      );
+    return SuccessResponse(
+      res,
+      200,
+      `Subject marks status updated successfully to ${result.status}`,
+      result,
+    );
+  } catch (error) {
+    console.error(
+      "Error updating examination session subject marks status:",
+      error,
+    );
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to update subject marks status",
     );
   }
 };
