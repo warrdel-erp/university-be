@@ -2,6 +2,7 @@ import * as model from "../../../models/index.js";
 import { buildScope, scoped } from "../../../utility/scoped.js";
 import { requestContext } from "../../../utility/requestContext.js";
 import { Op } from "sequelize";
+import sequelize from "../../../database/sequelizeConfig.js";
 
 export async function checkOverlappingLeave(userId, startDate, endDate, excludeRequestId = null, options = {}) {
   const where = {
@@ -363,4 +364,114 @@ export async function getLeavesAssignedToUserPositions(userId, filters = {}, opt
 
   const targetModel = isUniversity ? model.approvalRequestModel : scoped(model.approvalRequestModel);
   return targetModel.findAndCountAll(queryOptions);
+}
+
+/**
+ * Fetches scheduled work, lectures, exam invigilations, evaluation deadlines,
+ * and pending tasks for an employee during their leave dates.
+ */
+export async function getEmployeeWorkloadImpact(userId, startDate, endDate) {
+  if (!userId || !startDate || !endDate) {
+    return null;
+  }
+
+  // 1. Scheduled Classes / Lectures during the leave date range
+  const [scheduledLectures] = await sequelize.query(`
+    SELECT 
+      ttcd.date,
+      COALESCE(s.subject_name, 'Class') as subjectName,
+      s.subject_code as subjectCode,
+      crs.room_number as roomNumber,
+      ttsp.period_name as periodName,
+      ttsp.start_time as startTime,
+      ttsp.end_time as endTime
+    FROM time_table_cell_teachers_date_wise ttct
+    JOIN time_table_cell_date_wise ttcd ON ttcd.time_table_cell_date_wise_id = ttct.time_table_cell_date_wise_id
+    LEFT JOIN time_table_cell ttc ON ttc.time_table_cell_id = ttcd.time_table_cell_id
+    LEFT JOIN time_table_structure_periods ttsp ON ttsp.time_table_creation_id = ttc.time_table_creation_id
+    LEFT JOIN subject s ON s.subject_id = ttcd.subject_id
+    LEFT JOIN class_room_section crs ON crs.class_room_section_id = ttcd.class_room_section_id
+    WHERE ttct.user_id = ${sequelize.escape(userId)}
+      AND ttcd.date BETWEEN ${sequelize.escape(startDate)} AND ${sequelize.escape(endDate)}
+    ORDER BY ttcd.date ASC, ttsp.start_time ASC
+  `);
+
+  // 2. Exam Invigilation Duties during the leave date range
+  const [examDuties] = await sequelize.query(`
+    SELECT 
+      eia.exam_date as examDate,
+      eia.role,
+      crs.room_number as roomNumber
+    FROM exam_invigilator_assignment eia
+    LEFT JOIN class_room_section crs ON crs.class_room_section_id = eia.class_room_section_id
+    WHERE eia.user_id = ${sequelize.escape(userId)}
+      AND eia.exam_date BETWEEN ${sequelize.escape(startDate)} AND ${sequelize.escape(endDate)}
+    ORDER BY eia.exam_date ASC
+  `);
+
+  // 3. Teacher Exam Assignments / Evaluation Deadlines
+  const [examAssignments] = await sequelize.query(`
+    SELECT 
+      tea.teacher_exam_assignment_id as assignmentId,
+      tea.deadline,
+      s.subject_name as subjectName,
+      es.exam_date as examDate
+    FROM teacher_exam_assignment tea
+    JOIN employee e ON e.employee_id = tea.employee_id
+    LEFT JOIN exam_schedule es ON es.exam_schedule_id = tea.exam_schedule_id
+    LEFT JOIN subject s ON s.subject_id = es.subject_id
+    WHERE e.user_id = ${sequelize.escape(userId)}
+      AND (
+        (es.exam_date BETWEEN ${sequelize.escape(startDate)} AND ${sequelize.escape(endDate)})
+        OR (tea.deadline BETWEEN ${sequelize.escape(startDate)} AND ${sequelize.escape(endDate)})
+      )
+  `);
+
+  // 4. Pending Approval tasks assigned to this user's position
+  const [pendingApprovalsResult] = await sequelize.query(`
+    SELECT COUNT(*) as count
+    FROM approval_requests ar
+    JOIN user_department_positions udp ON udp.department_position_id = ar.assigned_to_position_id
+    WHERE udp.user_id = ${sequelize.escape(userId)}
+      AND udp.status = 'ACTIVE'
+      AND ar.status = 'pending'
+  `);
+  const pendingApprovalsCount = parseInt(pendingApprovalsResult[0]?.count || 0, 10);
+
+  // 5. Check if any substitute has been mapped
+  const [substitutes] = await sequelize.query(`
+    SELECT 
+      ts.teacher_substitute_id as substituteId,
+      u_sub.user_name as substituteName,
+      u_sub.email as substituteEmail
+    FROM teacher_substitute ts
+    JOIN users u_sub ON u_sub.user_id = ts.substitute_user_id
+    WHERE ts.user_id = ${sequelize.escape(userId)}
+  `);
+
+  const totalClasses = scheduledLectures.length;
+  const totalExamDuties = examDuties.length;
+  const totalDeadlines = examAssignments.length;
+  const hasConflicts = totalClasses > 0 || totalExamDuties > 0 || totalDeadlines > 0;
+
+  const summaryParts = [];
+  if (totalClasses > 0) summaryParts.push(`${totalClasses} lecture(s) scheduled`);
+  if (totalExamDuties > 0) summaryParts.push(`${totalExamDuties} exam duty(ies)`);
+  if (totalDeadlines > 0) summaryParts.push(`${totalDeadlines} exam deadline(s)`);
+  if (pendingApprovalsCount > 0) summaryParts.push(`${pendingApprovalsCount} pending approval(s)`);
+
+  const summaryText = summaryParts.length > 0 ? summaryParts.join(", ") : "No scheduled conflicts";
+
+  return {
+    hasConflicts,
+    summary: summaryText,
+    totalScheduledLectures: totalClasses,
+    totalExamDuties,
+    totalExamDeadlines: totalDeadlines,
+    pendingApprovalsCount,
+    scheduledLectures,
+    examDuties,
+    examDeadlines: examAssignments,
+    assignedSubstitutes: substitutes,
+  };
 }
