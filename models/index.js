@@ -202,6 +202,7 @@ import studentResultItemModel from "./studentResultItemModel.js";
 import previousAcademicUploadLogModel from "./previousAcademicUploadLogModel.js";
 import eventModel from "./eventModel.js";
 import eventLogModel from "./eventLogModel.js";
+import subjectZScoreCalculationModel from "./subjectZScoreCalculationModel.js";
 
 // Student Result Item associations
 studentResultItemModel.belongsTo(studentModel, { foreignKey: "studentId", as: "student" });
@@ -215,6 +216,22 @@ assessmentPlanComponentModel.hasMany(studentResultItemModel, { foreignKey: "asse
 
 studentResultItemModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
 studentResultItemModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+
+// Subject Z-Score Calculation associations
+subjectZScoreCalculationModel.belongsTo(examinationSessionModel, { foreignKey: "examinationSessionId", as: "examinationSession" });
+examinationSessionModel.hasMany(subjectZScoreCalculationModel, { foreignKey: "examinationSessionId", as: "zScoreCalculations" });
+
+subjectZScoreCalculationModel.belongsTo(subjectModel, { foreignKey: "subjectId", as: "subject" });
+subjectModel.hasMany(subjectZScoreCalculationModel, { foreignKey: "subjectId", as: "zScoreCalculations" });
+
+subjectZScoreCalculationModel.belongsTo(examScheduleModel, { foreignKey: "examScheduleId", as: "examSchedule" });
+examScheduleModel.hasMany(subjectZScoreCalculationModel, { foreignKey: "examScheduleId", as: "zScoreCalculations" });
+
+subjectZScoreCalculationModel.belongsTo(userModel, { foreignKey: "teacherId", as: "teacher" });
+subjectZScoreCalculationModel.belongsTo(userModel, { foreignKey: "createdBy", as: "creator" });
+
+subjectZScoreCalculationModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+subjectZScoreCalculationModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
 
 previousAcademicUploadLogModel.belongsTo(curriculumBatchTermMappingModel, {
   foreignKey: "curriculumBatchTermMappingId",
@@ -4387,6 +4404,7 @@ export {
   examRoomMaterialItemModel,
   studentResultModel,
   studentResultItemModel,
+  subjectZScoreCalculationModel,
   previousAcademicUploadLogModel,
   eventModel,
   eventLogModel,

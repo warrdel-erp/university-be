@@ -17,19 +17,23 @@ import * as pdfSplitJobRepository from "../repository/pdfSplitJobRepository.js";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-export const PAGES_PER_STUDENT = 2;
+export const DEFAULT_PAGES_PER_STUDENT = 2;
+export const PAGES_PER_STUDENT = DEFAULT_PAGES_PER_STUDENT; // Kept for backward compatibility
 
 export const SPLIT_BATCH_SIZE_PAGES = Number(process.env.SPLIT_BATCH_SIZE_PAGES) || 60;
 
-/** Always a whole number of students per batch */
-export const BATCH_SIZE_STUDENTS = Math.max(
-  1,
-  Math.floor(SPLIT_BATCH_SIZE_PAGES / PAGES_PER_STUDENT)
-);
+/** Calculate whole number of students per batch dynamically based on pagesPerStudent */
+export function getBatchSizeStudents(pagesPerStudent = DEFAULT_PAGES_PER_STUDENT) {
+  const pages = Number(pagesPerStudent) > 0 ? Number(pagesPerStudent) : DEFAULT_PAGES_PER_STUDENT;
+  return Math.max(1, Math.floor(SPLIT_BATCH_SIZE_PAGES / pages));
+}
+
+/** Always a whole number of students per batch (default fallback) */
+export const BATCH_SIZE_STUDENTS = getBatchSizeStudents(DEFAULT_PAGES_PER_STUDENT);
 
 /**
  * How many batch jobs run in parallel.
- * Each batch processes BATCH_SIZE_STUDENTS answer sheets concurrently.
+ * Each batch processes batchSizeStudents answer sheets concurrently.
  */
 export const BATCH_CONCURRENCY = Number(process.env.SPLIT_BATCH_CONCURRENCY) || 3;
 
