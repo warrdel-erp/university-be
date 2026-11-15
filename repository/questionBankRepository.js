@@ -84,7 +84,7 @@ export async function countQuestions(filters = {}) {
             raw: true,
         })).map((row) => row.subjectId);
 
-        if (!subjectIds.length) return { total: 0, approved: 0 };
+        if (!subjectIds.length) return { total: 0, approved: 0, pending: 0, rejected: 0 };
 
         const where = questionFiltersWhere(filters, subjectIds);
 
@@ -92,6 +92,12 @@ export async function countQuestions(filters = {}) {
             total: await scoped(model.questionBankModel).count({ where }),
             approved: await scoped(model.questionBankModel).count({
                 where: { ...where, status: questionStatus[1] },
+            }),
+            pending: await scoped(model.questionBankModel).count({
+                where: { ...where, status: questionStatus[0] },
+            }),
+            rejected: await scoped(model.questionBankModel).count({
+                where: { ...where, status: questionStatus[2] },
             }),
         };
     } catch (error) {
