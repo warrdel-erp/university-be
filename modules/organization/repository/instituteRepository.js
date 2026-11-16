@@ -4,7 +4,12 @@ import * as model from "../../../models/index.js";
 import { getTenantStore } from "../../../utility/requestContext.js";
 
 function universityWhere(extra = {}) {
-  return { universityId: getTenantStore().universityId, ...extra };
+  const store = getTenantStore();
+  const universityId = store?.universityId;
+  if (universityId) {
+    return { universityId, ...extra };
+  }
+  return { ...extra };
 }
 
 export async function createInstitute(data, affiliatedUniversities = [], academicYear) {
@@ -178,6 +183,24 @@ export async function updateAffiliatedUniversity(affiliatedUniversityId, data) {
     return getAffiliatedUniversityById(affiliatedUniversityId);
   } catch (error) {
     console.error("Error in Institute Repository (updateAffiliatedUniversity):", error);
+    throw error;
+  }
+}
+
+export async function deleteAffiliatedUniversity(affiliatedUniversityId) {
+  try {
+    const existing = await getAffiliatedUniversityById(affiliatedUniversityId);
+    if (!existing) {
+      return null;
+    }
+
+    await model.affiliatedIniversityModel.destroy({
+      where: universityWhere({ affiliatedUniversityId }),
+    });
+
+    return existing;
+  } catch (error) {
+    console.error("Error in Institute Repository (deleteAffiliatedUniversity):", error);
     throw error;
   }
 }

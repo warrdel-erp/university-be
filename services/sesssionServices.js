@@ -1,5 +1,5 @@
 import * as sessionCreationService from "../repository/sessionRepository.js";
-
+import sequelize from "../database/sequelizeConfig.js";
 import { assertCourseIsActive } from "../repository/courseRepository.js";
 
 
@@ -82,21 +82,45 @@ export async function updateSession(sessionId, sessionData, updatedBy) {
 
 
 export async function deleteSession(sessionId) {
-
-  const isSessionAlreadyMapped = await sessionCreationService.isSessionMappedwithcourse(sessionId);
-
-
-
-  if (isSessionAlreadyMapped.length > 0) {
-
-    throw new Error('Session already mapped with courses unable to delete')
-
+  const numericSessionId = Number(sessionId);
+  if (!numericSessionId || isNaN(numericSessionId)) {
+    throw new Error("Valid sessionId is required");
   }
 
+  // 1. Check if any batches exist under this session
+  const [batches] = await sequelize.query(
+    "SELECT batch_id FROM batch WHERE session_id = ? LIMIT 1",
+    { replacements: [numericSessionId] }
+  );
+  if (batches && batches.length > 0) {
+    throw new Error("Cannot delete session: Batches have already been created under this session.");
+  }
 
+  // 2. Check if any students are enrolled under this session
+  const [students] = await sequelize.query(
+    "SELECT student_id FROM students WHERE session_id = ? AND deleted_at IS NULL LIMIT 1",
+    { replacements: [numericSessionId] }
+  );
+  if (students && students.length > 0) {
+    throw new Error("Cannot delete session: Students are enrolled under this session.");
+  }
 
-  return await sessionCreationService.deleteSession(sessionId);
+  // 3. Check if any examination sessions are linked to this session
+  const [exams] = await sequelize.query(
+    "SELECT examination_session_term_id FROM examination_session_term WHERE session_id = ? LIMIT 1",
+    { replacements: [numericSessionId] }
+  );
+  if (exams && exams.length > 0) {
+    throw new Error("Cannot delete session: Examination sessions are linked to this session.");
+  }
 
+  // If no batches, students, or exams exist, clean up course mapping and delete session
+  await sequelize.query(
+    "DELETE FROM session_course_mapping WHERE session_id = ?",
+    { replacements: [numericSessionId] }
+  );
+
+  return await sessionCreationService.deleteSession(numericSessionId);
 }
 
 
@@ -332,8 +356,6 @@ export async function updateCouseSessionMapping(data, updatedBy) {
 }
 
 
-
-import sequelize from "../database/sequelizeConfig.js";
 
 export async function getSessionBatches(sessionId) {
     const [rows] = await sequelize.query("SELECT * FROM batch WHERE session_id = ? ORDER BY batch DESC", { replacements: [Number(sessionId)] });

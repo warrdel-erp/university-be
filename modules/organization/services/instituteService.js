@@ -1,3 +1,4 @@
+import * as model from "../../../models/index.js";
 import * as instituteRepository from "../repository/instituteRepository.js";
 import * as campusRepository from "../repository/campusRepository.js";
 import { getTenantStore } from "../../../utility/requestContext.js";
@@ -124,6 +125,53 @@ export const listInstitutes = async (campusId) => {
     return rows.map(mapInstituteRow);
   } catch (error) {
     console.error("Error in Institute Service (listInstitutes):", error);
+    throw error;
+  }
+};
+
+export const deleteAffiliatedUniversity = async (affiliatedUniversityId) => {
+  try {
+    const existing = await instituteRepository.getAffiliatedUniversityById(affiliatedUniversityId);
+    if (!existing) {
+      const error = new Error("Affiliated university not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Dependency check 1: Active courses mapped to this affiliated university
+    const mappedCourse = await model.courseModel.findOne({
+      where: {
+        affiliatedUniversityId,
+        deletedAt: null,
+      },
+      attributes: ["courseId", "courseName"],
+    });
+
+    if (mappedCourse) {
+      const error = new Error(`Cannot delete affiliated university: It is currently linked to course "${mappedCourse.courseName}".`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Dependency check 2: Active students mapped to this affiliated university
+    const mappedStudent = await model.studentModel.findOne({
+      where: {
+        affiliatedUniversityId,
+        deletedAt: null,
+      },
+      attributes: ["studentId"],
+    });
+
+    if (mappedStudent) {
+      const error = new Error("Cannot delete affiliated university: It is currently linked to active students.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await instituteRepository.deleteAffiliatedUniversity(affiliatedUniversityId);
+    return { affiliatedUniversityId };
+  } catch (error) {
+    console.error("Error in Institute Service (deleteAffiliatedUniversity):", error);
     throw error;
   }
 };
