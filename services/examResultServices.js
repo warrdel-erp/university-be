@@ -707,7 +707,7 @@ export async function getSku(query) {
     });
   }
 
-  const [studentRows, submitPairs] = await Promise.all([
+  const [studentRows, submitPairs, existingResults] = await Promise.all([
     examResultRepository.findApplicableStudentContexts({
       terms,
       courseSessionCombos,
@@ -716,7 +716,17 @@ export async function getSku(query) {
     examResultRepository.findSubmittedAnswerSheetPairsByExaminationSessionId(
       examinationSessionId,
     ),
+    examResultRepository.findStudentResultsByExaminationSession(
+      examinationSessionId,
+    ),
   ]);
+
+  const publishedByKey = new Map();
+  for (const result of existingResults || []) {
+    const plain = result.get ? result.get({ plain: true }) : result;
+    const key = `${Number(plain.studentId)}_${Number(plain.courseId)}_${Number(plain.sessionId)}_${Number(plain.term)}`;
+    publishedByKey.set(key, plain);
+  }
 
   const submitSet = new Set();
   for (const pair of submitPairs) {
@@ -724,6 +734,10 @@ export async function getSku(query) {
   }
 
   let ready = 0;
+  let notReady = 0;
+  let generated = 0;
+  let published = 0;
+  let readyTotal = 0;
   const studentSeen = new Set();
 
   for (const row of studentRows) {
@@ -735,6 +749,21 @@ export async function getSku(query) {
     const sessionId = Number(row.sessionId);
     const term = Number(row.studentClassSectionTerm.term);
 
+    const studentResult = publishedByKey.get(
+      `${studentId}_${courseId}_${sessionId}_${term}`
+    );
+
+    if (studentResult) {
+      const status = String(studentResult.resultStatus || "").toLowerCase();
+      if (status === "generated") {
+        generated += 1;
+      } else {
+        published += 1;
+      }
+      readyTotal += 1;
+      continue;
+    }
+
     const applicable = [];
     for (const schedule of schedules) {
       if (schedule.courseId != null && schedule.courseId !== courseId) continue;
@@ -744,7 +773,10 @@ export async function getSku(query) {
     }
 
     // No applicable exams => NOT_READY (same as list/detail readiness)
-    if (!applicable.length) continue;
+    if (!applicable.length) {
+      notReady += 1;
+      continue;
+    }
 
     let isReady = true;
     for (const schedule of applicable) {
@@ -753,7 +785,17 @@ export async function getSku(query) {
         break;
       }
     }
-    if (isReady) ready = decimalAdd(ready, 1);
+    if (isReady) {
+      ready += 1;
+      readyTotal += 1;
+    } else {
+      notReady += 1;
+    }
+  }
+
+  const accounted = ready + notReady + generated + published;
+  if (studentTotal > accounted) {
+    notReady += (studentTotal - accounted);
   }
 
   return {
@@ -764,7 +806,10 @@ export async function getSku(query) {
     checked: sheetSku.checked,
     notChecked: sheetSku.notChecked,
     ready,
-    notReady: decimalMax(0, decimalSubtract(studentTotal, ready)),
+    notReady,
+    generated,
+    published,
+    readyTotal,
   };
 }
 
@@ -2155,7 +2200,7 @@ export async function getSubjectCalculationBreakdown(body) {
     };
   }
 
-  const shouldSave = body.save === true || (body.isPost && body.save !== false);
+  const shouldSave = body.save === true || body.save === "true";
   if (shouldSave && isRelative) {
     try {
       await examResultRepository.saveSubjectZScoreCalculation({
