@@ -84,15 +84,28 @@ export async function countQuestions(filters = {}) {
             raw: true,
         })).map((row) => row.subjectId);
 
-        if (!subjectIds.length) return { total: 0, approved: 0 };
+        if (!subjectIds.length) return { total: 0, approved: 0, pending: 0, rejected: 0 };
 
         const where = questionFiltersWhere(filters, subjectIds);
 
-        return {
-            total: await scoped(model.questionBankModel).count({ where }),
-            approved: await scoped(model.questionBankModel).count({
+        const [total, approved, pending, rejected] = await Promise.all([
+            scoped(model.questionBankModel).count({ where }),
+            scoped(model.questionBankModel).count({
                 where: { ...where, status: questionStatus[1] },
             }),
+            scoped(model.questionBankModel).count({
+                where: { ...where, status: questionStatus[0] },
+            }),
+            scoped(model.questionBankModel).count({
+                where: { ...where, status: questionStatus[2] },
+            }),
+        ]);
+
+        return {
+            total,
+            approved,
+            pending,
+            rejected,
         };
     } catch (error) {
         console.error("Error counting questions in bank:", error.message);

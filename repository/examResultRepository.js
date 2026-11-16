@@ -503,6 +503,26 @@ export async function findStudentResult(where, transaction) {
   });
 }
 
+export async function findStudentResultsByExaminationSession(
+  examinationSessionId,
+  transaction,
+) {
+  return scoped(model.studentResultModel).findAll({
+    where: {
+      examinationSessionId: Number(examinationSessionId),
+    },
+    attributes: [
+      "studentResultId",
+      "studentId",
+      "courseId",
+      "sessionId",
+      "term",
+      "resultStatus",
+    ],
+    transaction,
+  });
+}
+
 export async function findStudentResultsByExaminationSessionAndStudentIds(
   examinationSessionId,
   studentIds,
