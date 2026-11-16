@@ -1,0 +1,221 @@
+{
+  "info": {
+    "_postman_id": "7b2c9a10-leave-types-v1-collection-001",
+    "name": "Leave Types Management APIs",
+    "description": "Comprehensive Leave Types APIs including General Information, Usage & Eligibility Rules, Holidays & Carry Forward Rules, and Encashment Rules with Status Management (Draft, Published, Active, Inactive).\n\nBase path: `/leave-types`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Get All Leave Types (List with Filters & Pagination)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text",
+            "description": "User JWT token cookie"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-types?page=1&limit=10&classification=All&status=All&search=",
+          "host": ["{{base_url}}"],
+          "path": ["leave-types"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number (defaults to 1)"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Records per page (defaults to 10)"
+            },
+            {
+              "key": "classification",
+              "value": "All",
+              "description": "Filter by classification ('Paid', 'Unpaid', 'Duty', or 'All')"
+            },
+            {
+              "key": "status",
+              "value": "All",
+              "description": "Filter by status ('Active', 'Inactive', 'Draft', 'Published', or 'All')"
+            },
+            {
+              "key": "search",
+              "value": "",
+              "description": "Search by name, code (e.g. 'CL'), or description"
+            }
+          ]
+        },
+        "description": "Returns list of leave types with their current status, balance tracking toggle, rules, and 'usedInPoliciesCount' (how many policies currently use this leave type)."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Get Single Leave Type by ID",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-types/1",
+          "host": ["{{base_url}}"],
+          "path": ["leave-types", "1"]
+        },
+        "description": "Fetches complete details for a single leave type including its 3 sub-rule tabs: eligibility, holidaysCarryForward, and encashment, along with usedInPoliciesCount."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Create Leave Type (Publish / Active)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Casual Leave\",\n  \"code\": \"CL\",\n  \"description\": \"For short-term personal needs.\",\n  \"classification\": \"Paid\",\n  \"trackBalance\": true,\n  \"status\": \"Active\",\n  \"eligibility\": {\n    \"allowDuringProbation\": true,\n    \"minServiceRequirement\": false,\n    \"allowHalfDay\": true,\n    \"minLeaveDuration\": 0.5,\n    \"maxConsecutiveDays\": 5,\n    \"maxDaysPerApplication\": 5,\n    \"advanceNoticeMin\": 1,\n    \"backdatedApplication\": \"Allowed with Limit\",\n    \"backdatedLimit\": 3,\n    \"futureApplicationLimit\": 60,\n    \"requireSupportingDoc\": true,\n    \"docRequirementRule\": \"Only When Leave Duration Is\",\n    \"docRequiredAfterDays\": 2,\n    \"acceptedDocTypes\": \"Medical Certificate, Prescription\",\n    \"combinationRule\": \"No Restriction\"\n  },\n  \"holidaysCarryForward\": {\n    \"applySandwichRule\": true,\n    \"sandwichWeeklyOffs\": true,\n    \"sandwichPublicHolidays\": true,\n    \"unusedLeaveAction\": \"Carry to Next Period\",\n    \"allowYearEndCarryForward\": true,\n    \"carryForwardCalcType\": \"Percentage of Unused Balance\",\n    \"carryForwardPercentage\": 50,\n    \"transferCap\": 30,\n    \"maxAccumulatedBalance\": 60,\n    \"expiryAfterMonths\": \"After 12 months\",\n    \"allowNegativeBalance\": false,\n    \"maxNegativeBalance\": 0,\n    \"requireAdditionalApproval\": false\n  },\n  \"encashment\": {\n    \"allowEncashment\": true,\n    \"applicableOn\": \"Both\",\n    \"dsLimitMethod\": \"Fixed Days\",\n    \"dsMaxEncashmentDays\": 10,\n    \"dsMinBalanceToRetain\": 10,\n    \"dsMinServiceRequirement\": 12,\n    \"dsEncashmentFrequency\": \"Yearly\",\n    \"sepLimitMethod\": \"Entire Eligible Balance\",\n    \"sepMinServiceRequirement\": 0\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/leave-types",
+          "host": ["{{base_url}}"],
+          "path": ["leave-types"]
+        },
+        "description": "Creates a new Leave Type along with its Eligibility, Holidays & Carry Forward, and Encashment configurations in an atomic transaction."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Create Leave Type (Save as Draft)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Maternity Leave\",\n  \"code\": \"ML\",\n  \"description\": \"For maternity related needs.\",\n  \"classification\": \"Paid\",\n  \"trackBalance\": false,\n  \"status\": \"Draft\",\n  \"eligibility\": {\n    \"allowDuringProbation\": false,\n    \"minServiceRequirement\": true,\n    \"allowHalfDay\": false,\n    \"minLeaveDuration\": 1,\n    \"maxConsecutiveDays\": 180,\n    \"maxDaysPerApplication\": 180,\n    \"advanceNoticeMin\": 30,\n    \"backdatedApplication\": \"Not Allowed\",\n    \"backdatedLimit\": 0,\n    \"futureApplicationLimit\": 90,\n    \"requireSupportingDoc\": true,\n    \"docRequirementRule\": \"Always\",\n    \"docRequiredAfterDays\": 1,\n    \"acceptedDocTypes\": \"Doctor Certificate\",\n    \"combinationRule\": \"No Restriction\"\n  },\n  \"holidaysCarryForward\": {\n    \"applySandwichRule\": false,\n    \"sandwichWeeklyOffs\": false,\n    \"sandwichPublicHolidays\": false,\n    \"unusedLeaveAction\": \"Lapse\",\n    \"allowYearEndCarryForward\": false,\n    \"transferCap\": 0,\n    \"maxAccumulatedBalance\": 0,\n    \"allowNegativeBalance\": false,\n    \"maxNegativeBalance\": 0,\n    \"requireAdditionalApproval\": false\n  },\n  \"encashment\": {\n    \"allowEncashment\": false\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/leave-types",
+          "host": ["{{base_url}}"],
+          "path": ["leave-types"]
+        },
+        "description": "Saves a Leave Type in 'Draft' status so it can be edited later before publishing."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Update Leave Type (Save Changes / Edit All Tabs)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Casual Leave (Updated)\",\n  \"description\": \"For short-term personal needs updated.\",\n  \"eligibility\": {\n    \"maxConsecutiveDays\": 7\n  },\n  \"holidaysCarryForward\": {\n    \"transferCap\": 35\n  },\n  \"encashment\": {\n    \"dsMaxEncashmentDays\": 15\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/leave-types/1",
+          "host": ["{{base_url}}"],
+          "path": ["leave-types", "1"]
+        },
+        "description": "Updates main leave type properties and upserts/updates any of the 3 sub-rule tables. NOTE: Once a leave type is 'Published', modifications are locked and this will return a 400 Bad Request error."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Update Status (Review & Publish / Activate / Deactivate)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"Published\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/leave-types/1/status",
+          "host": ["{{base_url}}"],
+          "path": ["leave-types", "1", "status"]
+        },
+        "description": "Quick status update endpoint. Allowed status values: 'Active', 'Inactive', 'Draft', 'Published'."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Delete Leave Type",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/leave-types/1?force=false",
+          "host": ["{{base_url}}"],
+          "path": ["leave-types", "1"],
+          "query": [
+            {
+              "key": "force",
+              "value": "false",
+              "description": "Pass true to force delete even if used in policies"
+            }
+          ]
+        },
+        "description": "Soft deletes the leave type. Will block deletion with a warning if the leave type is in use by policies unless ?force=true is passed."
+      },
+      "response": []
+    }
+  ]
+}
