@@ -10,7 +10,7 @@ import {
   buildStudentGroupFromSchedule,
   lookupStudentCount,
 } from "../utility/studentCount.js";
-import { getStudentCountMapByGroups } from "./studentCountServices.js";
+import { getStudentCountMapByGroups } from "../modules/student/services/studentCountServices.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);

@@ -1,0 +1,6535 @@
+import * as model from "../../../models/index.js";
+import { Op } from "sequelize";
+import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
+import * as academicGroupRepository from "../../student/repository/academicGroupRepository.js";
+import {
+  getTimeTableStructureById,
+  getStructureCourseMappingById,
+  getMappedStructuresForCourseSession,
+  findVariantById,
+  findDefaultVariantByStructureId,
+} from "../repository/timeTableRepository.js";
+import { getTeacherDetailsByTeacherSubjectId } from "../../hrms/repository/teacherSubjectMappingRepository.js";
+import { recomputeFaculityCurrentLoadHours } from "../../hrms/services/faculityService.js";
+import sequelize from "../../../database/sequelizeConfig.js";
+import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
+import {
+  resolveProgramTerm,
+  resolveTimeTableRoutineSection,
+  stripRoutinePersistPayload,
+} from "../../../utility/classSectionIncludes.js";
+import { findClassSectionTermById } from "../../student/repository/classSectionTermRepository.js";
+import {
+  getCourseByCourseId,
+  getSessionSummaryById,
+} from "../../../repository/courseRepository.js";
+import { buildTermName, termsForYear } from "../../../utility/courseTerms.js";
+import { formatQueryDate } from "../../../utility/helper.js";
+import { randomUUID } from "crypto";
+import { getTenantStore } from "../../../utility/requestContext.js";
+import { scoped } from "../../../utility/scoped.js";
+
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
+
+function toDateOnlyString(value) {
+  if (value == null || value === "") {
+    return null;
+  }
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (match) {
+      return match[1];
+    }
+  }
+  return formatQueryDate(value);
+}
+
+function assertRoutineDatesWithinStructure(
+  courseMapping,
+  startingDate,
+  endingDate,
+) {
+  if (!courseMapping) {
+    throw new Error("Invalid mapperId. Map the course to the structure first");
+  }
+
+  const mappingStart = toDateOnlyString(courseMapping.startingDate);
+  const mappingEnd = toDateOnlyString(courseMapping.endingDate);
+  const routineStart = toDateOnlyString(startingDate);
+  const routineEnd = toDateOnlyString(endingDate);
+
+  if (!mappingStart || !mappingEnd) {
+    throw new Error(
+      "Structure course mapping startingDate and endingDate are required",
+    );
+  }
+  if (!routineStart || !routineEnd) {
+    throw new Error("startingDate and endingDate are required");
+  }
+  if (routineStart > routineEnd) {
+    throw new Error("Routine endingDate cannot be before startingDate");
+  }
+  if (routineStart < mappingStart) {
+    throw new Error(
+      `Routine startingDate (${routineStart}) cannot be before mapping startingDate (${mappingStart})`,
+    );
+  }
+  if (routineEnd > mappingEnd) {
+    throw new Error(
+      `Routine endingDate (${routineEnd}) cannot be after mapping endingDate (${mappingEnd})`,
+    );
+  }
+}
+
+export async function buildRoutineVariantSchedules(
+  mapping = null,
+  routineDates = {},
+  basePeriods = [],
+) {
+  if (!Array.isArray(basePeriods) || basePeriods.length === 0) {
+    return [];
+  }
+
+  const plainMapping = mapping?.get ? mapping.get({ plain: true }) : mapping;
+  if (!plainMapping) return [];
+
+  const variantMappings = plainMapping?.variantCourseMappings || [];
+  const routineStart = routineDates?.startDate
+    ? toDateOnlyString(routineDates.startDate)
+    : "";
+  const routineEnd = routineDates?.endDate
+    ? toDateOnlyString(routineDates.endDate)
+    : "";
+
+  // Sort mappings chronologically by startingDate
+  const sortedMappings = [...variantMappings].sort((a, b) => {
+    const sA = toDateOnlyString(a?.startingDate) || "";
+    const sB = toDateOnlyString(b?.startingDate) || "";
+    return sA.localeCompare(sB);
+  });
+
+  // Filter overlapping mappings with the routine date range (if dates provided)
+  const applicableMappings = sortedMappings.filter((vm) => {
+    const vmStart = toDateOnlyString(vm.startingDate);
+    const vmEnd = toDateOnlyString(vm.endingDate);
+    if (!vmStart || !vmEnd) return false;
+    if (routineStart && routineEnd) {
+      return vmStart <= routineEnd && vmEnd >= routineStart;
+    }
+    if (routineStart) {
+      return vmEnd >= routineStart;
+    }
+    if (routineEnd) {
+      return vmStart <= routineEnd;
+    }
+    return true;
+  });
+
+  if (applicableMappings.length === 0) {
+    const structure = plainMapping?.timeTableStructure;
+    const structureVariants = structure?.structureVariants || [];
+    const defaultVariant =
+      structureVariants.find((v) => v.isDefault) || structureVariants[0];
+    let defVariantObj = defaultVariant?.get
+      ? defaultVariant.get({ plain: true })
+      : defaultVariant;
+    let defPeriods = defVariantObj?.variantPeriods;
+
+    if (!defPeriods?.length && plainMapping?.timeTableNameId) {
+      const dbDef = await findDefaultVariantByStructureId(
+        plainMapping.timeTableNameId,
+      );
+      if (dbDef?.timeTableStructureVariantId) {
+        const loaded = await findVariantById(
+          dbDef.timeTableStructureVariantId,
+        );
+        if (loaded) {
+          defVariantObj = loaded?.get ? loaded.get({ plain: true }) : loaded;
+          defPeriods = defVariantObj?.variantPeriods;
+        }
+      }
+    }
+
+    const vpMap = new Map();
+    for (const vp of defPeriods || []) {
+      const plainVp = vp?.get ? vp.get({ plain: true }) : vp;
+      if (plainVp?.timeTableStructurePeriodsId != null) {
+        vpMap.set(Number(plainVp.timeTableStructurePeriodsId), plainVp);
+      }
+    }
+
+    const periodsForDef = basePeriods.map((bp) => {
+      const plainBp = bp?.get ? bp.get({ plain: true }) : bp;
+      const periodId = Number(plainBp.timeTableCreationId);
+      const vp = vpMap.get(periodId);
+      return {
+        timeTableCreationId: periodId,
+        name: plainBp.periodName,
+        startTime:
+          vp && vp.startTime != null && vp.startTime !== ""
+            ? vp.startTime
+            : plainBp.startTime,
+        endTime:
+          vp && vp.endTime != null && vp.endTime !== ""
+            ? vp.endTime
+            : plainBp.endTime,
+        isBreak: plainBp.isBreak ?? false,
+        isCourse: vp?.isCourse ?? plainBp.isCourse ?? true,
+      };
+    });
+
+    return [
+      {
+        id: null,
+        timeTableStructureVariantId:
+          defVariantObj?.timeTableStructureVariantId || null,
+        name: defVariantObj?.name || "Regular",
+        startingDate: routineStart || toDateOnlyString(plainMapping.startingDate),
+        endingDate: routineEnd || toDateOnlyString(plainMapping.endingDate),
+        periods: periodsForDef,
+      },
+    ];
+  }
+
+  const result = [];
+  for (const vm of applicableMappings) {
+    const plainVm = vm.get ? vm.get({ plain: true }) : vm;
+    let variant = plainVm.variant;
+    let variantPeriods = variant?.variantPeriods;
+
+    if (!variantPeriods?.length && plainVm.timeTableStructureVariantId) {
+      const loaded = await findVariantById(
+        plainVm.timeTableStructureVariantId,
+      );
+      if (loaded) {
+        variant = loaded.get ? loaded.get({ plain: true }) : loaded;
+        variantPeriods = variant?.variantPeriods;
+      }
+    }
+
+    const vpMap = new Map();
+    for (const vp of variantPeriods || []) {
+      const plainVp = vp?.get ? vp.get({ plain: true }) : vp;
+      if (plainVp && plainVp.timeTableStructurePeriodsId != null) {
+        vpMap.set(Number(plainVp.timeTableStructurePeriodsId), plainVp);
+      }
+    }
+
+    const periodsForVariant = basePeriods.map((bp) => {
+      const plainBp = bp?.get ? bp.get({ plain: true }) : bp;
+      const periodId = Number(plainBp.timeTableCreationId);
+      const vp = vpMap.get(periodId);
+      return {
+        timeTableCreationId: periodId,
+        name: plainBp.periodName,
+        startTime:
+          vp && vp.startTime != null && vp.startTime !== ""
+            ? vp.startTime
+            : plainBp.startTime,
+        endTime:
+          vp && vp.endTime != null && vp.endTime !== ""
+            ? vp.endTime
+            : plainBp.endTime,
+        isBreak: plainBp.isBreak ?? false,
+        isCourse: vp?.isCourse ?? plainBp.isCourse ?? true,
+      };
+    });
+
+    result.push({
+      id: plainVm.id,
+      timeTableStructureVariantId: plainVm.timeTableStructureVariantId,
+      name: plainVm.name || variant?.name || "Regular",
+      startingDate: toDateOnlyString(plainVm.startingDate),
+      endingDate: toDateOnlyString(plainVm.endingDate),
+      periods: periodsForVariant,
+    });
+  }
+
+  return result;
+}
+
+export async function resolvePeriodsWithVariantTimings(
+  basePeriods = [],
+  mapping = null,
+  dateContext = null,
+) {
+  if (!Array.isArray(basePeriods) || basePeriods.length === 0) {
+    return [];
+  }
+
+  const plainMapping = mapping?.get ? mapping.get({ plain: true }) : mapping;
+  const variantMappings = plainMapping?.variantCourseMappings || [];
+
+  let matchedVariantPeriods = null;
+  let matchedVariant = null;
+
+  if (variantMappings.length > 0) {
+    let matchedMapping = null;
+    const targetDate = dateContext?.date || dateContext?.targetDate;
+    if (targetDate) {
+      const targetStr = toDateOnlyString(targetDate);
+      matchedMapping = variantMappings.find((vm) => {
+        const vmStart = toDateOnlyString(vm.startingDate);
+        const vmEnd = toDateOnlyString(vm.endingDate);
+        if (!vmStart || !vmEnd) return false;
+        return targetStr >= vmStart && targetStr <= vmEnd;
+      });
+    }
+
+    if (!matchedMapping) {
+      if (variantMappings.length === 1) {
+        matchedMapping = variantMappings[0];
+      } else if (dateContext?.startDate || dateContext?.endDate) {
+        const routineStart = dateContext.startDate
+          ? toDateOnlyString(dateContext.startDate)
+          : "";
+        const routineEnd = dateContext.endDate
+          ? toDateOnlyString(dateContext.endDate)
+          : "";
+
+        const todayStr = toDateOnlyString(new Date());
+        if (
+          todayStr &&
+          routineStart &&
+          routineEnd &&
+          todayStr >= routineStart &&
+          todayStr <= routineEnd
+        ) {
+          matchedMapping = variantMappings.find((vm) => {
+            const vmStart = toDateOnlyString(vm.startingDate);
+            const vmEnd = toDateOnlyString(vm.endingDate);
+            return vmStart && vmEnd && todayStr >= vmStart && todayStr <= vmEnd;
+          });
+        }
+
+        if (!matchedMapping) {
+          matchedMapping =
+            variantMappings.find((vm) => {
+              const vmStart = toDateOnlyString(vm.startingDate);
+              const vmEnd = toDateOnlyString(vm.endingDate);
+              if (!vmStart || !vmEnd) return false;
+              if (routineStart && routineEnd) {
+                return vmStart <= routineEnd && vmEnd >= routineStart;
+              }
+              if (routineStart) {
+                return routineStart >= vmStart && routineStart <= vmEnd;
+              }
+              return false;
+            }) || variantMappings[0];
+        }
+      } else {
+        matchedMapping = variantMappings[0];
+      }
+    }
+
+    const plainVm = matchedMapping?.get
+      ? matchedMapping.get({ plain: true })
+      : matchedMapping;
+
+    if (plainVm?.variant?.variantPeriods?.length) {
+      matchedVariant = plainVm.variant;
+      matchedVariantPeriods = plainVm.variant.variantPeriods;
+    } else if (plainVm?.timeTableStructureVariantId) {
+      const loaded = await findVariantById(
+        plainVm.timeTableStructureVariantId,
+      );
+      if (loaded?.variantPeriods?.length) {
+        matchedVariant = loaded;
+        matchedVariantPeriods = loaded.variantPeriods;
+      }
+    }
+  }
+
+  if (!matchedVariantPeriods) {
+    const structure = plainMapping?.timeTableStructure;
+    const structureVariants = structure?.structureVariants || [];
+    const defaultVariant =
+      structureVariants.find((v) => v.isDefault) || structureVariants[0];
+    const plainDef = defaultVariant?.get
+      ? defaultVariant.get({ plain: true })
+      : defaultVariant;
+
+    if (plainDef?.variantPeriods?.length) {
+      matchedVariant = plainDef;
+      matchedVariantPeriods = plainDef.variantPeriods;
+    } else if (plainMapping?.timeTableNameId) {
+      const dbDefVariant = await findDefaultVariantByStructureId(
+        plainMapping.timeTableNameId,
+      );
+      if (dbDefVariant?.timeTableStructureVariantId) {
+        const loadedDef = await findVariantById(
+          dbDefVariant.timeTableStructureVariantId,
+        );
+        if (loadedDef?.variantPeriods?.length) {
+          matchedVariant = loadedDef;
+          matchedVariantPeriods = loadedDef.variantPeriods;
+        }
+      }
+    }
+  }
+
+  const variantPeriodMap = new Map();
+  if (Array.isArray(matchedVariantPeriods)) {
+    for (const vp of matchedVariantPeriods) {
+      const plainVp = vp?.get ? vp.get({ plain: true }) : vp;
+      if (plainVp && plainVp.timeTableStructurePeriodsId != null) {
+        variantPeriodMap.set(
+          Number(plainVp.timeTableStructurePeriodsId),
+          plainVp,
+        );
+      }
+    }
+  }
+
+  return basePeriods.map((bp) => {
+    const plainBp = bp?.get ? bp.get({ plain: true }) : bp;
+    const periodId = Number(plainBp.timeTableCreationId);
+    const vp = variantPeriodMap.get(periodId);
+
+    const startTime =
+      vp && vp.startTime != null && vp.startTime !== ""
+        ? vp.startTime
+        : plainBp.startTime;
+    const endTime =
+      vp && vp.endTime != null && vp.endTime !== ""
+        ? vp.endTime
+        : plainBp.endTime;
+
+    return {
+      ...plainBp,
+      startTime,
+      endTime,
+      isCourse: vp?.isCourse ?? plainBp.isCourse ?? true,
+      timeTableStructureVariantId:
+        matchedVariant?.timeTableStructureVariantId ||
+        plainBp.timeTableStructureVariantId ||
+        null,
+      variantName: matchedVariant?.name || plainBp.variantName || null,
+    };
+  });
+}
+
+const COPY_OVERRIDE_FIELDS = [
+  "timeTableRoutineId",
+  "userId",
+  "subjectId",
+  "subjectComponentMappingId",
+  "electiveSubjectId",
+  "teacherSubjectMappingId",
+  "classRoomSectionId",
+  "isSameTeacher",
+  "teacherType",
+  "isAttendence",
+  "isOverridingSyblingElectives",
+  "timeTableType",
+];
+
+const MAPPING_REQUEST_KEYS = [
+  "classSectionTermIds",
+  "slots",
+  "timeTableCreationIds",
+  "classSectionsId",
+  "classSectionId",
+  "classSectionTermId",
+  "sourceTimeTableCellId",
+  "copyTarget",
+  "copiedFromTimeTableCellId",
+];
+
+function parseWeekOff(raw) {
+  if (raw == null) return [];
+  let list = raw;
+  if (typeof list === "string") {
+    try {
+      list = JSON.parse(list);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const day of list) out.push(String(day).toLowerCase());
+  return out;
+}
+
+function nextPeriodSlot(periodRows, creationId) {
+  let after = false;
+  for (const row of periodRows) {
+    const p = row.get ? row.get({ plain: true }) : row;
+    if (Number(p.timeTableCreationId) === Number(creationId)) {
+      after = true;
+      continue;
+    }
+    if (after && !p.isBreak) return p;
+  }
+  return null;
+}
+
+function nextWorkingDay(day, weekOffDays) {
+  const start = DAYS.findIndex(
+    (d) => d.toLowerCase() === String(day).toLowerCase(),
+  );
+  if (start < 0) throw new Error(`Invalid day: ${day}`);
+  for (let i = 1; i <= DAYS.length; i++) {
+    const next = DAYS[(start + i) % DAYS.length];
+    if (!weekOffDays.includes(next.toLowerCase())) return next;
+  }
+  throw new Error("No next working day available in this timetable structure");
+}
+
+function normalizeSlots(data) {
+  const source =
+    Array.isArray(data.slots) && data.slots.length ? data.slots : [data];
+  const slots = [];
+  for (const slot of source) {
+    const timeTableCreationId = Number(slot.timeTableCreationId);
+    const period = Number(slot.period);
+    if (!timeTableCreationId || !period) {
+      throw new Error("timeTableCreationId and period are required");
+    }
+    slots.push({ timeTableCreationId, period });
+  }
+  return slots;
+}
+
+function resolveTermIds(data, routine) {
+  if (
+    Array.isArray(data.classSectionTermIds) &&
+    data.classSectionTermIds.length
+  ) {
+    const ids = [];
+    for (const id of data.classSectionTermIds) {
+      const num = Number(id);
+      if (num) ids.push(num);
+    }
+    return [...new Set(ids)];
+  }
+  const single = data.classSectionTermId ?? routine?.classSectionTermId;
+  return single != null && single !== "" ? [Number(single)] : [];
+}
+
+function applyCopyOverrides(base, request) {
+  const payload = { ...base };
+  for (const field of COPY_OVERRIDE_FIELDS) {
+    const value = request[field];
+    if (value != null && value !== "") payload[field] = value;
+  }
+  return payload;
+}
+
+function stripMappingRow(row) {
+  for (const key of MAPPING_REQUEST_KEYS) delete row[key];
+  return row;
+}
+
+async function normalizeMappingTeacherInput(data, options = {}) {
+  const normalized = { ...data };
+
+  if (normalized.subjectComponentMappingId == null && normalized.subject_component_mapping_id != null) {
+    normalized.subjectComponentMappingId = Number(normalized.subject_component_mapping_id);
+  } else if (normalized.subjectComponentMappingId != null) {
+    normalized.subjectComponentMappingId = Number(normalized.subjectComponentMappingId);
+  }
+
+  if (normalized.userId == null && normalized.employeeId != null) {
+    const emp = await model.employeeModel.findOne({
+      where: { employeeId: Number(normalized.employeeId) },
+      transaction: options.transaction,
+    });
+    if (emp?.userId != null) {
+      normalized.userId = Number(emp.userId);
+    }
+  }
+
+  if (normalized.userId == null && normalized.teacherSubjectMappingId != null) {
+    const teacherRows = await getTeacherDetailsByTeacherSubjectId(
+      Number(normalized.teacherSubjectMappingId),
+    );
+    const teacherRow = teacherRows?.[0];
+    const teacherPlain = teacherRow?.get
+      ? teacherRow.get({ plain: true })
+      : teacherRow;
+    if (teacherPlain?.userId != null) {
+      normalized.userId = Number(teacherPlain.userId);
+    }
+  }
+
+  if (
+    normalized.userId != null &&
+    (!Array.isArray(normalized.teachers) || normalized.teachers.length === 0)
+  ) {
+    normalized.teachers = [
+      {
+        userId: Number(normalized.userId),
+        teacherType: normalized.teacherType || "Primary",
+        isAttendence:
+          normalized.isAttendence != null ? normalized.isAttendence : true,
+      },
+    ];
+  }
+
+  return normalized;
+}
+
+function formatMappingCreateResult(cell, extra = {}) {
+  const plain = cell?.get ? cell.get({ plain: true }) : cell;
+  const teachers = cell?.createdTeachers || plain?.timeTableCellTeachers || [];
+  const teacherRows = [];
+  for (const teacher of teachers) {
+    const teacherPlain = teacher?.get ? teacher.get({ plain: true }) : teacher;
+    teacherRows.push(teacherPlain);
+  }
+
+  const primaryTeacher = teacherRows[0] || null;
+
+  return {
+    timeTableCellId: plain.timeTableCellId,
+    subjectComponentMappingId: plain.subjectComponentMappingId ?? null,
+    timeTableCellTeacherId: primaryTeacher?.timeTableCellTeacherId ?? null,
+    timeTableCellTeachers: teacherRows,
+    ...extra,
+  };
+}
+
+function assertRoutineNotStarted(startingDate) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const start = new Date(startingDate);
+  start.setHours(0, 0, 0, 0);
+  if (now >= start) {
+    throw new Error(
+      "Cannot add or update mapping for a routine on or after its starting date.",
+    );
+  }
+}
+
+function assertMappingRoutineEditable(routine) {
+  if (!routine.isPublish) {
+    return;
+  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(routine.startingDate);
+  start.setHours(0, 0, 0, 0);
+  if (today > start) {
+    throw new Error(
+      "Cannot edit or delete mapping for a published routine after its starting date.",
+    );
+  }
+}
+
+function throwPublishedWeekMappingBlock(action) {
+  const error = new Error(
+    `Cannot ${action} week mapping on a published routine. Use PATCH /timeTableCreate/dateWiseCells with timeTableCellDateWiseId instead.`,
+  );
+  error.statusCode = 400;
+  throw error;
+}
+
+function assertMappingAddAllowed(routine) {
+  if (routine.isPublish) {
+    const error = new Error(
+      "Cannot add mapping to a published routine. Update date-wise cells instead.",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+}
+
+function assertWeekMappingChangeAllowed(routine, action) {
+  if (routine.isPublish) {
+    throwPublishedWeekMappingBlock(action);
+  }
+  assertMappingRoutineEditable(routine);
+}
+
+/**
+ * Unpublished draft: week cell (+ teachers) may be deleted anytime.
+ * Published: week mapping delete is blocked; use date-wise cell APIs.
+ */
+function assertMappingDeletable(routine) {
+  if (!routine.isPublish) {
+    return;
+  }
+  throwPublishedWeekMappingBlock("delete");
+}
+
+function assertRoutineEditable(startingDate) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const start = new Date(startingDate);
+  start.setHours(0, 0, 0, 0);
+  if (now >= start) {
+    throw new Error("Routine cannot be updated on or after its starting date");
+  }
+}
+
+function shapeRoutineListItem(routine) {
+  return {
+    name: routine.structureCourseMapping.timeTableStructure.name,
+    startingDate: routine.startingDate,
+    endingDate: routine.endingDate,
+    isPublish: Boolean(routine.isPublish),
+  };
+}
+
+function buildTermRoutineSummary(routines) {
+  let draftRoutineCount = 0;
+  let publishedRoutineCount = 0;
+  const timeTableRoutines = [];
+
+  if (!routines) {
+    return {
+      timeTableRoutines,
+      draftRoutineCount,
+      publishedRoutineCount,
+    };
+  }
+
+  for (const routine of routines) {
+    const row = shapeRoutineListItem(routine);
+    timeTableRoutines.push(row);
+    if (row.isPublish) {
+      publishedRoutineCount += 1;
+    } else {
+      draftRoutineCount += 1;
+    }
+  }
+
+  return {
+    timeTableRoutines,
+    draftRoutineCount,
+    publishedRoutineCount,
+  };
+}
+
+function shapeTimeTableCreateList(rows, course, activeYear) {
+  const coursePlain = course?.get ? course.get({ plain: true }) : course;
+  const byYear = {};
+  let draftRoutineCount = 0;
+  let publishedRoutineCount = 0;
+  let sessionAcademicYear = null;
+  const meta = {
+    courseId: coursePlain?.courseId ?? null,
+    sessionId: null,
+    courseName: coursePlain?.courseName ?? null,
+    termType: coursePlain?.termType ?? null,
+    academicYear: null,
+  };
+
+  for (const row of rows) {
+    const plain = row.get({ plain: true });
+    const section = plain.classSection;
+    if (!section?.year || !plain.term) continue;
+
+    const cs = section.courseSection;
+    if (meta.courseName == null && cs?.courseName)
+      meta.courseName = cs.courseName;
+    if (meta.termType == null && cs?.termType) meta.termType = cs.termType;
+    if (meta.courseId == null && section.courseId != null)
+      meta.courseId = section.courseId;
+    if (meta.sessionId == null && section.sessionId != null)
+      meta.sessionId = section.sessionId;
+    if (meta.academicYear == null && section.classSession?.sessionAcedmic) {
+      meta.academicYear = section.classSession.sessionAcedmic;
+      sessionAcademicYear = section.classSession.sessionAcedmic;
+    }
+
+    const year = Number(section.year);
+    const term = Number(plain.term);
+    const sectionId = Number(plain.classSectionsId);
+
+    if (!byYear[year]) byYear[year] = {};
+    if (!byYear[year][sectionId]) {
+      byYear[year][sectionId] = {
+        classSectionsId: sectionId,
+        section: section.section,
+        year,
+        classSession: section.classSession,
+        activeYear: section.activeYear,
+        termsByNum: {},
+      };
+    }
+
+    const termRoutineSummary = buildTermRoutineSummary(plain.timeTableRoutines);
+
+    draftRoutineCount += termRoutineSummary.draftRoutineCount;
+    publishedRoutineCount += termRoutineSummary.publishedRoutineCount;
+
+    byYear[year][sectionId].termsByNum[term] = {
+      term,
+      termName: coursePlain
+        ? buildTermName(coursePlain.termType, term)
+        : `Term ${term}`,
+      classSectionTermId: plain.classSectionTermId,
+      classSectionsId: sectionId,
+      draftRoutineCount: termRoutineSummary.draftRoutineCount,
+      publishedRoutineCount: termRoutineSummary.publishedRoutineCount,
+      timeTableRoutines: termRoutineSummary.timeTableRoutines,
+    };
+  }
+
+  const duration = Number(coursePlain?.courseDuration) || 0;
+  const yearNumbers = [];
+  if (duration > 0) {
+    for (let y = 1; y <= duration; y++) yearNumbers.push(y);
+  } else {
+    for (const y of Object.keys(byYear)) yearNumbers.push(Number(y));
+    yearNumbers.sort((a, b) => a - b);
+  }
+
+  let baseYear = null;
+  if (sessionAcademicYear?.year_title) {
+    const m = String(sessionAcademicYear.year_title).match(/\b(\d{4})\b/);
+    if (m) baseYear = parseInt(m[1], 10);
+  } else if (sessionAcademicYear?.starting_date) {
+    const m = String(sessionAcademicYear.starting_date).match(/^(\d{4})/);
+    if (m) baseYear = parseInt(m[1], 10);
+  }
+
+  const years = [];
+  for (const yearNum of yearNumbers) {
+    const yearBucket = byYear[yearNum] || {};
+    const sectionIds = [];
+    const sectionKeys = Object.keys(yearBucket);
+    for (const key of sectionKeys) {
+      sectionIds.push(Number(key));
+    }
+    sectionIds.sort((a, b) => a - b);
+
+    const classSections = [];
+    for (const sectionId of sectionIds) {
+      const sectionEntry = yearBucket[sectionId];
+      let termNumbers = [];
+      if (coursePlain) {
+        termNumbers = termsForYear(yearNum, coursePlain);
+      } else {
+        const termKeys = Object.keys(sectionEntry.termsByNum);
+        for (const key of termKeys) {
+          termNumbers.push(Number(key));
+        }
+        termNumbers.sort((a, b) => a - b);
+      }
+
+      const semesters = [];
+      for (const termNum of termNumbers) {
+        const existing = sectionEntry.termsByNum[termNum];
+        if (existing) {
+          semesters.push(existing);
+        } else {
+          semesters.push({
+            term: termNum,
+            termName: coursePlain
+              ? buildTermName(coursePlain.termType, termNum)
+              : `Term ${termNum}`,
+            classSectionTermId: null,
+            classSectionsId: sectionId,
+            draftRoutineCount: 0,
+            publishedRoutineCount: 0,
+            timeTableRoutines: [],
+          });
+        }
+      }
+
+      classSections.push({
+        classSectionsId: sectionEntry.classSectionsId,
+        section: sectionEntry.section,
+        year: sectionEntry.year,
+        classSession: sectionEntry.classSession,
+        activeYear: sectionEntry.activeYear,
+        semesters,
+      });
+    }
+
+    classSections.sort((a, b) =>
+      String(a.section).localeCompare(String(b.section)),
+    );
+
+    let batch = baseYear != null ? (baseYear - (yearNum - 1)) : null;
+    if (activeYear != null) {
+      batch = activeYear - (yearNum - 1);
+    } else if (classSections.length > 0 && classSections[0].activeYear) {
+      batch = classSections[0].activeYear - (yearNum - 1);
+    }
+
+    if (classSections.length > 0) {
+      years.push({ year: yearNum, batch, classSections });
+    }
+  }
+
+  return {
+    ...meta,
+    years,
+    draftRoutineCount,
+    publishedRoutineCount,
+  };
+}
+
+export async function resolveRoutinePlacement(data, options = {}) {
+  const classSectionTermId = data.classSectionTermId;
+  if (classSectionTermId == null || classSectionTermId === "") {
+    throw new Error("classSectionTermId is required");
+  }
+
+  const termRow = await findClassSectionTermById(
+    Number(classSectionTermId),
+    options,
+  );
+  if (!termRow) {
+    throw new Error("classSectionTermId not found");
+  }
+
+  const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
+  return {
+    ...data,
+    classSectionTermId: Number(classSectionTermId),
+    classSectionsId:
+      plain.classSectionsId ?? plain.classSection?.classSectionsId ?? null,
+    term: plain.term ?? null,
+  };
+}
+
+function routineScopeWhere(classSectionTermId) {
+  return { classSectionTermId: Number(classSectionTermId) };
+}
+
+function buildCopyPayload(sourceRow, target, request, teachers) {
+  const src = sourceRow.get ? sourceRow.get({ plain: true }) : sourceRow;
+  const payload = applyCopyOverrides(
+    {
+      timeTableRoutineId: src.timeTableRoutineId,
+      timeTableNameId: src.timeTableNameId,
+      timeTableCreationId: target.timeTableCreationId,
+      day: target.day,
+      period: target.period,
+      subjectId: src.subjectId,
+      subjectComponentMappingId: src.subjectComponentMappingId,
+      electiveSubjectId: src.electiveSubjectId,
+      teacherSubjectMappingId: src.teacherSubjectMappingId,
+      classRoomSectionId: src.classRoomSectionId,
+      isSameTeacher: src.isSameTeacher,
+      isAttendence: src.isAttendence,
+      isOverridingSyblingElectives: src.isOverridingSyblingElectives,
+      timeTableType: src.timeTableType,
+      copiedFromTimeTableCellId: src.timeTableCellId,
+    },
+    request,
+  );
+
+  payload.timeTableRoutineId = src.timeTableRoutineId;
+  payload.timeTableNameId = src.timeTableNameId;
+  payload.timeTableCreationId = target.timeTableCreationId;
+  payload.day = target.day;
+  payload.period = target.period;
+  payload.copiedFromTimeTableCellId = src.timeTableCellId;
+
+  // When copying from an existing cell (sourceTimeTableCellId),
+  // we must copy the entire cell including all its teacher rows.
+  // Only override teachers when this is NOT a copy operation.
+  const isCopyOperation = request.sourceTimeTableCellId != null;
+  if (!isCopyOperation && request.userId != null) {
+    payload.teachers = [
+      {
+        userId: Number(request.userId),
+        teacherType: request.teacherType || "Primary",
+        isAttendence:
+          request.isAttendence != null ? request.isAttendence : true,
+      },
+    ];
+  } else {
+    payload.teachers = teachers;
+  }
+
+  return payload;
+}
+
+async function resolveCopyPayloads(data, options) {
+  const sourceId = Number(data.sourceTimeTableCellId);
+  const source = await timeTableCreateRepository.getMappingCopySourceRepository(
+    sourceId,
+    options,
+  );
+  if (!source) {
+    throw new Error(`Source mapping ${sourceId} not found`);
+  }
+
+  const src = source.get({ plain: true });
+  let day = src.day;
+  let period = Number(src.period);
+  let timeTableCreationId = Number(src.timeTableCreationId);
+
+  if (data.copyTarget === "nextPeriod") {
+    const periodRows =
+      await timeTableCreateRepository.getStructurePeriodsRepository(
+        src.timeTableNameId,
+        options,
+      );
+    const next = nextPeriodSlot(periodRows, src.timeTableCreationId);
+    if (!next) {
+      throw new Error("No next period available for this timetable structure");
+    }
+    period += 1;
+    timeTableCreationId = Number(next.timeTableCreationId);
+  } else if (data.copyTarget === "nextDay") {
+    const structure =
+      await timeTableCreateRepository.getStructureWeekOffRepository(
+        src.timeTableNameId,
+        options,
+      );
+    day = nextWorkingDay(src.day, parseWeekOff(structure?.weekOff));
+  } else {
+    throw new Error("copyTarget must be nextPeriod or nextDay");
+  }
+
+  const sourceTeachers =
+    await timeTableCreateRepository.getSourceCellMappingsRepository(
+      sourceId,
+      options,
+    );
+  const teachers = [];
+  for (const row of sourceTeachers) {
+    const teacher = row.get ? row.get({ plain: true }) : row;
+    teachers.push({
+      userId: Number(teacher.userId),
+      teacherType: teacher.teacherType || "Primary",
+      isAttendence: teacher.isAttendence != null ? teacher.isAttendence : true,
+    });
+  }
+
+  const target = { day, period, timeTableCreationId };
+  return [buildCopyPayload(source, target, data, teachers)];
+}
+
+function throwSlotConflictError(message) {
+  const error = new Error(message);
+  error.statusCode = 409;
+  throw error;
+}
+
+async function resolveSlotConflictContext(
+  conflict,
+  fallbackPeriodInfo,
+  transaction,
+) {
+  const conflictPlain = conflict?.get
+    ? conflict.get({ plain: true })
+    : conflict;
+  const periodFromConflict =
+    conflictPlain?.timeTablecreation || fallbackPeriodInfo;
+  const routine = conflictPlain?.timeTableRoutine;
+  const day = conflictPlain?.day || fallbackPeriodInfo?.day;
+  const period = conflictPlain?.period;
+  const startTime =
+    periodFromConflict?.startTime || fallbackPeriodInfo?.startTime;
+  const endTime = periodFromConflict?.endTime || fallbackPeriodInfo?.endTime;
+  const slot =
+    day && startTime && endTime
+      ? `${day} (${startTime}-${endTime})`
+      : day || "unknown slot";
+
+  let classSectionLabel = "N/A";
+  let yearLabel = "N/A";
+  let termLabel = "N/A";
+
+  if (routine?.classSectionTermId) {
+    const termRow = await findClassSectionTermById(routine.classSectionTermId, {
+      transaction,
+    });
+    const termPlain = termRow?.get ? termRow.get({ plain: true }) : termRow;
+    if (termPlain) {
+      termLabel = String(termPlain.term ?? "N/A");
+      const section = termPlain.classSection;
+      if (section) {
+        classSectionLabel = section.section ?? "N/A";
+        yearLabel = section.year != null ? String(section.year) : "N/A";
+      }
+    }
+  }
+
+  let academicYearLabel = "N/A";
+  if (routine?.academicYearId) {
+    const academicYear = await scoped(model.acedmicYearModel).findOne({
+      where: { academicYearId: Number(routine.academicYearId) },
+      attributes: ["yearTitle"],
+      transaction,
+    });
+    academicYearLabel =
+      academicYear?.yearTitle ?? String(routine.academicYearId);
+  }
+
+  let dateLabel = "N/A";
+  if (routine?.isPublish && conflictPlain?.timeTableCellId) {
+    const firstDate =
+      await timeTableCreateRepository.findFirstDateWiseDateForCell(
+        conflictPlain.timeTableCellId,
+        { transaction },
+      );
+    if (firstDate) {
+      dateLabel = firstDate;
+    }
+  }
+  if (dateLabel === "N/A" && routine?.startingDate && routine?.endingDate) {
+    dateLabel = `${toDateOnlyString(routine.startingDate)} to ${toDateOnlyString(routine.endingDate)}`;
+  }
+
+  const periodLabel = period != null ? String(period) : "N/A";
+
+  return {
+    slot,
+    classSectionLabel,
+    yearLabel,
+    termLabel,
+    periodLabel,
+    dateLabel,
+    academicYearLabel,
+  };
+}
+
+function formatSlotConflictDetails(context) {
+  return (
+    ` (classSection: ${context.classSectionLabel}, year: ${context.yearLabel},` +
+    ` term: ${context.termLabel}, period: ${context.periodLabel},` +
+    ` date: ${context.dateLabel}, academicYear: ${context.academicYearLabel})`
+  );
+}
+
+async function resolveRoomLabel(conflict, classRoomSectionId, transaction) {
+  const conflictPlain = conflict?.get
+    ? conflict.get({ plain: true })
+    : conflict;
+
+  if (conflictPlain?.classRoom?.roomNumber) {
+    return `Room ${conflictPlain.classRoom.roomNumber}`;
+  }
+
+  const lookupRoomSectionId =
+    conflictPlain?.classRoomSectionId ?? classRoomSectionId;
+  const room = await scoped(model.classRoomModel).findOne({
+    where: { classRoomSectionId: Number(lookupRoomSectionId) },
+    attributes: ["roomNumber"],
+    transaction,
+  });
+
+  if (room?.roomNumber) {
+    return `Room ${room.roomNumber}`;
+  }
+
+  return `Room #${lookupRoomSectionId}`;
+}
+
+async function buildTeacherConflictMessage(
+  userId,
+  conflict,
+  fallbackPeriodInfo,
+  transaction,
+) {
+  const employee = await model.employeeModel.findOne({
+    where: { userId: Number(userId) },
+    attributes: ["employeeName"],
+    transaction,
+  });
+  const teacherName = employee?.employeeName || `User #${userId}`;
+  const context = await resolveSlotConflictContext(
+    conflict,
+    fallbackPeriodInfo,
+    transaction,
+  );
+
+  return (
+    `Teacher conflict: ${teacherName} already scheduled on ${context.slot}` +
+    formatSlotConflictDetails(context)
+  );
+}
+
+async function buildRoomConflictMessage(
+  conflict,
+  classRoomSectionId,
+  fallbackPeriodInfo,
+  transaction,
+) {
+  const roomLabel = await resolveRoomLabel(
+    conflict,
+    classRoomSectionId,
+    transaction,
+  );
+  const context = await resolveSlotConflictContext(
+    conflict,
+    fallbackPeriodInfo,
+    transaction,
+  );
+
+  return (
+    `Room conflict: ${roomLabel} occupied on ${context.slot}` +
+    formatSlotConflictDetails(context)
+  );
+}
+
+async function assertNoSlotConflicts({
+  userId,
+  classRoomSectionId,
+  day,
+  periodInfo,
+  startingDate,
+  endingDate,
+  conflictOptions,
+  electiveSubjectId,
+  courseId,
+  excludeRoutineId,
+  transaction,
+}) {
+  if (!periodInfo || !periodInfo.startTime || !periodInfo.endTime) {
+    const error = new Error(
+      "Period startTime and endTime are required for conflict checks",
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const { startTime, endTime } = periodInfo;
+  const mergedOptions = {
+    ...conflictOptions,
+    ...(excludeRoutineId != null && { excludeRoutineId }),
+  };
+
+  if (userId) {
+    const conflict =
+      await timeTableCreateRepository.checkTeacherConflictRepository(
+        userId,
+        day,
+        startTime,
+        endTime,
+        startingDate,
+        endingDate,
+        mergedOptions,
+        transaction,
+      );
+    if (conflict) {
+      const message = await buildTeacherConflictMessage(
+        userId,
+        conflict,
+        { day, ...periodInfo },
+        transaction,
+      );
+      throwSlotConflictError(message);
+    }
+  }
+
+  if (classRoomSectionId) {
+    const conflict =
+      await timeTableCreateRepository.checkRoomConflictRepository(
+        classRoomSectionId,
+        day,
+        startTime,
+        endTime,
+        startingDate,
+        endingDate,
+        mergedOptions,
+        transaction,
+      );
+    if (conflict) {
+      const message = await buildRoomConflictMessage(
+        conflict,
+        classRoomSectionId,
+        { day, ...periodInfo },
+        transaction,
+      );
+      throwSlotConflictError(message);
+    }
+  }
+
+  if (electiveSubjectId && courseId) {
+    const conflict =
+      await timeTableCreateRepository.checkElectiveSubjectConflictRepository(
+        electiveSubjectId,
+        courseId,
+        day,
+        startTime,
+        endTime,
+        startingDate,
+        endingDate,
+        mergedOptions,
+        transaction,
+      );
+    if (conflict) {
+      throwSlotConflictError(
+        "Elective conflict: subject already scheduled for this slot",
+      );
+    }
+  }
+}
+
+async function recomputeFacultyLoadForUser(userId, transaction) {
+  if (!userId) {
+    return;
+  }
+  await recomputeFaculityCurrentLoadHours(Number(userId), transaction);
+}
+
+async function recomputeFacultyLoadForUsers(userIds, transaction) {
+  const seen = new Set();
+  for (const userId of userIds) {
+    const id = Number(userId);
+    if (!id || seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    await recomputeFaculityCurrentLoadHours(id, transaction);
+  }
+}
+
+async function resolveCombinedRoutineTargets(
+  anchorRoutine,
+  classSectionTermIds,
+  transaction,
+) {
+  const targets = [];
+
+  for (const classSectionTermId of classSectionTermIds) {
+    if (
+      Number(anchorRoutine.classSectionTermId) === Number(classSectionTermId)
+    ) {
+      targets.push({
+        classSectionTermId: Number(classSectionTermId),
+        timeTableRoutineId: anchorRoutine.timeTableRoutineId,
+      });
+      continue;
+    }
+
+    const peerRoutine =
+      await timeTableCreateRepository.findRoutineForCombinedSessionRepository(
+        {
+          classSectionTermId,
+          timetableStructureCourseMapperId:
+            anchorRoutine.timetableStructureCourseMapperId,
+          timeTableType: anchorRoutine.timeTableType || "normal",
+          startingDate: anchorRoutine.startingDate,
+          endingDate: anchorRoutine.endingDate,
+        },
+        { transaction },
+      );
+
+    if (!peerRoutine) {
+      throw new Error(
+        `No matching timetable routine found for classSectionTermId ${classSectionTermId}. Create the section routine first.`,
+      );
+    }
+
+    targets.push({
+      classSectionTermId: Number(classSectionTermId),
+      timeTableRoutineId: peerRoutine.timeTableRoutineId,
+    });
+  }
+
+  return targets;
+}
+
+export async function addtimeTableCreate(data, createdBy, updatedBy) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    data.createdBy = createdBy;
+    data.updatedBy = updatedBy;
+
+    const timeTableType = data.timeTableType ?? "normal";
+
+    const courseMapping = await getStructureCourseMappingById(
+      data.timetableStructureCourseMapperId,
+      { transaction },
+    );
+    if (!courseMapping) {
+      throw new Error(
+        "Invalid mapperId. Map the course to the structure first",
+      );
+    }
+
+    if (
+      timeTableType === "normal" &&
+      (data.classSectionTermId == null || data.classSectionTermId === "") &&
+      (data.academicGroupId == null || data.academicGroupId === "")
+    ) {
+      throw new Error(
+        "Either classSectionTermId or academicGroupId is required",
+      );
+    }
+
+    let placement = { ...data };
+    if (data.classSectionTermId != null && data.classSectionTermId !== "") {
+      placement = await resolveRoutinePlacement(data, { transaction });
+    }
+
+    if (
+      timeTableType === "normal" &&
+      !placement.classSectionTermId &&
+      !placement.academicGroupId
+    ) {
+      throw new Error(
+        "Either classSectionTermId or academicGroupId is required",
+      );
+    }
+
+    if (placement.classSectionTermId) {
+      const termRow = await findClassSectionTermById(
+        placement.classSectionTermId,
+        { transaction },
+      );
+      if (!termRow) {
+        throw new Error("classSectionTermId not found");
+      }
+      const section = termRow.get({ plain: true }).classSection;
+      if (!section) {
+        throw new Error("class section not found for classSectionTermId");
+      }
+      if (
+        courseMapping.courseId &&
+        Number(section.courseId) !== Number(courseMapping.courseId)
+      ) {
+        throw new Error(
+          "classSectionTermId course does not match structure course mapping",
+        );
+      }
+      if (Number(section.sessionId) !== Number(courseMapping.sessionId)) {
+        throw new Error(
+          "classSectionTermId session does not match structure course mapping",
+        );
+      }
+      placement.courseId = section.courseId;
+    } else if (placement.academicGroupId) {
+      const groupRow = await timeTableCreateRepository.findAcademicGroupById(
+        placement.academicGroupId,
+        { transaction },
+      );
+      if (!groupRow) {
+        throw new Error("academicGroupId not found");
+      }
+      if (courseMapping.courseId) {
+        placement.courseId = courseMapping.courseId;
+      }
+    } else if (!placement.courseId) {
+      placement.courseId = courseMapping.courseId;
+    }
+
+    if (!placement.campusId) {
+      const instId = courseMapping.instituteId || data.instituteId;
+      if (instId) {
+        const inst = await model.instituteModel.findByPk(instId, {
+          transaction,
+        });
+        if (inst?.campusId) {
+          placement.campusId = inst.campusId;
+        }
+      }
+    }
+
+    delete placement.term;
+    delete placement.classSectionId;
+    delete placement.classSectionsId;
+    delete placement.sessionId;
+    delete placement.timeTableNameId;
+
+    if (!placement.startingDate && courseMapping.startingDate) {
+      placement.startingDate = courseMapping.startingDate;
+    }
+    if (!placement.endingDate && courseMapping.endingDate) {
+      placement.endingDate = courseMapping.endingDate;
+    }
+
+    if (placement.startingDate && placement.endingDate) {
+      assertRoutineDatesWithinStructure(
+        courseMapping,
+        placement.startingDate,
+        placement.endingDate,
+      );
+      placement.startingDate = toDateOnlyString(placement.startingDate);
+      placement.endingDate = toDateOnlyString(placement.endingDate);
+    } else {
+      throw new Error(
+        "startingDate and endingDate are required or must be defined on structure course mapping",
+      );
+    }
+
+    placement.timetableStructureCourseMapperId =
+      courseMapping.timetableStructureCourseMapperId;
+
+    if (
+      (placement.classSectionTermId || placement.academicGroupId) &&
+      placement.startingDate &&
+      placement.endingDate
+    ) {
+      const overlap =
+        await timeTableCreateRepository.checkRoutineOverlapRepository({
+          classSectionTermId: placement.classSectionTermId,
+          academicGroupId: placement.academicGroupId,
+          startingDate: placement.startingDate,
+          endingDate: placement.endingDate,
+          excludeRoutineId: placement.timeTableRoutineId,
+        });
+
+      if (overlap) {
+        throw new Error(
+          "Routine already exists for this section or group in the selected date range",
+        );
+      }
+    }
+
+    let result;
+
+    if (placement.timeTableRoutineId && placement.previousDate) {
+      await timeTableCreateRepository.changeTimeTableCreate(
+        placement.timeTableRoutineId,
+        {
+          endingDate: placement.previousDate,
+          updatedBy,
+        },
+        transaction,
+      );
+
+      const { timeTableRoutineId, previousDate, ...newCreateData } = placement;
+
+      result = await timeTableCreateRepository.addTimeTableCreate(
+        newCreateData,
+        transaction,
+      );
+    } else {
+      result = await timeTableCreateRepository.addTimeTableCreate(
+        placement,
+        transaction,
+      );
+    }
+
+    // Cell generation is deferred. It will be generated when a class is mapped via addtimeTableMapping
+
+    await transaction.commit();
+    return result;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function gettimeTableCreateDetails(query = {}) {
+  const { resolveActiveAcademicYearContext } = await import("../../../utility/curriculumSubjectsByActiveYear.js");
+  let activeYear = null;
+  try {
+    const ctx = await resolveActiveAcademicYearContext();
+    if (ctx && ctx.activeBatchYear) activeYear = ctx.activeBatchYear;
+  } catch (err) { }
+
+  const courseId = query.courseId != null ? Number(query.courseId) : null;
+  const sessionId = query.sessionId != null ? Number(query.sessionId) : null;
+
+  const rows =
+    await timeTableCreateRepository.findClassSectionTermsWithRoutines({
+      courseId,
+      sessionId,
+      activeYear,
+    });
+
+  let course = null;
+  if (courseId != null) {
+    course = await timeTableCreateRepository.findCourseById(courseId);
+  } else if (rows.length > 0) {
+    const first = rows[0].get({ plain: true });
+    course = first.classSection.courseSection;
+  }
+
+  return shapeTimeTableCreateList(rows, course, activeYear);
+}
+
+export async function getSingletimeTableCreateDetails(courseId) {
+  const result =
+    await timeTableCreateRepository.getSingleTimeTableCreateDetails(courseId);
+
+  return result;
+}
+
+export async function getTimeTableByCourseAndSection(
+  courseId,
+  classSectionTermId,
+  timeTableType,
+) {
+  if (timeTableType === "elective") {
+    return getElectiveRoutineGridByCourseId(courseId);
+  }
+
+  const data = await timeTableCreateRepository.getTimeTableByCourseAndSection(
+    courseId,
+    classSectionTermId,
+    timeTableType,
+  );
+
+  if (!Array.isArray(data) || !data.length) return [];
+
+  const result = [];
+  for (const item of data) {
+    const mapping = item.structureCourseMapping;
+    const structure = mapping.timeTableStructure;
+    let weekOff = structure.weekOff;
+    if (typeof weekOff === "string") {
+      weekOff = JSON.parse(weekOff);
+    }
+    if (!Array.isArray(weekOff)) {
+      weekOff = [];
+    }
+
+    const resolvedPeriods = await resolvePeriodsWithVariantTimings(
+      structure.timeTableName || [],
+      mapping,
+      { startDate: item.startingDate, endDate: item.endingDate },
+    );
+
+    const periods = [];
+    for (const period of resolvedPeriods) {
+      periods.push({
+        startTime: period.startTime,
+        endTime: period.endTime,
+        timeTableCreationId: period.timeTableCreationId,
+        type: period.type,
+        periodGap: period.periodGap,
+        periodLength: period.periodLength,
+        isBreak: period.isBreak,
+        periodName: period.periodName,
+        classSectionsId: item.classSectionsId,
+        classSectionTermId: item.classSectionTermId,
+      });
+    }
+
+    const section = resolveTimeTableRoutineSection(item);
+    const firstPeriod = structure.timeTableName && structure.timeTableName[0];
+
+    result.push({
+      timeTableRoutineId: item.timeTableRoutineId,
+      timeTableType: item.timeTableType,
+      name: structure.name,
+      isPublish: item.isPublish,
+      timeTableNameId: mapping.timeTableNameId,
+      timetableStructureCourseMapperId: item.timetableStructureCourseMapperId,
+      maximumPeriod: firstPeriod ? firstPeriod.maximumPeriod : undefined,
+      isCourse: firstPeriod ? firstPeriod.isCourse : undefined,
+      weekOff,
+      courseId: item.courseId,
+      classSectionsId: section ? section.classSectionsId : null,
+      classSectionTermId: item.classSectionTermId,
+      classSectionsName: section ? section.section : undefined,
+      courseName: item.timeTableCourse
+        ? item.timeTableCourse.courseName
+        : undefined,
+      startingDate: item.startingDate,
+      endingDate: item.endingDate,
+      timeTableClassSectionTerm: item.timeTableClassSectionTerm,
+      timeTableClassSection: section,
+      periods,
+    });
+  }
+
+  return result;
+}
+
+export async function updateTimeTableCreate(
+  TimeTableCreateId,
+  info,
+  updatedBy,
+) {
+  info.updatedBy = updatedBy;
+  const data = await timeTableCreateRepository.updateTimeTableCreate(
+    TimeTableCreateId,
+    info,
+  );
+  return data;
+}
+
+export async function deleteTimeTableRoutine(timeTableRoutineId) {
+  const routine =
+    await timeTableCreateRepository.getRoutineByIdRepository(
+      timeTableRoutineId,
+    );
+  if (!routine) {
+    throw new Error("Routine not found");
+  }
+
+  // Allow delete (draft or published) only before startingDate.
+  assertRoutineEditable(routine.startingDate);
+
+  const transaction = await sequelize.transaction();
+  try {
+    const deletedScheduleCount =
+      await timeTableCreateRepository.deleteSchedulesByRoutineIdRepository(
+        timeTableRoutineId,
+        { transaction },
+      );
+    const deletedRoutineCount =
+      await timeTableCreateRepository.deleteTimeTableRoutineRepository(
+        timeTableRoutineId,
+        { transaction },
+      );
+    if (!deletedRoutineCount) {
+      throw new Error("Routine not found");
+    }
+
+    await transaction.commit();
+    return {
+      message: "Routine deleted successfully",
+      timeTableRoutineId: Number(timeTableRoutineId),
+      deletedScheduleCount,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function deletetimeTableMapping(timeTableCellId, options = {}) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const schedule = await timeTableCreateRepository.getMappingByIdRepository(
+      timeTableCellId,
+      { transaction },
+    );
+    if (!schedule) {
+      const error = new Error("Mapping not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const routineId =
+      schedule.timeTableRoutineId ??
+      schedule.dataValues?.timeTableRoutineId ??
+      schedule.time_table_routine_id;
+
+    const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+      routineId,
+      { transaction },
+    );
+    if (!routine) {
+      const error = new Error("Routine not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    assertMappingDeletable(routine);
+
+    const mappingIds = [Number(timeTableCellId)];
+    if (options.deleteCombinedGroup && schedule.combinedGroupId) {
+      const siblings =
+        await timeTableCreateRepository.getMappingsByCombinedGroupIdRepository(
+          schedule.combinedGroupId,
+          { transaction },
+        );
+      mappingIds.length = 0;
+      for (const row of siblings) {
+        mappingIds.push(Number(row.timeTableCellId));
+      }
+    }
+
+    const teachers =
+      await timeTableCreateRepository.getTeachersByMappingIdsRepository(
+        mappingIds,
+        { transaction },
+      );
+
+    const result = await timeTableCreateRepository.deletetimeTableMapping(
+      timeTableCellId,
+      {
+        ...options,
+        transaction,
+      },
+    );
+
+    const teacherUserIds = [];
+    for (const teacher of teachers) {
+      teacherUserIds.push(teacher.userId);
+    }
+    await recomputeFacultyLoadForUsers(teacherUserIds, transaction);
+
+    await transaction.commit();
+    return {
+      ...result,
+      isPublish: Boolean(routine.isPublish),
+      deletedTimeTableCellTeacherIds: result.deletedTimeTableCellTeacherIds,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function executeMappingEntry(data, createdBy, updatedBy, transaction) {
+  const request = await normalizeMappingTeacherInput(data, { transaction });
+
+  if (request.sourceTimeTableCellId != null) {
+    const copyPayloads = await resolveCopyPayloads(request, { transaction });
+    if (!copyPayloads.length) {
+      throw new Error(
+        `Source mapping ${data.sourceTimeTableCellId} not found`,
+      );
+    }
+
+    const firstPayload = copyPayloads[0];
+    const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+      firstPayload.timeTableRoutineId,
+      { transaction },
+    );
+    if (!routine) {
+      throw new Error("Invalid timeTableRoutineId");
+    }
+
+    assertMappingAddAllowed(routine);
+
+    const periodInfo =
+      await timeTableCreateRepository.getPeriodInfoRepository(
+        firstPayload.timeTableCreationId,
+      );
+    if (!periodInfo) {
+      throw new Error(
+        `Invalid timeTableCreationId: ${firstPayload.timeTableCreationId}`,
+      );
+    }
+
+    const conflictOptions = {
+      allowedClassSectionTermIds: [Number(routine.classSectionTermId)],
+      excludeCombinedGroupId: null,
+    };
+
+    for (const payload of copyPayloads) {
+      const teacherList = Array.isArray(payload.teachers)
+        ? payload.teachers
+        : [];
+      if (teacherList.length === 0 && payload.userId != null) {
+        teacherList.push({ userId: payload.userId });
+      }
+
+      for (const teacher of teacherList) {
+        await assertNoSlotConflicts({
+          userId: teacher.userId,
+          classRoomSectionId: payload.classRoomSectionId,
+          day: payload.day,
+          periodInfo,
+          startingDate: routine.startingDate,
+          endingDate: routine.endingDate,
+          conflictOptions,
+          electiveSubjectId: payload.electiveSubjectId,
+          courseId: routine.courseId,
+          excludeRoutineId: routine.timeTableRoutineId,
+          transaction,
+        });
+      }
+
+      if (teacherList.length === 0) {
+        await assertNoSlotConflicts({
+          userId: null,
+          classRoomSectionId: payload.classRoomSectionId,
+          day: payload.day,
+          periodInfo,
+          startingDate: routine.startingDate,
+          endingDate: routine.endingDate,
+          conflictOptions,
+          electiveSubjectId: payload.electiveSubjectId,
+          courseId: routine.courseId,
+          excludeRoutineId: routine.timeTableRoutineId,
+          transaction,
+        });
+      }
+    }
+
+    const createdMappings = [];
+    for (const payload of copyPayloads) {
+      const rowData = stripMappingRow({
+        ...payload,
+        createdBy,
+        updatedBy,
+      });
+
+      if (rowData.timeTableType === "elective") {
+        rowData.isSameTeacher = false;
+      }
+
+      const result = await timeTableCreateRepository.addtimeTableMapping(
+        rowData,
+        transaction,
+      );
+      createdMappings.push(
+        formatMappingCreateResult(result, {
+          timeTableRoutineId: rowData.timeTableRoutineId,
+          classSectionTermId: routine.classSectionTermId,
+          timeTableCreationId: rowData.timeTableCreationId,
+          period: rowData.period,
+          day: rowData.day,
+          copiedFromTimeTableCellId: payload.copiedFromTimeTableCellId,
+        }),
+      );
+    }
+
+    const loadUserIds = [];
+    for (const payload of copyPayloads) {
+      const teacherList = Array.isArray(payload.teachers)
+        ? payload.teachers
+        : [];
+      if (teacherList.length === 0 && payload.userId != null) {
+        teacherList.push({ userId: payload.userId });
+      }
+      for (const teacher of teacherList) {
+        loadUserIds.push(teacher.userId);
+      }
+    }
+
+    return {
+      isCopy: true,
+      copiedFromTimeTableCellId: Number(request.sourceTimeTableCellId),
+      mappings: createdMappings,
+      loadUserIds,
+    };
+  }
+
+  const payload = request;
+
+  const {
+    timeTableRoutineId,
+    day,
+    classRoomSectionId,
+    userId,
+    combinedGroupId: existingCombinedGroupId,
+  } = payload;
+
+  if (!timeTableRoutineId) {
+    throw new Error("timeTableRoutineId is required");
+  }
+
+  const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+    timeTableRoutineId,
+    { transaction },
+  );
+  if (!routine) {
+    throw new Error("Invalid timeTableRoutineId");
+  }
+
+  const termIds = resolveTermIds(payload, routine);
+
+  assertMappingAddAllowed(routine);
+
+  const slots = normalizeSlots(payload);
+  const isCombined = termIds.length > 1;
+  const combinedGroupId = isCombined
+    ? existingCombinedGroupId || randomUUID()
+    : null;
+
+  let routineTargets;
+  if (termIds.length > 0) {
+    routineTargets = await resolveCombinedRoutineTargets(
+      routine,
+      termIds,
+      transaction,
+    );
+  } else {
+    routineTargets = [
+      {
+        classSectionTermId:
+          routine.classSectionTermId != null
+            ? Number(routine.classSectionTermId)
+            : null,
+        timeTableRoutineId: Number(timeTableRoutineId),
+      },
+    ];
+  }
+
+  const conflictOptions = {
+    allowedClassSectionTermIds: termIds,
+    excludeCombinedGroupId: existingCombinedGroupId || null,
+  };
+
+  const createdMappings = [];
+
+  for (const slot of slots) {
+    const periodInfo =
+      await timeTableCreateRepository.getPeriodInfoRepository(
+        slot.timeTableCreationId,
+      );
+    if (!periodInfo) {
+      throw new Error(
+        `Invalid timeTableCreationId: ${slot.timeTableCreationId}`,
+      );
+    }
+
+    const teacherList = Array.isArray(payload.teachers)
+      ? payload.teachers
+      : [];
+    if (teacherList.length === 0 && userId != null) {
+      teacherList.push({ userId });
+    }
+
+    for (const teacher of teacherList) {
+      await assertNoSlotConflicts({
+        userId: teacher.userId,
+        classRoomSectionId,
+        day,
+        periodInfo,
+        startingDate: routine.startingDate,
+        endingDate: routine.endingDate,
+        conflictOptions,
+        electiveSubjectId: payload.electiveSubjectId,
+        courseId: routine.courseId,
+        excludeRoutineId: routine.timeTableRoutineId,
+        transaction,
+      });
+    }
+
+    if (teacherList.length === 0) {
+      await assertNoSlotConflicts({
+        userId: null,
+        classRoomSectionId,
+        day,
+        periodInfo,
+        startingDate: routine.startingDate,
+        endingDate: routine.endingDate,
+        conflictOptions,
+        electiveSubjectId: payload.electiveSubjectId,
+        courseId: routine.courseId,
+        excludeRoutineId: routine.timeTableRoutineId,
+        transaction,
+      });
+    }
+
+    for (const target of routineTargets) {
+      const rowData = stripMappingRow({
+        ...payload,
+        timeTableRoutineId: target.timeTableRoutineId,
+        timeTableCreationId: slot.timeTableCreationId,
+        period: slot.period,
+        combinedGroupId,
+        createdBy,
+        updatedBy,
+      });
+
+      if (rowData.timeTableType === "elective") {
+        rowData.isSameTeacher = false;
+      }
+
+      const result = await timeTableCreateRepository.addtimeTableMapping(
+        rowData,
+        transaction,
+      );
+      createdMappings.push(
+        formatMappingCreateResult(result, {
+          timeTableRoutineId: target.timeTableRoutineId,
+          classSectionTermId: target.classSectionTermId,
+          timeTableCreationId: slot.timeTableCreationId,
+          period: slot.period,
+          combinedGroupId,
+          copiedFromTimeTableCellId:
+            payload.copiedFromTimeTableCellId ?? null,
+        }),
+      );
+    }
+  }
+
+  const loadUserIds = [];
+  if (Array.isArray(payload.teachers)) {
+    for (const teacher of payload.teachers) {
+      loadUserIds.push(teacher.userId);
+    }
+  }
+  if (userId != null) {
+    loadUserIds.push(userId);
+  }
+
+  return {
+    isCombined,
+    combinedGroupId,
+    classSectionTermIds: termIds,
+    mappings: createdMappings,
+    loadUserIds,
+  };
+}
+
+export async function addtimeTableMapping(data, createdBy, updatedBy) {
+  const isBulk = Array.isArray(data) || Array.isArray(data?.mappings);
+  const items = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.mappings)
+      ? data.mappings
+      : [data];
+
+  // In bulk mode: prevent internal duplicate slots in the incoming batch
+  if (items.length > 1) {
+    const seenSlots = new Set();
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item && item.timeTableRoutineId && item.day && item.period) {
+        const slotKey = `${item.timeTableRoutineId}_${String(item.day).trim().toLowerCase()}_${item.period}`;
+        if (seenSlots.has(slotKey)) {
+          throw new Error(
+            `Duplicate slot in payload at index ${i}: Routine ${item.timeTableRoutineId}, ${item.day} Period ${item.period}`,
+          );
+        }
+        seenSlots.add(slotKey);
+      }
+    }
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const allCreatedMappings = [];
+    const allLoadUserIds = [];
+
+    for (const item of items) {
+      const result = await executeMappingEntry(
+        item,
+        createdBy,
+        updatedBy,
+        transaction,
+      );
+      if (Array.isArray(result?.mappings)) {
+        allCreatedMappings.push(...result.mappings);
+      }
+      if (Array.isArray(result?.loadUserIds)) {
+        allLoadUserIds.push(...result.loadUserIds);
+      }
+    }
+
+    const uniqueLoadUserIds = [...new Set(allLoadUserIds.filter(Boolean))];
+    if (uniqueLoadUserIds.length > 0) {
+      await recomputeFacultyLoadForUsers(uniqueLoadUserIds, transaction);
+    }
+
+    await transaction.commit();
+
+    if (isBulk) {
+      return {
+        success: true,
+        count: allCreatedMappings.length,
+        mappings: allCreatedMappings,
+      };
+    }
+
+    // Single item backward compatibility
+    const singleResult = allCreatedMappings[0] || null;
+    const firstItem = items[0];
+    const isCopy = firstItem?.sourceTimeTableCellId != null;
+    const hasMultipleSlots = Array.isArray(firstItem?.slots) && firstItem.slots.length > 1;
+    const isCombined = Array.isArray(firstItem?.classSectionTermIds) && firstItem.classSectionTermIds.length > 1;
+
+    if (isCopy) {
+      return {
+        isCopy: true,
+        copiedFromTimeTableCellId: Number(firstItem.sourceTimeTableCellId),
+        mappings: allCreatedMappings,
+      };
+    }
+
+    if (isCombined || hasMultipleSlots) {
+      return {
+        isCombined,
+        combinedGroupId: allCreatedMappings[0]?.combinedGroupId || null,
+        classSectionTermIds: firstItem.classSectionTermIds || [],
+        mappings: allCreatedMappings,
+      };
+    }
+
+    return singleResult;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function cloneTimeTableRoutine(
+  previousRoutineId,
+  startingDate,
+  endingDate,
+  createdBy,
+  updatedBy,
+  previousDate,
+) {
+  const transaction = await sequelize.transaction();
+
+  const routineCloneFields = [
+    "timetableStructureCourseMapperId",
+    "courseId",
+    "academicYearId",
+    "classSectionTermId",
+    "campusId",
+    "instituteId",
+    "timeTableType",
+  ];
+
+  const mappingCloneFields = [
+    "timeTableNameId",
+    "timeTableCreationId",
+    "electiveSubjectId",
+    "subjectId",
+    "teacherSubjectMappingId",
+    "classRoomSectionId",
+    "isSameTeacher",
+    "day",
+    "period",
+    "timeTableType",
+    "isAttendence",
+    "isOverridingSyblingElectives",
+    "combinedGroupId",
+  ];
+
+  try {
+    const previousRoutine =
+      await timeTableCreateRepository.getFullRoutineDetailsRepository(
+        previousRoutineId,
+        { transaction },
+      );
+
+    if (!previousRoutine) {
+      const error = new Error("Routine not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const previousPlain = previousRoutine.get({ plain: true });
+    const start = toDateOnlyString(startingDate);
+    const end = toDateOnlyString(endingDate);
+    const previousEnd =
+      previousDate != null ? toDateOnlyString(previousDate) : null;
+
+    const previousMapping = await getStructureCourseMappingById(
+      previousPlain.timetableStructureCourseMapperId,
+      { transaction },
+    );
+    if (!previousMapping) {
+      const error = new Error("Structure course mapping not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const structure = await getTimeTableStructureById(
+      previousMapping.timeTableNameId,
+      { transaction },
+    );
+    if (!structure) {
+      const error = new Error("timeTableNameId not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    assertRoutineDatesWithinStructure(previousMapping, start, end);
+
+    if (previousEnd != null) {
+      if (previousEnd < toDateOnlyString(previousPlain.startingDate)) {
+        const error = new Error("previousDate before routine start");
+        error.statusCode = 400;
+        throw error;
+      }
+
+      await timeTableCreateRepository.changeTimeTableCreate(
+        previousRoutineId,
+        {
+          endingDate: previousEnd,
+          updatedBy,
+        },
+        transaction,
+      );
+    }
+
+    const overlap =
+      await timeTableCreateRepository.checkRoutineOverlapRepository(
+        {
+          classSectionTermId: previousPlain.classSectionTermId,
+          startingDate: start,
+          endingDate: end,
+          excludeRoutineId: previousEnd != null ? previousRoutineId : undefined,
+        },
+        { transaction },
+      );
+
+    if (overlap) {
+      const error = new Error("Routine date range overlaps");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const previousCells = previousPlain.timeTableCells;
+    const periodInfoByCreationId = new Map();
+    const conflictOptions = {
+      allowedClassSectionTermIds: [],
+      excludeCombinedGroupId: null,
+      excludeRoutineId: Number(previousRoutineId),
+    };
+
+    for (const cell of previousCells) {
+      const teachers = cell.timeTableCellTeachers;
+      if (
+        teachers.length === 0 &&
+        !cell.classRoomSectionId &&
+        !cell.electiveSubjectId
+      ) {
+        continue;
+      }
+
+      const creationId = Number(cell.timeTableCreationId);
+      let periodInfo = periodInfoByCreationId.get(creationId);
+      if (!periodInfo) {
+        periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
+          creationId,
+          { transaction },
+        );
+        periodInfoByCreationId.set(creationId, periodInfo);
+      }
+
+      await assertNoSlotConflicts({
+        userId: null,
+        classRoomSectionId: cell.classRoomSectionId,
+        day: cell.day,
+        periodInfo,
+        startingDate: start,
+        endingDate: end,
+        conflictOptions,
+        electiveSubjectId: cell.electiveSubjectId,
+        courseId: previousPlain.courseId,
+        transaction,
+      });
+
+      for (const teacher of teachers) {
+        await assertNoSlotConflicts({
+          userId: teacher.userId,
+          classRoomSectionId: null,
+          day: cell.day,
+          periodInfo,
+          startingDate: start,
+          endingDate: end,
+          conflictOptions,
+          electiveSubjectId: null,
+          courseId: previousPlain.courseId,
+          transaction,
+        });
+      }
+    }
+
+    const newRoutineData = {
+      startingDate: start,
+      endingDate: end,
+      isPublish: false,
+      createdBy,
+      updatedBy,
+      timetableStructureCourseMapperId:
+        previousPlain.timetableStructureCourseMapperId,
+    };
+
+    for (const field of routineCloneFields) {
+      if (previousPlain[field] !== undefined) {
+        newRoutineData[field] = previousPlain[field];
+      }
+    }
+
+    const newRoutine = await timeTableCreateRepository.addTimeTableCreate(
+      newRoutineData,
+      transaction,
+    );
+    const newRoutineId = newRoutine.timeTableRoutineId;
+    const cloneLoadUserIds = [];
+
+    for (const cell of previousCells) {
+      const row = {
+        timeTableRoutineId: newRoutineId,
+        createdBy,
+        updatedBy,
+        teachers: [],
+      };
+
+      for (const field of mappingCloneFields) {
+        if (cell[field] !== undefined) {
+          row[field] = cell[field];
+        }
+      }
+
+      for (const teacher of cell.timeTableCellTeachers) {
+        row.teachers.push({
+          userId: teacher.userId,
+          teacherType: teacher.teacherType,
+          isAttendence: teacher.isAttendence,
+        });
+      }
+
+      await timeTableCreateRepository.addtimeTableMapping(row, transaction);
+
+      for (const teacher of row.teachers) {
+        cloneLoadUserIds.push(teacher.userId);
+      }
+    }
+
+    await recomputeFacultyLoadForUsers(cloneLoadUserIds, transaction);
+
+    await transaction.commit();
+    return newRoutine;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function changeTimeTableCreate(body, updatedBy) {
+  const { timeTableRoutineId, classSectionTermId, ...updateData } = body;
+  const current =
+    await timeTableCreateRepository.getRoutineByIdRepository(
+      timeTableRoutineId,
+    );
+  if (!current) {
+    throw new Error("Routine not found");
+  }
+  const todayStr = toDateOnlyString(new Date());
+  if (current.isPublish && current.startingDate <= todayStr) {
+    throw new Error(
+      "Published routine cannot be updated on or after its starting date.",
+    );
+  }
+
+  let placementFields = { ...updateData };
+
+  if (classSectionTermId != null) {
+    const placement = await resolveRoutinePlacement({ classSectionTermId });
+    placementFields = {
+      ...placementFields,
+      classSectionTermId: placement.classSectionTermId,
+    };
+  }
+
+  if (
+    placementFields.startingDate ||
+    placementFields.endingDate ||
+    placementFields.classSectionTermId ||
+    placementFields.courseId ||
+    placementFields.timetableStructureCourseMapperId
+  ) {
+    const resolvedTermId =
+      placementFields.classSectionTermId || current.classSectionTermId;
+    const start = toDateOnlyString(
+      placementFields.startingDate || current.startingDate,
+    );
+    const end = toDateOnlyString(
+      placementFields.endingDate || current.endingDate,
+    );
+
+    const mapperId =
+      placementFields.timetableStructureCourseMapperId ||
+      current.timetableStructureCourseMapperId;
+    const courseMapping = await getStructureCourseMappingById(mapperId);
+    if (!courseMapping) {
+      throw new Error("Structure course mapping not found");
+    }
+
+    let courseId = placementFields.courseId || current.courseId;
+
+    if (placementFields.classSectionTermId) {
+      const termRow = await findClassSectionTermById(
+        placementFields.classSectionTermId,
+      );
+      if (!termRow) {
+        throw new Error("classSectionTermId not found");
+      }
+      const section = termRow.get({ plain: true }).classSection;
+      if (!section) {
+        throw new Error("class section not found for classSectionTermId");
+      }
+      if (Number(section.courseId) !== Number(courseMapping.courseId)) {
+        throw new Error(
+          "classSectionTermId course does not match structure course mapping",
+        );
+      }
+      if (Number(section.sessionId) !== Number(courseMapping.sessionId)) {
+        throw new Error(
+          "classSectionTermId session does not match structure course mapping",
+        );
+      }
+      courseId = section.courseId;
+      placementFields.courseId = courseId;
+    }
+
+    assertRoutineDatesWithinStructure(courseMapping, start, end);
+
+    placementFields.startingDate = start;
+    placementFields.endingDate = end;
+    placementFields.timetableStructureCourseMapperId =
+      courseMapping.timetableStructureCourseMapperId;
+    delete placementFields.timeTableNameId;
+
+    const overlap =
+      await timeTableCreateRepository.checkRoutineOverlapRepository({
+        classSectionTermId: resolvedTermId,
+        startingDate: start,
+        endingDate: end,
+        excludeRoutineId: timeTableRoutineId,
+      });
+
+    if (overlap) {
+      throw new Error(
+        "Routine already exists for this section in the selected date range",
+      );
+    }
+  }
+
+  const data = {
+    ...placementFields,
+    updatedBy,
+  };
+
+  const isDateChanged = Boolean(
+    (placementFields.startingDate &&
+      placementFields.startingDate !==
+      toDateOnlyString(current.startingDate)) ||
+    (placementFields.endingDate &&
+      placementFields.endingDate !== toDateOnlyString(current.endingDate)),
+  );
+
+  return await sequelize.transaction(async (transaction) => {
+    const result = await timeTableCreateRepository.changeTimeTableCreate(
+      timeTableRoutineId,
+      data,
+      transaction,
+    );
+
+    if (current.isPublish && isDateChanged) {
+      const oldStart = toDateOnlyString(current.startingDate);
+      const oldEnd = toDateOnlyString(current.endingDate);
+      const newStart = placementFields.startingDate || oldStart;
+      const newEnd = placementFields.endingDate || oldEnd;
+
+      await adjustPublishedRoutineDates(
+        timeTableRoutineId,
+        oldStart,
+        oldEnd,
+        newStart,
+        newEnd,
+        updatedBy,
+        transaction,
+      );
+    }
+
+    return result;
+  });
+}
+
+export async function updatetimeTableCreate(
+  timeTableCellId,
+  timeTableType,
+  updatedBy,
+) {
+  const cell = await timeTableCreateRepository.findMappingById(
+    Number(timeTableCellId),
+  );
+  if (!cell) {
+    throw new Error(`Mapping ${timeTableCellId} not found`);
+  }
+
+  const cellPlain = cell.get ? cell.get({ plain: true }) : cell;
+  const routine = await timeTableCreateRepository.getRoutineByIdRepository(
+    cellPlain.timeTableRoutineId,
+  );
+  if (!routine) {
+    throw new Error(`Routine ${cellPlain.timeTableRoutineId} not found`);
+  }
+
+  assertWeekMappingChangeAllowed(routine, "update");
+
+  const data = { timeTableType, updatedBy };
+  const result = await timeTableCreateRepository.updatetimeTableCreate(
+    Number(timeTableCellId),
+    data,
+  );
+  return result;
+}
+
+async function findTeacherSlotForUpdate(baseMappingId, item, transaction) {
+  if (item.timeTableCellTeacherId != null) {
+    return timeTableCreateRepository.findCellTeacherRepository(baseMappingId, {
+      timeTableCellTeacherId: item.timeTableCellTeacherId,
+      transaction,
+    });
+  }
+
+  if (item.teacherType != null) {
+    return timeTableCreateRepository.findCellTeacherRepository(baseMappingId, {
+      teacherType: item.teacherType,
+      transaction,
+    });
+  }
+
+  if (item.userId != null) {
+    return timeTableCreateRepository.findCellTeacherRepository(baseMappingId, {
+      userId: item.userId,
+      transaction,
+    });
+  }
+
+  return null;
+}
+
+function buildMappingCellPatch(item, updatedBy) {
+  const cellPatch = { updatedBy };
+
+  if (item.subjectId != null) cellPatch.subjectId = Number(item.subjectId);
+  const scmId = item.subjectComponentMappingId ?? item.subject_component_mapping_id;
+  if (scmId != null) cellPatch.subjectComponentMappingId = Number(scmId);
+  if (item.electiveSubjectId != null)
+    cellPatch.electiveSubjectId = Number(item.electiveSubjectId);
+  if (item.classRoomSectionId != null)
+    cellPatch.classRoomSectionId = Number(item.classRoomSectionId);
+  if (item.teacherSubjectMappingId != null) {
+    cellPatch.teacherSubjectMappingId = item.teacherSubjectMappingId;
+  }
+  if (item.timeTableType != null) cellPatch.timeTableType = item.timeTableType;
+  if (item.isOverridingSyblingElectives != null) {
+    cellPatch.isOverridingSyblingElectives = item.isOverridingSyblingElectives;
+  }
+  if (item.isAttendence != null && item.teacherType == null) {
+    cellPatch.isAttendence = item.isAttendence;
+  }
+  if (
+    item.subjectId != null ||
+    item.electiveSubjectId != null ||
+    item.teacherSubjectMappingId != null
+  ) {
+    cellPatch.isSameTeacher = false;
+  }
+
+  return cellPatch;
+}
+
+function hasMappingCellFieldUpdate(item) {
+  return (
+    item.subjectId != null ||
+    item.subjectComponentMappingId != null ||
+    item.subject_component_mapping_id != null ||
+    item.electiveSubjectId != null ||
+    item.classRoomSectionId != null ||
+    item.teacherSubjectMappingId != null ||
+    item.timeTableType != null ||
+    item.isOverridingSyblingElectives != null ||
+    (item.isAttendence != null && item.teacherType == null)
+  );
+}
+
+function hasTeacherSlotUpdate(item) {
+  return (
+    item.teacherType != null ||
+    item.timeTableCellTeacherId != null ||
+    item.userId != null ||
+    item.isAttendence != null ||
+    item.isOverridingSyblingElectives != null
+  );
+}
+
+async function assignTeacherToMappingCell({
+  baseMappingId,
+  item,
+  createdBy,
+  updatedBy,
+  transaction,
+}) {
+  const cellPatch = buildMappingCellPatch(item, updatedBy);
+  if (Object.keys(cellPatch).length > 1) {
+    await timeTableCreateRepository.updateMapping(
+      baseMappingId,
+      cellPatch,
+      transaction,
+    );
+  }
+
+  await timeTableCreateRepository.addCellTeacherRepository(
+    {
+      timeTableCellId: baseMappingId,
+      userId: Number(item.userId),
+      teacherType: item.teacherType || "Primary",
+      isAttendence: item.isAttendence != null ? item.isAttendence : true,
+      createdBy,
+      updatedBy,
+    },
+    transaction,
+  );
+
+  await timeTableCreateRepository.syncTeacherToDateWiseCellsRepository(
+    baseMappingId,
+    {
+      userId: Number(item.userId),
+      teacherType: item.teacherType || "Primary",
+      isAttendence: item.isAttendence != null ? item.isAttendence : true,
+      createdBy,
+      updatedBy,
+    },
+    { transaction },
+  );
+
+  await recomputeFacultyLoadForUser(item.userId, transaction);
+}
+
+export async function updateSimpleTeacherMapping(
+  mappingArray,
+  createdBy,
+  updatedBy,
+) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const base = mappingArray[0];
+    let baseRow = await timeTableCreateRepository.findMappingById(
+      base.timeTableCellId,
+    );
+
+    if (!baseRow) {
+      throw new Error(`Base mapping ${base.timeTableCellId} not found`);
+    }
+
+    baseRow = baseRow.get({ plain: true });
+    const baseMappingId = Number(baseRow.timeTableCellId);
+
+    const routineInfo =
+      await timeTableCreateRepository.getRoutineByIdRepository(
+        baseRow.timeTableRoutineId,
+      );
+    if (!routineInfo) {
+      throw new Error(`Routine ${baseRow.timeTableRoutineId} not found`);
+    }
+    const { startingDate, endingDate } = routineInfo;
+
+    assertWeekMappingChangeAllowed(routineInfo, "update");
+
+    const periodInfo = await timeTableCreateRepository.getPeriodInfoRepository(
+      baseRow.timeTableCreationId,
+    );
+    if (!periodInfo) {
+      throw new Error(
+        `Period Info not found for ID ${baseRow.timeTableCreationId}`,
+      );
+    }
+    const { startTime, endTime } = periodInfo;
+
+    const addingSecondaryTeacher = mappingArray.some(
+      (item) =>
+        item.isNew === true &&
+        String(item.teacherType || "").toLowerCase() === "secondary",
+    );
+
+    const effectiveRoomId =
+      base.classRoomSectionId ?? baseRow.classRoomSectionId;
+    if (effectiveRoomId && !addingSecondaryTeacher) {
+      const roomConflict =
+        await timeTableCreateRepository.checkRoomConflictRepository(
+          effectiveRoomId,
+          baseRow.day,
+          startTime,
+          endTime,
+          startingDate,
+          endingDate,
+          { excludeTimeTableCellId: baseMappingId },
+        );
+
+      if (roomConflict) {
+        const message = await buildRoomConflictMessage(
+          roomConflict,
+          effectiveRoomId,
+          { day: baseRow.day, ...periodInfo },
+          transaction,
+        );
+        throwSlotConflictError(message);
+      }
+    }
+
+    for (const item of mappingArray) {
+      if (item.userId) {
+        const conflict =
+          await timeTableCreateRepository.checkTeacherConflictRepository(
+            item.userId,
+            baseRow.day,
+            startTime,
+            endTime,
+            startingDate,
+            endingDate,
+            { excludeTimeTableCellId: baseMappingId },
+          );
+
+        if (conflict) {
+          const message = await buildTeacherConflictMessage(
+            item.userId,
+            conflict,
+            { day: baseRow.day, ...periodInfo },
+            transaction,
+          );
+          throwSlotConflictError(message);
+        }
+      }
+
+      if (item.isNew === true) {
+        if (!item.userId) {
+          throw new Error("userId is required for new teacher entry");
+        }
+
+        if (String(item.teacherType || "").toLowerCase() === "secondary") {
+          const primaryTeacher =
+            await timeTableCreateRepository.findCellTeacherRepository(
+              baseMappingId,
+              { teacherType: "Primary", transaction },
+            );
+          if (!primaryTeacher) {
+            throw new Error(
+              "Assign primary teacher before adding a secondary teacher",
+            );
+          }
+
+          const existingSecondary =
+            await timeTableCreateRepository.findCellTeacherRepository(
+              baseMappingId,
+              { teacherType: "Secondary", transaction },
+            );
+          if (existingSecondary) {
+            throw new Error("Secondary teacher already assigned for this cell");
+          }
+        }
+
+        const cellPatch = buildMappingCellPatch(item, updatedBy);
+        if (Object.keys(cellPatch).length > 1) {
+          await timeTableCreateRepository.updateMapping(
+            baseMappingId,
+            cellPatch,
+            transaction,
+          );
+        }
+
+        const teacherType = item.teacherType || "Secondary";
+        const isAttendence =
+          item.isAttendence != null ? item.isAttendence : false;
+
+        await timeTableCreateRepository.addCellTeacherRepository(
+          {
+            timeTableCellId: baseMappingId,
+            userId: Number(item.userId),
+            teacherType,
+            isAttendence,
+            createdBy,
+            updatedBy,
+          },
+          transaction,
+        );
+
+        await timeTableCreateRepository.syncTeacherToDateWiseCellsRepository(
+          baseMappingId,
+          {
+            userId: Number(item.userId),
+            teacherType,
+            isAttendence,
+            createdBy,
+            updatedBy,
+          },
+          { transaction },
+        );
+
+        await recomputeFacultyLoadForUser(item.userId, transaction);
+        continue;
+      }
+
+      if (!hasTeacherSlotUpdate(item) && !hasMappingCellFieldUpdate(item)) {
+        continue;
+      }
+
+      if (!hasTeacherSlotUpdate(item)) {
+        const cellPatch = buildMappingCellPatch(item, updatedBy);
+        if (Object.keys(cellPatch).length > 1) {
+          await timeTableCreateRepository.updateMapping(
+            baseMappingId,
+            cellPatch,
+            transaction,
+          );
+        }
+        continue;
+      }
+
+      let teacher = await findTeacherSlotForUpdate(
+        baseMappingId,
+        item,
+        transaction,
+      );
+
+      if (!teacher) {
+        if (!item.userId) {
+          throw new Error(`Teacher row not found for mapping ${baseMappingId}`);
+        }
+
+        await assignTeacherToMappingCell({
+          baseMappingId,
+          item,
+          createdBy,
+          updatedBy,
+          transaction,
+        });
+        continue;
+      }
+
+      const teacherPlain = teacher.get ? teacher.get({ plain: true }) : teacher;
+      const cellPatch = buildMappingCellPatch(item, updatedBy);
+      if (Object.keys(cellPatch).length > 1) {
+        await timeTableCreateRepository.updateMapping(
+          baseMappingId,
+          cellPatch,
+          transaction,
+        );
+      }
+
+      if (
+        item.userId != null &&
+        Number(teacherPlain.userId) !== Number(item.userId)
+      ) {
+        const previousUserId = Number(teacherPlain.userId);
+        await timeTableCreateRepository.updateCellTeacherRepository(
+          teacherPlain.timeTableCellTeacherId,
+          {
+            userId: Number(item.userId),
+            updatedBy,
+          },
+          transaction,
+        );
+        await timeTableCreateRepository.updateDateWiseTeachersUserIdRepository(
+          baseMappingId,
+          previousUserId,
+          Number(item.userId),
+          { transaction, updatedBy },
+        );
+        await recomputeFacultyLoadForUsers(
+          [previousUserId, item.userId],
+          transaction,
+        );
+        teacherPlain.userId = Number(item.userId);
+      }
+
+      const teacherTypeToSave =
+        item.teacherType != null ? item.teacherType : teacherPlain.teacherType;
+      const attendenceToSave =
+        item.isAttendence != null
+          ? item.isAttendence
+          : teacherPlain.isAttendence;
+      const noChange =
+        teacherPlain.teacherType === teacherTypeToSave &&
+        teacherPlain.isAttendence === attendenceToSave &&
+        (item.isOverridingSyblingElectives == null ||
+          baseRow.isOverridingSyblingElectives ===
+          item.isOverridingSyblingElectives);
+
+      if (!noChange) {
+        await timeTableCreateRepository.updateMapping(
+          baseMappingId,
+          {
+            teacherType: teacherTypeToSave,
+            isAttendence: attendenceToSave,
+            isOverridingSyblingElectives: item.isOverridingSyblingElectives,
+            timeTableCellTeacherId: teacherPlain.timeTableCellTeacherId,
+            updatedBy,
+          },
+          transaction,
+        );
+      }
+    }
+
+    await transaction.commit();
+    return { success: true, message: "Teacher mapping updated successfully" };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function getTimeTableMappingDetail(timeTableRoutineId) {
+  const rawResult =
+    await timeTableCreateRepository.getTimeTableMappingDetail(
+      timeTableRoutineId,
+    );
+
+  if (!Array.isArray(rawResult) || rawResult.length === 0) {
+    return [];
+  }
+
+  // Helper: Parse "YYYY-MM-DD" to JS Date object
+  function parseISODate(dateStr) {
+    if (typeof dateStr !== "string") return null;
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return null;
+    const [year, month, day] = parts.map(Number);
+    if (!year || !month || !day) return null;
+    return new Date(year, month - 1, day);
+  }
+
+  // Helper: Get array of all dates between two dates
+  function getDatesBetween(startDate, endDate) {
+    const dates = [];
+    let currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      dates.push(new Date(currentDate));
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    return dates;
+  }
+
+  // Helper: Get weekday name from date
+  function getWeekdayName(date) {
+    return date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  }
+
+  const result = [];
+
+  for (const rawItem of rawResult) {
+    const item = rawItem.toJSON ? rawItem.toJSON() : rawItem;
+    const timeTableCreate = item?.timeTableRoutine ?? item?.timeTablecreate;
+
+    const classSectionTermId = timeTableCreate?.classSectionTermId;
+    const startingDateStr = timeTableCreate?.startingDate;
+    const endingDateStr = timeTableCreate?.endingDate;
+
+    if (!classSectionTermId || !startingDateStr || !endingDateStr) {
+      item.totalClasses = 0;
+      result.push(item);
+      continue;
+    }
+
+    const startingDate = parseISODate(startingDateStr);
+    const endingDate = parseISODate(endingDateStr);
+
+    if (!startingDate || !endingDate || startingDate > endingDate) {
+      item.totalClasses = 0;
+      result.push(item);
+      continue;
+    }
+
+    const allDates = getDatesBetween(startingDate, endingDate);
+
+    // Week-off days from timetable
+    const weekOffDaysSet = new Set();
+    const timeTableNameList =
+      timeTableCreate.structureCourseMapping.timeTableStructure.timeTableName ||
+      [];
+
+    for (let i = 0; i < timeTableNameList.length; i++) {
+      const entry = timeTableNameList[i];
+      let weekOff = entry?.weekOff;
+
+      if (!Array.isArray(weekOff)) {
+        console.warn("Unexpected weekOff format:", weekOff);
+        weekOff = [];
+      }
+
+      for (let j = 0; j < weekOff.length; j++) {
+        const day = weekOff[j];
+        if (typeof day === "string") {
+          weekOffDaysSet.add(day.toLowerCase());
+        }
+      }
+    }
+
+    const workingDays = allDates.filter(
+      (date) => !weekOffDaysSet.has(getWeekdayName(date)),
+    );
+
+    // Holidays
+    let holidays = [];
+    try {
+      holidays = await getHolidayStartEndDate(startingDateStr, endingDateStr);
+    } catch (e) {
+      console.error("Failed to get holidays:", e);
+      holidays = [];
+    }
+
+    const holidayDatesSet = new Set();
+    if (Array.isArray(holidays)) {
+      for (let i = 0; i < holidays.length; i++) {
+        const h = holidays[i];
+        let holidayDate = null;
+
+        if (h?.date instanceof Date) {
+          holidayDate = new Date(
+            h.date.getFullYear(),
+            h.date.getMonth(),
+            h.date.getDate(),
+          );
+        } else if (typeof h?.date === "string") {
+          holidayDate = parseISODate(h.date);
+        }
+
+        if (holidayDate) {
+          holidayDatesSet.add(holidayDate.getTime());
+        }
+      }
+    }
+
+    const finalClassDays = workingDays.filter(
+      (date) => !holidayDatesSet.has(date.getTime()),
+    );
+    item.totalClasses = finalClassDays.length;
+
+    result.push(item);
+  }
+
+  return result;
+}
+
+export async function getSingletimeTableMappingDetail(courseId) {
+  return await timeTableCreateRepository.getSingleTimeTableCreateDetails(
+    courseId,
+  );
+}
+
+//---------------night
+
+export async function getTimeTableElective(courseId) {
+  const allData = await timeTableCreateRepository.getTimeTableCellData(
+    Number(courseId),
+    null,
+  );
+
+  //  Separate normal and elective
+  // const normal = allData.filter(
+  //   item =>
+  //     item.timeTableType === "normal" &&
+  //     item.classSectionsId === Number(classSectionsId)
+  // );
+
+  const elective = allData.filter(
+    (item) =>
+      item.timeTableType === "elective" && item.courseId === Number(courseId),
+  );
+
+  // const combined = [...normal, ...elective];
+  const combined = [...elective];
+
+  //  Format final output
+  const formatted = combined.map((item) => {
+    const course = item.timeTableCourse || {};
+    const classSection = resolveTimeTableRoutineSection(item) || {};
+
+    //  Build sectionRountine only for elective type
+    const sectionRoutine = (item?.timeTableCells || []).reduce((acc, curr) => {
+      let dayObj = acc.find((d) => d.day === curr.day);
+      if (!dayObj) {
+        dayObj = { day: curr.day, period: [] };
+        acc.push(dayObj);
+      }
+      const sameTeacher = curr?.isSameTeacher;
+      const subject = sameTeacher
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectName ??
+          curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectName)
+        : curr?.timeTableSubject?.subjectName;
+
+      const subjectCode = sameTeacher
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectCode ??
+          curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectCode)
+        : curr?.timeTableSubject?.subjectCode;
+
+      const subjectId = sameTeacher
+        ? (curr?.timeTableTeacherSubject?.employeeSubject?.subjectId ??
+          curr?.timeTableTeacherSubject?.employeeSubject?.subjects?.subjectId)
+        : curr?.timeTableSubject?.subjectId;
+
+      const teachers = curr?.timeTableCellTeachers?.length
+        ? curr.timeTableCellTeachers
+        : [null];
+
+      let existPeriod = dayObj.period.find(
+        (d) => d.timeTableCreationId === curr?.timeTableCreationId,
+      );
+
+      for (const teacher of teachers) {
+        const employeeDetails = teacher?.employeeDetails;
+        const teacherName = sameTeacher
+          ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.employeeName
+          : employeeDetails?.employeeName;
+        const employeeCode = sameTeacher
+          ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.employeeCode
+          : employeeDetails?.employeeCode;
+        const userId = sameTeacher
+          ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.userId
+          : employeeDetails?.userId;
+        const pickColor = sameTeacher
+          ? curr?.timeTableTeacherSubject?.teacherEmployeeData?.pickColor
+          : employeeDetails?.pickColor;
+
+        const mappingEntry = {
+          timeTableCellId: curr?.timeTableCellId,
+          employeeName: teacherName || "N/A",
+          employeeCode: employeeCode || "",
+          pickColor: pickColor || "",
+          userId: userId || null,
+          teacherType: teacher?.teacherType || null,
+          timeTableType: curr?.timeTableType,
+          roomId: curr?.classRoom?.classRoomSectionId || null,
+          roomName: curr?.classRoom?.roomNumber || null,
+          subject: curr?.timeTableElective
+            ? {
+              subjectId: curr?.timeTableElective?.electiveSubjectId,
+              Name: curr?.timeTableElective?.electiveSubjectName,
+              Code: curr?.timeTableElective?.electiveSubjectCode,
+            }
+            : {
+              subjectId: subjectId,
+              Name: subject,
+              Code: subjectCode,
+            },
+        };
+
+        if (!existPeriod) {
+          existPeriod = {
+            timeTableCreationId: curr?.timeTableCreationId,
+            periodName: curr?.timeTablecreation?.periodName,
+            isBreak: curr?.timeTablecreation?.isBreak,
+            periodLength: curr?.timeTablecreation?.periodLength,
+            periodGap: curr?.timeTablecreation?.periodGap,
+            startTime: curr?.timeTablecreation?.startTime,
+            endTime: curr?.timeTablecreation?.endTime,
+            mappingData: [mappingEntry],
+          };
+          dayObj.period.push(existPeriod);
+        } else {
+          existPeriod.mappingData.push(mappingEntry);
+        }
+      }
+
+      return acc;
+    }, []);
+
+    return {
+      courseName: course.courseName || "",
+      courseCode: course.courseCode || "",
+      courseId: item.courseId || "",
+      section: classSection.section || "",
+      class: classSection.year != null ? String(classSection.year) : "",
+      timeTableType: item.timeTableType,
+      classSectionsId: item.classSectionsId || null,
+      startingDate: item.startingDate || null,
+      endingDate: item.endingDate || null,
+      sectionRoutine,
+    };
+  });
+
+  return { formatted };
+}
+
+// export async function getTimeTableCellData(courseId, classSectionsId, universityId, instituteId, role) {
+//   const allData = await timeTableCreateRepository.getTimeTableCellData(
+//     courseId,
+//     classSectionsId,
+//     universityId,
+//     instituteId,
+//     role
+//   );
+//   console.log(`>>>>>>>allData`,JSON.stringify(allData));
+
+//   // 1. Separate normal and elective to get base metadata
+//   const normalItemBase = allData.find(
+//     item =>
+//       item.timeTableType === "normal" &&
+//       item.classSectionsId === Number(classSectionsId)
+//   );
+//   const electiveItemBase = allData.find(
+//     item =>
+//       item.timeTableType === "elective" &&
+//       item.courseId === Number(courseId)
+//   );
+
+//   // 2. Flatten all period mappings from both normal and elective base items
+//   const allMappings = [];
+//   const itemsToProcess = [normalItemBase, electiveItemBase].filter(Boolean);
+
+//   for (const item of itemsToProcess) {
+//     const course = item.timeTableCourse || {};
+//     const classSection = resolveTimeTableRoutineSection(item) || {};
+
+//     (item?.timeTablecreate || []).forEach(curr => {
+//       const {
+//         day,
+//         isSameTeacher,
+//         timeTableCellId,
+//         timeTableCreationId,
+//         timeTableType, // This is the **raw mapping type** (e.g., 'normal', 'elective', 'Both')
+//         timeTablecreation,
+//         timeTableSubject,
+//         employeeDetails,
+//         timeTableTeacherSubject,
+//         timeTableElective
+//       } = curr || {};
+
+//       const sameTeacher = isSameTeacher;
+
+//   let teacherData = null;
+//   let subjectData = null;
+
+//     if (sameTeacher === true) {
+//       // sameTeacher = true
+//       teacherData = timeTableTeacherSubject?.teacherEmployeeData || null;
+//       subjectData = timeTableTeacherSubject?.employeeSubject?.subjects || null;
+//     } else {
+//       // sameTeacher = false
+//       teacherData = employeeDetails || null;
+//       subjectData = timeTableSubject || null;
+//     }
+
+//       // Create the mapping entry
+//       const mappingEntry = {
+//         timeTableCellId,
+//         employeeName: teacherData?.employeeName || "N/A",
+//         employeeCode: teacherData?.employeeCode || "",
+//         pickColor: teacherData?.pickColor || "",
+//         userId: teacherData?.userId || null,
+//         isAttendence: curr?.isAttendence ?? null,
+//         timeTableType, // Use the raw mapping type for the final grouping key
+//         subject: timeTableElective
+//           ? {
+//               subjectId: timeTableElective?.electiveSubjectId,
+//               Name: timeTableElective?.electiveSubjectName,
+//               Code: timeTableElective?.electiveSubjectCode,
+//             }
+//           : {
+//               subjectId: subjectData?.subjectId,
+//               Name: subjectData?.subjectName,
+//               Code: subjectData?.subjectCode,
+//             },
+//       };
+
+//       // Store the flattened mapping along with its period and day metadata
+//       allMappings.push({
+//         day,
+//         timeTableCreationId,
+//         periodDetails: timeTablecreation || {},
+//         mappingEntry,
+//         // Store base course/section data for top-level aggregation
+//         baseMetadata: {
+//           course,
+//           classSection,
+//           courseId: item.courseId,
+//           classSectionsId: item.classSectionsId,
+//           startingDate: item.startingDate,
+//           endingDate: item.endingDate,
+//         }
+//       });
+//     });
+//   }
+
+//   // 3. Aggregate flattened mappings into final top-level time table structures (formatted)
+//   const finalAggregatedRoutines = allMappings.reduce((acc, currentMapping) => {
+//     const {
+//       day,
+//       timeTableCreationId,
+//       periodDetails,
+//       mappingEntry,
+//       baseMetadata
+//     } = currentMapping;
+
+//     // Key for top-level grouping is the internal mapping's timeTableType
+//     const finalType = mappingEntry.timeTableType;
+
+//     // Find or create the top-level time table object for this type ('normal', 'elective', or 'Both')
+//     let timeTableObj = acc.find(t => t.timeTableType === finalType);
+
+//     if (!timeTableObj) {
+//       // Create a new base object using the appropriate metadata
+//       const sourceItem = finalType === "normal" ? normalItemBase : electiveItemBase || baseMetadata;
+
+//       const course = sourceItem.timeTableCourse || baseMetadata.course || {};
+//       const classSection = sourceItem.timeTableClassSection || baseMetadata.classSection || {};
+
+//       timeTableObj = {
+//         courseName: course.courseName || "",
+//         courseCode: course.courseCode || "",
+//         courseId: sourceItem.courseId || baseMetadata.courseId || "",
+//         // Use normal section details for 'normal' and 'Both', and null/empty for 'elective'
+//         section: finalType !== "elective" ? classSection.section || "" : "",
+//         class: finalType !== "elective" ? classSection.class || "" : "",
+//         timeTableType: finalType, // Crucial: use the mapping's type here
+//         classSectionsId: finalType !== "elective" ? sourceItem.classSectionsId || baseMetadata.classSectionsId || null : null,
+//         startingDate: finalType !== "elective" ? sourceItem.startingDate || baseMetadata.startingDate || null : null,
+//         endingDate: finalType !== "elective" ? sourceItem.endingDate || baseMetadata.endingDate || null : null,
+//         sectionRoutine: [],
+//       };
+//       acc.push(timeTableObj);
+//     }
+
+//     // 4. Group by Day and Period within the chosen timeTableObj
+//     let dayObj = timeTableObj.sectionRoutine.find(d => d.day === day);
+//     if (!dayObj) {
+//       dayObj = { day, period: [] };
+//       timeTableObj.sectionRoutine.push(dayObj);
+//     }
+
+//     let existPeriod = dayObj.period.find(
+//       p => p.timeTableCreationId === timeTableCreationId
+//     );
+
+//     if (!existPeriod) {
+//       dayObj.period.push({
+//         timeTableCreationId,
+//         periodName: periodDetails.periodName,
+//         isBreak: periodDetails.isBreak,
+//         periodLength: periodDetails.periodLength,
+//         periodGap: periodDetails.periodGap,
+//         startTime: periodDetails.startTime,
+//         endTime: periodDetails.endTime,
+//         mappingData: [mappingEntry],
+//       });
+//     } else {
+//       // existPeriod.mappingData.push(mappingEntry);
+//       const alreadyExists = existPeriod.mappingData.some(m =>
+//         m.userId === mappingEntry.userId &&
+//         m.subject.subjectId === mappingEntry.subject.subjectId
+//       );
+
+//       if (!alreadyExists) {
+//         existPeriod.mappingData.push(mappingEntry);
+//       }
+//     }
+
+//     return acc;
+//   }, []);
+
+//   return { formatted: finalAggregatedRoutines };
+// };
+
+// latest change
+
+export async function getTimeTableCellData(courseId, classSectionTermId) {
+  const allData = await timeTableCreateRepository.getTimeTableCellData(
+    courseId,
+    classSectionTermId,
+  );
+
+  const filteredBySection = allData.filter((item) =>
+    item.dataValues.timeTableType === "normal"
+      ? Number(item.classSectionTermId) === Number(classSectionTermId)
+      : true,
+  );
+
+  // STEP 2: Group by timeTableNameId
+  const groupedByTimeTableName = filteredBySection.reduce((acc, item) => {
+    const key =
+      item.structureCourseMapping?.timeTableNameId ??
+      item.timeTableCells?.[0]?.timeTableNameId ??
+      item.timeTableNameId ??
+      `routine-${item.timeTableRoutineId}`;
+
+    if (!acc[key]) {
+      acc[key] = [];
+    }
+    acc[key].push(item);
+    return acc;
+  }, {});
+
+  const finalResult = [];
+
+  // STEP 3: Process EACH timetableNameId separately
+  for (const timeTableNameId in groupedByTimeTableName) {
+    const groupItems = groupedByTimeTableName[timeTableNameId];
+
+    const normalItemBase = groupItems.find(
+      (item) => item.timeTableType === "normal",
+    );
+
+    const electiveItemBase = groupItems.find(
+      (item) => item.timeTableType === "elective",
+    );
+
+    const allMappings = [];
+    const itemsToProcess = [normalItemBase, electiveItemBase].filter(Boolean);
+
+    //  STEP 4: FLATTEN — one mapping entry per cell teacher
+    for (const item of itemsToProcess) {
+      const course = item.timeTableCourse || {};
+      const classSection = resolveTimeTableRoutineSection(item) || {};
+
+      for (const curr of item?.timeTableCells || []) {
+        const {
+          day,
+          isSameTeacher,
+          timeTableCellId,
+          timeTableCreationId,
+          timeTableType,
+          timeTablecreation,
+          timeTableSubject,
+          timeTableTeacherSubject,
+          timeTableElective,
+          classRoom,
+          timeTableCellTeachers,
+        } = curr || {};
+
+        let subjectData = null;
+        if (isSameTeacher === true) {
+          subjectData = timeTableTeacherSubject?.employeeSubject?.subjectId
+            ? timeTableTeacherSubject.employeeSubject
+            : timeTableTeacherSubject?.employeeSubject?.subjects || null;
+        } else {
+          subjectData = timeTableSubject || null;
+        }
+
+        const teachers = timeTableCellTeachers?.length
+          ? timeTableCellTeachers
+          : [null];
+
+        for (const teacher of teachers) {
+          const teacherData =
+            isSameTeacher === true
+              ? timeTableTeacherSubject?.teacherEmployeeData ||
+              teacher?.employeeDetails ||
+              null
+              : teacher?.employeeDetails || null;
+
+          const mappingEntry = {
+            timeTableCellId,
+            combinedGroupId: curr?.combinedGroupId ?? null,
+            employeeName: teacherData?.employeeName || "N/A",
+            employeeCode: teacherData?.employeeCode || "",
+            pickColor: teacherData?.pickColor || "",
+            userId: teacherData?.userId || teacher?.userId || null,
+            teacherType: teacher?.teacherType || null,
+            isAttendence: teacher?.isAttendence ?? curr?.isAttendence ?? null,
+            timeTableType,
+            classRoom,
+            subject: timeTableElective
+              ? {
+                subjectId: timeTableElective?.electiveSubjectId,
+                Name: timeTableElective?.electiveSubjectName,
+                Code: timeTableElective?.electiveSubjectCode,
+              }
+              : {
+                subjectId: subjectData?.subjectId,
+                Name: subjectData?.subjectName,
+                Code: subjectData?.subjectCode,
+              },
+          };
+
+          allMappings.push({
+            day,
+            timeTableCreationId,
+            periodDetails: timeTablecreation || {},
+            mappingEntry,
+            baseMetadata: {
+              course,
+              classSection,
+              courseId: item.courseId,
+              classSectionsId: item.classSectionsId,
+              classSectionTermId: item.classSectionTermId,
+              startingDate: item.startingDate,
+              endingDate: item.endingDate,
+            },
+          });
+        }
+      }
+    }
+
+    // STEP 5: AGGREGATION (NO RESPONSE CHANGE)
+    const aggregated = allMappings.reduce((acc, current) => {
+      const {
+        day,
+        timeTableCreationId,
+        periodDetails,
+        mappingEntry,
+        baseMetadata,
+      } = current;
+
+      const finalType = mappingEntry.timeTableType;
+
+      let timeTableObj = acc.find((t) => t.timeTableType === finalType);
+
+      if (!timeTableObj) {
+        const sourceItem =
+          finalType === "normal"
+            ? normalItemBase
+            : electiveItemBase || baseMetadata;
+
+        const course = sourceItem?.timeTableCourse || baseMetadata.course || {};
+
+        const classSection =
+          resolveTimeTableRoutineSection(sourceItem) ||
+          baseMetadata.classSection ||
+          {};
+
+        timeTableObj = {
+          courseName: course.courseName || "",
+          courseCode: course.courseCode || "",
+          courseId: sourceItem?.courseId || baseMetadata.courseId || "",
+          section: finalType !== "elective" ? classSection.section || "" : "",
+          class:
+            finalType !== "elective"
+              ? classSection.year != null
+                ? String(classSection.year)
+                : ""
+              : "",
+          timeTableType: finalType,
+          classSectionsId:
+            finalType !== "elective"
+              ? sourceItem?.classSectionsId ||
+              baseMetadata.classSectionsId ||
+              null
+              : null,
+          startingDate:
+            finalType !== "elective"
+              ? sourceItem?.startingDate || baseMetadata.startingDate || null
+              : null,
+          endingDate:
+            finalType !== "elective"
+              ? sourceItem?.endingDate || baseMetadata.endingDate || null
+              : null,
+          sectionRoutine: [],
+        };
+
+        acc.push(timeTableObj);
+      }
+
+      let dayObj = timeTableObj.sectionRoutine.find((d) => d.day === day);
+      if (!dayObj) {
+        dayObj = { day, period: [] };
+        timeTableObj.sectionRoutine.push(dayObj);
+      }
+
+      let periodObj = dayObj.period.find(
+        (p) => p.timeTableCreationId === timeTableCreationId,
+      );
+
+      if (!periodObj) {
+        dayObj.period.push({
+          timeTableCreationId,
+          periodName: periodDetails.periodName,
+          isBreak: periodDetails.isBreak,
+          periodLength: periodDetails.periodLength,
+          periodGap: periodDetails.periodGap,
+          startTime: periodDetails.startTime,
+          endTime: periodDetails.endTime,
+          mappingData: [mappingEntry],
+        });
+      } else {
+        const exists = periodObj.mappingData.some(
+          (m) =>
+            m.timeTableCellId === mappingEntry.timeTableCellId &&
+            m.teacherType === mappingEntry.teacherType,
+        );
+
+        if (!exists) {
+          periodObj.mappingData.push(mappingEntry);
+        }
+      }
+
+      return acc;
+    }, []);
+
+    finalResult.push(...aggregated);
+  }
+
+  return { formatted: finalResult };
+}
+
+const WEEKDAY_BY_JS_INDEX = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const WEEKDAY_ALIASES = {
+  sun: "sunday",
+  sunday: "sunday",
+  mon: "monday",
+  monday: "monday",
+  tue: "tuesday",
+  tues: "tuesday",
+  tuesday: "tuesday",
+  wed: "wednesday",
+  wednesday: "wednesday",
+  thu: "thursday",
+  thur: "thursday",
+  thurs: "thursday",
+  thursday: "thursday",
+  fri: "friday",
+  friday: "friday",
+  sat: "saturday",
+  saturday: "saturday",
+};
+
+function normalizeWeekdayKey(value) {
+  if (value == null) {
+    return null;
+  }
+  const key = String(value).trim().toLowerCase();
+  return WEEKDAY_ALIASES[key] || null;
+}
+
+function cellMatchesPeriodDay(cell, period, daysName) {
+  if (Number(cell.timeTableCreationId) !== Number(period.timeTableCreationId)) {
+    return false;
+  }
+  const cellDay = normalizeWeekdayKey(cell.day);
+  const targetDay = normalizeWeekdayKey(daysName);
+  return cellDay != null && cellDay === targetDay;
+}
+
+function collectPeriodCells(cells, period, daysName) {
+  const result = [];
+  const seenCellIds = new Set();
+
+  for (const cell of cells) {
+    if (!cellMatchesPeriodDay(cell, period, daysName)) {
+      continue;
+    }
+    const cellId = Number(cell.timeTableCellId);
+    if (seenCellIds.has(cellId)) {
+      continue;
+    }
+    seenCellIds.add(cellId);
+    result.push(cell);
+  }
+
+  result.sort((a, b) => Number(a.timeTableCellId) - Number(b.timeTableCellId));
+  return result;
+}
+
+function resolveCellSubject(cell) {
+  const subject = cell.timeTableSubject;
+  const mapping = cell.subjectComponentMapping;
+  const component = mapping?.component;
+
+  const componentData = component
+    ? {
+      id: component.id,
+      componentId: component.id,
+      componentName: component.componentName,
+      code: component.code,
+      description: component.description ?? null,
+    }
+    : null;
+
+  return {
+    subjectId: subject?.subjectId ?? null,
+    name: subject?.subjectName ?? "N/A",
+    subjectComponentMappingId:
+      cell.subjectComponentMappingId ?? mapping?.id ?? null,
+    component: componentData,
+  };
+}
+
+function weekdayNameFromDateOnly(dateStr) {
+  const date = new Date(`${dateStr}T12:00:00`);
+  return WEEKDAY_BY_JS_INDEX[date.getDay()];
+}
+
+function eachDateInRange(startStr, endStr) {
+  const dates = [];
+  let current = startStr;
+  while (current <= endStr) {
+    dates.push(current);
+    const next = new Date(`${current}T12:00:00`);
+    next.setDate(next.getDate() + 1);
+    current = toDateOnlyString(next);
+  }
+  return dates;
+}
+
+export async function adjustPublishedRoutineDates(
+  timeTableRoutineId,
+  oldStart,
+  oldEnd,
+  newStart,
+  newEnd,
+  actorId,
+  transaction,
+) {
+  const routine = await timeTableCreateRepository.getRoutineForPublishRepository(
+    timeTableRoutineId,
+    { transaction },
+  );
+  if (!routine) {
+    throw new Error("Time table create ID not found");
+  }
+
+  const plain = routine.get({ plain: true });
+
+  const cells = await timeTableCreateRepository.getRoutineCellsForPublishRepository(
+    timeTableRoutineId,
+    { transaction },
+  );
+  if (!cells.length) {
+    return;
+  }
+
+  const oldDates = eachDateInRange(oldStart, oldEnd);
+  const newDates = eachDateInRange(newStart, newEnd);
+
+  const datesToDelete = [];
+  for (let i = 0; i < oldDates.length; i++) {
+    const d = oldDates[i];
+    if (newDates.indexOf(d) === -1) {
+      datesToDelete.push(d);
+    }
+  }
+
+  const datesToCreate = [];
+  for (let i = 0; i < newDates.length; i++) {
+    const d = newDates[i];
+    if (oldDates.indexOf(d) === -1) {
+      datesToCreate.push(d);
+    }
+  }
+
+  const mappingIds = [];
+  for (let i = 0; i < cells.length; i++) {
+    mappingIds.push(Number(cells[i].timeTableCellId));
+  }
+
+  // 1. Delete rows for datesToDelete
+  if (mappingIds.length > 0 && datesToDelete.length > 0) {
+    const dateWiseToDelete =
+      await timeTableCreateRepository.getDateWiseCellsByMappingsAndDates(
+        mappingIds,
+        datesToDelete,
+        transaction,
+      );
+
+    const dateWiseIdsToDelete = [];
+    for (let i = 0; i < dateWiseToDelete.length; i++) {
+      dateWiseIdsToDelete.push(dateWiseToDelete[i].timeTableCellDateWiseId);
+    }
+
+    if (dateWiseIdsToDelete.length > 0) {
+      await timeTableCreateRepository.deleteTeachersDateWiseByIds(
+        dateWiseIdsToDelete,
+        transaction,
+      );
+    }
+
+    await timeTableCreateRepository.deleteDateWiseCellsByMappingsAndDates(
+      mappingIds,
+      datesToDelete,
+      transaction,
+    );
+  }
+
+  // 2. Create rows for datesToCreate
+  if (datesToCreate.length > 0 && cells.length > 0) {
+    const weekOff = parseWeekOff(
+      plain.structureCourseMapping?.timeTableStructure?.weekOff,
+    );
+
+    const cellsByDay = {};
+    for (let i = 0; i < cells.length; i++) {
+      const cellPlain = cells[i].get({ plain: true });
+      const dayKey = normalizeWeekdayKey(cellPlain.day);
+      if (!dayKey) continue;
+      if (!cellsByDay[dayKey]) {
+        cellsByDay[dayKey] = [];
+      }
+      cellsByDay[dayKey].push(cellPlain);
+    }
+
+    const planned = [];
+    for (let i = 0; i < datesToCreate.length; i++) {
+      const dateStr = datesToCreate[i];
+      const weekday = normalizeWeekdayKey(weekdayNameFromDateOnly(dateStr));
+      if (!weekday || weekOff.indexOf(weekday) !== -1) {
+        continue;
+      }
+      const dayCells = cellsByDay[weekday];
+      if (!dayCells) continue;
+      for (let j = 0; j < dayCells.length; j++) {
+        planned.push({ cell: dayCells[j], date: dateStr });
+      }
+    }
+
+    if (planned.length > 0) {
+      const dateWisePayload = [];
+      for (let i = 0; i < planned.length; i++) {
+        const item = planned[i];
+        dateWisePayload.push({
+          timeTableCellId: item.cell.timeTableCellId,
+          date: item.date,
+          classRoomSectionId: item.cell.classRoomSectionId,
+          subjectId: item.cell.subjectId,
+          electiveSubjectId: item.cell.electiveSubjectId,
+          createdBy: actorId,
+          updatedBy: actorId,
+        });
+      }
+
+      const createdDateWise = [];
+      for (let i = 0; i < dateWisePayload.length; i++) {
+        const instance = await timeTableCreateRepository.createDateWiseCell(
+          dateWisePayload[i],
+          transaction,
+        );
+        createdDateWise.push(instance);
+      }
+
+      const teacherPayload = [];
+      for (let i = 0; i < createdDateWise.length; i++) {
+        const dateWiseRow = createdDateWise[i];
+        const teachers = planned[i].cell.timeTableCellTeachers || [];
+        for (let j = 0; j < teachers.length; j++) {
+          const teacher = teachers[j];
+          teacherPayload.push({
+            timeTableCellDateWiseId: dateWiseRow.timeTableCellDateWiseId,
+            userId: Number(teacher.userId),
+            teacherType: teacher.teacherType,
+            isAttendence: teacher.isAttendence,
+            createdBy: actorId,
+            updatedBy: actorId,
+          });
+        }
+      }
+
+      for (let i = 0; i < teacherPayload.length; i++) {
+        await timeTableCreateRepository.createTeacherDateWise(
+          teacherPayload[i],
+          transaction,
+        );
+      }
+    }
+  }
+}
+
+export async function publishTimeTableService(timeTableRoutineId) {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const routine =
+      await timeTableCreateRepository.getRoutineForPublishRepository(
+        timeTableRoutineId,
+        { transaction },
+      );
+    if (!routine) {
+      throw new Error("Time table create ID not found");
+    }
+
+    const plain = routine.get({ plain: true });
+
+    const start = toDateOnlyString(plain.startingDate);
+    const end = toDateOnlyString(plain.endingDate);
+    if (!start || !end) {
+      throw new Error(
+        "Routine startingDate and endingDate are required to publish",
+      );
+    }
+    if (start > end) {
+      throw new Error("Routine endingDate cannot be before startingDate");
+    }
+
+    const actorId =
+      getTenantStore().userId ?? plain.updatedBy ?? plain.createdBy;
+    if (!actorId) {
+      throw new Error("User id is required to publish time table");
+    }
+
+    const weekOff = parseWeekOff(
+      plain.structureCourseMapping?.timeTableStructure?.weekOff,
+    );
+
+    const cells =
+      await timeTableCreateRepository.getRoutineCellsForPublishRepository(
+        timeTableRoutineId,
+        { transaction },
+      );
+
+    if (!cells.length) {
+      throw new Error("No timetable cells found for this routine");
+    }
+
+    const cellsByDay = new Map();
+    const mappingIds = [];
+    for (const cell of cells) {
+      const cellPlain = cell.get({ plain: true });
+      mappingIds.push(Number(cellPlain.timeTableCellId));
+      const dayKey = normalizeWeekdayKey(cellPlain.day);
+      if (!dayKey) {
+        continue;
+      }
+      if (!cellsByDay.has(dayKey)) {
+        cellsByDay.set(dayKey, []);
+      }
+      cellsByDay.get(dayKey).push(cellPlain);
+    }
+
+    if (cellsByDay.size === 0) {
+      throw new Error("Timetable cells have invalid day values");
+    }
+
+    await timeTableCreateRepository.clearDateWiseForMappingIdsRepository(
+      mappingIds,
+      transaction,
+    );
+
+    const planned = [];
+    for (const dateStr of eachDateInRange(start, end)) {
+      const weekday = normalizeWeekdayKey(weekdayNameFromDateOnly(dateStr));
+      if (!weekday || weekOff.includes(weekday)) {
+        continue;
+      }
+
+      const dayCells = cellsByDay.get(weekday);
+      if (!dayCells) {
+        continue;
+      }
+
+      for (const cell of dayCells) {
+        planned.push({ cell, date: dateStr });
+      }
+    }
+
+    if (!planned.length) {
+      throw new Error(
+        "No date-wise timetable rows could be generated for this routine",
+      );
+    }
+
+    const dateWisePayload = [];
+    for (const item of planned) {
+      dateWisePayload.push({
+        timeTableCellId: item.cell.timeTableCellId,
+        date: item.date,
+        classRoomSectionId: item.cell.classRoomSectionId,
+        subjectId: item.cell.subjectId,
+        electiveSubjectId: item.cell.electiveSubjectId,
+        createdBy: actorId,
+        updatedBy: actorId,
+      });
+    }
+
+    const createdDateWise =
+      await timeTableCreateRepository.bulkCreateDateWiseCellsRepository(
+        dateWisePayload,
+        transaction,
+      );
+
+    const teacherPayload = [];
+    for (let i = 0; i < createdDateWise.length; i++) {
+      const dateWiseRow = createdDateWise[i];
+      const teachers = planned[i].cell.timeTableCellTeachers || [];
+      for (const teacher of teachers) {
+        teacherPayload.push({
+          timeTableCellDateWiseId: dateWiseRow.timeTableCellDateWiseId,
+          userId: Number(teacher.userId),
+          teacherType: teacher.teacherType,
+          isAttendence: teacher.isAttendence,
+          createdBy: actorId,
+          updatedBy: actorId,
+        });
+      }
+    }
+
+    await timeTableCreateRepository.bulkCreateDateWiseTeachersRepository(
+      teacherPayload,
+      transaction,
+    );
+
+    await timeTableCreateRepository.publishTimeTableRepository(
+      timeTableRoutineId,
+      {
+        transaction,
+      },
+    );
+
+    await transaction.commit();
+
+    const dateWiseByCellId = {};
+    for (const item of planned) {
+      const cellId = Number(item.cell.timeTableCellId);
+      dateWiseByCellId[cellId] = (dateWiseByCellId[cellId] || 0) + 1;
+    }
+
+    const cellSummary = [];
+    for (const cellId of mappingIds) {
+      cellSummary.push({
+        timeTableCellId: cellId,
+        dateWiseCount: dateWiseByCellId[cellId] || 0,
+      });
+    }
+
+    return {
+      message: "Time table published successfully",
+      timeTableRoutineId: Number(timeTableRoutineId),
+      startingDate: start,
+      endingDate: end,
+      weekCellCount: mappingIds.length,
+      dateWiseCount: createdDateWise.length,
+      teacherDateWiseCount: teacherPayload.length,
+      cells: cellSummary,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    if (error.name === "SequelizeUniqueConstraintError") {
+      throw new Error(
+        "Date-wise timetable row already exists for this cell and date",
+      );
+    }
+    throw error;
+  }
+}
+
+function mergeSubjectLists(...lists) {
+  const subjectMap = new Map();
+
+  for (const list of lists) {
+    for (const subject of list) {
+      if (!subject?.subjectId) continue;
+      const subjectId = Number(subject.subjectId);
+      const existing = subjectMap.get(subjectId);
+      subjectMap.set(subjectId, {
+        subjectId,
+        subject:
+          existing?.subject || subject.subject || subject.subjectName || null,
+        subjectCode: existing?.subjectCode || subject.subjectCode || null,
+      });
+    }
+  }
+
+  return [...subjectMap.values()].sort((a, b) => a.subjectId - b.subjectId);
+}
+
+function subjectsFromClassSectionStudents(sectionData) {
+  const subjectMap = new Map();
+
+  for (const student of sectionData?.students ?? []) {
+    for (const mapping of student.studentSubjectMapper ?? []) {
+      const sub = mapping.subjects;
+      if (!sub?.subjectId) continue;
+      const subjectId = Number(sub.subjectId);
+      if (!subjectMap.has(subjectId)) {
+        subjectMap.set(subjectId, {
+          subjectId,
+          subject: sub.subjectName,
+          subjectCode: sub.subjectCode,
+        });
+      }
+    }
+  }
+
+  return [...subjectMap.values()];
+}
+
+function resolveScheduleSubjectId(cell) {
+  if (cell?.subjectId) {
+    return Number(cell.subjectId);
+  }
+  if (cell?.timeTableSubject?.subjectId) {
+    return Number(cell.timeTableSubject.subjectId);
+  }
+  if (cell?.timeTableTeacherSubject?.subjectId) {
+    return Number(cell.timeTableTeacherSubject.subjectId);
+  }
+  if (cell?.timeTableTeacherSubject?.employeeSubject?.subjectId) {
+    return Number(cell.timeTableTeacherSubject.employeeSubject.subjectId);
+  }
+  return null;
+}
+
+function resolveScheduleSubjectDetails(cell, subjectId) {
+  const sub =
+    cell?.timeTableSubject || cell?.timeTableTeacherSubject?.employeeSubject;
+  if (sub?.subjectId === subjectId) {
+    return {
+      subjectId,
+      subject: sub.subjectName,
+      subjectCode: sub.subjectCode,
+    };
+  }
+  return { subjectId, subject: null, subjectCode: null };
+}
+
+function countSubjectsInRoutine(cells = []) {
+  const countMap = {};
+  const subjectsFromCells = [];
+  const countedSlots = new Set();
+
+  for (const cell of cells) {
+    if (cell?.timeTablecreation?.isBreak) {
+      continue;
+    }
+
+    const subjectId = resolveScheduleSubjectId(cell);
+    if (!subjectId) {
+      continue;
+    }
+
+    subjectsFromCells.push(resolveScheduleSubjectDetails(cell, subjectId));
+
+    const slotKey = `${cell.day}-${cell.period}-${subjectId}`;
+    if (!countedSlots.has(slotKey)) {
+      countMap[subjectId] = (countMap[subjectId] || 0) + 1;
+      countedSlots.add(slotKey);
+    }
+  }
+
+  return { countMap, subjectsFromCells };
+}
+
+export async function getSubjectWithCount(classSectionTermId) {
+  const [subjectsData, timeTableData] = await Promise.all([
+    timeTableCreateRepository.ClassSubjectCount(classSectionTermId),
+    timeTableCreateRepository.timeTableData(classSectionTermId),
+  ]);
+
+  if (!subjectsData) {
+    throw new Error("classSectionTermId not found");
+  }
+
+  const studentSubjects = subjectsFromClassSectionStudents(subjectsData);
+  const finalResult = [];
+
+  for (const routine of timeTableData) {
+    const mapping = routine.structureCourseMapping;
+    if (!mapping || !mapping.timeTableStructure) {
+      continue;
+    }
+
+    const { countMap, subjectsFromCells } = countSubjectsInRoutine(
+      routine.timeTableCells || [],
+    );
+    finalResult.push({
+      routine,
+      mapping,
+      countMap,
+      subjectsFromCells,
+    });
+  }
+
+  const cellSubjectLists = [];
+  for (const entry of finalResult) {
+    cellSubjectLists.push(entry.subjectsFromCells);
+  }
+
+  let subjectsList = mergeSubjectLists(studentSubjects, ...cellSubjectLists);
+
+  const unresolvedIds = [];
+  for (const subject of subjectsList) {
+    if (!subject.subject && !subject.subjectCode) {
+      unresolvedIds.push(subject.subjectId);
+    }
+  }
+
+  if (unresolvedIds.length) {
+    const resolvedSubjects =
+      await timeTableCreateRepository.getSubjectsByIds(unresolvedIds);
+    subjectsList = mergeSubjectLists(subjectsList, resolvedSubjects);
+  }
+
+  const result = [];
+  for (const entry of finalResult) {
+    const structure = entry.mapping.timeTableStructure;
+    const subjects = [];
+    for (const subject of subjectsList) {
+      subjects.push({
+        subjectId: subject.subjectId,
+        subject: subject.subject,
+        subjectCode: subject.subjectCode,
+        count: entry.countMap[subject.subjectId] || 0,
+      });
+    }
+
+    result.push({
+      timeTableNameId: entry.mapping.timeTableNameId,
+      timeTableName: structure.name,
+      subjects,
+    });
+  }
+
+  return result;
+}
+
+export async function getRoutineByClassSectionId(
+  classSectionTermId,
+  options = {},
+) {
+  const targetDate = options.date ? toDateOnlyString(options.date) : null;
+  const placement = await resolveRoutinePlacement({ classSectionTermId });
+  const scope = routineScopeWhere(placement.classSectionTermId);
+
+  const termRow = await findClassSectionTermById(placement.classSectionTermId);
+  let classSection = null;
+  let section = null;
+  if (termRow) {
+    const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
+    classSection = plain.classSection ?? null;
+    section = classSection?.section ?? null;
+  }
+
+  const courseId =
+    classSection?.courseId != null ? Number(classSection.courseId) : null;
+  const sessionId =
+    classSection?.sessionId != null ? Number(classSection.sessionId) : null;
+
+  const placementMeta = {
+    classSectionTermId: placement.classSectionTermId,
+    section,
+    term: placement.term != null ? Number(placement.term) : null,
+    year: classSection?.year != null ? Number(classSection.year) : null,
+    courseId,
+    sessionId,
+  };
+
+  const normalRoutines =
+    await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(
+      scope,
+    );
+
+  if (!normalRoutines || !normalRoutines.length) {
+    const structures = await buildMappedStructuresWithoutRoutines(
+      courseId,
+      sessionId,
+      classSection,
+    );
+    return { ...placementMeta, structures, classSection };
+  }
+
+  const timeTableNameIds = [];
+  for (const r of normalRoutines) {
+    timeTableNameIds.push(r.structureCourseMapping.timeTableNameId);
+  }
+  // const electiveRoutines =
+  //   await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(
+  //     timeTableNameIds,
+  //     null,
+  //     normalRoutines,
+  //   );
+  const electiveRoutines = [];
+
+  const allCellsForLookup = [];
+  for (const routine of normalRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+  }
+  // for (const routine of electiveRoutines) {
+  //   for (const cell of routine.timeTableCells || []) {
+  //     allCellsForLookup.push(cell);
+  //   }
+  // }
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+
+  const daysList = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  const structuresById = new Map();
+
+  const toDateStr = (d) => (d ? new Date(d).toISOString().split("T")[0] : "");
+
+  for (const routine of normalRoutines) {
+    const mapping = routine.structureCourseMapping;
+    const timeTableNameId = mapping.timeTableNameId;
+    const timeTableCreateName = mapping.timeTableStructure;
+    const periods = timeTableCreateName.timeTableName || [];
+    const normalCells = routine.timeTableCells || [];
+
+    const routineStart = toDateStr(routine.startingDate);
+    const routineEnd = toDateStr(routine.endingDate);
+
+    const variantSchedules = await buildRoutineVariantSchedules(
+      mapping,
+      { startDate: routine.startingDate, endDate: routine.endingDate },
+      periods,
+    );
+
+    const resolvedPeriods = await resolvePeriodsWithVariantTimings(
+      periods,
+      mapping,
+      {
+        startDate: routine.startingDate,
+        endDate: routine.endingDate,
+        date: targetDate,
+      },
+    );
+
+    // const matchingElectives = [];
+    // for (const er of electiveRoutines) {
+    //   if (
+    //     er.structureCourseMapping.timeTableNameId === timeTableNameId &&
+    //     toDateStr(er.startingDate) >= routineStart &&
+    //     toDateStr(er.endingDate) <= routineEnd
+    //   ) {
+    //     matchingElectives.push(er);
+    //   }
+    // }
+    // const electiveCells = [];
+    // for (const er of matchingElectives) {
+    //   const cells = er.timeTableCells || [];
+    //   for (const cell of cells) {
+    //     electiveCells.push(cell);
+    //   }
+    // }
+    const electiveCells = [];
+
+    const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+    const weekOffLower = [];
+    for (const day of weekOffList) {
+      weekOffLower.push(String(day).toLowerCase());
+    }
+
+    if (!structuresById.has(timeTableNameId)) {
+      structuresById.set(timeTableNameId, {
+        timeTableNameId,
+        name: timeTableCreateName.name || "N/A",
+        weekOff: weekOffList,
+        timetableStructureCourseMapperId:
+          mapping.timetableStructureCourseMapperId,
+        courseId:
+          mapping.courseId != null ? Number(mapping.courseId) : courseId,
+        sessionId:
+          mapping.sessionId != null ? Number(mapping.sessionId) : sessionId,
+        startingDate: mapping.startingDate ?? null,
+        endingDate: mapping.endingDate ?? null,
+        variants: variantSchedules,
+        routines: [],
+      });
+    }
+
+    const formattedPeriods = [];
+    for (const period of resolvedPeriods) {
+      const formattedDays = [];
+      for (const daysName of daysList) {
+        if (weekOffLower.includes(daysName.toLowerCase())) {
+          formattedDays.push({
+            name: daysName,
+            isDayOff: true,
+          });
+          continue;
+        }
+
+        if (period.isBreak) {
+          formattedDays.push({
+            name: daysName,
+            isBreak: true,
+          });
+          continue;
+        }
+
+        const periodNormalCells = collectPeriodCells(
+          normalCells,
+          period,
+          daysName,
+        );
+
+        // const periodElectiveCells = collectPeriodCells(
+        //   electiveCells,
+        //   period,
+        //   daysName,
+        // );
+
+        // let isOverriding = false;
+        // for (const cell of periodNormalCells) {
+        //   if (cell.isOverridingSyblingElectives === true) {
+        //     isOverriding = true;
+        //     break;
+        //   }
+        // }
+
+        const scheduleItems = formatNormalCellsAsScheduleItems(
+          periodNormalCells,
+          employeeByUserId,
+        );
+
+        // if (!isOverriding) {
+        //   const electiveItems = formatElectiveCellsAsScheduleItems(
+        //     periodElectiveCells,
+        //     employeeByUserId,
+        //   );
+        //   for (const item of electiveItems) {
+        //     scheduleItems.push(item);
+        //   }
+        // }
+
+        formattedDays.push({
+          name: daysName,
+          scheduleItems,
+        });
+      }
+
+      const variantTimings = variantSchedules.map((vs) => {
+        const vp = (vs.periods || []).find(
+          (p) =>
+            Number(p.timeTableCreationId) ===
+            Number(period.timeTableCreationId),
+        );
+        return {
+          variantCourseMappingId: vs.id,
+          timeTableStructureVariantId: vs.timeTableStructureVariantId,
+          variantName: vs.name,
+          startingDate: vs.startingDate,
+          endingDate: vs.endingDate,
+          startTime: vp?.startTime ?? period.startTime,
+          endTime: vp?.endTime ?? period.endTime,
+        };
+      });
+
+      formattedPeriods.push({
+        timeTableCreationId: period.timeTableCreationId,
+        name: period.periodName,
+        startTime: period.startTime,
+        endTime: period.endTime,
+        variantTimings,
+        days: formattedDays,
+      });
+    }
+
+    const activeDate = targetDate || toDateOnlyString(new Date());
+    const matchedActiveVariant =
+      variantSchedules.find(
+        (vs) => activeDate >= vs.startingDate && activeDate <= vs.endingDate,
+      ) ||
+      variantSchedules[0] ||
+      null;
+
+    structuresById.get(timeTableNameId).routines.push({
+      timeTableRoutineId: routine.timeTableRoutineId,
+      timetableStructureCourseMapperId:
+        routine.timetableStructureCourseMapperId,
+      isPublished: routine.isPublish,
+      startDate: routine.startingDate,
+      endDate: routine.endingDate,
+      year: classSection?.year != null ? Number(classSection.year) : null,
+      activeVariant: matchedActiveVariant
+        ? {
+          timeTableStructureVariantId:
+            matchedActiveVariant.timeTableStructureVariantId,
+          name: matchedActiveVariant.name,
+          startingDate: matchedActiveVariant.startingDate,
+          endingDate: matchedActiveVariant.endingDate,
+        }
+        : null,
+      variants: variantSchedules,
+      periods: formattedPeriods,
+    });
+  }
+
+  // Also include course/session mappings that have no routine yet for this section
+  if (courseId != null && sessionId != null) {
+    const mappedWithoutRoutine = await buildMappedStructuresWithoutRoutines(
+      courseId,
+      sessionId,
+      classSection,
+    );
+    for (const mapped of mappedWithoutRoutine) {
+      if (!structuresById.has(mapped.timeTableNameId)) {
+        structuresById.set(mapped.timeTableNameId, mapped);
+      }
+    }
+  }
+
+  const structures = [];
+  for (const structure of structuresById.values()) {
+    structures.push(structure);
+  }
+
+  return { ...placementMeta, structures, classSection };
+}
+
+export async function getRoutineByAcademicGroupId(
+  academicGroupId,
+  options = {},
+) {
+  const targetDate = options.date ? toDateOnlyString(options.date) : null;
+  const groupRow =
+    await academicGroupRepository.getGroupWithScope(academicGroupId);
+  const plainGroup = groupRow
+    ? groupRow.get
+      ? groupRow.get({ plain: true })
+      : groupRow
+    : null;
+  const scope = plainGroup?.scope || {};
+
+  const courseId = scope?.courseId != null ? Number(scope.courseId) : null;
+  const sessionId = scope?.sessionId != null ? Number(scope.sessionId) : null;
+
+  const placementMeta = {
+    academicGroupId: Number(academicGroupId),
+    groupName: plainGroup?.groupName ?? null,
+    groupCode: plainGroup?.groupCode ?? null,
+    academicGroupScopeId: plainGroup?.academicGroupScopeId ?? null,
+    courseId,
+    sessionId,
+  };
+
+  const routineScope = { academicGroupId: Number(academicGroupId) };
+
+  const normalRoutines =
+    await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository(
+      routineScope,
+    );
+
+  if (!normalRoutines || !normalRoutines.length) {
+    const structures = await buildMappedStructuresWithoutRoutines(
+      courseId,
+      sessionId,
+      null,
+      plainGroup?.academicGroupScopeId,
+    );
+    return { ...placementMeta, structures, group: plainGroup };
+  }
+
+  const timeTableNameIds = [];
+  for (const r of normalRoutines) {
+    timeTableNameIds.push(r.structureCourseMapping.timeTableNameId);
+  }
+  // const electiveRoutines =
+  //   await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(
+  //     timeTableNameIds,
+  //     null,
+  //     normalRoutines,
+  //   );
+  const electiveRoutines = [];
+
+  const allCellsForLookup = [];
+  for (const routine of normalRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+  }
+  // for (const routine of electiveRoutines) {
+  //   for (const cell of routine.timeTableCells || []) {
+  //     allCellsForLookup.push(cell);
+  //   }
+  // }
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+
+  const daysList = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  const structuresById = new Map();
+
+  const toDateStr = (d) => (d ? new Date(d).toISOString().split("T")[0] : "");
+
+  for (const routine of normalRoutines) {
+    const mapping = routine.structureCourseMapping;
+    const timeTableNameId = mapping.timeTableNameId;
+    const timeTableCreateName = mapping.timeTableStructure;
+    const periods = timeTableCreateName.timeTableName || [];
+    const normalCells = routine.timeTableCells || [];
+
+    const routineStart = toDateStr(routine.startingDate);
+    const routineEnd = toDateStr(routine.endingDate);
+
+    const variantSchedules = await buildRoutineVariantSchedules(
+      mapping,
+      { startDate: routine.startingDate, endDate: routine.endingDate },
+      periods,
+    );
+
+    const resolvedPeriods = await resolvePeriodsWithVariantTimings(
+      periods,
+      mapping,
+      {
+        startDate: routine.startingDate,
+        endDate: routine.endingDate,
+        date: targetDate,
+      },
+    );
+
+    // const matchingElectives = [];
+    // for (const er of electiveRoutines) {
+    //   if (
+    //     er.structureCourseMapping.timeTableNameId === timeTableNameId &&
+    //     toDateStr(er.startingDate) >= routineStart &&
+    //     toDateStr(er.endingDate) <= routineEnd
+    //   ) {
+    //     matchingElectives.push(er);
+    //   }
+    // }
+    // const electiveCells = [];
+    // for (const er of matchingElectives) {
+    //   const cells = er.timeTableCells || [];
+    //   for (const cell of cells) {
+    //     electiveCells.push(cell);
+    //   }
+    // }
+    const electiveCells = [];
+
+    const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+    const weekOffLower = [];
+    for (const day of weekOffList) {
+      weekOffLower.push(String(day).toLowerCase());
+    }
+
+    if (!structuresById.has(timeTableNameId)) {
+      structuresById.set(timeTableNameId, {
+        timeTableNameId,
+        name: timeTableCreateName.name || "N/A",
+        weekOff: weekOffList,
+        timetableStructureCourseMapperId:
+          mapping.timetableStructureCourseMapperId,
+        courseId:
+          mapping.courseId != null ? Number(mapping.courseId) : courseId,
+        sessionId:
+          mapping.sessionId != null ? Number(mapping.sessionId) : sessionId,
+        startingDate: mapping.startingDate ?? null,
+        endingDate: mapping.endingDate ?? null,
+        variants: variantSchedules,
+        routines: [],
+      });
+    }
+
+    const formattedPeriods = [];
+    for (const period of resolvedPeriods) {
+      const formattedDays = [];
+      for (const daysName of daysList) {
+        if (weekOffLower.includes(daysName.toLowerCase())) {
+          formattedDays.push({
+            name: daysName,
+            isDayOff: true,
+          });
+          continue;
+        }
+
+        if (period.isBreak) {
+          formattedDays.push({
+            name: daysName,
+            isBreak: true,
+          });
+          continue;
+        }
+
+        const periodNormalCells = collectPeriodCells(
+          normalCells,
+          period,
+          daysName,
+        );
+        // const periodElectiveCells = collectPeriodCells(
+        //   electiveCells,
+        //   period,
+        //   daysName,
+        // );
+
+        // let isOverriding = false;
+        // for (const cell of periodNormalCells) {
+        //   if (cell.isOverridingSyblingElectives === true) {
+        //     isOverriding = true;
+        //     break;
+        //   }
+        // }
+
+        const scheduleItems = formatNormalCellsAsScheduleItems(
+          periodNormalCells,
+          employeeByUserId,
+        );
+
+        // if (!isOverriding) {
+        //   const electiveItems = formatElectiveCellsAsScheduleItems(
+        //     periodElectiveCells,
+        //     employeeByUserId,
+        //   );
+        //   for (const item of electiveItems) {
+        //     scheduleItems.push(item);
+        //   }
+        // }
+
+        formattedDays.push({
+          name: daysName,
+          scheduleItems,
+        });
+      }
+
+      const variantTimings = variantSchedules.map((vs) => {
+        const vp = (vs.periods || []).find(
+          (p) =>
+            Number(p.timeTableCreationId) ===
+            Number(period.timeTableCreationId),
+        );
+        return {
+          variantCourseMappingId: vs.id,
+          timeTableStructureVariantId: vs.timeTableStructureVariantId,
+          variantName: vs.name,
+          startingDate: vs.startingDate,
+          endingDate: vs.endingDate,
+          startTime: vp?.startTime ?? period.startTime,
+          endTime: vp?.endTime ?? period.endTime,
+        };
+      });
+
+      formattedPeriods.push({
+        timeTableCreationId: period.timeTableCreationId,
+        name: period.periodName,
+        startTime: period.startTime,
+        endTime: period.endTime,
+        variantTimings,
+        days: formattedDays,
+      });
+    }
+
+    const activeDate = targetDate || toDateOnlyString(new Date());
+    const matchedActiveVariant =
+      variantSchedules.find(
+        (vs) => activeDate >= vs.startingDate && activeDate <= vs.endingDate,
+      ) ||
+      variantSchedules[0] ||
+      null;
+
+    structuresById.get(timeTableNameId).routines.push({
+      timeTableRoutineId: routine.timeTableRoutineId,
+      timetableStructureCourseMapperId:
+        routine.timetableStructureCourseMapperId,
+      isPublished: routine.isPublish,
+      startDate: routine.startingDate,
+      endDate: routine.endingDate,
+      year: null,
+      activeVariant: matchedActiveVariant
+        ? {
+          timeTableStructureVariantId:
+            matchedActiveVariant.timeTableStructureVariantId,
+          name: matchedActiveVariant.name,
+          startingDate: matchedActiveVariant.startingDate,
+          endingDate: matchedActiveVariant.endingDate,
+        }
+        : null,
+      variants: variantSchedules,
+      periods: formattedPeriods,
+    });
+  }
+
+  if (
+    (courseId != null && sessionId != null) ||
+    plainGroup?.academicGroupScopeId != null
+  ) {
+    const mappedWithoutRoutine = await buildMappedStructuresWithoutRoutines(
+      courseId,
+      sessionId,
+      null,
+      plainGroup?.academicGroupScopeId,
+    );
+    for (const mapped of mappedWithoutRoutine) {
+      if (!structuresById.has(mapped.timeTableNameId)) {
+        structuresById.set(mapped.timeTableNameId, mapped);
+      }
+    }
+  }
+
+  const structures = [];
+  for (const structure of structuresById.values()) {
+    structures.push(structure);
+  }
+
+  return { ...placementMeta, structures, group: plainGroup };
+}
+
+function parseWeekOffList(weekOffRaw) {
+  let weekOffList = [];
+  try {
+    weekOffList = Array.isArray(weekOffRaw)
+      ? weekOffRaw
+      : typeof weekOffRaw === "string"
+        ? JSON.parse(weekOffRaw)
+        : [];
+    if (typeof weekOffList === "string") {
+      weekOffList = JSON.parse(weekOffList);
+    }
+  } catch (e) {
+    weekOffList = [];
+  }
+  return weekOffList;
+}
+
+function buildEmptyPeriodGrid(periods, weekOffList) {
+  const daysList = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  const weekOffLower = [];
+  for (const day of weekOffList) {
+    weekOffLower.push(String(day).toLowerCase());
+  }
+
+  const formattedPeriods = [];
+  for (const period of periods) {
+    const formattedDays = [];
+    for (const daysName of daysList) {
+      if (weekOffLower.includes(daysName.toLowerCase())) {
+        formattedDays.push({
+          name: daysName,
+          isDayOff: true,
+        });
+        continue;
+      }
+      if (period.isBreak) {
+        formattedDays.push({
+          name: daysName,
+          isBreak: true,
+        });
+        continue;
+      }
+      formattedDays.push({
+        name: daysName,
+        scheduleItems: [],
+      });
+    }
+    formattedPeriods.push({
+      timeTableCreationId: period.timeTableCreationId,
+      name: period.periodName,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      ...(period.variantTimings && { variantTimings: period.variantTimings }),
+      days: formattedDays,
+    });
+  }
+  return formattedPeriods;
+}
+
+function collectTeacherUserIdsFromCells(cells) {
+  const userIds = new Set();
+
+  for (const cell of cells) {
+    const plain = cell.get ? cell.get({ plain: true }) : cell;
+    for (const teacher of plain.timeTableCellTeachers || []) {
+      if (teacher.userId != null) {
+        userIds.add(Number(teacher.userId));
+      }
+    }
+
+    const mappingEmployee = plain.timeTableTeacherSubject?.teacherEmployeeData;
+    if (mappingEmployee?.userId != null) {
+      userIds.add(Number(mappingEmployee.userId));
+    }
+  }
+
+  return userIds;
+}
+
+async function buildEmployeeLookupMap(cells) {
+  const userIds = [...collectTeacherUserIdsFromCells(cells)];
+  if (!userIds.length) {
+    return new Map();
+  }
+
+  const rows =
+    await timeTableCreateRepository.getEmployeesByUserIdsRepository(userIds);
+  const lookup = new Map();
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    lookup.set(Number(plain.userId), plain);
+  }
+  return lookup;
+}
+
+function resolveTeacherEmployeeForCell(
+  teacherRow,
+  plainCell,
+  employeeByUserId,
+) {
+  if (teacherRow.employeeDetails?.employeeName) {
+    return teacherRow.employeeDetails;
+  }
+
+  const mappingEmployee =
+    plainCell.timeTableTeacherSubject?.teacherEmployeeData;
+  if (
+    mappingEmployee &&
+    Number(mappingEmployee.userId) === Number(teacherRow.userId)
+  ) {
+    return mappingEmployee;
+  }
+
+  if (employeeByUserId && teacherRow.userId != null) {
+    return employeeByUserId.get(Number(teacherRow.userId)) ?? null;
+  }
+
+  return teacherRow.employeeDetails ?? null;
+}
+
+function mapCellTeachers(cell, employeeByUserId) {
+  const plainCell = cell.get ? cell.get({ plain: true }) : cell;
+  const teachers = plainCell.timeTableCellTeachers || [];
+  const mapped = [];
+
+  for (const teacherRow of teachers) {
+    const employee = resolveTeacherEmployeeForCell(
+      teacherRow,
+      plainCell,
+      employeeByUserId,
+    );
+    mapped.push({
+      employeeId: employee?.employeeId ?? null,
+      userId: teacherRow.userId,
+      name: employee?.employeeName ?? "N/A",
+      color: employee?.pickColor,
+      timeTableCellId: plainCell.timeTableCellId,
+      timeTableCellTeacherId: teacherRow.timeTableCellTeacherId,
+      teacherType: teacherRow.teacherType,
+      isAttendence: teacherRow.isAttendence,
+    });
+  }
+
+  if (mapped.length === 0 && plainCell.isSameTeacher === true) {
+    const employee = plainCell.timeTableTeacherSubject?.teacherEmployeeData;
+    if (employee) {
+      mapped.push({
+        employeeId: employee.employeeId ?? null,
+        userId: employee.userId ?? null,
+        name: employee.employeeName ?? "N/A",
+        color: employee.pickColor,
+        timeTableCellId: plainCell.timeTableCellId,
+        timeTableCellTeacherId: null,
+        teacherType: "Primary",
+        isAttendence: plainCell.isAttendence ?? true,
+      });
+    }
+  }
+
+  return mapped;
+}
+
+function formatNormalCellsAsScheduleItems(periodNormalCells, employeeByUserId) {
+  const scheduleItems = [];
+
+  for (const cell of periodNormalCells) {
+    const subject = resolveCellSubject(cell);
+    const roomName = cell.classRoom ? cell.classRoom.roomNumber : "N/A";
+    const roomId = cell.classRoom ? cell.classRoom.classRoomSectionId : null;
+
+    scheduleItems.push({
+      timeTableCellId: cell.timeTableCellId,
+      period: cell.period,
+      type: "normal",
+      isOverridingSyblingElectives: cell.isOverridingSyblingElectives,
+      teachers: mapCellTeachers(cell, employeeByUserId),
+      subject,
+      subjectComponentMappingId: subject.subjectComponentMappingId ?? null,
+      component: subject.component ?? null,
+      room: { classRoomSectionId: roomId, name: roomName },
+    });
+  }
+
+  return scheduleItems;
+}
+
+function formatElectiveCellsAsScheduleItems(
+  periodElectiveCells,
+  employeeByUserId,
+) {
+  const scheduleItems = [];
+
+  for (const cell of periodElectiveCells) {
+    const subject = cell.timeTableElective;
+    const subjectName = subject ? subject.electiveSubjectName : "N/A";
+    const subjectId = subject ? subject.electiveSubjectId : null;
+    const roomName = cell.classRoom ? cell.classRoom.roomNumber : "N/A";
+    const roomId = cell.classRoom ? cell.classRoom.classRoomSectionId : null;
+
+    const mapping = cell.subjectComponentMapping;
+    const component = mapping?.component;
+    const componentData = component
+      ? {
+        id: component.id,
+        componentId: component.id,
+        componentName: component.componentName,
+        code: component.code,
+        description: component.description ?? null,
+      }
+      : null;
+
+    scheduleItems.push({
+      timeTableCellId: cell.timeTableCellId,
+      period: cell.period,
+      type: "elective",
+      teachers: mapCellTeachers(cell, employeeByUserId),
+      subject: {
+        electiveSubjectId: subjectId,
+        name: subjectName,
+        subjectComponentMappingId:
+          cell.subjectComponentMappingId ?? mapping?.id ?? null,
+        component: componentData,
+      },
+      subjectComponentMappingId:
+        cell.subjectComponentMappingId ?? mapping?.id ?? null,
+      component: componentData,
+      room: { classRoomSectionId: roomId, name: roomName },
+    });
+  }
+
+  return scheduleItems;
+}
+
+function formatElectiveRoutinePeriods(
+  periods,
+  cells,
+  weekOffList,
+  employeeByUserId,
+) {
+  const daysList = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  const weekOffLower = [];
+  for (const day of weekOffList) {
+    weekOffLower.push(String(day).toLowerCase());
+  }
+
+  const formattedPeriods = [];
+  for (const period of periods) {
+    const formattedDays = [];
+    for (const daysName of daysList) {
+      if (weekOffLower.includes(daysName.toLowerCase())) {
+        formattedDays.push({
+          name: daysName,
+          isDayOff: true,
+        });
+        continue;
+      }
+
+      if (period.isBreak) {
+        formattedDays.push({
+          name: daysName,
+          isBreak: true,
+        });
+        continue;
+      }
+
+      const periodElectiveCells = collectPeriodCells(cells, period, daysName);
+
+      formattedDays.push({
+        name: daysName,
+        scheduleItems: formatElectiveCellsAsScheduleItems(
+          periodElectiveCells,
+          employeeByUserId,
+        ),
+      });
+    }
+
+    formattedPeriods.push({
+      timeTableCreationId: period.timeTableCreationId,
+      name: period.periodName,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      days: formattedDays,
+    });
+  }
+
+  return formattedPeriods;
+}
+
+async function getElectiveRoutineGridByCourseId(courseId) {
+  const courseIdNum = Number(courseId);
+  const placementMeta = {
+    classSectionTermId: null,
+    section: null,
+    term: null,
+    year: null,
+    courseId: courseIdNum,
+    sessionId: null,
+  };
+
+  const electiveRoutines =
+    await timeTableCreateRepository.getElectiveRoutinesByCourseIdRepository(
+      courseIdNum,
+    );
+
+  const allCells = [];
+  for (const routine of electiveRoutines) {
+    for (const cell of routine.timeTableCells || []) {
+      allCells.push(cell);
+    }
+  }
+  const employeeByUserId = await buildEmployeeLookupMap(allCells);
+
+  const structuresById = new Map();
+
+  for (const routine of electiveRoutines) {
+    const mapping = routine.structureCourseMapping;
+    const timeTableNameId = mapping.timeTableNameId;
+    const timeTableCreateName = mapping.timeTableStructure;
+    const periods = timeTableCreateName.timeTableName || [];
+    const cells = routine.timeTableCells || [];
+    const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+
+    const resolvedPeriods = await resolvePeriodsWithVariantTimings(
+      periods,
+      mapping,
+      { startDate: routine.startingDate, endDate: routine.endingDate },
+    );
+
+    if (!structuresById.has(timeTableNameId)) {
+      structuresById.set(timeTableNameId, {
+        timeTableNameId,
+        name: timeTableCreateName.name || "N/A",
+        weekOff: weekOffList,
+        timetableStructureCourseMapperId:
+          mapping.timetableStructureCourseMapperId,
+        courseId: Number(mapping.courseId),
+        sessionId: Number(mapping.sessionId),
+        startingDate: mapping.startingDate,
+        endingDate: mapping.endingDate,
+        routines: [],
+      });
+    }
+
+    structuresById.get(timeTableNameId).routines.push({
+      timeTableRoutineId: routine.timeTableRoutineId,
+      timetableStructureCourseMapperId:
+        routine.timetableStructureCourseMapperId,
+      isPublished: routine.isPublish,
+      startDate: routine.startingDate,
+      endDate: routine.endingDate,
+      year: null,
+      periods: formatElectiveRoutinePeriods(
+        resolvedPeriods,
+        cells,
+        weekOffList,
+        employeeByUserId,
+      ),
+    });
+  }
+
+  const mappedWithoutRoutine = await buildMappedStructuresWithoutRoutines(
+    courseIdNum,
+    null,
+    null,
+  );
+  for (const mapped of mappedWithoutRoutine) {
+    if (!structuresById.has(mapped.timeTableNameId)) {
+      structuresById.set(mapped.timeTableNameId, mapped);
+    }
+  }
+
+  const structures = [];
+  for (const structure of structuresById.values()) {
+    structures.push(structure);
+  }
+
+  return {
+    ...placementMeta,
+    structures,
+    classSection: null,
+  };
+}
+
+async function buildMappedStructuresWithoutRoutines(
+  courseId,
+  sessionId,
+  classSection,
+  academicGroupScopeId = null,
+) {
+  if (courseId == null && academicGroupScopeId == null) {
+    return [];
+  }
+
+  const rows = await getMappedStructuresForCourseSession(
+    courseId,
+    sessionId,
+    academicGroupScopeId,
+  );
+  const structures = [];
+
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const structure = plain.timeTableStructure;
+    const course = plain.course || {};
+    const session = plain.session || {};
+    const weekOffList = parseWeekOffList(structure.weekOff);
+    const periodRows = structure.timeTableName || [];
+
+    const variantSchedules = await buildRoutineVariantSchedules(
+      plain,
+      { startDate: plain.startingDate, endDate: plain.endingDate },
+      periodRows,
+    );
+
+    const resolvedPeriods = await resolvePeriodsWithVariantTimings(
+      periodRows,
+      plain,
+      { startDate: plain.startingDate, endDate: plain.endingDate },
+    );
+
+    const resolvedWithVariantTimings = resolvedPeriods.map((rp) => {
+      const vTimings = variantSchedules.map((vs) => {
+        const vp = (vs.periods || []).find(
+          (p) =>
+            Number(p.timeTableCreationId) ===
+            Number(rp.timeTableCreationId),
+        );
+        return {
+          variantCourseMappingId: vs.id,
+          timeTableStructureVariantId: vs.timeTableStructureVariantId,
+          variantName: vs.name,
+          startingDate: vs.startingDate,
+          endingDate: vs.endingDate,
+          startTime: vp?.startTime ?? rp.startTime,
+          endTime: vp?.endTime ?? rp.endTime,
+        };
+      });
+      return {
+        ...rp,
+        variantTimings: vTimings,
+      };
+    });
+
+    structures.push({
+      timeTableNameId: plain.timeTableNameId,
+      name: structure.name || "N/A",
+      weekOff: weekOffList,
+      timetableStructureCourseMapperId: plain.timetableStructureCourseMapperId,
+      courseId: plain.courseId,
+      courseName: course.courseName || null,
+      courseCode: course.courseCode || null,
+      sessionId: plain.sessionId,
+      sessionName: session.sessionName || null,
+      startingDate: plain.startingDate,
+      endingDate: plain.endingDate,
+      year: classSection?.year != null ? Number(classSection.year) : null,
+      variants: variantSchedules,
+      routines: [],
+      periods: buildEmptyPeriodGrid(resolvedWithVariantTimings, weekOffList),
+    });
+  }
+
+  return structures;
+}
+
+function mapRoutineClassSection(classSection) {
+  if (!classSection) return null;
+  const plain = classSection.get
+    ? classSection.get({ plain: true })
+    : classSection;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.year != null ? String(plain.year) : null,
+    semesterId: null,
+    term: resolveProgramTerm(plain),
+    course: plain.courseSection
+      ? {
+        courseId: plain.courseSection.courseId,
+        courseName: plain.courseSection.courseName,
+        courseCode: plain.courseSection.courseCode,
+      }
+      : null,
+  };
+}
+
+function mapClassSectionSummary(classSection) {
+  const plain = classSection.get
+    ? classSection.get({ plain: true })
+    : classSection;
+  return {
+    classSectionsId: plain.classSectionsId,
+    section: plain.section,
+    class: plain.year != null ? String(plain.year) : null,
+    semesterId: null,
+    term: resolveProgramTerm(plain),
+  };
+}
+
+export async function getRoutineByTeacherAndAcademicYear(
+  userId,
+  courseId,
+  sessionId,
+  subjectId,
+  options = {},
+) {
+  const weekStart = options.weekStart || null;
+  const weekEnd = options.weekEnd || null;
+  const batchId = options.batchId || null;
+
+  const bundle = await timeTableCreateRepository.getTeacherRoutineBundle(
+    userId,
+    courseId,
+    sessionId,
+    subjectId,
+    {
+      weekStart,
+      weekEnd,
+      batchId,
+      publishedOnly: options.publishedOnly !== false,
+    },
+  );
+
+  const employee = bundle.employee;
+  const course = bundle.course;
+  const session = bundle.session;
+  const classSections = bundle.classSections;
+  const routineRows = bundle.routines;
+
+  const classSectionSummaries = [];
+  for (const classSection of classSections) {
+    classSectionSummaries.push(mapClassSectionSummary(classSection));
+  }
+
+  const common = {
+    employee: employee
+      ? {
+        employeeId: employee.employeeId,
+        userId: employee.userId,
+        employeeName: employee.employeeName,
+        employeeCode: employee.employeeCode,
+        pickColor: employee.pickColor,
+      }
+      : null,
+    course: course
+      ? {
+        courseId: course.courseId,
+        courseName: course.courseName,
+        courseCode: course.courseCode,
+      }
+      : null,
+    session: session
+      ? {
+        sessionId: session.sessionId,
+        sessionName: session.sessionName,
+        academicYearId: session.academicYearId,
+      }
+      : null,
+    classSections: classSectionSummaries,
+  };
+
+  if (!routineRows.length) {
+    return { ...common, routines: [] };
+  }
+
+  const allCellsForLookup = [];
+  for (const row of routineRows) {
+    for (const cell of row.routine.timeTableCells || []) {
+      allCellsForLookup.push(cell);
+    }
+    // for (const cell of row.electiveCells || []) {
+    //   allCellsForLookup.push(cell);
+    // }
+  }
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+
+  const daysList = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  const formattedRoutines = [];
+
+  const toDateStr = (d) => (d ? new Date(d).toISOString().split("T")[0] : "");
+  const addDays = (dateStr, days) => {
+    const d = new Date(dateStr + "T12:00:00");
+    d.setDate(d.getDate() + days);
+    return d.toISOString().split("T")[0];
+  };
+
+  for (const row of routineRows) {
+    const routine = row.routine;
+    const electiveCells = row.electiveCells;
+    const mapping = routine.structureCourseMapping;
+    const timeTableCreateName = mapping.timeTableStructure;
+    const periods = timeTableCreateName.timeTableName || [];
+
+    const normalStart = toDateStr(routine.startingDate);
+    const normalEnd = toDateStr(routine.endingDate);
+
+    const boundariesSet = new Set();
+    boundariesSet.add(normalStart);
+    boundariesSet.add(addDays(normalEnd, 1));
+
+    // const electiveRoutinesMap = new Map();
+    // for (const cell of electiveCells || []) {
+    //   const eStart = toDateStr(cell.getDataValue("startingDate"));
+    //   const eEnd = toDateStr(cell.getDataValue("endingDate"));
+    //   const eId = cell.getDataValue("electiveRoutineId");
+    //   if (eId && eStart && eEnd) {
+    //     electiveRoutinesMap.set(eId, {
+    //       startDate: eStart,
+    //       endDate: eEnd,
+    //       cells: [],
+    //     });
+    //   }
+    // }
+
+    // for (const cell of electiveCells || []) {
+    //   const eId = cell.getDataValue("electiveRoutineId");
+    //   if (eId && electiveRoutinesMap.has(eId)) {
+    //     electiveRoutinesMap.get(eId).cells.push(cell);
+    //   }
+    // }
+
+    // const electiveRoutines = Array.from(electiveRoutinesMap.values());
+    const electiveRoutines = [];
+
+    for (const er of electiveRoutines) {
+      if (er.startDate <= normalEnd && er.endDate >= normalStart) {
+        boundariesSet.add(er.startDate);
+        boundariesSet.add(addDays(er.endDate, 1));
+      }
+    }
+
+    const sortedBoundaries = Array.from(boundariesSet).sort();
+
+    const segments = [];
+    for (let i = 0; i < sortedBoundaries.length - 1; i++) {
+      const segStart = sortedBoundaries[i];
+      const segEnd = addDays(sortedBoundaries[i + 1], -1);
+      if (segStart >= normalStart && segEnd <= normalEnd) {
+        segments.push({ startDate: segStart, endDate: segEnd });
+      }
+    }
+
+    for (const seg of segments) {
+      if (weekStart != null && weekEnd != null) {
+        if (seg.startDate > weekEnd || seg.endDate < weekStart) {
+          continue;
+        }
+      }
+
+      const activeElectiveCells = [];
+      for (const er of electiveRoutines) {
+        if (er.startDate <= seg.endDate && er.endDate >= seg.startDate) {
+          activeElectiveCells.push(...er.cells);
+        }
+      }
+
+      // Filter cells down to only those matching the requested userId
+      const normalCells = (routine.timeTableCells || []).filter(
+        (cell) =>
+          cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0,
+      );
+      const filteredElectiveCells = activeElectiveCells.filter(
+        (cell) =>
+          cell.timeTableCellTeachers && cell.timeTableCellTeachers.length > 0,
+      );
+
+      if (!normalCells.length && !filteredElectiveCells.length) {
+        continue;
+      }
+
+      const classSection = mapRoutineClassSection(
+        resolveTimeTableRoutineSection(routine),
+      );
+
+      if (routine.classSectionTermId != null && !classSection?.classSectionsId) {
+        continue;
+      }
+
+      const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+      const weekOffLower = [];
+      for (const day of weekOffList) {
+        weekOffLower.push(String(day).toLowerCase());
+      }
+
+      const variantSchedules = await buildRoutineVariantSchedules(
+        mapping,
+        {
+          startDate: routine.startingDate || seg.startDate,
+          endDate: routine.endingDate || seg.endDate,
+        },
+        periods,
+      );
+
+      const resolvedPeriods = await resolvePeriodsWithVariantTimings(
+        periods,
+        mapping,
+        { startDate: seg.startDate, endDate: seg.endDate },
+      );
+
+      const formattedPeriods = [];
+      for (const period of resolvedPeriods) {
+        const formattedDays = [];
+        for (const daysName of daysList) {
+          if (weekOffLower.includes(daysName.toLowerCase())) {
+            formattedDays.push({
+              name: daysName,
+              isDayOff: true,
+              scheduleItems: [],
+            });
+            continue;
+          }
+
+          if (period.isBreak) {
+            formattedDays.push({
+              name: daysName,
+              isBreak: true,
+              scheduleItems: [],
+            });
+            continue;
+          }
+
+          const periodNormalCells = collectPeriodCells(
+            normalCells,
+            period,
+            daysName,
+          );
+
+          const periodElectiveCells = collectPeriodCells(
+            filteredElectiveCells,
+            period,
+            daysName,
+          );
+
+          let isOverriding = false;
+          for (const cell of periodNormalCells) {
+            if (cell.isOverridingSyblingElectives === true) {
+              isOverriding = true;
+              break;
+            }
+          }
+
+          const scheduleItems = formatNormalCellsAsScheduleItems(
+            periodNormalCells,
+            employeeByUserId,
+          );
+
+          if (!isOverriding) {
+            const electiveItems = formatElectiveCellsAsScheduleItems(
+              periodElectiveCells,
+              employeeByUserId,
+            );
+            for (const item of electiveItems) {
+              scheduleItems.push(item);
+            }
+          }
+
+          formattedDays.push({
+            name: daysName,
+            scheduleItems,
+          });
+        }
+
+        const variantTimings = variantSchedules.map((vs) => {
+          const vp = (vs.periods || []).find(
+            (p) =>
+              Number(p.timeTableCreationId) ===
+              Number(period.timeTableCreationId),
+          );
+          return {
+            variantCourseMappingId: vs.id,
+            timeTableStructureVariantId: vs.timeTableStructureVariantId,
+            variantName: vs.name,
+            startingDate: vs.startingDate,
+            endingDate: vs.endingDate,
+            startTime: vp?.startTime ?? period.startTime,
+            endTime: vp?.endTime ?? period.endTime,
+          };
+        });
+
+        formattedPeriods.push({
+          timeTableCreationId: period.timeTableCreationId,
+          name: period.periodName,
+          startTime: period.startTime,
+          endTime: period.endTime,
+          isBreak: period.isBreak || false,
+          isCourse: period.isCourse ?? true,
+          variantTimings,
+          days: formattedDays,
+        });
+      }
+
+      const activeDate = toDateOnlyString(new Date());
+      const matchedActiveVariant =
+        variantSchedules.find(
+          (vs) => activeDate >= vs.startingDate && activeDate <= vs.endingDate,
+        ) ||
+        variantSchedules[0] ||
+        null;
+
+      let academicGroup = null;
+      if (routine.academicGroup) {
+        const scope = routine.academicGroup.scope || {};
+        academicGroup = {
+          academicGroupId: routine.academicGroup.academicGroupId,
+          groupName: routine.academicGroup.groupName,
+          groupCode: routine.academicGroup.groupCode,
+          academicGroupScopeId: scope.academicGroupScopeId || null,
+          courseId: scope.courseId || null,
+          courseName: scope.course?.courseName || null,
+          sessionId: scope.sessionId || null,
+          sessionName: scope.session?.sessionName || null,
+          term: scope.term || null,
+          classSectionTermId: scope.classSectionTermId || null,
+        };
+      }
+
+      formattedRoutines.push({
+        timeTableRoutineId: routine.timeTableRoutineId,
+        isPublished: routine.isPublish,
+        timeTableNameId: mapping.timeTableNameId,
+        name: timeTableCreateName.name || "N/A",
+        startDate: seg.startDate,
+        endDate: seg.endDate,
+        classSection,
+        academicGroup,
+        activeVariant: matchedActiveVariant
+          ? {
+            timeTableStructureVariantId:
+              matchedActiveVariant.timeTableStructureVariantId,
+            name: matchedActiveVariant.name,
+            startingDate: matchedActiveVariant.startingDate,
+            endingDate: matchedActiveVariant.endingDate,
+          }
+          : null,
+        variants: variantSchedules,
+        periods: formattedPeriods,
+      });
+    }
+  }
+
+  return { ...common, routines: formattedRoutines };
+}
+
+function resolveDateWiseCellSubject(cell) {
+  if (cell.timeTableType === "elective" && cell.timeTableElective) {
+    return {
+      subjectId: cell.timeTableElective.electiveSubjectId,
+      subjectName: cell.timeTableElective.electiveSubjectName,
+      subjectCode: cell.timeTableElective.electiveSubjectCode,
+    };
+  }
+
+  if (
+    cell.isSameTeacher === true &&
+    cell.timeTableTeacherSubject?.employeeSubject
+  ) {
+    const mappedSubject = cell.timeTableTeacherSubject.employeeSubject;
+    return {
+      subjectId: mappedSubject.subjectId,
+      subjectName: mappedSubject.subjectName,
+      subjectCode: mappedSubject.subjectCode,
+    };
+  }
+
+  const subject = cell.timeTableSubject;
+  return {
+    subjectId: subject?.subjectId ?? null,
+    subjectName: subject?.subjectName ?? null,
+    subjectCode: subject?.subjectCode ?? null,
+  };
+}
+
+function getSectionWeekRange(date, navStart, navEnd) {
+  const anchorDate = toDateOnlyString(date || new Date());
+
+  const base = new Date(`${anchorDate}T00:00:00`);
+  const day = base.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(base);
+  monday.setDate(base.getDate() + mondayOffset);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const startDate = toDateOnlyString(monday);
+  const endDate = toDateOnlyString(sunday);
+
+  const previousMonday = new Date(monday);
+  previousMonday.setDate(monday.getDate() - 7);
+  const previousSunday = new Date(previousMonday);
+  previousSunday.setDate(previousMonday.getDate() + 6);
+  const nextMonday = new Date(monday);
+  nextMonday.setDate(monday.getDate() + 7);
+  const nextSunday = new Date(nextMonday);
+  nextSunday.setDate(nextMonday.getDate() + 6);
+
+  let previousWeekDate = toDateOnlyString(previousMonday);
+  let nextWeekDate = toDateOnlyString(nextMonday);
+
+  if (
+    !weekRangeOverlapsBounds(
+      toDateOnlyString(previousMonday),
+      toDateOnlyString(previousSunday),
+      navStart,
+      navEnd,
+    )
+  ) {
+    previousWeekDate = null;
+  }
+  if (
+    !weekRangeOverlapsBounds(
+      toDateOnlyString(nextMonday),
+      toDateOnlyString(nextSunday),
+      navStart,
+      navEnd,
+    )
+  ) {
+    nextWeekDate = null;
+  }
+
+  return {
+    week: "current",
+    startDate,
+    endDate,
+    anchorDate,
+    previousWeekDate,
+    nextWeekDate,
+  };
+}
+
+function buildDayDatesFromWeekStart(weekStartDate) {
+  const dayDates = {};
+  const monday = new Date(`${weekStartDate}T00:00:00`);
+  for (let i = 0; i < DAYS.length; i++) {
+    const current = new Date(monday);
+    current.setDate(monday.getDate() + i);
+    dayDates[DAYS[i]] = toDateOnlyString(current);
+  }
+  return dayDates;
+}
+
+function getOverlappingDateRange(weekStart, weekEnd, rangeStart, rangeEnd) {
+  if (!rangeStart || !rangeEnd) {
+    return { startDate: weekStart, endDate: weekEnd };
+  }
+
+  const startDate = weekStart > rangeStart ? weekStart : rangeStart;
+  const endDate = weekEnd < rangeEnd ? weekEnd : rangeEnd;
+  if (startDate > endDate) {
+    return null;
+  }
+  return { startDate, endDate };
+}
+
+function weekRangeOverlapsBounds(weekStart, weekEnd, boundStart, boundEnd) {
+  if (!boundStart || !boundEnd) {
+    return true;
+  }
+  return weekStart <= boundEnd && weekEnd >= boundStart;
+}
+
+function getSectionRoutineNavigationBounds(routines) {
+  let publishedStart = null;
+  let publishedEnd = null;
+  let anyStart = null;
+  let anyEnd = null;
+
+  for (const routine of routines) {
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    const start = toDateOnlyString(plain.startingDate);
+    const end = toDateOnlyString(plain.endingDate);
+    if (!start || !end) {
+      continue;
+    }
+
+    if (anyStart == null || start < anyStart) {
+      anyStart = start;
+    }
+    if (anyEnd == null || end > anyEnd) {
+      anyEnd = end;
+    }
+
+    if (!plain.isPublish) {
+      continue;
+    }
+    if (publishedStart == null || start < publishedStart) {
+      publishedStart = start;
+    }
+    if (publishedEnd == null || end > publishedEnd) {
+      publishedEnd = end;
+    }
+  }
+
+  if (publishedStart != null && publishedEnd != null) {
+    return { navStart: publishedStart, navEnd: publishedEnd };
+  }
+
+  return { navStart: null, navEnd: null };
+}
+
+function routineContainsDate(routine, date) {
+  const plain = routine.get ? routine.get({ plain: true }) : routine;
+  const start = toDateOnlyString(plain.startingDate);
+  const end = toDateOnlyString(plain.endingDate);
+  if (!start || !end || !date) {
+    return false;
+  }
+  return date >= start && date <= end;
+}
+
+function routineOverlapsWeek(routine, week) {
+  const routineStart = toDateOnlyString(routine.startingDate);
+  const routineEnd = toDateOnlyString(routine.endingDate);
+  if (!routineStart || !routineEnd) {
+    return false;
+  }
+  return routineStart <= week.endDate && routineEnd >= week.startDate;
+}
+
+function isDateWithinRange(date, rangeStart, rangeEnd) {
+  if (!date || !rangeStart || !rangeEnd) {
+    return true;
+  }
+  return date >= rangeStart && date <= rangeEnd;
+}
+
+function pickSectionRoutineForWeek(routines, week, anchorDate) {
+  const publishedMatches = [];
+
+  for (const routine of routines) {
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    if (!routineOverlapsWeek(plain, week)) {
+      continue;
+    }
+    if (plain.isPublish) {
+      publishedMatches.push(routine);
+    }
+  }
+
+  if (!publishedMatches.length) {
+    return null;
+  }
+
+  if (anchorDate) {
+    for (const routine of publishedMatches) {
+      if (routineContainsDate(routine, anchorDate)) {
+        return routine;
+      }
+    }
+  }
+
+  return publishedMatches[0];
+}
+
+async function buildRoutinePeriodGrid(
+  routine,
+  electiveCells,
+  classSection,
+  employeeByUserId,
+  dateContext = null,
+) {
+  const plainRoutine = routine.get ? routine.get({ plain: true }) : routine;
+  const mapping = plainRoutine.structureCourseMapping;
+  const timeTableCreateName = mapping.timeTableStructure;
+  const periods = timeTableCreateName.timeTableName || [];
+  const resolvedPeriods = await resolvePeriodsWithVariantTimings(
+    periods,
+    mapping,
+    {
+      startDate: plainRoutine.startingDate,
+      endDate: plainRoutine.endingDate,
+      date: dateContext?.date || dateContext?.targetDate,
+      targetDate: dateContext?.date || dateContext?.targetDate,
+    },
+  );
+  const normalCells = plainRoutine.timeTableCells || [];
+  const daysList = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+  ];
+  const weekOffList = parseWeekOffList(timeTableCreateName.weekOff);
+  const weekOffLower = [];
+  for (const day of weekOffList) {
+    weekOffLower.push(String(day).toLowerCase());
+  }
+
+  const formattedPeriods = [];
+  for (const period of resolvedPeriods) {
+    const formattedDays = [];
+    for (const daysName of daysList) {
+      if (weekOffLower.includes(daysName.toLowerCase())) {
+        formattedDays.push({ name: daysName, isDayOff: true });
+        continue;
+      }
+
+      if (period.isBreak) {
+        formattedDays.push({ name: daysName, isBreak: true });
+        continue;
+      }
+
+      const periodNormalCells = collectPeriodCells(
+        normalCells,
+        period,
+        daysName,
+      );
+      const periodElectiveCells = collectPeriodCells(
+        electiveCells,
+        period,
+        daysName,
+      );
+
+      let isOverriding = false;
+      for (const cell of periodNormalCells) {
+        if (cell.isOverridingSyblingElectives === true) {
+          isOverriding = true;
+          break;
+        }
+      }
+
+      const scheduleItems = formatNormalCellsAsScheduleItems(
+        periodNormalCells,
+        employeeByUserId,
+      );
+      if (!isOverriding) {
+        const electiveItems = formatElectiveCellsAsScheduleItems(
+          periodElectiveCells,
+          employeeByUserId,
+        );
+        for (const item of electiveItems) {
+          scheduleItems.push(item);
+        }
+      }
+
+      formattedDays.push({
+        name: daysName,
+        scheduleItems,
+      });
+    }
+
+    formattedPeriods.push({
+      timeTableCreationId: period.timeTableCreationId,
+      name: period.periodName,
+      startTime: period.startTime,
+      endTime: period.endTime,
+      isBreak: period.isBreak ?? false,
+      isCourse: period.isCourse ?? true,
+      timeTableStructureVariantId: period.timeTableStructureVariantId ?? null,
+      variantName: period.variantName ?? null,
+      days: formattedDays,
+    });
+  }
+
+  return {
+    timeTableRoutineId: plainRoutine.timeTableRoutineId,
+    timetableStructureCourseMapperId:
+      plainRoutine.timetableStructureCourseMapperId,
+    timeTableNameId: mapping.timeTableNameId,
+    name: timeTableCreateName.name || "N/A",
+    isPublished: Boolean(plainRoutine.isPublish),
+    isDraft: !plainRoutine.isPublish,
+    startDate: plainRoutine.startingDate,
+    endDate: plainRoutine.endingDate,
+    year: classSection?.year != null ? Number(classSection.year) : null,
+    classSection: mapRoutineClassSection(classSection),
+    periods: formattedPeriods,
+  };
+}
+
+function buildDateWiseLookup(rows) {
+  const lookup = new Map();
+  for (const row of rows) {
+    const plain = row.get ? row.get({ plain: true }) : row;
+    const dateKey = toDateOnlyString(plain.date);
+    lookup.set(`${plain.timeTableCellId}|${dateKey}`, plain);
+  }
+  return lookup;
+}
+
+function mapDateWiseTeachersForItem(plainRow) {
+  const teachers = [];
+  for (const teacher of plainRow.timeTableCellTeachersDateWise || []) {
+    teachers.push({
+      timeTableCellTeachersDateWiseId: teacher.timeTableCellTeachersDateWiseId,
+      userId: teacher.userId,
+      teacherType: teacher.teacherType,
+      isAttendence: teacher.isAttendence,
+      employeeName: teacher.employeeDetails?.employeeName ?? null,
+      employeeCode: teacher.employeeDetails?.employeeCode ?? null,
+      pickColor: teacher.employeeDetails?.pickColor ?? null,
+    });
+  }
+  return teachers;
+}
+
+function resolvePrimaryTeacherUserId(teachers) {
+  for (const teacher of teachers || []) {
+    if (String(teacher.teacherType || "").toLowerCase() === "primary") {
+      return Number(teacher.userId);
+    }
+  }
+  if (teachers?.[0]?.userId != null) {
+    return Number(teachers[0].userId);
+  }
+  return null;
+}
+
+function enrichRoutineScheduleWithDateWise(
+  routine,
+  week,
+  dateWiseLookup,
+  routineStart,
+  routineEnd,
+) {
+  const dayDates = buildDayDatesFromWeekStart(week.startDate);
+  for (const period of routine.periods || []) {
+    for (const day of period.days || []) {
+      const dayDate = dayDates[day.name] || null;
+      day.date = dayDate;
+      day.isWithinRoutine = isDateWithinRange(
+        dayDate,
+        routineStart,
+        routineEnd,
+      );
+
+      if (!day.isWithinRoutine) {
+        for (const item of day.scheduleItems || []) {
+          item.date = dayDate;
+          item.timeTableCellDateWiseId = null;
+        }
+        continue;
+      }
+
+      for (const item of day.scheduleItems || []) {
+        const cellId =
+          item.timeTableCellId != null ? Number(item.timeTableCellId) : null;
+        let matched = null;
+        if (cellId != null && dayDate != null) {
+          matched = dateWiseLookup.get(`${cellId}|${dayDate}`);
+        }
+
+        item.date = dayDate;
+        item.timeTableCellDateWiseId = matched?.timeTableCellDateWiseId ?? null;
+        item.subjectId =
+          matched?.subjectId ??
+          item.subject?.subjectId ??
+          item.subject?.electiveSubjectId ??
+          null;
+        item.electiveSubjectId =
+          matched?.electiveSubjectId ?? item.subject?.electiveSubjectId ?? null;
+        item.userId = matched
+          ? resolvePrimaryTeacherUserId(matched.timeTableCellTeachersDateWise)
+          : (item.teachers?.[0]?.userId ?? null);
+        item.classRoomSectionId =
+          matched?.classRoomSectionId ?? item.room?.classRoomSectionId ?? null;
+
+        if (matched) {
+          item.teachers = mapDateWiseTeachersForItem(matched);
+          if (matched.classRoom) {
+            item.room = {
+              classRoomSectionId:
+                matched.classRoomSectionId ??
+                matched.classRoom.classRoomSectionId ??
+                null,
+              name: matched.classRoom.roomNumber ?? null,
+            };
+          }
+          if (matched.timeTableSubject) {
+            item.subject = {
+              subjectId: matched.timeTableSubject.subjectId,
+              name: matched.timeTableSubject.subjectName,
+            };
+          } else if (matched.timeTableElective) {
+            item.subject = {
+              electiveSubjectId: matched.timeTableElective.electiveSubjectId,
+              name: matched.timeTableElective.electiveSubjectName,
+            };
+          }
+        }
+      }
+    }
+  }
+}
+
+function mapDateWiseSectionContext(courseRow, sessionRow) {
+  const course = courseRow?.get ? courseRow.get({ plain: true }) : courseRow;
+  return {
+    course: course
+      ? {
+        courseId: course.courseId,
+        courseName: course.courseName,
+        courseCode: course.courseCode,
+      }
+      : null,
+    session: sessionRow
+      ? {
+        sessionId: sessionRow.sessionId,
+        sessionName: sessionRow.sessionName,
+      }
+      : null,
+  };
+}
+
+export async function getDateWiseCellsBySection(
+  courseId,
+  sessionId,
+  classSectionTermId,
+  options = {},
+) {
+  const anchorDate = toDateOnlyString(options.date || new Date());
+
+  let placement = null;
+  let scope = {};
+  if (classSectionTermId != null) {
+    placement = await resolveRoutinePlacement({ classSectionTermId });
+    scope = routineScopeWhere(placement.classSectionTermId);
+  } else {
+    scope = { courseId: Number(courseId), sessionId: Number(sessionId) };
+  }
+
+  const termId = placement ? placement.classSectionTermId : null;
+  const [termRow, courseRow, sessionRow] = await Promise.all([
+    termId ? findClassSectionTermById(termId) : null,
+    getCourseByCourseId(Number(courseId)),
+    getSessionSummaryById(Number(sessionId)),
+  ]);
+
+  const { course, session } = mapDateWiseSectionContext(courseRow, sessionRow);
+  let classSection = null;
+  let section = null;
+  if (termRow) {
+    const plain = termRow.get ? termRow.get({ plain: true }) : termRow;
+    classSection = plain.classSection ?? null;
+    section = classSection?.section ?? null;
+  }
+
+  const routines =
+    await timeTableCreateRepository.getNormalRoutinesBySectionScopeRepository({
+      ...scope,
+      isPublish: true,
+    });
+
+  // console.log("termRow:", termRow);
+  // console.log("courseRow:", courseRow?.courseName);
+  // console.log("sessionRow:", sessionRow?.sessionName);
+  // console.log("routines length:", routines ? routines.length : 0);
+  const { navStart, navEnd } = getSectionRoutineNavigationBounds(routines);
+  const week = getSectionWeekRange(anchorDate, navStart, navEnd);
+  const selectedRoutine = pickSectionRoutineForWeek(routines, week, anchorDate);
+
+  const common = {
+    courseId: Number(courseId),
+    sessionId: Number(sessionId),
+    classSectionTermId: classSectionTermId ? Number(classSectionTermId) : null,
+    course,
+    session,
+    section,
+    term: placement?.term != null ? Number(placement.term) : null,
+    year: classSection?.year != null ? Number(classSection.year) : null,
+  };
+
+  if (!selectedRoutine) {
+    return {
+      ...common,
+      routine: null,
+      routines,
+      week,
+    };
+  }
+
+  const plainSelected = selectedRoutine.get({ plain: true });
+  const routineStart = toDateOnlyString(plainSelected.startingDate);
+  const routineEnd = toDateOnlyString(plainSelected.endingDate);
+  const mapping = plainSelected.structureCourseMapping;
+  const timeTableNameId = mapping.timeTableNameId;
+
+  let electiveCells = [];
+  // if (timeTableNameId != null) {
+  //   const electiveRoutines =
+  //     await timeTableCreateRepository.getElectiveRoutinesByTableNamesRepository(
+  //       [timeTableNameId],
+  //       null,
+  //       [selectedRoutine],
+  //       { isPublish: true },
+  //     );
+  //   const toDateStr = (d) => (d ? new Date(d).toISOString().split("T")[0] : "");
+  //   const selectedStart = toDateStr(plainSelected.startingDate);
+  //   const selectedEnd = toDateStr(plainSelected.endingDate);
+  //   for (const electiveRoutine of electiveRoutines) {
+  //     if (
+  //       toDateStr(electiveRoutine.startingDate) >= selectedStart &&
+  //       toDateStr(electiveRoutine.endingDate) <= selectedEnd
+  //     ) {
+  //       const cells = electiveRoutine.timeTableCells || [];
+  //       for (const cell of cells) {
+  //         electiveCells.push(cell);
+  //       }
+  //     }
+  //   }
+  // }
+
+  const allCellsForLookup = [
+    ...(selectedRoutine.timeTableCells || []),
+    ...electiveCells,
+  ];
+  const employeeByUserId = await buildEmployeeLookupMap(allCellsForLookup);
+  const routine = await buildRoutinePeriodGrid(
+    selectedRoutine,
+    electiveCells,
+    classSection,
+    employeeByUserId,
+    { date: anchorDate, targetDate: anchorDate },
+  );
+
+  const variantSchedules = await buildRoutineVariantSchedules(
+    mapping,
+    {
+      startDate: selectedRoutine.startingDate,
+      endDate: selectedRoutine.endingDate,
+    },
+    mapping?.timeTableStructure?.timeTableName || [],
+  );
+  routine.variantSchedules = variantSchedules;
+
+  if (routine.isPublished) {
+    const dateRange = getOverlappingDateRange(
+      week.startDate,
+      week.endDate,
+      routineStart,
+      routineEnd,
+    );
+    let dateWiseRows = [];
+    if (dateRange) {
+      dateWiseRows =
+        await timeTableCreateRepository.getPublishedDateWiseCellsForRoutineInWeekRepository(
+          routine.timeTableRoutineId,
+          dateRange.startDate,
+          dateRange.endDate,
+        );
+    }
+    const dateWiseLookup = buildDateWiseLookup(dateWiseRows);
+    enrichRoutineScheduleWithDateWise(
+      routine,
+      week,
+      dateWiseLookup,
+      routineStart,
+      routineEnd,
+    );
+  } else {
+    enrichRoutineScheduleWithDateWise(
+      routine,
+      week,
+      new Map(),
+      routineStart,
+      routineEnd,
+    );
+  }
+
+  return {
+    ...common,
+    routine,
+    routines,
+    week,
+  };
+}
+
+async function assertPublishedDateWiseCell(
+  timeTableCellDateWiseId,
+  transaction,
+) {
+  const row =
+    await timeTableCreateRepository.getDateWiseCellForUpdateRepository(
+      timeTableCellDateWiseId,
+      { transaction },
+    );
+  if (!row) {
+    throw new Error("Date-wise cell not found");
+  }
+
+  const plain = row.get({ plain: true });
+  const routine = plain.timeTableCell?.timeTableRoutine;
+  if (!routine?.isPublish) {
+    throw new Error("Updates are allowed only for published routines");
+  }
+
+  return plain;
+}
+
+export async function updateDateWiseCell(
+  timeTableCellDateWiseId,
+  payload,
+  updatedBy,
+) {
+  const transaction = await sequelize.transaction();
+  try {
+    await assertPublishedDateWiseCell(timeTableCellDateWiseId, transaction);
+    await timeTableCreateRepository.updateDateWiseCellRepository(
+      timeTableCellDateWiseId,
+      payload,
+      updatedBy,
+      { transaction },
+    );
+    await transaction.commit();
+
+    const result = { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) };
+    if (payload.timeTableCellTeachersDateWiseId != null) {
+      result.timeTableCellTeachersDateWiseId = Number(
+        payload.timeTableCellTeachersDateWiseId,
+      );
+    }
+    if (payload.userId != null) {
+      result.userId = Number(payload.userId);
+    }
+    if (payload.subjectId != null) {
+      result.subjectId = Number(payload.subjectId);
+    }
+    if (payload.electiveSubjectId != null) {
+      result.electiveSubjectId = Number(payload.electiveSubjectId);
+    }
+    if (payload.classRoomSectionId != null) {
+      result.classRoomSectionId = Number(payload.classRoomSectionId);
+    }
+    return result;
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
+  const transaction = await sequelize.transaction();
+  try {
+    const teacherRecord =
+      await timeTableCreateRepository.findCellTeacherByIdRepository(
+        timeTableCellTeacherId,
+        { transaction },
+      );
+
+    if (!teacherRecord) {
+      const error = new Error("Time table teacher assignment not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const { timeTableCellId, userId } = teacherRecord;
+
+    const cellRow = await timeTableCreateRepository.findMappingById(
+      timeTableCellId,
+      { transaction },
+    );
+    if (!cellRow) {
+      const error = new Error("Associated timetable cell not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const routineInfo =
+      await timeTableCreateRepository.getRoutineByIdRepository(
+        cellRow.timeTableRoutineId,
+        { transaction },
+      );
+    if (!routineInfo) {
+      const error = new Error("Associated timetable routine not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    assertWeekMappingChangeAllowed(routineInfo, "delete");
+
+    await timeTableCreateRepository.deleteCellTeacherRepository(
+      timeTableCellTeacherId,
+      transaction,
+    );
+
+    await timeTableCreateRepository.deleteDateWiseTeachersByCellAndUserRepository(
+      timeTableCellId,
+      userId,
+      transaction,
+    );
+
+    await recomputeFacultyLoadForUser(userId, transaction);
+
+    await transaction.commit();
+    return {
+      message: "Time table teacher deleted successfully",
+      deletedTimeTableCellTeacherId: Number(timeTableCellTeacherId),
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+import { getCascadingGroupRoutinesService } from "../../student/services/academicGroupScopeService.js";
+export { getCascadingGroupRoutinesService };
+
+export const fillMissingSubjectsService = async (data, updatedBy) => {
+  // data is a record mapping subjectCode to an array of cellIds.
+  const subjectCodes = Object.keys(data);
+  if (subjectCodes.length === 0) {
+    return { success: true, message: "No data provided" };
+  }
+
+  // Use transaction to ensure data integrity
+  return await sequelize.transaction(async (t) => {
+    // 1. Validate subject codes and fetch their subjectIds
+    const subjects = await model.subjectModel.findAll({
+      where: { subjectCode: subjectCodes },
+      attributes: ['subjectId', 'subjectCode'],
+      transaction: t,
+    });
+
+    const subjectMap = {};
+    for (const subject of subjects) {
+      subjectMap[subject.subjectCode] = subject.subjectId;
+    }
+
+    const missingSubjects = subjectCodes.filter(code => !subjectMap[code]);
+    if (missingSubjects.length > 0) {
+      const error = new Error(`Invalid subject codes: ${missingSubjects.join(", ")}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const allCellIds = Object.values(data).flat();
+    if (allCellIds.length === 0) {
+      return { success: true, message: "No cell IDs provided" };
+    }
+
+    // 2. Validate cell IDs and check if they are missing subjectId
+    const cells = await model.timeTableCellModel.findAll({
+      where: { timeTableCellId: allCellIds },
+      attributes: ['timeTableCellId', 'subjectId'],
+      transaction: t,
+    });
+
+    const cellMap = {};
+    for (const cell of cells) {
+      cellMap[cell.timeTableCellId] = cell;
+    }
+
+    const missingCells = allCellIds.filter(id => !cellMap[id]);
+    if (missingCells.length > 0) {
+      const error = new Error(`Invalid cell IDs: ${missingCells.join(", ")}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const cellsWithExistingData = allCellIds.filter(id => cellMap[id].subjectId != null);
+    if (cellsWithExistingData.length > 0) {
+      const error = new Error(`Some cells already have a subjectId: ${cellsWithExistingData.join(", ")}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 3. Update the data
+    let updatedCellsCount = 0;
+    let updatedDateWiseCount = 0;
+
+    for (const [subjectCode, cellIds] of Object.entries(data)) {
+      const subjectId = subjectMap[subjectCode];
+
+      // Update time_table_cell
+      await model.timeTableCellModel.update(
+        { subjectId: subjectId, updatedBy: updatedBy },
+        { where: { timeTableCellId: cellIds }, transaction: t }
+      );
+      updatedCellsCount += cellIds.length;
+
+      // Update time_table_cell_date_wise
+      const [affectedRows] = await model.timeTableCellDateWiseModel.update(
+        { subjectId: subjectId, updatedBy: updatedBy },
+        { where: { timeTableCellId: cellIds }, transaction: t }
+      );
+      updatedDateWiseCount += affectedRows;
+
+
+    }
+
+    return {
+      success: true,
+      updatedCellsCount,
+      updatedDateWiseCount,
+    };
+  });
+};

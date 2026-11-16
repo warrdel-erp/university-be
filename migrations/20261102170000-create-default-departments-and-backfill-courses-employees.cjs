@@ -5,7 +5,7 @@
  * 1. Recreate department triggers if broken definer exists.
  * 2. Ensure is_default column exists on department table.
  * 3. Fix legacy department_type for Admin departments if mislabeled.
- * 4. Ensure default departments ("Admin" and "Academic") exist for each institute with is_default = true.
+ * 4. Ensure default departments ("Admin (Default)" and "Academic (Default)") exist for each institute with is_default = true.
  * 5. Backfill existing default departments to is_default = true.
  * 6. Backfill courses where department_id IS NULL or wrongly mapped to Admin.
  * 7. Backfill employees where department_id IS NULL by linking to the institute's default department (Teachers -> Academic, Admin -> Admin).
@@ -101,7 +101,7 @@ module.exports = {
       `SELECT institute_id, institute_name, university_id FROM institute WHERE deleted_at IS NULL`
     );
 
-    // 5. For each institute, ensure "Admin" and "Academic" default departments exist with is_default = true
+    // 5. For each institute, ensure "Admin (Default)" and "Academic (Default)" default departments exist with is_default = true
     for (const inst of institutes) {
       const instituteId = inst.institute_id;
       const universityId = inst.university_id;
@@ -113,8 +113,8 @@ module.exports = {
         FROM department 
         WHERE institute_id = :instituteId 
           AND department_name NOT LIKE '%Admin%'
-          AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics'))
-        ORDER BY (CASE WHEN department_name IN ('Academic', 'Academics') THEN 1 ELSE 2 END), department_id ASC
+          AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics', 'Academic (Default)'))
+        ORDER BY (CASE WHEN department_name IN ('Academic (Default)', 'Academic', 'Academics') THEN 1 ELSE 2 END), department_id ASC
         LIMIT 1
         `,
         { replacements: { instituteId } }
@@ -127,7 +127,7 @@ module.exports = {
             department_name, department_code, department_type, description, is_default,
             university_id, institute_id, created_by, updated_by, created_at, updated_at
           ) VALUES (
-            'Academic', 'ACAD', 'Academic', 'Default Academic Department', true,
+            'Academic (Default)', 'ACAD', 'Academic', 'Default Academic Department', true,
             :universityId, :instituteId, :userId, :userId, NOW(), NOW()
           )
           `,
@@ -147,7 +147,7 @@ module.exports = {
         SELECT department_id 
         FROM department 
         WHERE institute_id = :instituteId 
-          AND (department_type = 'Admin' OR department_name = 'Admin')
+          AND (department_type = 'Admin' OR department_name IN ('Admin', 'Admin (Default)'))
         LIMIT 1
         `,
         { replacements: { instituteId } }
@@ -160,7 +160,7 @@ module.exports = {
             department_name, department_code, department_type, description, is_default,
             university_id, institute_id, created_by, updated_by, created_at, updated_at
           ) VALUES (
-            'Admin', 'ADMIN', 'Admin', 'Default Administrative Department', true,
+            'Admin (Default)', 'ADMIN', 'Admin', 'Default Administrative Department', true,
             :universityId, :instituteId, :userId, :userId, NOW(), NOW()
           )
           `,
@@ -179,8 +179,23 @@ module.exports = {
     await queryInterface.sequelize.query(`
       UPDATE \`department\`
       SET \`is_default\` = true
-      WHERE \`department_name\` IN ('Admin', 'Academic', 'Academics')
+      WHERE \`department_name\` IN ('Admin', 'Academic', 'Academics', 'Admin (Default)', 'Academic (Default)')
          OR \`department_code\` IN ('ADMIN', 'ACAD')
+    `);
+
+    // 6b. Rename default departments to standard 'Admin (Default)' and 'Academic (Default)'
+    await queryInterface.sequelize.query(`
+      UPDATE \`department\`
+      SET \`department_name\` = 'Admin (Default)'
+      WHERE (\`department_name\` = 'Admin' OR \`department_code\` = 'ADMIN')
+        AND (\`department_type\` = 'Admin' OR \`is_default\` = true)
+    `);
+
+    await queryInterface.sequelize.query(`
+      UPDATE \`department\`
+      SET \`department_name\` = 'Academic (Default)'
+      WHERE (\`department_name\` IN ('Academic', 'Academics') OR \`department_code\` = 'ACAD')
+        AND (\`department_type\` = 'Academic' OR \`is_default\` = true)
     `);
 
     // 7. Backfill course.department_id for any course where department_id IS NULL or was mapped to an Admin dept
@@ -191,11 +206,11 @@ module.exports = {
         SELECT institute_id, MIN(department_id) AS academic_dept_id
         FROM department
         WHERE department_name NOT LIKE '%Admin%'
-          AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics'))
+          AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics', 'Academic (Default)'))
         GROUP BY institute_id
       ) d_new ON d_new.institute_id = c.institute_id
       SET c.department_id = d_new.academic_dept_id
-      WHERE d_old.department_name = 'Admin' OR d_old.department_type = 'Admin'
+      WHERE d_old.department_name IN ('Admin', 'Admin (Default)') OR d_old.department_type = 'Admin'
     `);
 
     await queryInterface.sequelize.query(`
@@ -204,7 +219,7 @@ module.exports = {
         SELECT institute_id, MIN(department_id) AS academic_dept_id
         FROM department
         WHERE department_name NOT LIKE '%Admin%'
-          AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics'))
+          AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics', 'Academic (Default)'))
         GROUP BY institute_id
       ) d ON d.institute_id = c.institute_id
       SET c.department_id = d.academic_dept_id
@@ -236,7 +251,7 @@ module.exports = {
           SELECT institute_id, MIN(department_id) AS academic_dept_id
           FROM department
           WHERE department_name NOT LIKE '%Admin%'
-            AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics'))
+            AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics', 'Academic (Default)'))
           GROUP BY institute_id
         ) d ON d.institute_id = e.institute_id
         SET e.department_id = d.academic_dept_id
@@ -251,7 +266,7 @@ module.exports = {
         INNER JOIN (
           SELECT institute_id, MIN(department_id) AS admin_dept_id
           FROM department
-          WHERE department_type = 'Admin' OR department_name = 'Admin'
+          WHERE department_type = 'Admin' OR department_name IN ('Admin', 'Admin (Default)')
           GROUP BY institute_id
         ) d ON d.institute_id = e.institute_id
         SET e.department_id = d.admin_dept_id
@@ -266,7 +281,7 @@ module.exports = {
           SELECT institute_id, MIN(department_id) AS default_dept_id
           FROM department
           WHERE department_name NOT LIKE '%Admin%'
-            AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics'))
+            AND (department_type = 'Academic' OR department_name IN ('Academic', 'Academics', 'Academic (Default)'))
           GROUP BY institute_id
         ) d ON d.institute_id = e.institute_id
         SET e.department_id = d.default_dept_id

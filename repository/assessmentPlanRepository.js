@@ -74,6 +74,18 @@ function paginationMeta(totalRecords, page, limit) {
   };
 }
 
+export function resolveComponentAssessmentType(comp = {}) {
+  const explicit =
+    comp.assessmentType || comp.evaluationType || comp.assessmentScope;
+  if (explicit && typeof explicit === "string") {
+    const normalized = explicit.toUpperCase().trim();
+    if (normalized === "INTERNAL" || normalized === "EXTERNAL") {
+      return normalized;
+    }
+  }
+  return null;
+}
+
 export async function createAssessmentPlan(planData, options = {}) {
   const { components, ...mainPlanData } = planData;
   const record = await scoped(model.assessmentPlanModel).create(
@@ -85,6 +97,7 @@ export async function createAssessmentPlan(planData, options = {}) {
     const componentsToCreate = components.map((comp) => ({
       ...comp,
       assessmentPlanId: record.assessmentPlanId,
+      assessmentType: resolveComponentAssessmentType(comp),
       universityId: mainPlanData.universityId,
       instituteId: mainPlanData.instituteId,
       createdBy: mainPlanData.createdBy,
@@ -172,6 +185,9 @@ export async function getAssessmentPlans({
           "academicRegulationId",
           "regulationCode",
           "regulationName",
+          "evaluationPattern",
+          "internalWeightage",
+          "externalWeightage",
         ],
         required: false,
       },
@@ -188,7 +204,13 @@ export async function getAssessmentPlans({
           {
             model: model.examSetupTypeModel,
             as: "examSetupType",
-            attributes: ["examSetupTypeId", "examName"],
+            attributes: [
+              "examSetupTypeId",
+              "examName",
+              "examCode",
+              "examCategory",
+              "managedBy",
+            ],
             required: false,
           },
         ],
@@ -248,6 +270,9 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
           "academicRegulationId",
           "regulationCode",
           "regulationName",
+          "evaluationPattern",
+          "internalWeightage",
+          "externalWeightage",
         ],
         required: false,
       },
@@ -258,7 +283,13 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
           {
             model: model.examSetupTypeModel,
             as: "examSetupType",
-            attributes: ["examSetupTypeId", "examName"],
+            attributes: [
+              "examSetupTypeId",
+              "examName",
+              "examCode",
+              "examCategory",
+              "managedBy",
+            ],
             required: false,
           },
         ],
@@ -306,6 +337,7 @@ export async function updateAssessmentPlan(
       const componentsToCreate = components.map((comp) => ({
         ...comp,
         assessmentPlanId: planId,
+        assessmentType: resolveComponentAssessmentType(comp),
         universityId: existingPlan?.universityId,
         instituteId: existingPlan?.instituteId,
         createdBy: mainUpdateData.updatedBy || null,
@@ -504,8 +536,9 @@ export async function createAssessmentPlanComponent(
   componentData,
   options = {},
 ) {
+  const assessmentType = resolveComponentAssessmentType(componentData);
   const record = await scoped(model.assessmentPlanComponentModel).create(
-    componentData,
+    { ...componentData, assessmentType },
     options,
   );
   return await scoped(model.assessmentPlanComponentModel).findOne({
@@ -530,7 +563,18 @@ export async function updateAssessmentPlanComponent(
   const opts =
     typeof assessmentPlanComponentId === "object" ? updateData || {} : options;
 
-  await scoped(model.assessmentPlanComponentModel).update(dataPayload, {
+  const payloadToUpdate = { ...dataPayload };
+  if (
+    payloadToUpdate.assessmentType === undefined &&
+    payloadToUpdate.examSetupTypeId
+  ) {
+    payloadToUpdate.assessmentType = await resolveComponentAssessmentType(
+      payloadToUpdate,
+      opts,
+    );
+  }
+
+  await scoped(model.assessmentPlanComponentModel).update(payloadToUpdate, {
     where: { assessmentPlanComponentId: compId },
     transaction: opts.transaction,
   });
@@ -611,6 +655,47 @@ export async function findOverviewByCurriculumBatchMappingId({
             as: "session",
             attributes: ["sessionId", "sessionName", "courseId"],
             required: false,
+          },
+          {
+            model: model.academicRegulationCourseMappingModel,
+            as: "regulationBatchMappings",
+            attributes: [
+              "academicRegulationCourseMappingId",
+              "academicRegulationId",
+              "batchId",
+            ],
+            required: false,
+            separate: true,
+            order: [["academicRegulationCourseMappingId", "DESC"]],
+            include: [
+              {
+                model: model.academicRegulationModel,
+                as: "academicRegulation",
+                attributes: {
+                  exclude: [
+                    "createdAt",
+                    "updatedAt",
+                    "deletedAt",
+                    "createdBy",
+                    "updatedBy",
+                  ],
+                },
+                required: false,
+                include: [
+                  {
+                    model: model.gradingModel,
+                    as: "gradingScheme",
+                    attributes: [
+                      "gradingId",
+                      "gradingName",
+                      "gradingCode",
+                      "gradingMethod",
+                    ],
+                    required: false,
+                  },
+                ],
+              },
+            ],
           },
         ],
       },
@@ -758,6 +843,35 @@ export async function findOverviewByCurriculumBatchMappingId({
                 where:
                   Object.keys(planWhere).length > 0 ? planWhere : undefined,
                 required: Object.keys(planWhere).length > 0,
+                include: [
+                  {
+                    model: model.academicRegulationModel,
+                    as: "academicRegulation",
+                    attributes: {
+                      exclude: [
+                        "createdAt",
+                        "updatedAt",
+                        "deletedAt",
+                        "createdBy",
+                        "updatedBy",
+                      ],
+                    },
+                    required: false,
+                    include: [
+                      {
+                        model: model.gradingModel,
+                        as: "gradingScheme",
+                        attributes: [
+                          "gradingId",
+                          "gradingName",
+                          "gradingCode",
+                          "gradingMethod",
+                        ],
+                        required: false,
+                      },
+                    ],
+                  },
+                ],
               },
             ],
           },
@@ -1289,5 +1403,144 @@ export async function findAssignedSubjectMappings(batchIds = []) {
       batchId: { [Op.in]: batchIds },
     },
     attributes: ["batchId", "subjectId"],
+  });
+}
+
+export async function getMappedAssessmentTypes({
+  assessmentType,
+  batchId,
+  courseId,
+  term,
+  subjectId,
+  search,
+  options = {},
+} = {}) {
+  const whereExamSetup = {};
+  if (search) {
+    whereExamSetup[Op.or] = [
+      { examName: { [Op.like]: `%${search}%` } },
+      { examCode: { [Op.like]: `%${search}%` } },
+    ];
+  }
+
+  const whereComponent = {};
+  if (assessmentType) {
+    const normalizedType = String(assessmentType).toUpperCase().trim();
+    if (normalizedType === "INTERNAL" || normalizedType === "EXTERNAL") {
+      whereComponent.assessmentType = normalizedType;
+    }
+  }
+
+  const whereMapping = {};
+  if (batchId) {
+    whereMapping.batchId = Number(batchId);
+  }
+  if (subjectId) {
+    whereMapping.subjectId = Number(subjectId);
+  }
+
+  const mappingInclude = [];
+  if (courseId || term) {
+    const cstmInclude = [];
+    if (courseId) {
+      cstmInclude.push({
+        model: model.curriculumModel,
+        as: "curriculum",
+        where: { courseId: Number(courseId) },
+        required: true,
+        attributes: ["curriculumId", "courseId"],
+      });
+    }
+    mappingInclude.push({
+      model: model.curriculumSubjectTermMappingModel,
+      as: "curriculumSubjectTermMapping",
+      where: term ? { term: Number(term) } : undefined,
+      required: true,
+      attributes: ["curriculumSubjectTermMappingId", "term", "curriculumId"],
+      include: cstmInclude,
+    });
+  }
+
+  const rows = await scoped(model.examSetupTypeModel).findAll({
+    attributes: [
+      "examSetupTypeId",
+      "examName",
+      "examCode",
+      "examCategory",
+      "managedBy",
+      "examDescription",
+    ],
+    where: whereExamSetup,
+    include: [
+      {
+        model: model.assessmentPlanComponentModel,
+        as: "assessmentPlanComponents",
+        attributes: [
+          "assessmentPlanComponentId",
+          "assessmentPlanId",
+          "assessmentType",
+          "weightagePercentage",
+        ],
+        where: whereComponent,
+        required: true,
+        include: [
+          {
+            model: model.assessmentPlanModel,
+            as: "assessmentPlan",
+            attributes: [
+              "assessmentPlanId",
+              "planName",
+              "planCode",
+              "batchId",
+              "isActive",
+            ],
+            where: { isActive: true },
+            required: true,
+            include: [
+              {
+                model: model.assessmentPlanSubjectMappingModel,
+                as: "subjectMappings",
+                attributes: [
+                  "assessmentPlanSubjectMappingId",
+                  "subjectId",
+                  "batchId",
+                  "curriculumSubjectTermMappingId",
+                ],
+                where: whereMapping,
+                required: true,
+                include: mappingInclude,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [["examName", "ASC"]],
+    transaction: options.transaction,
+  });
+
+  return rows.map((type) => {
+    const plain = type.get ? type.get({ plain: true }) : type;
+    const comps = plain.assessmentPlanComponents || [];
+    const mappedTypes = [
+      ...new Set(comps.map((c) => c.assessmentType).filter(Boolean)),
+    ];
+    const resolvedAssessmentType =
+      mappedTypes.length === 1
+        ? mappedTypes[0]
+        : mappedTypes.length > 1
+          ? "BOTH"
+          : null;
+
+    return {
+      examSetupTypeId: plain.examSetupTypeId,
+      examName: plain.examName,
+      examCode: plain.examCode,
+      examCategory: plain.examCategory,
+      managedBy: plain.managedBy,
+      examDescription: plain.examDescription,
+      assessmentType: resolvedAssessmentType,
+      mappedPlansCount: new Set(comps.map((c) => c.assessmentPlanId)).size,
+    };
   });
 }

@@ -17,9 +17,9 @@ const leaveRequestModel = sequelize.define(
       allowNull: false,
       field: 'user_id',
       references: {
-                model: users,
-                key: 'user_id'
-            }
+        model: users,
+        key: 'user_id'
+      }
     },
     universityId: {
       type: DataTypes.INTEGER,
@@ -72,7 +72,7 @@ const leaveRequestModel = sequelize.define(
       allowNull: true
     },
     status: {
-      type: DataTypes.ENUM("pending", "approved", "rejected", "cancelled"),
+      type: DataTypes.ENUM("pending", "approved", "rejected", "cancelled", "skipped"),
       defaultValue: "pending"
     },
     reviewedBy: {

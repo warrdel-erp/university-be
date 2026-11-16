@@ -1,0 +1,724 @@
+import * as employee from "../services/employeeServices.js";
+import * as fileHandler from "../../../utility/fileHandler.js";
+import * as AttendanceCreation from "../../timetable/services/attendanceServices.js";
+
+import { SuccessResponse, ErrorResponse } from "../../../utility/response.js";
+import { validateEmployeeUser } from "../../../utility/employeeValidation.js";
+import {
+  getTenantStore,
+  getAcademicYearId,
+} from "../../../utility/requestContext.js";
+import { formatQueryDate } from "../../../utility/helper.js";
+
+function getErrorMessageAndStatus(error) {
+  if (error.statusCode) {
+    return { status: error.statusCode, message: error.message };
+  }
+  if (error.name === "SequelizeUniqueConstraintError") {
+    const email = error.fields?.email;
+    return { status: 409, message: email ? `Email "${email}" already exists` : "Record already exists" };
+  }
+  if (error.name === "SequelizeValidationError") {
+    return { status: 400, message: error.errors?.[0]?.message || "Validation error" };
+  }
+  return { status: 500, message: error.message || "Internal Server Error" };
+}
+
+export const addEmployee = async (req, res) => {
+  try {
+    const data = req.body;
+    const file = req.files;
+    const createdBy = req.user.userId;
+    const { roleId } = req.body;
+    const result = await employee.addEmployee(data, file, createdBy, roleId);
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in adding employee:", error);
+    const { status, message } = getErrorMessageAndStatus(error);
+    return ErrorResponse(res, status, message);
+  }
+};
+
+export const getAllEmployee = async (req, res) => {
+     const { search, page, limit,userId } = req.query;
+   const {defaultRole:role, instituteId, campusId,} = getTenantStore();
+  try {
+    const result = await employee.getAllEmployee({campusId, instituteId,role,userId,search, page, limit});
+    return SuccessResponse(res,200,"Employee fetched successfully",result.data,result.pagination);
+  } catch (error) {
+    console.error("Error in getting all employee:", error);
+    const message = error?.message || "Internal Server Error";
+    const statusCode = /not found|scope/i.test(message) ? 400 : 500;
+    res.status(statusCode).send(message);
+  }
+};
+
+export const getSingleEmployeeDetails = async (req, res) => {
+  const id = req.params.id;
+  try {
+    const result = await employee.getSingleEmployeeDetails(id);
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in getting single employee details:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+export const deleteEmployeeDetail = async (req, res) => {
+  const userId = req.params.id;
+  try {
+    if (!userId) {
+      return res.status(400).send("userId is required");
+    }
+    const result = await employee.deleteEmployeeDetail(userId);
+    res.status(200).send(result);
+  } catch (error) {
+    console.error(`Error in deleting userId ${userId}:`, error);
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).send(error.message || "Internal Server Error");
+  }
+};
+
+export const importEmployeeData = async (req, res) => {
+  try {
+    const { campusId, instituteId, roleId } = req.body;
+    const createdBy = req.user.userId;
+    const data = { ...req.body, createdBy };
+
+    if (!(campusId && instituteId && roleId)) {
+      return res
+        .status(400)
+        .json({ error: "campusId, instituteId, and roleId are required" });
+    }
+
+    const excelFile = req.files?.employee;
+    if (!excelFile) {
+      return res.status(400).json({ error: "Excel file is required" });
+    }
+
+    const excelData = fileHandler.readExcelFile(excelFile.data);
+    if (!excelData) {
+      return res.status(400).json({ error: "Error reading the Excel file" });
+    }
+
+    const result = await employee.importEmployeeData(excelData, data);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    return res.status(200).json({ message: result.message });
+  } catch (error) {
+    console.error("Controller Error:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "An unexpected error occurred" });
+  }
+};
+
+export const updateEmployee = async (req, res) => {
+  const userId = req.params.id;
+  try {
+    const data = req.body;
+    const file = req.files;
+    const updatedBy = req.user.userId;
+    const createdBy = req.user.userId;
+
+    const result = await employee.updateEmployee(
+      userId,
+      data,
+      file,
+      updatedBy,
+      createdBy,
+    );
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in updating employee:", error);
+    const { status, message } = getErrorMessageAndStatus(error);
+    return ErrorResponse(res, status, message);
+  }
+};
+
+export async function getBooksIssuedToEmployee(req, res) {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+
+    const result = await employee.getBooksIssuedToEmployee(userId);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export const getTeacherTimeTable = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).send("userId is required");
+    }
+
+    const result = await employee.getTeacherTimeTable(userId);
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in getTeacherTimeTable:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+export const getTeacherSubject = async (req, res) => {
+  try {
+    const { userId, sessionId, term } = req.query;
+    const result = await employee.getTeacherSubject(userId, {
+      sessionId,
+      term,
+    });
+
+    res.status(200).send(result);
+  } catch (error) {
+    console.error("Error in getTeacher subject:", error);
+    res.status(500).send("Internal Server Error");
+  }
+};
+
+export async function getSubjectEvalution(req, res) {
+  try {
+    const { userId } = req.query;
+    const evaluation = await employee.getSubjectEvalution(userId);
+    if (evaluation) {
+      res.status(200).json(evaluation);
+    } else {
+      res.status(404).json({ message: "evaluation not found" });
+    }
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+export const getTodayClassSchedule = async (req, res) => {
+  try {
+    const { userId, date, sessionId, groupPeriods } = req.query;
+    if (!userId) {
+      return res.status(400).send("userId is required");
+    }
+
+    const formattedDate = formatQueryDate(date);
+
+    let groupingType = false;
+    if (groupPeriods === "consecutive") {
+      groupingType = "consecutive";
+    } else if (groupPeriods === "sessional") {
+      groupingType = "sessional";
+    }
+
+    const { schedules, total } = await employee.getTodayClassSchedule(
+      Number(userId),
+      formattedDate,
+      sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
+      groupingType,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Schedule fetched successfully",
+      schedules,
+      {
+        total,
+        limit: total,
+        page: 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getTodayClassSchedule:", error);
+    const statusCode = /scope/i.test(error.message) ? 400 : 500;
+    res.status(statusCode).send({ message: error.message, success: false });
+  }
+};
+
+export const getTeacherCourses = async (req, res) => {
+  try {
+    const { userId } = req.query;
+
+    if (!userId) {
+      return res.status(400).send("userId is required");
+    }
+
+    const result = await employee.getTeacherCourses(userId);
+    res.status(200).send({ success: true, result });
+  } catch (error) {
+    console.error("Error in getTeacherCourses controller:", error);
+    res.status(500).send({ message: "Internal Server Error", success: false });
+  }
+};
+
+export const getTeacherSubjectsFromSchedule = async (req, res) => {
+  try {
+    const { userId, courseId, sessionId } = req.query;
+
+    if (!userId) {
+      return ErrorResponse(res, 400, "userId is required");
+    }
+
+    const result = await employee.getTeacherSubjectsFromSchedule(userId, {
+      courseId,
+      sessionId,
+    });
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from schedule", result);
+  } catch (error) {
+    console.error("Error in getTeacherSubjectsFromSchedule controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getMyTeacherSubjectsFromSchedule = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { courseId, sessionId } = req.query;
+
+    const result = await employee.getTeacherSubjectsFromSchedule(userId, {
+      courseId,
+      sessionId,
+    });
+    return SuccessResponse(res, 200, "Teacher subjects fetched successfully from schedule", result);
+  } catch (error) {
+    console.error("Error in getMyTeacherSubjectsFromSchedule controller:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getPastClassSchedules = async (req, res) => {
+  try {
+    const { userId, date, sessionId, groupPeriods, search } = req.query;
+    const hasPagination =
+      req.query.page !== undefined || req.query.limit !== undefined;
+    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
+    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
+    if (!userId) {
+      return SuccessResponse(res, 400, "userId is required");
+    }
+
+    const formattedDate = formatQueryDate(date);
+
+    let groupingType = false;
+    if (groupPeriods === "consecutive" || groupPeriods === "true") {
+      groupingType = "consecutive";
+    } else if (groupPeriods === "sessional") {
+      groupingType = "sessional";
+    }
+
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
+    const { teacher, schedules, total } = await employee.getPastClassSchedules(userId, formattedDate,
+      groupingType,
+      sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
+      paginationOpts,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Past class schedules fetched successfully",
+      { teacher, schedules },
+      {
+        total,
+        limit: hasPagination ? limit : total,
+        page: hasPagination ? page : 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getPastClassSchedules:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getUpcomingClassSchedules = async (req, res) => {
+  try {
+    const { userId, date, groupPeriods, search } = req.query;
+    const hasPagination =
+      req.query.page !== undefined || req.query.limit !== undefined;
+    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
+    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
+    if (!userId) {
+      return res.status(400).send("userId is required");
+    }
+
+    const currentDate = date ? new Date(date) : new Date();
+    const formattedDate = formatQueryDate(date);
+
+    let groupingType = false;
+    if (groupPeriods === "consecutive") {
+      groupingType = "consecutive";
+    } else if (groupPeriods === "sessional") {
+      groupingType = "sessional";
+    }
+
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
+    const { schedules, total } = await employee.getUpcomingClassSchedules(userId, formattedDate,
+      groupingType,
+      paginationOpts,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Schedule fetched successfully",
+      schedules,
+      {
+        total,
+        limit: hasPagination ? limit : total,
+        page: hasPagination ? page : 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getUpcomingClassSchedules:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getSectionCounts = async (req, res) => {
+  try {
+    const { userId, date } = req.query;
+    if (!userId) {
+      return ErrorResponse(res, 400, "userId is required");
+    }
+
+    
+
+    const currentDate = date ? new Date(date) : new Date();
+    const formattedDate = formatQueryDate(date);
+
+    const {
+      pastCount,
+      upcomingCount,
+      uniqueCombinationsCount,
+      uniqueSubjectsCount,
+    } = await employee.getSectionCounts(userId, formattedDate);
+
+    return SuccessResponse(res, 200, "Section counts fetched successfully", {
+      pastClassesCount: pastCount,
+      upcomingClassesCount: upcomingCount,
+      uniqueCombinationsCount,
+      uniqueSubjectsCount,
+    });
+  } catch (error) {
+    console.error("Error in getSectionCounts:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getUniqueClassSectionSubjects = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const hasPagination =
+      req.query.page !== undefined || req.query.limit !== undefined;
+    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
+    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
+    const result = await employee.getUniqueClassSectionSubjects(userId);
+
+    const total = result.combinations.length;
+    const paginatedData = hasPagination
+      ? result.combinations.slice((page - 1) * limit, page * limit)
+      : result.combinations;
+
+    return SuccessResponse(
+      res,
+      200,
+      "Unique class section subjects fetched successfully",
+      paginatedData,
+      {
+        total,
+        limit: hasPagination ? limit : total,
+        page: hasPagination ? page : 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getUniqueClassSectionSubjects:", error);
+    res.status(500).send({ message: "Internal Server Error", success: false });
+  }
+};
+
+export async function getEmployeeSectionDates(req, res) {
+  try {
+    const { classSectionTermId, subjectId, userId } = req.query;
+
+    const data = await AttendanceCreation.getEmployeeSectionDates(
+      classSectionTermId,
+      subjectId,
+      userId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Employee section dates fetched successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Controller Error:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+}
+
+export const getMyUniqueClassSectionSubjects = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const hasPagination =
+      req.query.page !== undefined || req.query.limit !== undefined;
+    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
+    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
+    const result = await employee.getUniqueClassSectionSubjects(userId);
+
+    const total = result.combinations.length;
+    const paginatedData = hasPagination
+      ? result.combinations.slice((page - 1) * limit, page * limit)
+      : result.combinations;
+
+    return SuccessResponse(
+      res,
+      200,
+      "Unique class section subjects fetched successfully",
+      paginatedData,
+      {
+        total,
+        limit: hasPagination ? limit : total,
+        page: hasPagination ? page : 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getMyUniqueClassSectionSubjects:", error);
+    res.status(500).send({ message: "Internal Server Error", success: false });
+  }
+};
+
+export const getMyTodayClassSchedule = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { date, sessionId, groupPeriods } = req.query;
+    const formattedDate = formatQueryDate(date);
+
+    let groupingType = false;
+    if (groupPeriods === "consecutive") {
+      groupingType = "consecutive";
+    } else if (groupPeriods === "sessional") {
+      groupingType = "sessional";
+    }
+
+    const { schedules, total } = await employee.getTodayClassSchedule(
+      Number(userId),
+      formattedDate,
+      sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
+      groupingType,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Schedule fetched successfully",
+      schedules,
+      {
+        total,
+        limit: total,
+        page: 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getMyTodayClassSchedule:", error);
+    const statusCode = /scope/i.test(error.message) ? 400 : 500;
+    res.status(statusCode).send({ message: error.message, success: false });
+  }
+};
+
+export const getMyPastClassSchedules = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { date, sessionId, groupPeriods, search } = req.query;
+    const hasPagination =
+      req.query.page !== undefined || req.query.limit !== undefined;
+    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
+    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
+
+    const formattedDate = formatQueryDate(date);
+
+    let groupingType = false;
+    if (groupPeriods === "consecutive" || groupPeriods === "true") {
+      groupingType = "consecutive";
+    } else if (groupPeriods === "sessional") {
+      groupingType = "sessional";
+    }
+
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
+    const { teacher, schedules, total } = await employee.getPastClassSchedules(userId, formattedDate,
+      groupingType,
+      sessionId != null && sessionId !== "" ? Number(sessionId) : undefined,
+      paginationOpts,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Past class schedules fetched successfully",
+      { teacher, schedules },
+      {
+        total,
+        limit: hasPagination ? limit : total,
+        page: hasPagination ? page : 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getMyPastClassSchedules:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getMyUpcomingClassSchedules = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { date, groupPeriods, search } = req.query;
+    const hasPagination =
+      req.query.page !== undefined || req.query.limit !== undefined;
+    const page = hasPagination ? Number(req.query.page) || 1 : undefined;
+    const limit = hasPagination ? Number(req.query.limit) || 10 : undefined;
+    const currentDate = date ? new Date(date) : new Date();
+    const formattedDate = formatQueryDate(date);
+
+    let groupingType = false;
+    if (groupPeriods === "consecutive") {
+      groupingType = "consecutive";
+    } else if (groupPeriods === "sessional") {
+      groupingType = "sessional";
+    }
+
+    const paginationOpts = hasPagination ? { page, limit } : {};
+    if (search) paginationOpts.search = search;
+
+    const { schedules, total } = await employee.getUpcomingClassSchedules(userId, formattedDate,
+      groupingType,
+      paginationOpts,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Schedule fetched successfully",
+      schedules,
+      {
+        total,
+        limit: hasPagination ? limit : total,
+        page: hasPagination ? page : 1,
+      },
+    );
+  } catch (error) {
+    console.error("Error in getMyUpcomingClassSchedules:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getMySectionCounts = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { date } = req.query;
+    
+
+    const currentDate = date ? new Date(date) : new Date();
+    const formattedDate = formatQueryDate(date);
+
+    const {
+      pastCount,
+      upcomingCount,
+      uniqueCombinationsCount,
+      uniqueSubjectsCount,
+    } = await employee.getSectionCounts(userId, formattedDate);
+
+    return SuccessResponse(res, 200, "Section counts fetched successfully", {
+      pastClassesCount: pastCount,
+      upcomingClassesCount: upcomingCount,
+      uniqueCombinationsCount,
+      uniqueSubjectsCount,
+    });
+  } catch (error) {
+    console.error("Error in getMySectionCounts:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+export const getMyEmployeeSectionDates = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+      return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { classSectionTermId, subjectId } = req.query;
+
+    const data = await AttendanceCreation.getEmployeeSectionDates(
+      classSectionTermId,
+      subjectId,
+      userId,
+    );
+
+    return SuccessResponse(
+      res,
+      200,
+      "Employee section dates fetched successfully",
+      data,
+    );
+  } catch (error) {
+    console.error("Controller Error:", error);
+    return ErrorResponse(res, 500, "Internal Server Error");
+  }
+};
+
+/** Self-service alias of GET /employee/:id — uses userId from token. */
+export const getMyEmployeeDetails = async (req, res) => {
+  try {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid || !validation.employeeRecord?.employeeId) {
+      return res.status(200).send([]);
+    }
+
+    const result = await employee.getSingleEmployeeDetails(
+      validation.employeeRecord.employeeId,
+    );
+    return res.status(200).send(result ?? []);
+  } catch (error) {
+    console.error("Error in getMyEmployeeDetails:", error);
+    return res.status(500).send("Internal Server Error");
+  }
+};
+

@@ -162,7 +162,11 @@ export async function getMyQuestionPapers(req, res) {
             { examScheduleId, createdBy: userId },
             { limit, offset }
         );
-        return SuccessResponse(res, 200, "Question papers fetched successfully", result.questionPapers, {
+        const papersWithoutAdminStatus = (result.questionPapers || []).map((paper) => {
+            const { status, ...rest } = paper;
+            return rest;
+        });
+        return SuccessResponse(res, 200, "Question papers fetched successfully", papersWithoutAdminStatus, {
             total: result.total,
             limit: parseInt(limit, 10),
             page: parseInt(page, 10)

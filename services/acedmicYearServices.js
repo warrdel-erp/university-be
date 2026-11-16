@@ -1,5 +1,5 @@
 import * as acedmicYearCreationService from '../repository/acedmicYearRepository.js';
-import * as instituteRepository from '../repository/instituteRepository.js';
+import * as instituteRepository from '../modules/organization/repository/instituteRepository.js';
 import * as mainRepository from '../repository/mainRepository.js';
 import * as electiveSubjectRepository from '../repository/electiveSubjectRepository.js';
 import * as sessionRepository from '../repository/sessionRepository.js';

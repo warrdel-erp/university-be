@@ -1,0 +1,123 @@
+import * as DepartmentCreation from "../services/departmentService.js";
+import { SuccessResponse, ErrorResponse } from "../../../utility/response.js";
+
+export async function addDepartment(req, res) {
+  const createdBy = req.user.userId;
+  const updatedBy = req.user.userId;
+  try {
+    const result = await DepartmentCreation.addDepartment(
+      req.body,
+      createdBy,
+      updatedBy,
+    );
+
+    if (req.body.departmentId != null) {
+      return SuccessResponse(res, 200, 'Parent department created successfully', result);
+    }
+
+    return SuccessResponse(res, 200, 'Data added successfully', result);
+  } catch (error) {
+    if (error.message === 'Department not found' || /cannot insert parent for a default department/i.test(error.message)) {
+      return ErrorResponse(res, 404, error.message);
+    }
+    if (/cannot insert parent for a default department/i.test(error.message)) {
+      return ErrorResponse(res, 400, error.message);
+    }
+    return ErrorResponse(res, 500, 'Internal Server Error', error.message);
+  }
+}
+
+export async function getAllDepartment(req, res) {
+  try {
+    const departmentDetails = await DepartmentCreation.getDepartmentDetails();
+    return SuccessResponse(
+      res,
+      200,
+      "Department details fetched successfully",
+      departmentDetails,
+    );
+  } catch (error) {
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+}
+
+export async function getSingleDepartmentDetails(req, res) {
+  try {
+    const { departmentId } = req.query;
+    const departmentDetails =
+      await DepartmentCreation.getSingleDepartmentDetails(departmentId);
+    if (departmentDetails) {
+      return SuccessResponse(
+        res,
+        200,
+        "Department details fetched successfully",
+        departmentDetails,
+      );
+    } else {
+      return ErrorResponse(res, 404, "Department details not found");
+    }
+  } catch (error) {
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+}
+
+export async function updateDepartment(req, res) {
+  try {
+    const { departmentId, ...updateData } = req.body;
+    const updatedBy = req.user.userId;
+    const updated = await DepartmentCreation.updateDepartment(
+      departmentId,
+      updateData,
+      updatedBy,
+    );
+    if (!updated) {
+      return ErrorResponse(res, 404, "Department details not found");
+    }
+    return SuccessResponse(res, 200, "Department details updated successfully");
+  } catch (error) {
+    if (/cannot be updated|not found|cannot be its own parent/i.test(error.message)) {
+      return ErrorResponse(res, 400, error.message);
+    }
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+}
+
+export async function deleteDepartment(req, res) {
+  try {
+    const { departmentId } = req.query;
+    const deleted = await DepartmentCreation.deleteDepartment(departmentId);
+    if (deleted) {
+      return SuccessResponse(
+        res,
+        200,
+        `Delete successful for departmentDetails ID ${departmentId}`,
+      );
+    } else {
+      return ErrorResponse(res, 404, "Department details not found");
+    }
+  } catch (error) {
+    if (/cannot be deleted|not found/i.test(error.message)) {
+      return ErrorResponse(res, 400, error.message);
+    }
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+}
+
+export async function getDepartmentByIdEmployee(req, res) {
+  try {
+    const { departmentId } = req.query;
+    const departmentDetails =
+      await DepartmentCreation.getDepartmentByIdEmployee(departmentId);
+    if (departmentDetails) {
+      return SuccessResponse(
+        res,
+        "Department details fetched successfully",
+        departmentDetails,
+      );
+    } else {
+      return ErrorResponse(res, 404, "Department details not found");
+    }
+  } catch (error) {
+    return ErrorResponse(res, 500, "Internal Server Error", error.message);
+  }
+}

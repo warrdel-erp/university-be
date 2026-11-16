@@ -3,7 +3,7 @@ import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 import { getAllocatedCapacityByExamScheduleIds } from "../utility/roomCapacity.js";
 import { lookupStudentCount, buildTermCohortGroupKey } from "../utility/studentCount.js";
-import * as studentCountRepository from "./studentCountRepository.js";
+import * as studentCountRepository from "../modules/student/repository/studentCountRepository.js";
 import { curriculumBatchTermScheduleInclude } from "./curriculumBatchTermRepository.js";
 import { QUESTION_STATUS } from "../constant.js";
 import { decimalAdd, toIntegerNumber } from "../utility/decimalMoney.js";

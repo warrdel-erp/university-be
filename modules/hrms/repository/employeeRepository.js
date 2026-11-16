@@ -1,0 +1,912 @@
+import { Op } from 'sequelize';
+import * as model from "../../../models/index.js";
+import { buildScope, scoped } from "../../../utility/scoped.js";
+import {
+    resolveSubjectIdsForTeacherFilters,
+    teacherSubjectWhere,
+} from './teacherSubjectMappingRepository.js';
+
+// ============================================================================
+// 1. Constants & Reusable Attributes
+// ============================================================================
+
+const S3_FILE_ATTRIBUTES = [
+    'id',
+    'entityType',
+    's3Key',
+    'size',
+    'mime',
+    'originalName',
+    'status',
+];
+
+const OFFICE_ATTRIBUTES = [
+    'employeeOfficeId',
+    'employeeId',
+    'joiningDate',
+    'confirmationDate',
+    'relievingDate',
+    'retirementDate',
+    'transferDate',
+    'resignationDate',
+    'noticePeriod',
+    'employeeFileNumber',
+    'officialEmailId',
+    'officialMobileNumber',
+    'istActive',
+    'bankName',
+    'accountNumber',
+    'ifscCode',
+    'iindActive',
+    'bankNameIInd',
+    'accountNumberIInd',
+    'ifscCodeIInd',
+    'contractBased',
+    'gpf',
+    'esiNumber',
+    'uanNumber',
+    'lectureBased',
+    'pfNumber',
+    'panNumber',
+    'voterId',
+    'aadharNumber',
+    'spouseName',
+    'nomineeName',
+    'officeExtensionNumber',
+    'designation',
+    'salutation',
+];
+
+const ADDRESS_ATTRIBUTES = [
+    'employeeAddressId',
+    'employeeId',
+    'pAddress',
+    'pPincode',
+    'pCountry',
+    'pState',
+    'pCity',
+    'mobileNumber',
+    'personalEmail',
+];
+
+const CORS_ADDRESS_ATTRIBUTES = [
+    'employeeCorAddressId',
+    'employeeId',
+    'address',
+    'pincode',
+    'cCountry',
+    'cState',
+    'cCity',
+];
+
+const EMPLOYEE_SCALAR_ATTRIBUTES = [
+    'employeeId',
+    'userId',
+    'universityId',
+    'campusId',
+    'instituteId',
+    'employeePhoto',
+    'employeeSignature',
+    'employeeCode',
+    'departmentId',
+    'employmentType',
+    'employeeName',
+    'dateOfBirth',
+    'fatherName',
+    'motherName',
+    'pickColor',
+];
+
+// ============================================================================
+// 2. Include Builders
+// ============================================================================
+
+export function employeeCodeMasterInclude(as) {
+    return {
+        model: model.employeeCodeMasterType.unscoped(),
+        as,
+        attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+        include: [
+            {
+                model: model.employeeCodeMaster.unscoped(),
+                as: 'codes',
+                attributes: ['employeeCodeMasterId', 'codeMasterType'],
+            },
+        ],
+    };
+}
+
+function buildEmployeeOfficeInclude(options = {}) {
+    return {
+        model: model.employeeOfficeModel.unscoped(),
+        as: 'office',
+        ...(options.separate ? { separate: true } : {}),
+        attributes: OFFICE_ATTRIBUTES,
+        include: [employeeCodeMasterInclude('codeMasterDesignation')],
+    };
+}
+
+function buildEmployeeMetaDataInclude(options = {}) {
+    return {
+        model: model.employeeMetaDataModel.unscoped(),
+        as: 'employeeMetaData',
+        ...(options.separate ? { separate: true } : {}),
+        attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+        include: [
+            {
+                model: model.employeeCodeMasterType.unscoped(),
+                as: 'typess',
+                attributes: ['employeeCodeMasterTypeId', 'code', 'description'],
+                include: [
+                    {
+                        model: model.employeeCodeMaster.unscoped(),
+                        as: 'codes',
+                        attributes: ['employeeCodeMasterId', 'codeMasterType'],
+                    },
+                ],
+            },
+        ],
+    };
+}
+
+function buildEmployeeListIncludes() {
+    return [
+        {
+            model: model.userModel.unscoped(),
+            as: 'userEmployee',
+            attributes: ['universityId', 'userId'],
+        },
+        {
+            model: model.userModel.unscoped(),
+            as: 'user',
+            attributes: ['universityId', 'userId', 'defaultRoleId'],
+            required: false,
+            include: [
+                {
+                    model: model.roleModel.unscoped(),
+                    as: 'defaultRoleRef',
+                    attributes: ['roleId', 'role'],
+                    required: false,
+                },
+                {
+                    model: model.userRolePermissionModel.unscoped(),
+                    as: 'userRolePermissions',
+                    attributes: ['roleId'],
+                    include: [
+                        {
+                            model: model.roleModel.unscoped(),
+                            as: 'userRole',
+                            attributes: ['role'],
+                        },
+                    ],
+                },
+            ],
+        },
+        buildEmployeeOfficeInclude(),
+        {
+            model: model.employeeAddressModel.unscoped(),
+            as: 'address',
+            attributes: ADDRESS_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'photoFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'signatureFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        buildEmployeeMetaDataInclude(),
+        {
+            model: model.departmentModel.unscoped(),
+            as: 'employeeDepartment',
+            attributes: ['departmentId', 'departmentName'],
+            required: false,
+        },
+    ];
+}
+
+function buildEmployeeDetailIncludes() {
+    return [
+        {
+            model: model.userModel.unscoped(),
+            as: 'userEmployee',
+            attributes: ['userId', 'defaultRoleId'],
+            include: [
+                {
+                    model: model.roleModel.unscoped(),
+                    as: 'defaultRoleRef',
+                    attributes: ['roleId', 'role'],
+                    required: false,
+                },
+            ],
+        },
+        {
+            model: model.employeeAddressModel.unscoped(),
+            as: 'address',
+            separate: true,
+            attributes: ADDRESS_ATTRIBUTES,
+        },
+        {
+            model: model.employeeCorAddressModel.unscoped(),
+            as: 'corsAddress',
+            separate: true,
+            attributes: CORS_ADDRESS_ATTRIBUTES,
+        },
+        buildEmployeeOfficeInclude({ separate: true }),
+        {
+            model: model.employeeSkillModel.unscoped(),
+            as: 'skill',
+            separate: true,
+            attributes: [
+                'employeeSkillId',
+                'employeeId',
+                'name',
+                'experienceInYear',
+                'experienceInMonth',
+                'proficiencyLevel',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterEmployeeSkill')],
+        },
+        {
+            model: model.employeeDocumentsModel.unscoped(),
+            as: 'qualification',
+            separate: true,
+            attributes: [
+                'employeeDocumentsId',
+                'employeeId',
+                'qualifications',
+                'degreeLevel',
+                'stream',
+                'fromYear',
+                'toYear',
+                'university',
+                'percentage',
+                'remarks',
+                'pursuing',
+                'medicalCouncilName',
+                'medicalRegistrationNumber',
+                'medicalCouncilRegistrationDate',
+                'medicalRegistrationExpiryDate',
+            ],
+            include: [
+                employeeCodeMasterInclude('codeMasterDocumentQualification'),
+                employeeCodeMasterInclude('codeMasterDocumentDegreeLevel'),
+                employeeCodeMasterInclude('codeMasterDocumentStream'),
+            ],
+        },
+        {
+            model: model.employeeQualificationModel.unscoped(),
+            as: 'documents',
+            separate: true,
+            attributes: [
+                'employeeQualificationId',
+                'employeeId',
+                'document',
+                'receivedDate',
+                'returnedDate',
+                'attachment',
+            ],
+            include: [
+                employeeCodeMasterInclude('codeMasterQualificationDocuments'),
+                {
+                    model: model.s3FileModel.unscoped(),
+                    as: 'attachmentFile',
+                    attributes: S3_FILE_ATTRIBUTES,
+                    required: false,
+                },
+            ],
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'photoFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.s3FileModel.unscoped(),
+            as: 'signatureFile',
+            attributes: S3_FILE_ATTRIBUTES,
+            required: false,
+        },
+        {
+            model: model.employeeExperianceModel.unscoped(),
+            as: 'experience',
+            separate: true,
+            attributes: [
+                'employeeExperianceId',
+                'employeeId',
+                'experienceType',
+                'organization',
+                'desigation',
+                'fromDate',
+                'toDate',
+                'totalExperianceYears',
+                'totalExperianceMonths',
+                'totalExperiancedays',
+                'lastSalary',
+                'remarks',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterExperienceType')],
+        },
+        {
+            model: model.employeeAchievementModel.unscoped(),
+            as: 'achievements',
+            separate: true,
+            attributes: [
+                'employeeAchievementsId',
+                'employeeId',
+                'achievementCategory',
+                'title',
+                'description',
+                'noOfTimes',
+                'discipline',
+                'nameOf',
+                'date',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterAchievementCategory')],
+        },
+        {
+            model: model.employeeWardModel.unscoped(),
+            as: 'ward',
+            separate: true,
+            attributes: [
+                'employeeWardId',
+                'employeeId',
+                'wardName',
+                'studyIn',
+                'annualFees',
+                'dateOfBirth',
+            ],
+        },
+        {
+            model: model.employeeActivityModel.unscoped(),
+            as: 'activity',
+            separate: true,
+            attributes: [
+                'employeeActivityId',
+                'employeeId',
+                'activity',
+                'monthYear',
+                'remarks',
+            ],
+        },
+        {
+            model: model.employeeReferenceModel.unscoped(),
+            as: 'reference',
+            separate: true,
+            attributes: [
+                'employeeReferenceId',
+                'employeeId',
+                'name',
+                'designation',
+                'mobileNumber',
+                'address',
+            ],
+        },
+        {
+            model: model.employeeResearchModel.unscoped(),
+            as: 'research',
+            separate: true,
+            attributes: [
+                'employeeResearchId',
+                'employeeId',
+                'thesisName',
+                'associate',
+                'periodFrom',
+                'to',
+                'institution',
+            ],
+        },
+        {
+            model: model.employeeFilesModel.unscoped(),
+            as: 'files',
+            separate: true,
+            attributes: ['employeeFilesId', 'key', 'url'],
+        },
+        {
+            model: model.employeeLongLeaveModel.unscoped(),
+            as: 'longLeave',
+            separate: true,
+            attributes: [
+                'employeeLongLeaveId',
+                'employeeId',
+                'leaveType',
+                'DateOfLeaving',
+                'DateOfRejoining',
+                'remark',
+            ],
+            include: [employeeCodeMasterInclude('codeMasterLeaveType')],
+        },
+        buildEmployeeMetaDataInclude({ separate: true }),
+        {
+            model: model.departmentModel.unscoped(),
+            as: 'employeeDepartment',
+            attributes: ['departmentId', 'departmentName'],
+            required: false,
+        },
+    ];
+}
+
+// ============================================================================
+// 3. Employee Identity & Scope Assertion
+// ============================================================================
+
+export async function assertScopedEmployee(id, options = {}) {
+    if (!id) return null;
+    const numId = Number(id);
+    if (isNaN(numId)) return null;
+
+    let employee = await scoped(model.employeeModel).findOne({
+        where: { employeeId: numId },
+        attributes: options.attributes || ['userId', 'employeeId'],
+        transaction: options.transaction,
+    });
+
+    if (!employee) {
+        employee = await scoped(model.employeeModel).findOne({
+            where: { userId: numId },
+            attributes: options.attributes || ['userId', 'employeeId'],
+            transaction: options.transaction,
+        });
+    }
+
+    return employee;
+}
+
+export const getEmployeeById = assertScopedEmployee;
+export const getEmployeeByUserId = assertScopedEmployee;
+
+export async function resolveEmployeeIdForAuth({ userId, employeeId } = {}) {
+    if (employeeId != null && employeeId !== '') {
+        const row = await scoped(model.employeeModel).findOne({
+            where: { userId: Number(employeeId) },
+            attributes: ['userId'],
+        });
+        if (!row) {
+            return null;
+        }
+        if (userId != null && Number(row.userId) !== Number(userId)) {
+            return null;
+        }
+        return row.userId;
+    }
+
+    if (userId != null && userId !== '') {
+        const row = await scoped(model.employeeModel).findOne({
+            where: { userId: Number(userId) },
+            attributes: ['employeeId'],
+        });
+        return row?.employeeId ?? null;
+    }
+
+    return null;
+}
+
+async function assertEmployeeNotLinked(userId) {
+    const subjectLinks = await scoped(model.teacherSubjectMappingModel).count({
+        where: { userId: Number(userId) },
+    });
+
+    if (subjectLinks > 0) {
+        const error = new Error('Cannot delete employee: employee is connected to subjects.');
+        error.statusCode = 409;
+        throw error;
+    }
+}
+
+// ============================================================================
+// 4. Employee CRUD Operations
+// ============================================================================
+
+export async function addEmployee(data, transaction) {
+    try {
+        return await scoped(model.employeeModel).create(data, { transaction });
+    } catch (error) {
+        console.error('Error in add employee:', error);
+        throw error;
+    }
+}
+
+export async function updateEmployee(employeeId, data, transaction) {
+    try {
+        const existing = await assertScopedEmployee(employeeId, { transaction });
+        if (!existing) {
+            return [0];
+        }
+
+        return await scoped(model.employeeModel).update(
+            data,
+            { where: { employeeId: existing.employeeId }, transaction },
+        );
+    } catch (error) {
+        console.error('Error in update employee:', error);
+        throw error;
+    }
+}
+
+export async function getAllEmployee(params = {}) {
+    const { campusId, instituteId, employeeId, page , limit , search = '',} = params;
+
+    const currentPage = Math.max(Number(page) || 1, 1);
+    const pageLimit = Math.max(Number(limit) || 10, 1);
+    const offset = (currentPage - 1) * pageLimit;
+
+    try {
+        const whereClause = {
+            ...(employeeId && { userId: employeeId }),
+            ...(campusId && { campusId }),
+            ...(instituteId && { instituteId }),
+        };
+
+        if (search && search.trim()) {
+            whereClause[Op.or] = [
+                { employeeName: { [Op.like]: `%${search.trim()}%`}},
+                { employeeCode: { [Op.like]: `%${search.trim()}%`}}];
+        }
+
+       
+
+        const { rows, count } = await scoped(model.employeeModel).findAndCountAll({
+            attributes: {exclude: ['createdAt', 'updatedAt', 'deletedAt'],},
+            where: whereClause,
+            ...(limit && page && { limit: pageLimit, offset }),
+            include: buildEmployeeListIncludes(),
+            distinct: true
+        });
+        return {
+            data: rows,
+            pagination: {
+                page: currentPage,
+                limit: pageLimit,
+                total: count,
+                totalPages: Math.ceil(count / pageLimit),
+            },
+        };
+    } catch (error) {
+        console.error('Error in getting all employee:', error);
+        throw error;
+    }
+}
+
+export async function getSingleEmployeeDetails(id) {
+    if (!id) return [];
+    try {
+        const scopedEmployee = await assertScopedEmployee(id, {
+            attributes: ['employeeId'],
+        });
+        if (!scopedEmployee) return [];
+
+        return await scoped(model.employeeModel).findAll({
+            attributes: EMPLOYEE_SCALAR_ATTRIBUTES,
+            include: buildEmployeeDetailIncludes(),
+            where: {
+                employeeId: scopedEmployee.employeeId,
+            },
+        });
+    } catch (error) {
+        console.error(`Error in getting employee for ${id}:`, error);
+        throw error;
+    }
+}
+
+export async function deleteEmployeeDetail(employeeId) {
+    try {
+        const existing = await assertScopedEmployee(employeeId);
+        if (!existing) {
+            throw new Error('Employee not found');
+        }
+
+        await assertEmployeeNotLinked(existing.userId);
+
+        await scoped(model.employeeModel).destroy({
+            where: { userId: existing.userId },
+            individualHooks: true,
+        });
+        return { message: 'employee deleted successfully' };
+    } catch (error) {
+        console.error('Error during soft delete:', error);
+        if (error.statusCode === 409 || error.message === 'Employee not found') {
+            throw error;
+        }
+        throw new Error('Unable to soft delete account');
+    }
+}
+
+export async function createEmployeeWithDetails(employeeData, officeData, addressData, transaction) {
+    const employee = await scoped(model.employeeModel).create(employeeData, { transaction });
+
+    if (officeData) {
+        officeData.employeeId = employee.employeeId;
+        await model.employeeOfficeModel.create(officeData, { transaction });
+    }
+
+    if (addressData) {
+        addressData.employeeId = employee.employeeId;
+        await model.employeeAddressModel.create(addressData, { transaction });
+    }
+
+    return employee;
+}
+
+// ============================================================================
+// 5. Academic & Schedule Operations
+// ============================================================================
+
+export async function getPreviousEnrollNumber(campusCode, instituteCode) {
+    try {
+        return await scoped(model.employeeModel).findOne({
+            attributes: ['employee_Code'],
+            where: {
+                employee_Code: {
+                    [Op.regexp]: `^${campusCode}/${instituteCode}/`,
+                },
+            },
+            order: [['employee_Code', 'DESC']],
+        });
+    } catch (error) {
+        console.error(`Error in get Previous Enroll Number for campus ${campusCode} and institue Code ${instituteCode}:`, error);
+        throw error;
+    }
+}
+
+export async function getTeacherSubject(employeeId, filters = {}) {
+    try {
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            return [];
+        }
+
+        const { academicYearId, sessionId, term } = filters;
+        const subjectIds = await resolveSubjectIdsForTeacherFilters({ academicYearId, sessionId });
+
+        const subjectWhere = {
+            ...(academicYearId != null && { academicYearId }),
+            ...(term != null && { term }),
+            ...buildScope(model.subjectModel),
+        };
+
+        return await scoped(model.teacherSubjectMappingModel).findAll({
+            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+            where: {
+                userId: employee.userId,
+                ...teacherSubjectWhere(subjectIds),
+            },
+            include: [
+                {
+                    model: model.subjectModel,
+                    as: 'employeeSubject',
+                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                    where: subjectWhere,
+                    required: true,
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: 'courseInfo',
+                            attributes: ['courseId', 'courseName', 'courseCode'],
+                            required: false,
+                        },
+                        {
+                            model: model.internalAssessmentModel,
+                            as: 'subjectAssessments',
+                            attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                            where: {
+                                userId: employee.userId,
+                                ...(term != null && { term }),
+                            },
+                            required: false,
+                            include: [
+                                {
+                                    model: model.examSetupTypeModel,
+                                    as: 'assessmentExamType',
+                                    attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'] },
+                                    required: false,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        });
+    } catch (error) {
+        console.error('Error in getting employee subjects:', error);
+        throw error;
+    }
+}
+
+export async function getTeacherCourses(employeeId) {
+    try {
+        const employee = await assertScopedEmployee(employeeId);
+        if (!employee) {
+            return [];
+        }
+
+        const result = await scoped(model.teacherSubjectMappingModel).findAll({
+            where: { userId: Number(employee.userId) },
+            include: [
+                {
+                    model: model.subjectModel.unscoped(),
+                    as: 'employeeSubject',
+                    required: true,
+                    where: buildScope(model.subjectModel),
+                    include: [
+                        {
+                            model: model.courseModel.unscoped(),
+                            as: 'courseInfo',
+                            required: true,
+                            attributes: ['courseId', 'courseName', 'courseCode'],
+                        },
+                    ],
+                },
+            ],
+        });
+
+        const courses = [];
+        const seen = new Set();
+
+        result.forEach((mapping) => {
+            const course = mapping.employeeSubject?.courseInfo;
+            if (course && !seen.has(course.courseId)) {
+                courses.push(course);
+                seen.add(course.courseId);
+            }
+        });
+
+        return courses;
+    } catch (error) {
+        console.error('Error in getTeacherCourses repository:', error);
+        throw error;
+    }
+}
+
+export async function getTeacherSubjectsFromSchedule(userId) {
+    try {
+        const employee = await assertScopedEmployee(userId);
+        if (!employee) {
+            return { courses: [], subjects: [] };
+        }
+
+        const teacherUserId = Number(employee.userId);
+
+        const result = await model.timeTableCellModel.findAll({
+            attributes: [
+                'timeTableCellId',
+                'subjectId',
+                'electiveSubjectId',
+                'teacherSubjectMappingId',
+            ],
+            where: {
+                [Op.or]: [
+                    { '$timeTableCellTeachers.user_id$': teacherUserId },
+                    { '$timeTableTeacherSubject.user_id$': teacherUserId },
+                ],
+            },
+            subQuery: false,
+            include: [
+                {
+                    model: model.timeTableCellTeachersModel,
+                    as: 'timeTableCellTeachers',
+                    required: false,
+                    attributes: ['userId'],
+                },
+                {
+                    model: model.timeTableRoutineModel,
+                    as: 'timeTableRoutine',
+                    required: true,
+                    where: {
+                        isPublish: true,
+                        ...buildScope(model.timeTableRoutineModel),
+                    },
+                    attributes: ['timeTableRoutineId'],
+                },
+                {
+                    model: model.subjectModel,
+                    as: 'timeTableSubject',
+                    required: false,
+                    where: buildScope(model.subjectModel),
+                    attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                    include: [
+                        {
+                            model: model.courseModel,
+                            as: 'courseInfo',
+                            attributes: ['courseId', 'courseName', 'courseCode'],
+                            required: false,
+                        },
+                    ],
+                },
+                {
+                    model: model.electiveSubjectModel,
+                    as: 'timeTableElective',
+                    required: false,
+                    attributes: [
+                        'electiveSubjectId',
+                        'electiveSubjectName',
+                        'electiveSubjectCode',
+                    ],
+                },
+                {
+                    model: model.teacherSubjectMappingModel,
+                    as: 'timeTableTeacherSubject',
+                    required: false,
+                    attributes: ['teacherSubjectMappingId', 'userId'],
+                    include: [
+                        {
+                            model: model.subjectModel,
+                            as: 'employeeSubject',
+                            where: buildScope(model.subjectModel),
+                            required: false,
+                            attributes: ['subjectId', 'subjectName', 'subjectCode'],
+                            include: [
+                                {
+                                    model: model.courseModel,
+                                    as: 'courseInfo',
+                                    attributes: ['courseId', 'courseName', 'courseCode'],
+                                    required: false,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        });
+
+        const coursesMap = new Map();
+        const subjectsMap = new Map();
+
+        for (const row of result) {
+            const item = row.get({ plain: true });
+            let subject = null;
+            let course = null;
+
+            if (item.timeTableSubject) {
+                subject = {
+                    subjectId: item.timeTableSubject.subjectId,
+                    subjectName: item.timeTableSubject.subjectName,
+                    subjectCode: item.timeTableSubject.subjectCode,
+                };
+                course = item.timeTableSubject.courseInfo;
+            } else if (item.timeTableElective) {
+                subject = {
+                    subjectId: item.timeTableElective.electiveSubjectId,
+                    subjectName: item.timeTableElective.electiveSubjectName,
+                    subjectCode: item.timeTableElective.electiveSubjectCode,
+                };
+            } else if (item.timeTableTeacherSubject && item.timeTableTeacherSubject.employeeSubject) {
+                const sub = item.timeTableTeacherSubject.employeeSubject;
+                subject = {
+                    subjectId: sub.subjectId,
+                    subjectName: sub.subjectName,
+                    subjectCode: sub.subjectCode,
+                };
+                course = sub.courseInfo;
+            }
+
+            if (subject && !subjectsMap.has(subject.subjectId)) {
+                subjectsMap.set(subject.subjectId, subject);
+            }
+
+            if (course && !coursesMap.has(course.courseId)) {
+                coursesMap.set(course.courseId, course);
+            }
+        }
+
+        const courses = [];
+        for (const course of coursesMap.values()) {
+            courses.push(course);
+        }
+        const subjects = [];
+        for (const subject of subjectsMap.values()) {
+            subjects.push(subject);
+        }
+
+        return { courses, subjects };
+    } catch (error) {
+        console.error('Error in getTeacherSubjectsFromSchedule repository:', error);
+        throw error;
+    }
+}

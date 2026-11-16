@@ -517,6 +517,9 @@ export async function bulkMyFinalSubmitObtainedMarks(req, res) {
 export async function splitAnswerSheetPdf(req, res) {
   try {
     const fileUploadId = req.body.answerSheetS3FileId;
+    const pagesPerStudent = req.body.pagesPerStudent
+      ? Number(req.body.pagesPerStudent)
+      : 2;
 
     // Find FileUpload record to get the S3 key
     const fileRecord = await s3FileRepository.getS3FileById(fileUploadId);
@@ -613,6 +616,7 @@ export async function splitAnswerSheetPdf(req, res) {
         s3Key,
         req.user.userId,
         answerSheet?.id ?? null,
+        pagesPerStudent,
       );
 
     return SuccessResponse(

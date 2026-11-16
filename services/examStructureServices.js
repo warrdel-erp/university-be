@@ -1,6 +1,6 @@
 import * as examStructureRepository from "../repository/examStructureRepository.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
-import { countStudentsForExamGroup } from "./studentCountServices.js";
+import { countStudentsForExamGroup } from "../modules/student/services/studentCountServices.js";
 
 export async function addExamStructure(examDetail, createdBy, updatedBy) {
     examDetail.createdBy = createdBy;
