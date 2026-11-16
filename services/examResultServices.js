@@ -707,7 +707,7 @@ export async function getSku(query) {
     });
   }
 
-  const [studentRows, submitPairs] = await Promise.all([
+  const [studentRows, submitPairs, existingResults] = await Promise.all([
     examResultRepository.findApplicableStudentContexts({
       terms,
       courseSessionCombos,
@@ -716,7 +716,17 @@ export async function getSku(query) {
     examResultRepository.findSubmittedAnswerSheetPairsByExaminationSessionId(
       examinationSessionId,
     ),
+    examResultRepository.findStudentResultsByExaminationSession(
+      examinationSessionId,
+    ),
   ]);
+
+  const publishedByKey = new Map();
+  for (const result of existingResults || []) {
+    const plain = result.get ? result.get({ plain: true }) : result;
+    const key = `${Number(plain.studentId)}_${Number(plain.courseId)}_${Number(plain.sessionId)}_${Number(plain.term)}`;
+    publishedByKey.set(key, plain);
+  }
 
   const submitSet = new Set();
   for (const pair of submitPairs) {
@@ -724,6 +734,10 @@ export async function getSku(query) {
   }
 
   let ready = 0;
+  let notReady = 0;
+  let generated = 0;
+  let published = 0;
+  let readyTotal = 0;
   const studentSeen = new Set();
 
   for (const row of studentRows) {
@@ -735,6 +749,21 @@ export async function getSku(query) {
     const sessionId = Number(row.sessionId);
     const term = Number(row.studentClassSectionTerm.term);
 
+    const studentResult = publishedByKey.get(
+      `${studentId}_${courseId}_${sessionId}_${term}`
+    );
+
+    if (studentResult) {
+      const status = String(studentResult.resultStatus || "").toLowerCase();
+      if (status === "generated") {
+        generated += 1;
+      } else {
+        published += 1;
+      }
+      readyTotal += 1;
+      continue;
+    }
+
     const applicable = [];
     for (const schedule of schedules) {
       if (schedule.courseId != null && schedule.courseId !== courseId) continue;
@@ -744,7 +773,10 @@ export async function getSku(query) {
     }
 
     // No applicable exams => NOT_READY (same as list/detail readiness)
-    if (!applicable.length) continue;
+    if (!applicable.length) {
+      notReady += 1;
+      continue;
+    }
 
     let isReady = true;
     for (const schedule of applicable) {
@@ -753,7 +785,17 @@ export async function getSku(query) {
         break;
       }
     }
-    if (isReady) ready = decimalAdd(ready, 1);
+    if (isReady) {
+      ready += 1;
+      readyTotal += 1;
+    } else {
+      notReady += 1;
+    }
+  }
+
+  const accounted = ready + notReady + generated + published;
+  if (studentTotal > accounted) {
+    notReady += (studentTotal - accounted);
   }
 
   return {
@@ -764,7 +806,10 @@ export async function getSku(query) {
     checked: sheetSku.checked,
     notChecked: sheetSku.notChecked,
     ready,
-    notReady: decimalMax(0, decimalSubtract(studentTotal, ready)),
+    notReady,
+    generated,
+    published,
+    readyTotal,
   };
 }
 
@@ -2155,6 +2200,26 @@ export async function getSubjectCalculationBreakdown(body) {
     };
   }
 
+  const shouldSave = body.save === true || body.save === "true";
+  if (shouldSave && isRelative) {
+    try {
+      await examResultRepository.saveSubjectZScoreCalculation({
+        examinationSessionId,
+        subjectId,
+        examScheduleId,
+        teacherId: teacherIdFilter || null,
+        calculationType: teacherIdFilter ? "TEACHER" : "SUBJECT",
+        evaluatedStudentsCount: evaluatedStudents.length,
+        classMean: cohortStatistics?.classMean != null ? cohortStatistics.classMean : null,
+        standardDev: cohortStatistics?.standardDeviation != null ? cohortStatistics.standardDeviation : null,
+        gradingId: gradingScheme?.gradingId ? Number(gradingScheme.gradingId) : null,
+        createdBy: body.createdBy ? Number(body.createdBy) : null,
+      });
+    } catch (saveErr) {
+      console.warn("Failed to auto-save subject Z-score calculation metadata:", saveErr.message);
+    }
+  }
+
   return {
     teacher: teacherSummary,
     subject: {
@@ -2614,6 +2679,59 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
 
     const teachersList = groupStudentsByTeacher(studentsList);
 
+    const calculations = await examResultRepository.findSubjectZScoreCalculations({
+      examinationSessionId: Number(examSession.examinationSessionId),
+      subjectId: Number(schedule.subjectId),
+    });
+
+    const subjectCalc = calculations.find((c) => c.calculationType === "SUBJECT");
+    const isSubjectZScoreCalculated = Boolean(subjectCalc);
+
+    const teacherCalcMap = new Map();
+    for (const c of calculations) {
+      if (c.calculationType === "TEACHER" && c.teacherId != null) {
+        teacherCalcMap.set(Number(c.teacherId), c);
+      }
+    }
+    const anyTeacherCalculated = teacherCalcMap.size > 0;
+
+    const enhancedTeachersList = teachersList.map((t) => {
+      const tId = t.teacherId != null ? Number(t.teacherId) : null;
+      const tCalc = tId ? teacherCalcMap.get(tId) : null;
+      const isCalculated = Boolean(tCalc);
+      const isButtonDisabled = isSubjectZScoreCalculated || isCalculated;
+      const disabledReason = isSubjectZScoreCalculated
+        ? "Subject-wide Z-Score has already been calculated."
+        : isCalculated
+          ? "Z-Score for this teacher has already been calculated."
+          : null;
+
+      return {
+        ...t,
+        isZScoreCalculated: isCalculated,
+        isButtonDisabled,
+        disabledReason,
+        calculatedAt: tCalc?.createdAt || null,
+        classMean: tCalc?.classMean != null ? Number(tCalc.classMean) : null,
+        standardDev: tCalc?.standardDev != null ? Number(tCalc.standardDev) : null,
+        evaluatedCountInCalculation: tCalc?.evaluatedStudentsCount || null,
+      };
+    });
+
+    const isSubjectButtonDisabled = isSubjectZScoreCalculated || anyTeacherCalculated;
+    const subjectDisabledReason = isSubjectZScoreCalculated
+      ? "Subject-wide Z-Score has already been calculated."
+      : anyTeacherCalculated
+        ? "Teacher-wise Z-Score calculation is in progress/completed."
+        : null;
+
+    const completedTeachersCount = enhancedTeachersList.filter((t) => t.isZScoreCalculated).length;
+    const mode = isSubjectZScoreCalculated
+      ? "SUBJECT"
+      : anyTeacherCalculated
+        ? "TEACHER"
+        : "PENDING";
+
     return {
       examinationSession: {
         examinationSessionId: Number(examSession.examinationSessionId),
@@ -2628,9 +2746,22 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
         examScheduleId: Number(schedule.examScheduleId),
         maximumMarks,
         submittedStudentsCount: sheets.length,
+        isSubjectZScoreCalculated,
+        isSubjectButtonDisabled,
+        disabledReason: subjectDisabledReason,
+        calculatedAt: subjectCalc?.createdAt || null,
       },
-      totalTeachers: teachersList.length,
-      teachers: teachersList,
+      zScoreSummary: {
+        mode,
+        isSubjectZScoreCalculated,
+        isSubjectButtonDisabled,
+        totalTeachers: enhancedTeachersList.length,
+        completedTeachersCount,
+        pendingTeachersCount: Math.max(0, enhancedTeachersList.length - completedTeachersCount),
+        calculatedAt: subjectCalc?.createdAt || null,
+      },
+      totalTeachers: enhancedTeachersList.length,
+      teachers: enhancedTeachersList,
       totalStudents: total,
       students: paginatedStudents,
       pagination: {
@@ -2644,6 +2775,17 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
   }
 
   // Case 2: No specific subjectId passed -> return only subjects with submitted answer sheets
+  const allCalculations = await scoped(model.subjectZScoreCalculationModel).findAll({
+    where: { examinationSessionId: Number(examSession.examinationSessionId) },
+    raw: true,
+  });
+  const calcsBySubjectId = new Map();
+  for (const c of allCalculations) {
+    const sId = Number(c.subjectId);
+    if (!calcsBySubjectId.has(sId)) calcsBySubjectId.set(sId, []);
+    calcsBySubjectId.get(sId).push(c);
+  }
+
   const subjectsWithSubmittedSheets = [];
   for (const schedule of schedules) {
     const sheets = sheetsByScheduleId.get(Number(schedule.examScheduleId)) || [];
@@ -2652,6 +2794,22 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
     const maximumMarks = toMoneyNumber(schedule.maximumMarks) || 100;
     const students = sheets.map((sheet) => formatStudent(sheet, schedule));
     const teachersList = groupStudentsByTeacher(students);
+    const subCalcs = calcsBySubjectId.get(Number(schedule.subjectId)) || [];
+    const isSubjDone = subCalcs.some((c) => c.calculationType === "SUBJECT");
+    const teacherDoneSet = new Set(
+      subCalcs
+        .filter((c) => c.calculationType === "TEACHER" && c.teacherId != null)
+        .map((c) => Number(c.teacherId)),
+    );
+
+    const enhancedTeachers = teachersList.map((t) => {
+      const isCalculated = t.teacherId != null && teacherDoneSet.has(Number(t.teacherId));
+      return {
+        ...t,
+        isZScoreCalculated: isCalculated,
+        isButtonDisabled: isSubjDone || isCalculated,
+      };
+    });
 
     subjectsWithSubmittedSheets.push({
       subjectId: Number(schedule.subjectId),
@@ -2661,8 +2819,10 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
       examScheduleId: Number(schedule.examScheduleId),
       maximumMarks,
       submittedStudentsCount: students.length,
-      totalTeachers: teachersList.length,
-      teachers: teachersList,
+      isSubjectZScoreCalculated: isSubjDone,
+      isSubjectButtonDisabled: isSubjDone || teacherDoneSet.size > 0,
+      totalTeachers: enhancedTeachers.length,
+      teachers: enhancedTeachers,
       students,
     });
   }
@@ -2677,4 +2837,31 @@ export async function getSubjectStudentsWithSubmittedAnswerSheets(body) {
     subjects: subjectsWithSubmittedSheets,
   };
 }
+
+export async function resetSubjectZScoreCalculation(body) {
+  const examinationSessionId = Number(body.examinationSessionId);
+  const subjectId = Number(body.subjectId);
+  const teacherId = body.teacherId != null ? Number(body.teacherId) : null;
+
+  if (!examinationSessionId || !subjectId) {
+    const err = new Error("examinationSessionId and subjectId are required.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const deletedCount = await examResultRepository.deleteSubjectZScoreCalculation({
+    examinationSessionId,
+    subjectId,
+    teacherId,
+  });
+
+  return {
+    success: true,
+    message: teacherId
+      ? `Z-Score calculation reset for teacherId=${teacherId}`
+      : "Z-Score calculation reset for subject",
+    deletedCount,
+  };
+}
+
 

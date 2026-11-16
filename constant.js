@@ -553,6 +553,7 @@ export const EXECUTION_TYPE = {
   JURY_REVIEW_EXAMINATION: "Jury / Review Examination",
   ATTENDANCE_SCORE: "Attendance Score",
   MANUAL_SCORE_ENTRY: "Manual Score Entry",
+  EXTERNAL_SCORE_ENTRY: "External Score Entry",
 };
 
 export const EXECUTION_TYPES = Object.values(EXECUTION_TYPE);
@@ -586,6 +587,9 @@ export const EXECUTION_PROFILE = {
 
   // Manual Score Entry
   MANUAL_SCORE_ENTRY: "Manual Score Entry",
+
+  // External Score Entry
+  EXTERNAL_SCORE_ENTRY: "External Score Entry",
 };
 
 export const EXECUTION_PROFILES = Object.values(EXECUTION_PROFILE);
@@ -619,6 +623,9 @@ export const EXECUTION_TYPE_PROFILES_MAP = {
   ],
   [EXECUTION_TYPE.MANUAL_SCORE_ENTRY]: [
     EXECUTION_PROFILE.MANUAL_SCORE_ENTRY,
+  ],
+  [EXECUTION_TYPE.EXTERNAL_SCORE_ENTRY]: [
+    EXECUTION_PROFILE.EXTERNAL_SCORE_ENTRY,
   ],
 };
 

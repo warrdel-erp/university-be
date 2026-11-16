@@ -116,7 +116,18 @@ export async function getRequests(filters = {}) {
 }
 
 export async function getRequestById(requestId) {
-  return repo.getRequestById(requestId);
+  const request = await repo.getRequestById(requestId);
+  if (!request) return null;
+
+  const plain = request.toJSON ? request.toJSON() : request;
+  if (plain.userId && plain.startDate && plain.endDate) {
+    plain.workloadImpact = await repo.getEmployeeWorkloadImpact(
+      plain.userId,
+      plain.startDate,
+      plain.endDate
+    );
+  }
+  return plain;
 }
 
 export async function updateRequestStatus(requestId, status, reviewerId, options = {}) {
@@ -205,11 +216,35 @@ export async function getLeavesAssignedToMe(user, query = {}) {
   const offset = (page - 1) * limit;
 
   const result = await repo.getLeavesAssignedToUserPositions(userId, query, { limit, offset, user });
+
+  // Attach workload impact (scheduled lectures, exam duties, etc.) for each leave request in the list
+  const rowsWithWorkload = await Promise.all(
+    (result.rows || []).map(async (row) => {
+      const plainRow = row.toJSON ? row.toJSON() : row;
+      const leave = plainRow.leaveRequest;
+      const applicantUserId = leave?.userId || plainRow.requestedBy;
+
+      let workloadImpact = null;
+      if (applicantUserId && leave?.startDate && leave?.endDate) {
+        workloadImpact = await repo.getEmployeeWorkloadImpact(
+          applicantUserId,
+          leave.startDate,
+          leave.endDate
+        );
+      }
+
+      return {
+        ...plainRow,
+        workloadImpact,
+      };
+    })
+  );
+
   return {
     total: result.count,
     page,
     limit,
     totalPages: Math.ceil(result.count / limit),
-    data: result.rows,
+    data: rowsWithWorkload,
   };
 }

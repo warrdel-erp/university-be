@@ -306,6 +306,34 @@ router.post(
   examResultController.getTeacherZScoreList,
 );
 
+const resetZScoreBody = z.object({
+  examinationSessionId: id,
+  subjectId: id,
+  teacherId: id.optional().nullable(),
+  assignedToUserId: id.optional().nullable(),
+}).passthrough();
+
+const resetZScoreQuery = z.object({
+  examinationSessionId: id.optional(),
+  subjectId: id.optional(),
+  teacherId: id.optional().nullable(),
+  assignedToUserId: id.optional().nullable(),
+});
+
+router.post(
+  "/subject/zscore/reset",
+  userAuth,
+  validate({ body: resetZScoreBody, query: resetZScoreQuery }),
+  examResultController.resetSubjectZScoreCalculation,
+);
+
+router.post(
+  "/subject-zscore/reset",
+  userAuth,
+  validate({ body: resetZScoreBody, query: resetZScoreQuery }),
+  examResultController.resetSubjectZScoreCalculation,
+);
+
 export default router;
 
 

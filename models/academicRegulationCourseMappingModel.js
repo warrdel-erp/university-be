@@ -94,8 +94,8 @@ const academicRegulationCourseMappingModel = sequelize.define(
         indexes: [
             {
                 unique: true,
-                fields: ['academic_regulation_id', 'batch_id'],
-                name: 'unique_regulation_batch'
+                fields: ['batch_id'],
+                name: 'uq_academic_regulation_batch_id'
             }
         ]
     }
