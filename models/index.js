@@ -3163,6 +3163,14 @@ leavePolicyEntitlementModel.belongsTo(leavePolicyModel, {
   foreignKey: "policy_id",
   as: "policy",
 });
+leavePolicyEntitlementModel.belongsTo(leaveTypeModel, {
+  foreignKey: "leave_type_id",
+  as: "leaveTypeMaster",
+});
+leaveTypeModel.hasMany(leavePolicyEntitlementModel, {
+  foreignKey: "leave_type_id",
+  as: "policyEntitlements",
+});
 
 // Leave Policy Roles Associations
 leavePolicyModel.hasMany(leavePolicyRoleModel, {

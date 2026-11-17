@@ -12,7 +12,7 @@ export async function addPolicy(req, res) {
   const entitlements = data.entitlements || data.leaveEntitlements;
   if (!data.totalLeavesPerYear && Array.isArray(entitlements) && entitlements.length > 0) {
     data.totalLeavesPerYear = entitlements.reduce(
-      (sum, e) => sum + (Number(e.entitlementAnnual) || 0),
+      (sum, e) => sum + (Number(e.annualEntitlement ?? e.annual_entitlement ?? e.entitlementAnnual) || 0),
       0
     );
   }
@@ -87,7 +87,7 @@ export async function getPolicyById(req, res) {
 
 export async function updatePolicy(req, res) {
   try {
-    const { policyId } = req.body;
+    const policyId = req.body.policyId || req.query.policyId || req.params.policyId;
     if (!policyId) return res.status(400).json({ message: "policyId is required" });
 
     await service.updatePolicy(policyId, req.body);
@@ -99,7 +99,7 @@ export async function updatePolicy(req, res) {
 
 export async function deletePolicy(req, res) {
   try {
-    const { policyId } = req.query;
+    const policyId = req.query.policyId || req.body.policyId || req.params.policyId;
     if (!policyId) return res.status(400).json({ message: "policyId is required" });
 
     const deleted = await service.deletePolicy(policyId);

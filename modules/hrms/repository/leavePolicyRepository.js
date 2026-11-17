@@ -21,8 +21,16 @@ export async function createFullPolicy({ policyData, entitlements = [], roleAssi
     let createdEntitlements = [];
     if (entitlements && entitlements.length > 0) {
       const entitlementRecords = entitlements.map((ent) => ({
-        ...ent,
         policyId,
+        leaveTypeId: ent.leaveTypeId ?? ent.leave_type_id ?? null,
+        customLeaveName: ent.customLeaveName ?? ent.custom_leave_name ?? ent.leaveType ?? ent.name ?? "",
+        annualEntitlement: ent.annualEntitlement ?? ent.annual_entitlement ?? ent.entitlementAnnual ?? 0,
+        entitlementUnit: ent.entitlementUnit ?? ent.entitlement_unit ?? "Days",
+        onJoiningRule: ent.onJoiningRule ?? ent.on_joining_rule ?? null,
+        onSeparationRule: ent.onSeparationRule ?? ent.on_separation_rule ?? null,
+        roundingRule: ent.roundingRule ?? ent.rounding_rule ?? null,
+        distributionFrequency: ent.distributionFrequency ?? ent.distribution_frequency ?? ent.creditMethod ?? null,
+        distributionMethod: ent.distributionMethod ?? ent.distribution_method ?? null,
       }));
       createdEntitlements = await model.leavePolicyEntitlementModel.bulkCreate(entitlementRecords, {
         transaction: t,
@@ -146,16 +154,25 @@ export async function getPolicies(filters = {}) {
         model: model.leavePolicyEntitlementModel,
         as: "entitlements",
         attributes: [
-          "entitlementId",
-          "leaveType",
-          "leaveCode",
-          "entitlementAnnual",
-          "creditMethod",
-          "carryForward",
-          "maxCarryForwardDays",
-          "maximumConsecutiveDays",
-          "keyRules",
-          "status",
+          "id",
+          "policyId",
+          "leaveTypeId",
+          "customLeaveName",
+          "annualEntitlement",
+          "entitlementUnit",
+          "onJoiningRule",
+          "onSeparationRule",
+          "roundingRule",
+          "distributionFrequency",
+          "distributionMethod",
+        ],
+        include: [
+          {
+            model: model.leaveTypeModel,
+            as: "leaveTypeMaster",
+            attributes: ["id", "name", "code", "classification"],
+            required: false,
+          },
         ],
       },
       roleInclude,
@@ -176,6 +193,14 @@ export async function getPolicyById(policyId, options = {}) {
       {
         model: model.leavePolicyEntitlementModel,
         as: "entitlements",
+        include: [
+          {
+            model: model.leaveTypeModel,
+            as: "leaveTypeMaster",
+            attributes: ["id", "name", "code", "classification"],
+            required: false,
+          },
+        ],
       },
       {
         model: model.leavePolicyRoleModel,
@@ -204,17 +229,115 @@ export async function getPolicyById(policyId, options = {}) {
   });
 }
 
-export async function updatePolicy(policyId, data) {
-  const existing = await scoped(model.leavePolicyModel).findOne({
-    attributes: ["policyId"],
-    where: { policyId },
-  });
-  if (!existing) {
-    return [0];
-  }
+export async function updatePolicy(policyId, data, options = {}) {
+  return sequelize.transaction(async (t) => {
+    const txn = options.transaction || t;
 
-  return scoped(model.leavePolicyModel).update(data, {
-    where: { policyId },
+    const existing = await scoped(model.leavePolicyModel).findOne({
+      where: { policyId },
+      transaction: txn,
+    });
+    if (!existing) {
+      return [0];
+    }
+
+    const { entitlements, leaveEntitlements, roleAssignments, ...policyFields } = data;
+    const finalEntitlements = entitlements || leaveEntitlements;
+
+    // Recalculate totalLeavesPerYear if entitlements provided and not explicitly set in payload
+    if (Array.isArray(finalEntitlements) && finalEntitlements.length > 0 && !policyFields.totalLeavesPerYear) {
+      policyFields.totalLeavesPerYear = finalEntitlements.reduce(
+        (sum, e) => sum + (Number(e.annualEntitlement ?? e.annual_entitlement ?? e.entitlementAnnual) || 0),
+        0
+      );
+    }
+
+    const result = await scoped(model.leavePolicyModel).update(policyFields, {
+      where: { policyId },
+      transaction: txn,
+    });
+
+    // Update entitlements if provided
+    if (Array.isArray(finalEntitlements)) {
+      await model.leavePolicyEntitlementModel.destroy({
+        where: { policyId },
+        transaction: txn,
+        force: true,
+      });
+
+      if (finalEntitlements.length > 0) {
+        const entitlementRecords = finalEntitlements.map((ent) => ({
+          policyId,
+          leaveTypeId: ent.leaveTypeId ?? ent.leave_type_id ?? null,
+          customLeaveName: ent.customLeaveName ?? ent.custom_leave_name ?? ent.leaveType ?? ent.name ?? "",
+          annualEntitlement: ent.annualEntitlement ?? ent.annual_entitlement ?? ent.entitlementAnnual ?? 0,
+          entitlementUnit: ent.entitlementUnit ?? ent.entitlement_unit ?? "Days",
+          onJoiningRule: ent.onJoiningRule ?? ent.on_joining_rule ?? null,
+          onSeparationRule: ent.onSeparationRule ?? ent.on_separation_rule ?? null,
+          roundingRule: ent.roundingRule ?? ent.rounding_rule ?? null,
+          distributionFrequency: ent.distributionFrequency ?? ent.distribution_frequency ?? ent.creditMethod ?? null,
+          distributionMethod: ent.distributionMethod ?? ent.distribution_method ?? null,
+        }));
+        await model.leavePolicyEntitlementModel.bulkCreate(entitlementRecords, {
+          transaction: txn,
+          validate: true,
+        });
+      }
+    }
+
+    // Update role assignments if provided
+    if (Array.isArray(roleAssignments)) {
+      const existingRoles = await model.leavePolicyRoleModel.findAll({
+        where: { policyId },
+        attributes: ["id"],
+        transaction: txn,
+      });
+      const existingRoleIds = existingRoles.map((r) => r.id);
+      if (existingRoleIds.length > 0) {
+        await model.leavePolicyEmployeeModel.destroy({
+          where: { policyRoleId: existingRoleIds },
+          transaction: txn,
+        });
+        await model.leavePolicyRoleModel.destroy({
+          where: { policyId },
+          transaction: txn,
+        });
+      }
+
+      for (const ra of roleAssignments) {
+        const roleRecord = await model.leavePolicyRoleModel.create(
+          {
+            policyId,
+            roleId: ra.roleId,
+            assignmentMode: ra.assignmentMode || "ALL",
+            effectiveFrom: ra.effectiveFrom || policyFields.effectiveFrom || existing.effectiveFrom || new Date(),
+            effectiveTo: ra.effectiveTo || policyFields.effectiveTo || existing.effectiveTo || null,
+            universityId: policyFields.universityId || existing.universityId,
+            instituteId: policyFields.instituteId || existing.instituteId,
+            campusId: policyFields.campusId || existing.campusId,
+          },
+          { transaction: txn }
+        );
+
+        const policyRoleId = roleRecord.id || roleRecord.dataValues?.id;
+        if (
+          (ra.assignmentMode === "SELECTED" || ra.assignment_mode === "SELECTED") &&
+          Array.isArray(ra.selectedUserIds) &&
+          ra.selectedUserIds.length > 0
+        ) {
+          const empRecords = ra.selectedUserIds.map((userId) => ({
+            policyRoleId,
+            userId,
+            isActive: true,
+          }));
+          await model.leavePolicyEmployeeModel.bulkCreate(empRecords, {
+            transaction: txn,
+          });
+        }
+      }
+    }
+
+    return result;
   });
 }
 
