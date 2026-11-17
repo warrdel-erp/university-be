@@ -2230,14 +2230,16 @@ export async function getPastClassSchedules(
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || undefined;
   const hasPagination = limit != null && limit > 0;
+  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
+  const canUseDbPagination = hasPagination && !groupPeriods && !search;
 
-  // Fetch all rows — do not pass page/limit to the query so joins, sort and filters are consistent
-  const { rows: rawSchedules } =
+  // Pass page/limit directly to DB when no in-memory grouping or search is needed
+  const { rows: rawSchedules, total: dbTotal } =
     await employeeScheduleRepository.getPastClassSchedulesForEmployee(
       userId,
       currentDateString,
       sessionId,
-      {},
+      canUseDbPagination ? { page, limit } : {},
       academicYearId,
     );
 
@@ -2245,7 +2247,6 @@ export async function getPastClassSchedules(
 
   let schedules = rawSchedules.map(stripTeacherFieldsFromSchedule);
 
-  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
   if (search) {
     schedules = schedules.filter((s) => {
       const subj =
@@ -2272,10 +2273,10 @@ export async function getPastClassSchedules(
     schedules.sort((a, b) => (new Date(b.date) - new Date(a.date)) || ((Number(a.period) || 0) - (Number(b.period) || 0)));
   }
 
-  const total = schedules.length;
+  const total = canUseDbPagination ? dbTotal : schedules.length;
 
   let pageSchedules = schedules;
-  if (hasPagination) {
+  if (hasPagination && !canUseDbPagination) {
     const offset = (page - 1) * limit;
     pageSchedules = schedules.slice(offset, offset + limit);
   }
@@ -2340,18 +2341,19 @@ export async function getUpcomingClassSchedules(
   const page = Number(pagination.page) || 1;
   const limit = Number(pagination.limit) || undefined;
   const hasPagination = limit != null && limit > 0;
+  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
+  const canUseDbPagination = hasPagination && !groupPeriods && !search;
 
-  // Fetch all rows — do not pass page/limit to the query
-  const { rows: upcomingClasses } =
+  // Pass page/limit directly to DB when no in-memory grouping or search is needed
+  const { rows: upcomingClasses, total: dbTotal } =
     await employeeScheduleRepository.getUpcomingClassSchedulesForEmployee(
       userId,
       currentDateString,
-      {},
+      canUseDbPagination ? { page, limit } : {},
     );
 
   let schedules = upcomingClasses.map(stripTeacherFieldsFromSchedule);
 
-  const search = pagination?.search ? String(pagination.search).trim().toLowerCase() : "";
   if (search) {
     schedules = schedules.filter((s) => {
       const subj =
@@ -2378,10 +2380,10 @@ export async function getUpcomingClassSchedules(
     schedules.sort((a, b) => new Date(a.date) - new Date(b.date));
   }
 
-  const total = schedules.length;
+  const total = canUseDbPagination ? dbTotal : schedules.length;
 
   let pageSchedules = schedules;
-  if (hasPagination) {
+  if (hasPagination && !canUseDbPagination) {
     const offset = (page - 1) * limit;
     pageSchedules = schedules.slice(offset, offset + limit);
   }
