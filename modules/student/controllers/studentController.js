@@ -548,7 +548,7 @@ export async function getMyStudentsByClassSection(req, res) {
     let isElective = false;
     if (access.dateWiseIds && access.dateWiseIds.length > 0) {
       const { timeTableCellDateWiseModel, timeTableCellModel } =
-        await import("../models/index.js");
+        await import("../../../models/index.js");
       const samplePeriod = await timeTableCellDateWiseModel.findOne({
         where: { timeTableCellDateWiseId: access.dateWiseIds[0] },
         include: [

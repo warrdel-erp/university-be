@@ -508,6 +508,124 @@ async function countMappedCoursesForSessionTerms(
   return matchedSubjectIds.size;
 }
 
+async function resolveSessionWorkflowProgress(examinationSessionId, status, options = {}) {
+  const sessionId = Number(examinationSessionId);
+  if (!sessionId) {
+    return {
+      currentStep: status === "Draft" ? 0 : 2,
+      progress: status === "Draft" ? 15 : 50,
+      lifecycleStage: "scheduling",
+    };
+  }
+
+  try {
+    const resultsCount = await scoped(model.studentResultModel).count({
+      where: { examinationSessionId: sessionId },
+      transaction: options.transaction,
+    });
+
+    if (resultsCount > 0) {
+      return {
+        currentStep: 5,
+        progress: 100,
+        lifecycleStage: "results",
+      };
+    }
+
+    const schedules = await scoped(model.examScheduleModel).findAll({
+      where: { examinationSessionId: sessionId },
+      attributes: ["examScheduleId", "examDate"],
+      raw: true,
+      transaction: options.transaction,
+    });
+
+    if (!schedules.length) {
+      return {
+        currentStep: 0,
+        progress: status === "Draft" ? 15 : 25,
+        lifecycleStage: "scheduling",
+      };
+    }
+
+    const scheduleIds = schedules.map((s) => Number(s.examScheduleId)).filter(Boolean);
+
+    const [evaluatedCount, scannedCount, hallTicketsCount] = await Promise.all([
+      scheduleIds.length
+        ? scoped(model.answerSheetQrModel).count({
+            where: {
+              examScheduleId: { [Op.in]: scheduleIds },
+              markingStatus: "submit",
+            },
+            transaction: options.transaction,
+          })
+        : 0,
+      scheduleIds.length
+        ? scoped(model.answerSheetQrModel).count({
+            where: {
+              examScheduleId: { [Op.in]: scheduleIds },
+              fileUploadId: { [Op.ne]: null },
+            },
+            transaction: options.transaction,
+          })
+        : 0,
+      scoped(model.studentHallTicketModel).count({
+        where: { examinationSessionId: sessionId },
+        transaction: options.transaction,
+      }),
+    ]);
+
+    if (evaluatedCount > 0) {
+      return {
+        currentStep: 4,
+        progress: 85,
+        lifecycleStage: "evaluation",
+      };
+    }
+
+    if (scannedCount > 0) {
+      return {
+        currentStep: 3,
+        progress: 70,
+        lifecycleStage: "evaluation",
+      };
+    }
+
+    const today = localDateOnlyString();
+    const hasConductedOrToday = schedules.some(
+      (s) => s.examDate && s.examDate <= today
+    );
+
+    if (hasConductedOrToday) {
+      return {
+        currentStep: 2,
+        progress: 50,
+        lifecycleStage: "running",
+      };
+    }
+
+    if (hallTicketsCount > 0) {
+      return {
+        currentStep: 1,
+        progress: 35,
+        lifecycleStage: "scheduling",
+      };
+    }
+
+    return {
+      currentStep: 0,
+      progress: 25,
+      lifecycleStage: "scheduling",
+    };
+  } catch (err) {
+    console.error("Error resolving session workflow progress:", err);
+    return {
+      currentStep: status === "Draft" ? 0 : 2,
+      progress: status === "Draft" ? 15 : 50,
+      lifecycleStage: "scheduling",
+    };
+  }
+}
+
 async function buildSessionSummary(sessionRecord, options = {}) {
   if (!sessionRecord) {
     return null;
@@ -669,11 +787,25 @@ async function buildSessionSummary(sessionRecord, options = {}) {
     }
   }
 
+  const workflow = await resolveSessionWorkflowProgress(
+    examinationSessionId,
+    sessionPlain.status,
+    options,
+  );
+
   return {
     ...sessionPlain,
     courseCount,
+    subjectCount: courseCount,
     totalStudents,
     studentCount: totalStudents,
+    currentStep: workflow.currentStep,
+    progress: workflow.progress,
+    lifecycleStage: workflow.lifecycleStage,
+    overview: {
+      exams: courseCount,
+      students: totalStudents,
+    },
   };
 }
 
