@@ -1,5 +1,6 @@
 import * as model from "../../../models/index.js";
 import { scoped } from "../../../utility/scoped.js";
+import { requestContext } from "../../../utility/requestContext.js";
 import sequelize from "../../../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 
@@ -360,22 +361,34 @@ export async function deletePolicy(policyId) {
  * Returns roles with employee count and their current leave policy assignment.
  * Powers the "ROLE ASSIGNMENT" table in the UI.
  */
-export async function getRolesSummary({ instituteId, universityId }) {
-  // 1. Get all active roles
+export async function getRolesSummary({ instituteId, universityId } = {}) {
+  const currentUniversityId = universityId || requestContext.getStore()?.universityId;
+
+  // 1. Get all active roles belonging to the current university
+  const roleWhere = { deletedAt: null };
+  if (currentUniversityId) {
+    roleWhere.universityId = currentUniversityId;
+  }
+
   const roles = await model.roleModel.findAll({
-    where: { deletedAt: null },
+    where: roleWhere,
     attributes: ["roleId", "role", "code", "scope"],
     order: [["role", "ASC"]],
   });
 
   // 2. Get active policy role mappings with parent policy details
+  const policyWhere = { deletedAt: null };
+  if (currentUniversityId) {
+    policyWhere.universityId = currentUniversityId;
+  }
+
   const activeAssignments = await model.leavePolicyRoleModel.findAll({
     where: { deletedAt: null },
     include: [
       {
         model: model.leavePolicyModel,
         as: "policy",
-        where: { deletedAt: null },
+        where: policyWhere,
         attributes: ["policyId", "policyName", "policyCode", "status", "effectiveFrom"],
       },
       {
@@ -407,7 +420,7 @@ export async function getRolesSummary({ instituteId, universityId }) {
       LEFT JOIN employee emp ON emp.user_id = u.user_id AND emp.deleted_at IS NULL
       WHERE 1=1
         ${instituteId ? `AND COALESCE(emp.institute_id, usr.default_institute_id) = ${sequelize.escape(instituteId)}` : ""}
-        ${universityId ? `AND COALESCE(emp.university_id, usr.university_id) = ${sequelize.escape(universityId)}` : ""}
+        ${currentUniversityId ? `AND COALESCE(emp.university_id, usr.university_id) = ${sequelize.escape(currentUniversityId)}` : ""}
     `);
     const totalEmployees = parseInt(userCountResult[0]?.count || 0, 10);
 
@@ -460,6 +473,8 @@ export async function getRolesSummary({ instituteId, universityId }) {
  * Powers the "Select Employees" side drawer in the UI.
  */
 export async function getRoleEmployees(roleId, { search, policyId, instituteId, universityId } = {}) {
+  const currentUniversityId = universityId || requestContext.getStore()?.universityId;
+
   // 1. Fetch all distinct users belonging to this role within tenant scope
   let searchQuery = "";
   if (search) {
@@ -485,7 +500,7 @@ export async function getRoleEmployees(roleId, { search, policyId, instituteId, 
         OR u.default_role_id = ${roleId}
       )
       ${instituteId ? `AND COALESCE(e.institute_id, u.default_institute_id) = ${sequelize.escape(instituteId)}` : ""}
-      ${universityId ? `AND COALESCE(e.university_id, u.university_id) = ${sequelize.escape(universityId)}` : ""}
+      ${currentUniversityId ? `AND COALESCE(e.university_id, u.university_id) = ${sequelize.escape(currentUniversityId)}` : ""}
       ${searchQuery}
     ORDER BY COALESCE(e.employee_name, u.user_name) ASC
   `);
@@ -535,10 +550,10 @@ export async function getRoleEmployees(roleId, { search, policyId, instituteId, 
       status: u.userStatus || "Active",
       currentPolicy: currentAssignment
         ? {
-            policyId: currentAssignment.policyId,
-            policyName: currentAssignment.policyName,
-            policyCode: currentAssignment.policyCode,
-          }
+          policyId: currentAssignment.policyId,
+          policyName: currentAssignment.policyName,
+          policyCode: currentAssignment.policyCode,
+        }
         : null,
       isSelected: !!isSelected,
     };
