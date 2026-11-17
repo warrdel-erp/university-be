@@ -343,6 +343,7 @@ export async function bulkFinalSubmitByIds(
 ) {
   const where = {
     id: { [Op.in]: ids },
+    obtainedMarks: { [Op.ne]: null },
   };
   if (assignedToUserId != null) {
     where.assignedToUser = Number(assignedToUserId);

@@ -89,3 +89,26 @@ export const listInstitutes = async (req, res) => {
     });
   }
 };
+
+export const deleteAffiliatedUniversity = async (req, res) => {
+  try {
+    const { affiliatedUniversityId } = req.params;
+    const result = await instituteService.deleteAffiliatedUniversity(
+      Number(affiliatedUniversityId)
+    );
+
+    return res.status(200).json({
+      status: "success",
+      message: "Affiliated university deleted successfully",
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error in Delete Affiliated University Controller:", error);
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      status: "error",
+      message: statusCode === 500 ? "Internal Server Error" : error.message,
+      ...(statusCode === 500 && { error: error.message }),
+    });
+  }
+};
