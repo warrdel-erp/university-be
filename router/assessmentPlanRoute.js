@@ -20,6 +20,8 @@ import {
   deleteAssessmentPlanSubjectMapping,
   getBatchCoursesWithSessions,
   getMappedAssessmentTypes,
+  publishBatchAssessmentPlans,
+  unfreezeBatchAssessmentPlans,
 } from "../controllers/assessmentPlanController.js";
 
 const router = express.Router();
@@ -35,6 +37,10 @@ export const createSubjectMappingBody = z.object({
     .int()
     .positive("curriculumSubjectTermMappingId is required"),
   subjectId: z.coerce.number().int().positive().optional(),
+});
+
+export const batchIdParamSchema = z.object({
+  batchId: z.coerce.number().int().positive("batchId is required"),
 });
 
 export const listSubjectMappingQuery = z.object({
@@ -247,6 +253,26 @@ router.delete(
   useAuth,
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   deleteAssessmentPlanSubjectMapping,
+);
+
+// ==========================================
+// BATCH PUBLISH / FREEZE ENDPOINTS
+// ==========================================
+
+router.post(
+  "/batch/:batchId/publish",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  validate({ params: batchIdParamSchema }),
+  publishBatchAssessmentPlans,
+);
+
+router.post(
+  "/batch/:batchId/unfreeze",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  validate({ params: batchIdParamSchema }),
+  unfreezeBatchAssessmentPlans,
 );
 
 // ==========================================
