@@ -127,7 +127,7 @@ export async function getLeaveTypes(filters = {}, pagination = {}) {
           sequelize.literal(`(
             SELECT COUNT(DISTINCT lpe.policy_id)
             FROM leave_policy_entitlements lpe
-            WHERE lpe.leave_code = leave_types.code
+            WHERE lpe.leave_type_id = leave_types.id
               AND lpe.deleted_at IS NULL
           )`),
           "usedInPoliciesCount",
@@ -180,7 +180,7 @@ export async function getLeaveTypeById(id, options = {}) {
           sequelize.literal(`(
             SELECT COUNT(DISTINCT lpe.policy_id)
             FROM leave_policy_entitlements lpe
-            WHERE lpe.leave_code = leave_types.code
+            WHERE lpe.leave_type_id = leave_types.id
               AND lpe.deleted_at IS NULL
           )`),
           "usedInPoliciesCount",
@@ -221,14 +221,29 @@ export async function findByCode(code, universityId, excludeId = null) {
 }
 
 /**
+ * Count how many policies use this leave type ID.
+ */
+export async function countPoliciesUsingLeaveTypeId(leaveTypeId) {
+  const [result] = await sequelize.query(`
+    SELECT COUNT(DISTINCT lpe.policy_id) AS policyCount
+    FROM leave_policy_entitlements lpe
+    WHERE lpe.leave_type_id = ${sequelize.escape(leaveTypeId)}
+      AND lpe.deleted_at IS NULL
+  `);
+  return result && result[0] ? Number(result[0].policyCount) : 0;
+}
+
+/**
  * Count how many policies use this leave code.
  */
 export async function countPoliciesUsingLeaveCode(code) {
   const [result] = await sequelize.query(`
     SELECT COUNT(DISTINCT lpe.policy_id) AS policyCount
     FROM leave_policy_entitlements lpe
-    WHERE lpe.leave_code = ${sequelize.escape(code)}
+    JOIN leave_types lt ON lt.id = lpe.leave_type_id
+    WHERE lt.code = ${sequelize.escape(code)}
       AND lpe.deleted_at IS NULL
+      AND lt.deleted_at IS NULL
   `);
   return result && result[0] ? Number(result[0].policyCount) : 0;
 }

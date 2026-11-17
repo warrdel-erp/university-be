@@ -149,7 +149,7 @@ export async function deleteLeaveType(id, options = {}) {
   }
 
   // Check if leave type is being used in policies
-  const usedCount = await repo.countPoliciesUsingLeaveCode(existing.code);
+  const usedCount = await repo.countPoliciesUsingLeaveTypeId(existing.id);
   if (usedCount > 0 && !options.force) {
     throw new Error(
       `Cannot delete leave type '${existing.name} (${existing.code})' because it is currently used in ${usedCount} leave policy/policies. Please remove it from the policies first, or pass force=true.`
