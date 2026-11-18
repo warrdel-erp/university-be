@@ -15,6 +15,8 @@ export const AUDIT_ENABLED_TABLES = new Set([
   "exam_schedule",
   "examination_session",
   "campus",
+  "institute",
+  "affiliated_university",
 ]);
 
 export function isAuditModelExcluded(model) {

@@ -5,6 +5,12 @@ export const AUDIT_EVENTS = Object.freeze({
     CAMPUS_UPDATE:            "CAMPUS_UPDATE",
     CAMPUS_DELETE:            "CAMPUS_DELETE",
 
+    // ─── Institute ──────────────────────────────────────────────────────
+    INSTITUTE_CREATE:         "INSTITUTE_CREATE",
+    INSTITUTE_UPDATE:         "INSTITUTE_UPDATE",
+    INSTITUTE_DELETE:         "INSTITUTE_DELETE",
+    AFFILIATED_UNIVERSITY_UPDATE: "AFFILIATED_UNIVERSITY_UPDATE",
+
     // ─── Student ──────────────────────────────────────────────────────
     STUDENT_CREATE:           "STUDENT_CREATE",
     STUDENT_UPDATE:           "STUDENT_UPDATE",
