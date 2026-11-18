@@ -47,7 +47,7 @@ export async function createLeaveType(data, user = {}) {
     name: name.trim(),
     code: cleanCode,
     classification: classification || "Paid",
-    status: status || "Active",
+    status: status || "Draft",
     trackBalance: data.trackBalance !== undefined ? Boolean(data.trackBalance) : true,
     universityId,
     instituteId,

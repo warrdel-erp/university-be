@@ -59,7 +59,7 @@ const leaveTypeModel = sequelize.define(
     },
     status: {
       type: DataTypes.ENUM("Active", "Inactive", "Draft", "Published"),
-      defaultValue: "Active",
+      defaultValue: "Draft",
       field: "status",
     },
     createdBy: {

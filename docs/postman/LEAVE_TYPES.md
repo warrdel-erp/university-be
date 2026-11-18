@@ -141,9 +141,9 @@ Returns the complete configuration of a single leave type across all 4 sections.
 
 ---
 
-## 3. Create Leave Type (Publish / Active)
+## 3. Create Leave Type (Default: Draft)
 
-Creates a Leave Type along with its Eligibility, Holidays & Carry Forward, and Encashment child tables in a single transaction.
+Creates a Leave Type along with its Eligibility, Holidays & Carry Forward, and Encashment child tables in a single transaction. Defaults to `"status": "Draft"` when not provided.
 
 - **Method:** `POST`
 - **URL:** `{{base_url}}/leave-types`
@@ -157,7 +157,7 @@ Creates a Leave Type along with its Eligibility, Holidays & Carry Forward, and E
   "description": "For short-term personal needs.",
   "classification": "Paid",
   "trackBalance": true,
-  "status": "Active",
+  "status": "Draft",
   "eligibility": {
     "allowDuringProbation": true,
     "minServiceRequirement": false,
