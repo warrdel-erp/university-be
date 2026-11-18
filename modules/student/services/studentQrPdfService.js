@@ -100,8 +100,8 @@ async function appendStudentQrPage(pdfDoc, student, fonts) {
   // 4. Student Details Box
   const cardX = 50;
   const cardWidth = width - 100;
-  const cardHeight = 250;
-  const cardY = qrY - cardHeight - 25;
+  const cardHeight = 220;
+  const cardY = qrY - cardHeight - 35;
 
   page.drawRectangle({
     x: cardX,
@@ -174,12 +174,11 @@ async function appendStudentQrPage(pdfDoc, student, fonts) {
   drawField("PROGRAM", student.course?.courseName || "N/A", col1X, cardY + cardHeight - 140);
   drawField("TERM", termStr, col2X, cardY + cardHeight - 140);
 
-  // Row 3: Active Section & UUID
+  // Row 3: Active Section
   const sectionStr = student.studentClassSectionTerm?.classSection?.section
     ? `Section ${student.studentClassSectionTerm.classSection.section}`
     : "N/A";
   drawField("CURRENT SECTION", sectionStr, col1X, cardY + cardHeight - 185);
-  drawField("STUDENT UUID", student.uuid || "N/A", col2X, cardY + cardHeight - 185);
 
   // 5. Page footer
   const footerText = "Scan this QR code using an authorized scanner to verify student credentials.";
