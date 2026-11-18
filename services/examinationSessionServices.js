@@ -3713,7 +3713,7 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     hallTickets: {
       total: hallTicketStats.students,
       totalExamSchedules: totalExamSchedule,
-      totalHallTicketGenerated: hallTicketStats.hallTicketsGenerated,
+      totalHallTicketGenerated: hallTicketStats.hallTicketsPublished,
     },
     bundles: {
       total: totalBundles,

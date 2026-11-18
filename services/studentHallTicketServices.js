@@ -608,21 +608,17 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
   return await sequelize.transaction(async (transaction) => {
     let targets = null;
     if (studentIds && studentIds.length > 0) {
-      const membership =
-        await studentHallTicketRepository.getStudentsByExaminationSessionId(
+      const generatedCountForTargets = await studentHallTicketRepository.countHallTickets(
+        {
           examinationSessionId,
-          {
-            studentId: studentIds,
-            page: 1,
-            limit: 1,
-            purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.SUMMARY,
-          },
-          transaction,
-        );
+          studentId: studentIds,
+        },
+        transaction,
+      );
 
-      if (membership.total !== studentIds.length) {
+      if (generatedCountForTargets === 0) {
         const error = new Error(
-          `One or more students are not associated with examination session ${examinationSessionId}`,
+          "No generated hall tickets found for the specified student(s). Please generate them first.",
         );
         error.statusCode = 400;
         throw error;
