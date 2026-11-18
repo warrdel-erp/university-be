@@ -2656,6 +2656,47 @@ export async function getStudentsForQrPdf(filters = {}) {
     return rows.map((r) => r.get({ plain: true }));
 }
 
+export async function getStudentByUuid(uuid) {
+    if (!uuid) return null;
+
+    const student = await scoped(model.studentModel).findOne({
+        where: { uuid },
+        attributes: {
+            exclude: ['createdAt', 'updatedAt', 'deletedAt'],
+        },
+        include: [
+            {
+                model: model.courseModel,
+                as: 'course',
+                attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.batchModel,
+                as: 'batch',
+                attributes: ['batchId', 'batch'],
+            },
+            {
+                model: model.instituteModel,
+                as: 'institute',
+                attributes: ['instituteId', 'instituteName'],
+            },
+            {
+                model: model.campusModel,
+                as: 'campus',
+                attributes: ['campusId', 'campusName'],
+            },
+            studentClassSectionTermWithSectionInclude({
+                includeSectionTerms: false,
+                sectionAttributes: ['classSectionsId', 'section', 'year'],
+            }),
+        ],
+    });
+
+    if (!student) return null;
+    return student.get({ plain: true });
+}
+
+
 
 
 

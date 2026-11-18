@@ -26,6 +26,7 @@ import {
   getAllAnswerSheets,
   downloadStudentsQrPdf,
   getStudentProfileQr,
+  getStudentByUuid,
 } from "../controllers/studentController.js";
 import { checkAccess } from "../../../middleware/checkAccess.js";
 import { PERMISSIONS } from "../../../const/permissions.js";
@@ -701,6 +702,18 @@ router.get(
   "/qr-pdf",
   userAuth,
   downloadStudentsQrPdf
+);
+
+router.get(
+  "/by-uuid/:uuid",
+  userAuth,
+  getStudentByUuid
+);
+
+router.get(
+  "/uuid/:uuid",
+  userAuth,
+  getStudentByUuid
 );
 
 router.get(

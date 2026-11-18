@@ -262,3 +262,40 @@ export async function getStudentProfileQrCode(studentId) {
     qrCode: qrCodeBase64,
   };
 }
+
+/**
+ * Fetch full student details using their UUID (scanned from QR code).
+ * @param {string} uuid
+ * @returns {Promise<object>}
+ */
+export async function getStudentDetailsByUuid(uuid) {
+  if (!uuid || typeof uuid !== "string" || uuid.trim() === "") {
+    const error = new Error("Valid UUID is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const student = await studentRepository.getStudentByUuid(uuid.trim());
+  if (!student) {
+    const error = new Error(`Student not found with UUID: ${uuid}`);
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const fullName = [student.firstName, student.middleName, student.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  return {
+    ...student,
+    fullName,
+    programName: student.course?.courseName || null,
+    batchName: student.batch?.batch || null,
+    term: student.studentClassSectionTerm?.term || null,
+    currentSection: student.studentClassSectionTerm?.classSection?.section || null,
+    instituteName: student.institute?.instituteName || null,
+    campusName: student.campus?.campusName || null,
+  };
+}
+

@@ -685,6 +685,21 @@ export const downloadStudentsQrPdf = async (req, res) => {
   }
 };
 
+export const getStudentByUuid = async (req, res) => {
+  try {
+    const { uuid } = req.params;
+    const result = await studentQrPdfService.getStudentDetailsByUuid(uuid);
+    return SuccessResponse(res, 200, "Student details fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching student details by UUID:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch student details"
+    );
+  }
+};
+
 export const getStudentProfileQr = async (req, res) => {
   try {
     const studentId = req.params.studentId ?? req.query.studentId;
