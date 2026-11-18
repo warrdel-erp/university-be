@@ -109,38 +109,39 @@ Creates main policy + multiple entitlements (CL, SL, EL) + role assignments in a
   "effectiveFrom": "2026-07-01",
   "effectiveTo": null,
   "status": "Published",
-  "leaveEntitlements": [
+  "entitlements": [
     {
-      "leaveType": "Casual Leave (CL)",
-      "leaveCode": "CL",
-      "entitlementAnnual": 12,
-      "creditMethod": "Monthly",
-      "carryForward": true,
-      "maxCarryForwardDays": 6,
-      "maximumConsecutiveDays": 3,
-      "keyRules": ["Probation", "Notice", "Half-day"],
-      "status": "Configured"
+      "leaveTypeId": 1,
+      "customLeaveName": "Casual Leave (CL)",
+      "annualEntitlement": 12,
+      "entitlementUnit": "Days",
+      "distributionFrequency": "Monthly",
+      "distributionMethod": "Frontloaded",
+      "onJoiningRule": "Prorate from joining month",
+      "onSeparationRule": "Encash remaining balance",
+      "roundingRule": "Nearest 0.5"
     },
     {
-      "leaveType": "Sick Leave (SL)",
-      "leaveCode": "SL",
-      "entitlementAnnual": 10,
-      "creditMethod": "Monthly",
-      "carryForward": true,
-      "maxCarryForwardDays": 10,
-      "maximumConsecutiveDays": 5,
-      "keyRules": ["Notice", "Document Required", "Max Limit"],
-      "status": "Configured"
+      "leaveTypeId": 2,
+      "customLeaveName": "Sick Leave (SL)",
+      "annualEntitlement": 10,
+      "entitlementUnit": "Days",
+      "distributionFrequency": "Monthly",
+      "distributionMethod": "Start of Period",
+      "onJoiningRule": "Full allocation if joined before 15th",
+      "onSeparationRule": "Lapse on exit",
+      "roundingRule": "Round down"
     },
     {
-      "leaveType": "Earned Leave (EL)",
-      "leaveCode": "EL",
-      "entitlementAnnual": 15,
-      "creditMethod": "Monthly",
-      "carryForward": true,
-      "maxCarryForwardDays": 30,
-      "keyRules": ["Encashment", "Carry Forward", "Min/Max"],
-      "status": "Configured"
+      "leaveTypeId": 3,
+      "customLeaveName": "Earned Leave (EL)",
+      "annualEntitlement": 15,
+      "entitlementUnit": "Days",
+      "distributionFrequency": "Yearly",
+      "distributionMethod": "Accrued",
+      "onJoiningRule": "Prorate",
+      "onSeparationRule": "Encash up to 30 days",
+      "roundingRule": "Exact"
     }
   ],
   "roleAssignments": [
@@ -190,11 +191,27 @@ Fetches policies assigned to a role. Automatically applies hybrid filter (assign
 - **URL:** `{{base_url}}/leave-policies`
 - **Headers:** `Content-Type: application/json`, `Cookie: accessToken={{token}}`
 
+Updates master policy fields and optionally synchronizes child `entitlements` and `roleAssignments`.
+
 ```json
 {
   "policyId": 1,
   "policyName": "Updated Teaching Staff Leave Policy",
-  "status": "Published"
+  "status": "Published",
+  "description": "Updated description with revised entitlements",
+  "entitlements": [
+    {
+      "leaveTypeId": 1,
+      "customLeaveName": "Casual Leave (CL)",
+      "annualEntitlement": 14.5,
+      "entitlementUnit": "Days",
+      "distributionFrequency": "Monthly",
+      "distributionMethod": "Frontloaded",
+      "onJoiningRule": "Prorate",
+      "onSeparationRule": "Encash remaining balance",
+      "roundingRule": "Nearest 0.5"
+    }
+  ]
 }
 ```
 

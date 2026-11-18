@@ -5,11 +5,11 @@ import leavePolicyModel from "./leavePolicyModel.js";
 const leavePolicyEntitlementModel = sequelize.define(
   "leave_policy_entitlements",
   {
-    entitlementId: {
+    id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true,
-      field: "entitlement_id",
+      field: "id",
     },
     policyId: {
       type: DataTypes.INTEGER,
@@ -20,55 +20,51 @@ const leavePolicyEntitlementModel = sequelize.define(
         key: "policy_id",
       },
     },
-    leaveType: {
+    leaveTypeId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: "leave_type_id",
+    },
+    customLeaveName: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      field: "leave_type",
+      field: "custom_leave_name",
     },
-    leaveCode: {
+    annualEntitlement: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: false,
+      field: "annual_entitlement",
+    },
+    entitlementUnit: {
       type: DataTypes.STRING(20),
-      allowNull: false,
-      field: "leave_code",
-    },
-    entitlementAnnual: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-      field: "entitlement_annual",
-    },
-    creditMethod: {
-      type: DataTypes.ENUM("Monthly", "Yearly", "Quarterly"),
-      allowNull: false,
-      defaultValue: "Monthly",
-      field: "credit_method",
-    },
-    carryForward: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      field: "carry_forward",
-    },
-    maxCarryForwardDays: {
-      type: DataTypes.INTEGER,
       allowNull: true,
-      defaultValue: 0,
-      field: "max_carry_forward_days",
+      defaultValue: "Days",
+      field: "entitlement_unit",
     },
-    maximumConsecutiveDays: {
-      type: DataTypes.INTEGER,
+    onJoiningRule: {
+      type: DataTypes.STRING(100),
       allowNull: true,
-      field: "maximum_consecutive_days",
+      field: "on_joining_rule",
     },
-    keyRules: {
-      type: DataTypes.JSON,
+    onSeparationRule: {
+      type: DataTypes.STRING(100),
       allowNull: true,
-      field: "key_rules",
+      field: "on_separation_rule",
     },
-    status: {
+    roundingRule: {
       type: DataTypes.STRING(50),
-      allowNull: false,
-      defaultValue: "Configured",
-      field: "status",
+      allowNull: true,
+      field: "rounding_rule",
+    },
+    distributionFrequency: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: "distribution_frequency",
+    },
+    distributionMethod: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      field: "distribution_method",
     },
     createdAt: {
       type: DataTypes.DATE,
@@ -98,4 +94,3 @@ const leavePolicyEntitlementModel = sequelize.define(
 leavePolicyEntitlementModel.scopeConfig = { university: false, institute: false, academicYear: false };
 
 export default leavePolicyEntitlementModel;
-

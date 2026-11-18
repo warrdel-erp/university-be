@@ -56,6 +56,12 @@ const assessmentPlanSubjectMappingModel = sequelize.define(
                 key: 'id'
             }
         },
+        isFrozen: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false,
+            field: 'is_frozen'
+        },
         universityId: {
             type: DataTypes.INTEGER,
             allowNull: false,
