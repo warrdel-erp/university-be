@@ -12,7 +12,7 @@ export async function addPolicy(req, res) {
   const entitlements = data.entitlements || data.leaveEntitlements;
   if (!data.totalLeavesPerYear && Array.isArray(entitlements) && entitlements.length > 0) {
     data.totalLeavesPerYear = entitlements.reduce(
-      (sum, e) => sum + (Number(e.entitlementAnnual) || 0),
+      (sum, e) => sum + (Number(e.annualEntitlement ?? e.annual_entitlement ?? e.entitlementAnnual) || 0),
       0
     );
   }
@@ -35,8 +35,8 @@ export async function getAllPolicies(req, res) {
     const roleId = viewAll
       ? null
       : req.query.roleId
-      ? parseInt(req.query.roleId, 10)
-      : req.user?.defaultRoleId || req.user?.dataValues?.defaultRoleId;
+        ? parseInt(req.query.roleId, 10)
+        : req.user?.defaultRoleId || req.user?.dataValues?.defaultRoleId;
 
     const userId = req.query.userId
       ? parseInt(req.query.userId, 10)
@@ -87,7 +87,7 @@ export async function getPolicyById(req, res) {
 
 export async function updatePolicy(req, res) {
   try {
-    const { policyId } = req.body;
+    const policyId = req.body.policyId || req.query.policyId || req.params.policyId;
     if (!policyId) return res.status(400).json({ message: "policyId is required" });
 
     await service.updatePolicy(policyId, req.body);
@@ -99,7 +99,7 @@ export async function updatePolicy(req, res) {
 
 export async function deletePolicy(req, res) {
   try {
-    const { policyId } = req.query;
+    const policyId = req.query.policyId || req.body.policyId || req.params.policyId;
     if (!policyId) return res.status(400).json({ message: "policyId is required" });
 
     const deleted = await service.deletePolicy(policyId);
@@ -116,8 +116,16 @@ export async function deletePolicy(req, res) {
  */
 export async function getRolesSummary(req, res) {
   try {
-    const instituteId = req.user?.defaultInstituteId || req.user?.dataValues?.defaultInstituteId;
-    const universityId = req.user?.universityId || req.user?.dataValues?.universityId;
+    const instituteId =
+      req.query.instituteId ||
+      req.user?.defaultInstituteId ||
+      req.user?.dataValues?.defaultInstituteId ||
+      req.headers["x-institute-id"];
+    const universityId =
+      req.query.universityId ||
+      req.user?.universityId ||
+      req.user?.dataValues?.universityId ||
+      req.headers["x-university-id"];
 
     const summary = await service.getRolesSummary({
       instituteId,
@@ -137,8 +145,16 @@ export async function getRoleEmployees(req, res) {
     const { roleId } = req.params;
     if (!roleId) return res.status(400).json({ message: "roleId is required" });
 
-    const instituteId = req.user?.defaultInstituteId || req.user?.dataValues?.defaultInstituteId;
-    const universityId = req.user?.universityId || req.user?.dataValues?.universityId;
+    const instituteId =
+      req.query.instituteId ||
+      req.user?.defaultInstituteId ||
+      req.user?.dataValues?.defaultInstituteId ||
+      req.headers["x-institute-id"];
+    const universityId =
+      req.query.universityId ||
+      req.user?.universityId ||
+      req.user?.dataValues?.universityId ||
+      req.headers["x-university-id"];
 
     const result = await service.getRoleEmployees(roleId, {
       ...req.query,

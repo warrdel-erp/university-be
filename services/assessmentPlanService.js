@@ -228,10 +228,12 @@ function mapAssessmentPlanMapping(mapping) {
     batchId: plain.batchId,
     curriculumSubjectTermMappingId: plain.curriculumSubjectTermMappingId,
     subjectId: plain.subjectId,
+    isFrozen: Boolean(plain.isFrozen),
     assessmentPlan: plan
       ? {
           assessmentPlanId: plan.assessmentPlanId,
           planName: plan.planName,
+          status: plan.status || null,
           regulationId: plan.regulationId || null,
           academicRegulation: formatAcademicRegulationDetails(
             plan.academicRegulation,
@@ -341,6 +343,24 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
   const regMapping = batch?.regulationBatchMappings?.[0] || null;
   const reg = regMapping?.academicRegulation || null;
 
+  let allFrozen = subjects.length > 0;
+  let hasAnyMapping = false;
+  for (const s of subjects) {
+    if (!s.assessmentPlanMappings || s.assessmentPlanMappings.length === 0) {
+      allFrozen = false;
+    } else {
+      hasAnyMapping = true;
+      for (const m of s.assessmentPlanMappings) {
+        if (!m.isFrozen) {
+          allFrozen = false;
+        }
+      }
+    }
+  }
+
+  const isFrozen = hasAnyMapping && allFrozen;
+  const publishStatus = isFrozen ? "Published" : "Draft";
+
   return {
     curriculumBatchMappingId: batchMapping.curriculumBatchMappingId,
     curriculumId: curriculum.curriculumId,
@@ -348,6 +368,8 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
     batch: batchYear,
     batchEndYear,
     batchName: buildBatchName(batchYear, batchEndYear),
+    publishStatus,
+    isFrozen,
     academicRegulationId: reg?.academicRegulationId || null,
     academicRegulation: formatAcademicRegulationDetails(reg),
     sessionId: batch?.sessionId || null,
@@ -401,6 +423,7 @@ function collectBatchIds(sessions) {
 
 function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
   const assignedByBatch = new Map();
+  const mappingsByBatch = new Map();
   for (const row of assignedRows) {
     let subjectSet = assignedByBatch.get(row.batchId);
     if (!subjectSet) {
@@ -408,6 +431,13 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
       assignedByBatch.set(row.batchId, subjectSet);
     }
     subjectSet.add(row.subjectId);
+
+    let mappingList = mappingsByBatch.get(row.batchId);
+    if (!mappingList) {
+      mappingList = [];
+      mappingsByBatch.set(row.batchId, mappingList);
+    }
+    mappingList.push(row);
   }
 
   const result = [];
@@ -482,12 +512,24 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
         activeCalendarYear: activeBatchYear,
       });
 
+      const batchMappings = mappingsByBatch.get(batch.batchId) || [];
+      const hasAssignments =
+        subjectIds.length > 0 &&
+        decimalGreaterThanOrEqual(assignedSubjects, subjectIds.length);
+      const isBatchFrozen =
+        hasAssignments &&
+        batchMappings.length > 0 &&
+        batchMappings.every((m) => Boolean(m.isFrozen));
+      const publishStatus = isBatchFrozen ? "Published" : "Draft";
+
       nest.batches.push({
         batchId: batch.batchId,
         batch: batchYear,
         batchEndYear,
         batchName: buildBatchName(batchYear, batchEndYear),
         status: batch.status,
+        publishStatus,
+        isFrozen: isBatchFrozen,
         intakeCapacity: batch.intakeCapacity ?? null,
         classSections: batch.classSections || [],
         curriculumBatchMappingId,
@@ -860,10 +902,8 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       throw error;
     }
 
-    if (plan.status !== "Published" || !plan.isActive) {
-      const error = new Error(
-        "Cannot map an assessment plan in Draft status. Plan must be Published.",
-      );
+    if (!plan.isActive) {
+      const error = new Error("Cannot map an inactive assessment plan.");
       error.statusCode = 400;
       throw error;
     }
@@ -924,7 +964,6 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
         curriculumSubjectTermMappingId: Number(
           payload.curriculumSubjectTermMappingId,
         ),
-        assessmentPlanId: Number(payload.assessmentPlanId),
         universityId,
         instituteId,
       },
@@ -938,6 +977,7 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
         payload.curriculumSubjectTermMappingId,
       ),
       subjectId: Number(payload.subjectId || cstmRecord.subjectId),
+      isFrozen: false,
       universityId,
       instituteId,
       createdBy: user?.userId || null,
@@ -948,13 +988,58 @@ export async function createAssessmentPlanSubjectMapping({ payload, user }) {
       if (existingMapping.deletedAt) {
         await existingMapping.restore({ transaction: t });
         await existingMapping.update(data, { transaction: t });
-        return existingMapping;
+        return await assessmentPlanRepo.reloadSubjectMapping(
+          existingMapping.assessmentPlanSubjectMappingId,
+          { transaction: t },
+        );
       }
-      const error = new Error(
-        "Subject is already mapped to this assessment plan for this batch",
+
+      if (
+        Number(existingMapping.assessmentPlanId) ===
+        Number(payload.assessmentPlanId)
+      ) {
+        return await assessmentPlanRepo.reloadSubjectMapping(
+          existingMapping.assessmentPlanSubjectMappingId,
+          { transaction: t },
+        );
+      }
+
+      // Reassigning to a different plan:
+      // Check if existing mapping is frozen
+      if (existingMapping.isFrozen) {
+        const blockingSchedule =
+          await assessmentPlanRepo.findBlockingExamScheduleForSubjectMapping(
+            existingMapping,
+            { transaction: t },
+          );
+        if (blockingSchedule) {
+          const error = new Error(
+            "Cannot change assessment plan because an examination schedule already exists for this subject.",
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+
+        const error = new Error(
+          "Assessment plan assignment for this subject is frozen. Unfreeze to change the applied plan.",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      await existingMapping.update(
+        {
+          assessmentPlanId: Number(payload.assessmentPlanId),
+          subjectId: Number(payload.subjectId || cstmRecord.subjectId),
+          updatedBy: user?.userId || null,
+        },
+        { transaction: t },
       );
-      error.statusCode = 409;
-      throw error;
+
+      return await assessmentPlanRepo.reloadSubjectMapping(
+        existingMapping.assessmentPlanSubjectMappingId,
+        { transaction: t },
+      );
     }
 
     return await assessmentPlanRepo.createAssessmentPlanSubjectMapping(data, {
@@ -976,6 +1061,14 @@ export async function deleteAssessmentPlanSubjectMapping(mappingId) {
     if (!mapping) {
       const error = new Error("Subject assessment plan mapping not found");
       error.statusCode = 404;
+      throw error;
+    }
+
+    if (mapping.isFrozen) {
+      const error = new Error(
+        "Cannot unmap subject because assessment plan choices for this batch are frozen. Revert to draft/unfreeze first.",
+      );
+      error.statusCode = 400;
       throw error;
     }
 
@@ -1040,5 +1133,169 @@ export async function getMappedAssessmentTypes(queryParams = {}) {
     term: parsePositiveId(term),
     subjectId: parsePositiveId(subjectId),
     search: search ? String(search).trim() : undefined,
+  });
+}
+
+export async function publishBatchAssessmentPlans({ batchId, user }) {
+  const parsedBatchId = parsePositiveId(batchId);
+  if (!parsedBatchId) {
+    const error = new Error("batchId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return await sequelize.transaction(async (t) => {
+    const batch = await assessmentPlanRepo.findBatchForMapping(parsedBatchId, {
+      transaction: t,
+    });
+    if (!batch) {
+      const error = new Error(`Batch (ID: ${parsedBatchId}) does not exist`);
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const mappings =
+      await assessmentPlanRepo.findBatchSubjectMappingsWithPlans(
+        parsedBatchId,
+        { transaction: t },
+      );
+
+    if (!mappings || mappings.length === 0) {
+      const error = new Error(
+        "No assessment plans have been assigned to subjects for this batch yet. Assign plans before publishing.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const planMap = new Map();
+    for (const m of mappings) {
+      if (m.assessmentPlan) {
+        planMap.set(m.assessmentPlan.assessmentPlanId, m.assessmentPlan);
+      }
+    }
+
+    if (planMap.size === 0) {
+      const error = new Error("No valid assessment plans found for this batch.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Validate each plan: must have components and total weightage == 100
+    for (const [planId, plan] of planMap.entries()) {
+      const components = plan.components || [];
+      if (components.length === 0) {
+        const error = new Error(
+          `Assessment plan "${plan.planName}" (ID: ${planId}) has no components defined. Total weightage must be 100%.`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      let totalWeightage = 0;
+      for (const comp of components) {
+        totalWeightage = decimalAdd(
+          totalWeightage,
+          comp.weightagePercentage || 0,
+        );
+      }
+
+      if (decimalCompare(totalWeightage, 100) !== 0) {
+        const error = new Error(
+          `Assessment plan "${plan.planName}" total weightage must be 100% (currently ${totalWeightage}%).`,
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    // 1. Freeze all subject mappings for this batch
+    await assessmentPlanRepo.freezeSubjectMappingsByBatchId(
+      parsedBatchId,
+      user?.userId || null,
+      { transaction: t },
+    );
+
+    // 2. Publish the mapped plans
+    const planIds = Array.from(planMap.keys());
+    await assessmentPlanRepo.publishAssessmentPlansByIds(
+      planIds,
+      user?.userId || null,
+      { transaction: t },
+    );
+
+    return {
+      message: "Assessment plans published and choices frozen successfully",
+      batchId: parsedBatchId,
+      publishedPlansCount: planIds.length,
+      assignedSubjectsCount: mappings.length,
+      isFrozen: true,
+      publishStatus: "Published",
+    };
+  });
+}
+
+export async function unfreezeBatchAssessmentPlans({ batchId, user }) {
+  const parsedBatchId = parsePositiveId(batchId);
+  if (!parsedBatchId) {
+    const error = new Error("batchId is required");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return await sequelize.transaction(async (t) => {
+    const blocking = await assessmentPlanRepo.findBlockingExamScheduleForBatch(
+      parsedBatchId,
+      { transaction: t },
+    );
+    if (blocking) {
+      const error = new Error(
+        "Cannot unfreeze assessment plans because an examination schedule already exists for this batch.",
+      );
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const mappings =
+      await assessmentPlanRepo.findBatchSubjectMappingsWithPlans(
+        parsedBatchId,
+        { transaction: t },
+      );
+    if (!mappings || mappings.length === 0) {
+      const error = new Error("No assessment plans found for this batch.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const planIds = Array.from(
+      new Set(
+        mappings
+          .filter((m) => m.assessmentPlanId)
+          .map((m) => m.assessmentPlanId),
+      ),
+    );
+
+    // 1. Unfreeze all subject mappings for this batch
+    await assessmentPlanRepo.unfreezeSubjectMappingsByBatchId(
+      parsedBatchId,
+      user?.userId || null,
+      { transaction: t },
+    );
+
+    // 2. Revert mapped plans to draft
+    if (planIds.length > 0) {
+      await assessmentPlanRepo.unfreezeAssessmentPlansByIds(
+        planIds,
+        user?.userId || null,
+        { transaction: t },
+      );
+    }
+
+    return {
+      message: "Assessment plans reverted to draft successfully",
+      batchId: parsedBatchId,
+      isFrozen: false,
+      publishStatus: "Draft",
+    };
   });
 }

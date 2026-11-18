@@ -28,9 +28,10 @@
 GET /assessmentPlan/batchCoursesSessions?courseId=34
         ↓ pick courseId + sessionId + curriculumBatchMappingId from batches[]
 GET /assessmentPlan/overview?curriculumBatchMappingId=2
-        ↓ assign plans (Publish plan first)
-POST /assessmentPlan
+        ↓ assign plans to subjects in Draft mode (can freely change/re-assign plans)
 POST /assessmentPlan/subjectMapping
+        ↓ when all choices are final, click Final Publish button to freeze choices
+POST /assessmentPlan/batch/:batchId/publish
         ↓ then create exam session term
 POST /examinationSession/term
 ```
@@ -192,17 +193,31 @@ Same fields as create (partial). Cannot change `sessionId` / `academicYearId` vi
   "sessionId": 20
 }
 ```
-Plan must be **Published**. Mapping stores `sessionId`; plan does not.
+Draft plans can be mapped directly. If a subject is already mapped, calling this endpoint with a new `assessmentPlanId` will re-assign/update the applied plan (while in Draft).
 
 #### `GET /assessmentPlan/subjectMapping`
 Query: `assessmentPlanId`, `subjectId`, `courseId`, `sessionId`, `academicYearId`, `page`, `limit`
 
 #### `DELETE /assessmentPlan/subjectMapping/:mappingId`
+Allowed only while batch assessment plans are in Draft.
 
-### 1.7 Migration
+### 1.7 Batch Publish & Freeze APIs
 
-`migrations/20260910213000-remove-session-id-from-assessment-plan.cjs`  
-Drops `assessment_plan.session_id` (FK + indexes).
+#### `POST /assessmentPlan/batch/:batchId/publish`
+Finalizes and freezes all assessment plan choices for the batch.
+- Validates that mapped plans have components totaling 100% weightage.
+- Updates all mapped plans for the batch to `status = 'Published'`.
+- Locks subject mappings from further changes or deletions.
+
+#### `POST /assessmentPlan/batch/:batchId/unfreeze`
+Reverts all mapped assessment plans for the batch back to `Draft` and sets `is_frozen = false` (allowed only if no exam schedules exist for the batch).
+
+### 1.8 Migration
+
+- `migrations/20261117202500-add-is-frozen-to-assessment-plan-subject-mapping.cjs`  
+  Adds `is_frozen` (boolean, default `false`) to `assessment_plan_subject_mapping`.
+- `migrations/20260910213000-remove-session-id-from-assessment-plan.cjs`  
+  Drops `assessment_plan.session_id` (FK + indexes).
 
 ```bash
 npm run migrate
