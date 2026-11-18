@@ -257,7 +257,7 @@ function resolveSubjectYearStatus(termYear, activeBatchYear) {
 }
 
 /** Flat subject list; term + course live on each subject. */
-function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
+function buildOverviewSubjects(batchMapping, rows, activeBatchYear, batchMappings = null) {
   const curriculum = batchMapping.curriculum;
   const course = curriculum.course;
   const batch = batchMapping.batch;
@@ -343,23 +343,32 @@ function buildOverviewSubjects(batchMapping, rows, activeBatchYear) {
   const regMapping = batch?.regulationBatchMappings?.[0] || null;
   const reg = regMapping?.academicRegulation || null;
 
-  let allFrozen = subjects.length > 0;
-  let hasAnyMapping = false;
-  for (const s of subjects) {
-    if (!s.assessmentPlanMappings || s.assessmentPlanMappings.length === 0) {
-      allFrozen = false;
-    } else {
-      hasAnyMapping = true;
-      for (const m of s.assessmentPlanMappings) {
-        if (!m.isFrozen) {
-          allFrozen = false;
+  let isFrozen = false;
+  let publishStatus = "Draft";
+
+  if (Array.isArray(batchMappings)) {
+    const hasMappings = batchMappings.length > 0;
+    isFrozen = hasMappings && batchMappings.every((m) => Boolean(m.isFrozen));
+    publishStatus = isFrozen ? "Published" : "Draft";
+  } else {
+    let allFrozen = subjects.length > 0;
+    let hasAnyMapping = false;
+    for (const s of subjects) {
+      if (!s.assessmentPlanMappings || s.assessmentPlanMappings.length === 0) {
+        allFrozen = false;
+      } else {
+        hasAnyMapping = true;
+        for (const m of s.assessmentPlanMappings) {
+          if (!m.isFrozen) {
+            allFrozen = false;
+          }
         }
       }
     }
-  }
 
-  const isFrozen = hasAnyMapping && allFrozen;
-  const publishStatus = isFrozen ? "Published" : "Draft";
+    isFrozen = hasAnyMapping && allFrozen;
+    publishStatus = isFrozen ? "Published" : "Draft";
+  }
 
   return {
     curriculumBatchMappingId: batchMapping.curriculumBatchMappingId,
@@ -517,7 +526,6 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
         subjectIds.length > 0 &&
         decimalGreaterThanOrEqual(assignedSubjects, subjectIds.length);
       const isBatchFrozen =
-        hasAssignments &&
         batchMappings.length > 0 &&
         batchMappings.every((m) => Boolean(m.isFrozen));
       const publishStatus = isBatchFrozen ? "Published" : "Draft";
@@ -836,10 +844,16 @@ export async function getCourseAssessmentPlanOverview(queryParams = {}) {
     err.statusCode = 404;
     throw err;
   }
+  const effectiveBatchId = result.batchMapping?.batchId || parsedBatchId;
+  const batchMappings = effectiveBatchId
+    ? await assessmentPlanRepo.findAssignedSubjectMappings([effectiveBatchId])
+    : [];
+
   const overview = buildOverviewSubjects(
     result.batchMapping,
     result.rows,
     activeBatchYear,
+    batchMappings,
   );
 
   return {
