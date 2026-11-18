@@ -1,4 +1,5 @@
 import * as studentService from "../services/studentService.js";
+import * as studentQrPdfService from "../services/studentQrPdfService.js";
 import * as fileHandler from "../../../utility/fileHandler.js";
 import { SuccessResponse, ErrorResponse } from "../../../utility/response.js";
 import { getAcademicYearId } from "../../../utility/requestContext.js";
@@ -653,3 +654,49 @@ export const getAllAnswerSheets = async (req, res) => {
     });
   }
 };
+
+export const downloadStudentsQrPdf = async (req, res) => {
+  try {
+    const filters = {
+      studentId: req.query.studentId,
+      studentIds: req.query.studentIds,
+      courseId: req.query.courseId,
+      batchId: req.query.batchId,
+      classSectionTermId: req.query.classSectionTermId,
+      limit: req.query.limit,
+    };
+
+    const { pdfBuffer, count } = await studentQrPdfService.generateStudentsQrPdf(filters);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="students_qr_pass_${Date.now()}.pdf"`
+    );
+    res.setHeader("Content-Length", pdfBuffer.length);
+    return res.end(pdfBuffer);
+  } catch (error) {
+    console.error("Error generating students QR PDF:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to generate students QR PDF"
+    );
+  }
+};
+
+export const getStudentProfileQr = async (req, res) => {
+  try {
+    const studentId = req.params.studentId ?? req.query.studentId;
+    const result = await studentQrPdfService.getStudentProfileQrCode(studentId);
+    return SuccessResponse(res, 200, "Student QR fetched successfully", result);
+  } catch (error) {
+    console.error("Error fetching student profile QR:", error);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to fetch student QR"
+    );
+  }
+};
+

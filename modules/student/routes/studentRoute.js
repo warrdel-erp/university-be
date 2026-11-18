@@ -24,6 +24,8 @@ import {
   getMyStudentsByClassSection,
   getStudentsByElectiveSubject,
   getAllAnswerSheets,
+  downloadStudentsQrPdf,
+  getStudentProfileQr,
 } from "../controllers/studentController.js";
 import { checkAccess } from "../../../middleware/checkAccess.js";
 import { PERMISSIONS } from "../../../const/permissions.js";
@@ -695,6 +697,18 @@ router.get(
   validate({ query: getAllAnswerSheetsQuerySchema }),
   getAllAnswerSheets,
 );
+router.get(
+  "/qr-pdf",
+  userAuth,
+  downloadStudentsQrPdf
+);
+
+router.get(
+  "/:studentId/qr-code",
+  userAuth,
+  getStudentProfileQr
+);
+
 router.get(
   "/:studentId",
   userAuth,
