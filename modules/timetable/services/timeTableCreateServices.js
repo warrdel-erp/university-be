@@ -1,33 +1,32 @@
-import * as model from "../../../models/index.js";
+import { randomUUID } from "crypto";
 import { Op } from "sequelize";
-import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
-import * as academicGroupRepository from "../../student/repository/academicGroupRepository.js";
-import {
-  getTimeTableStructureById,
-  getStructureCourseMappingById,
-  getMappedStructuresForCourseSession,
-  findVariantById,
-  findDefaultVariantByStructureId,
-} from "../repository/timeTableRepository.js";
-import { getTeacherDetailsByTeacherSubjectId } from "../../hrms/repository/teacherSubjectMappingRepository.js";
-import { recomputeFaculityCurrentLoadHours } from "../../hrms/services/faculityService.js";
 import sequelize from "../../../database/sequelizeConfig.js";
-import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
-import {
-  resolveProgramTerm,
-  resolveTimeTableRoutineSection,
-  stripRoutinePersistPayload,
-} from "../../../utility/classSectionIncludes.js";
-import { findClassSectionTermById } from "../../student/repository/classSectionTermRepository.js";
+import * as model from "../../../models/index.js";
 import {
   getCourseByCourseId,
   getSessionSummaryById,
 } from "../../../repository/courseRepository.js";
+import {
+  resolveProgramTerm,
+  resolveTimeTableRoutineSection
+} from "../../../utility/classSectionIncludes.js";
 import { buildTermName, termsForYear } from "../../../utility/courseTerms.js";
 import { formatQueryDate } from "../../../utility/helper.js";
-import { randomUUID } from "crypto";
 import { getTenantStore } from "../../../utility/requestContext.js";
 import { scoped } from "../../../utility/scoped.js";
+import { getTeacherDetailsByTeacherSubjectId } from "../../hrms/repository/teacherSubjectMappingRepository.js";
+import { recomputeFaculityCurrentLoadHours } from "../../hrms/services/faculityService.js";
+import * as academicGroupRepository from "../../student/repository/academicGroupRepository.js";
+import { findClassSectionTermById } from "../../student/repository/classSectionTermRepository.js";
+import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
+import {
+  findDefaultVariantByStructureId,
+  findVariantById,
+  getMappedStructuresForCourseSession,
+  getStructureCourseMappingById,
+  getTimeTableStructureById,
+} from "../repository/timeTableRepository.js";
+import * as timeTableCreateRepository from "../repository/timeTablecreateRepository.js";
 
 const DAYS = [
   "Monday",
@@ -1482,6 +1481,20 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
     let result;
 
     if (placement.timeTableRoutineId && placement.previousDate) {
+      const prevRoutine =
+        await timeTableCreateRepository.getRoutineByIdRepository(
+          placement.timeTableRoutineId,
+          { transaction },
+        );
+      const prevPlain = prevRoutine?.get
+        ? prevRoutine.get({ plain: true })
+        : prevRoutine;
+      const oldStart = prevPlain
+        ? toDateOnlyString(prevPlain.startingDate)
+        : null;
+      const oldEnd = prevPlain ? toDateOnlyString(prevPlain.endingDate) : null;
+      const newEnd = toDateOnlyString(placement.previousDate);
+
       await timeTableCreateRepository.changeTimeTableCreate(
         placement.timeTableRoutineId,
         {
@@ -1490,6 +1503,24 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
         },
         transaction,
       );
+
+      if (
+        prevPlain?.isPublish &&
+        oldStart &&
+        oldEnd &&
+        newEnd &&
+        newEnd < oldEnd
+      ) {
+        await adjustPublishedRoutineDates(
+          placement.timeTableRoutineId,
+          oldStart,
+          oldEnd,
+          oldStart,
+          newEnd,
+          updatedBy,
+          transaction,
+        );
+      }
 
       const { timeTableRoutineId, previousDate, ...newCreateData } = placement;
 
@@ -2224,6 +2255,9 @@ export async function cloneTimeTableRoutine(
         throw error;
       }
 
+      const oldStart = toDateOnlyString(previousPlain.startingDate);
+      const oldEnd = toDateOnlyString(previousPlain.endingDate);
+
       await timeTableCreateRepository.changeTimeTableCreate(
         previousRoutineId,
         {
@@ -2232,6 +2266,23 @@ export async function cloneTimeTableRoutine(
         },
         transaction,
       );
+
+      if (
+        previousPlain.isPublish &&
+        oldStart &&
+        oldEnd &&
+        previousEnd < oldEnd
+      ) {
+        await adjustPublishedRoutineDates(
+          previousRoutineId,
+          oldStart,
+          oldEnd,
+          oldStart,
+          previousEnd,
+          updatedBy,
+          transaction,
+        );
+      }
     }
 
     const overlap =
@@ -3738,7 +3789,7 @@ export async function adjustPublishedRoutineDates(
 ) {
   const routine = await timeTableCreateRepository.getRoutineForPublishRepository(
     timeTableRoutineId,
-    { transaction },
+    { transaction, ignoreScope: true },
   );
   if (!routine) {
     throw new Error("Time table create ID not found");
@@ -3748,7 +3799,7 @@ export async function adjustPublishedRoutineDates(
 
   const cells = await timeTableCreateRepository.getRoutineCellsForPublishRepository(
     timeTableRoutineId,
-    { transaction },
+    { transaction, ignoreScope: true },
   );
   if (!cells.length) {
     return;
@@ -3778,14 +3829,24 @@ export async function adjustPublishedRoutineDates(
     mappingIds.push(Number(cells[i].timeTableCellId));
   }
 
-  // 1. Delete rows for datesToDelete
-  if (mappingIds.length > 0 && datesToDelete.length > 0) {
-    const dateWiseToDelete =
-      await timeTableCreateRepository.getDateWiseCellsByMappingsAndDates(
-        mappingIds,
-        datesToDelete,
-        transaction,
-      );
+  // 1. Delete rows outside new range (datesToDelete as well as any existing out-of-range cells)
+  if (mappingIds.length > 0) {
+    const outOfRangeConditions = [
+      { date: { [Op.lt]: newStart } },
+      { date: { [Op.gt]: newEnd } },
+    ];
+    if (datesToDelete.length > 0) {
+      outOfRangeConditions.push({ date: { [Op.in]: datesToDelete } });
+    }
+
+    const dateWiseToDelete = await model.timeTableCellDateWiseModel.findAll({
+      where: {
+        timeTableCellId: { [Op.in]: mappingIds },
+        [Op.or]: outOfRangeConditions,
+      },
+      attributes: ["timeTableCellDateWiseId"],
+      transaction,
+    });
 
     const dateWiseIdsToDelete = [];
     for (let i = 0; i < dateWiseToDelete.length; i++) {
@@ -3793,17 +3854,15 @@ export async function adjustPublishedRoutineDates(
     }
 
     if (dateWiseIdsToDelete.length > 0) {
-      await timeTableCreateRepository.deleteTeachersDateWiseByIds(
+      await timeTableCreateRepository.deleteDateWiseDependentsByIds(
         dateWiseIdsToDelete,
         transaction,
       );
+      await model.timeTableCellDateWiseModel.destroy({
+        where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIdsToDelete } },
+        transaction,
+      });
     }
-
-    await timeTableCreateRepository.deleteDateWiseCellsByMappingsAndDates(
-      mappingIds,
-      datesToDelete,
-      transaction,
-    );
   }
 
   // 2. Create rows for datesToCreate
