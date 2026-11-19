@@ -43,6 +43,15 @@ const assessmentPlanModel = sequelize.define(
                 key: 'academic_regulation_id'
             }
         },
+        academicRegulationAssesmentSchemeId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'academic_regulation_assesment_scheme_id',
+            references: {
+                model: 'academic_regulation_assesment_scheme',
+                key: 'id'
+            }
+        },
         gradingId: {
             type: DataTypes.BIGINT,
             allowNull: true,

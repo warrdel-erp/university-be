@@ -169,12 +169,31 @@ async function resolveGradingScheme({
             {
               model: model.gradingModel,
               as: "gradingScheme",
-              required: true,
+              required: false,
               include: [
                 {
                   model: model.gradingGradeModel,
                   as: "grades",
                   required: false,
+                },
+              ],
+            },
+            {
+              model: model.academicRegulationAssesmentSchemeModel,
+              as: "assessmentSchemes",
+              required: false,
+              include: [
+                {
+                  model: model.gradingModel,
+                  as: "gradingScheme",
+                  required: false,
+                  include: [
+                    {
+                      model: model.gradingGradeModel,
+                      as: "grades",
+                      required: false,
+                    },
+                  ],
                 },
               ],
             },
@@ -185,14 +204,23 @@ async function resolveGradingScheme({
       transaction,
     });
 
-    if (regMapping?.academicRegulation?.gradingScheme) {
-      const scheme = regMapping.academicRegulation.gradingScheme;
+    const reg = regMapping?.academicRegulation;
+    let scheme = null;
+    if (reg?.assessmentSchemes && reg.assessmentSchemes.length > 0) {
+      const matched = reg.assessmentSchemes.find((s) => s.gradingScheme);
+      if (matched) scheme = matched.gradingScheme;
+    }
+    if (!scheme && reg?.gradingScheme) {
+      scheme = reg.gradingScheme;
+    }
+
+    if (scheme) {
       if (Array.isArray(scheme.grades)) {
         scheme.grades.sort(
           (a, b) => (Number(a.sortOrder) || 0) - (Number(b.sortOrder) || 0),
         );
       }
-      scheme.academicRegulation = regMapping.academicRegulation;
+      scheme.academicRegulation = reg;
       return scheme;
     }
   }

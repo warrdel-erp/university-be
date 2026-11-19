@@ -1383,9 +1383,10 @@ function buildTermSubjects(assessmentPlanSubjectMappings, curriculumSubjectTermM
     }
 
     const assessmentPlan = mapping.assessmentPlan;
-    const grading = mapGradingScheme(assessmentPlan.gradingScheme);
-    const regulation = mapRegulationRules(assessmentPlan.academicRegulation);
-    if (grading.grades.length === 0 && regulation) {
+    const scheme = assessmentPlan.assessmentScheme || null;
+    const grading = mapGradingScheme(scheme?.gradingScheme || assessmentPlan.gradingScheme);
+    const regulation = mapRegulationRules(scheme || assessmentPlan.academicRegulation);
+    if (grading.grades.length === 0 && regulation?.gradingScheme) {
       grading.grades = regulation.gradingScheme.grades;
       grading.minimumPassingMarks = regulation.gradingScheme.minimumPassingMarks;
       grading.maximumMarks = regulation.gradingScheme.maximumMarks;

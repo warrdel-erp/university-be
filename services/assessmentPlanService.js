@@ -1,5 +1,6 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
+import * as model from "../models/index.js";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
 import {
   decimalAdd,
@@ -122,7 +123,34 @@ export function formatAcademicRegulationDetails(reg) {
         }
       : null,
 
-    // Step 2: Evaluation Pattern & Weightage
+    // Step 2: Assessment Schemes (Evaluation Patterns)
+    assessmentSchemes: Array.isArray(raw.assessmentSchemes)
+      ? raw.assessmentSchemes.map((s) => ({
+          id: s.id,
+          name: s.name,
+          code: s.code,
+          evaluationPattern: s.evaluationPattern,
+          gradingSchemeId: s.gradingSchemeId,
+          internalWeightage: s.internalWeightage,
+          externalWeightage: s.externalWeightage,
+          maximumInternalMarks: s.maximumInternalMarks,
+          maximumExternalMarks: s.maximumExternalMarks,
+          minimumInternalMarks: s.minimumInternalMarks,
+          minimumExternalMarks: s.minimumExternalMarks,
+          minimumOverallMarks: s.minimumOverallMarks,
+          minimumOverallPercentage: s.minimumOverallPercentage,
+          gradingScheme: s.gradingScheme
+            ? {
+                gradingId: s.gradingScheme.gradingId,
+                gradingName: s.gradingScheme.gradingName,
+                gradingCode: s.gradingScheme.gradingCode,
+                gradingMethod: s.gradingScheme.gradingMethod,
+              }
+            : null,
+        }))
+      : [],
+
+    // Legacy Evaluation Pattern & Weightage
     evaluationPattern: raw.evaluationPattern ?? null,
     internalWeightage: raw.internalWeightage ?? null,
     externalWeightage: raw.externalWeightage ?? null,
@@ -235,6 +263,26 @@ function mapAssessmentPlanMapping(mapping) {
           planName: plan.planName,
           status: plan.status || null,
           regulationId: plan.regulationId || null,
+          academicRegulationAssesmentSchemeId:
+            plan.academicRegulationAssesmentSchemeId || null,
+          assessmentScheme: plan.assessmentScheme
+            ? {
+                id: plan.assessmentScheme.id,
+                name: plan.assessmentScheme.name,
+                code: plan.assessmentScheme.code,
+                evaluationPattern: plan.assessmentScheme.evaluationPattern,
+                gradingSchemeId: plan.assessmentScheme.gradingSchemeId,
+                internalWeightage: plan.assessmentScheme.internalWeightage,
+                externalWeightage: plan.assessmentScheme.externalWeightage,
+                maximumInternalMarks: plan.assessmentScheme.maximumInternalMarks,
+                maximumExternalMarks: plan.assessmentScheme.maximumExternalMarks,
+                minimumInternalMarks: plan.assessmentScheme.minimumInternalMarks,
+                minimumExternalMarks: plan.assessmentScheme.minimumExternalMarks,
+                minimumOverallMarks: plan.assessmentScheme.minimumOverallMarks,
+                minimumOverallPercentage: plan.assessmentScheme.minimumOverallPercentage,
+                gradingScheme: plan.assessmentScheme.gradingScheme || null,
+              }
+            : null,
           academicRegulation: formatAcademicRegulationDetails(
             plan.academicRegulation,
           ),
@@ -549,6 +597,7 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
               academicRegulationId: reg.academicRegulationId,
               regulationCode: reg.regulationCode,
               regulationName: reg.regulationName,
+              assessmentSchemes: reg.assessmentSchemes || [],
             }
           : null,
         totalSubjects: subjectIds.length,
@@ -584,10 +633,34 @@ export async function createAssessmentPlan({ payload, user }) {
       getAcademicYearId() ||
       (user?.academicYearId ? Number(user.academicYearId) : null);
 
+    const schemeId =
+      payload.academicRegulationAssesmentSchemeId ||
+      payload.assesmentSchemeId ||
+      payload.assessmentSchemeId;
+
+    let scheme = null;
+    if (schemeId) {
+      scheme = await model.academicRegulationAssesmentSchemeModel.findOne({
+        where: { id: Number(schemeId) },
+        transaction: t,
+      });
+      if (!scheme) {
+        const error = new Error(`Assessment scheme with ID ${schemeId} not found`);
+        error.statusCode = 404;
+        throw error;
+      }
+    }
+
     const planData = {
       ...payload,
       batchId: payload.batchId ? Number(payload.batchId) : null,
-      regulationId: payload.regulationId ? Number(payload.regulationId) : null,
+      regulationId: payload.regulationId
+        ? Number(payload.regulationId)
+        : (scheme?.academicRegulationId ? Number(scheme.academicRegulationId) : null),
+      academicRegulationAssesmentSchemeId: scheme ? Number(scheme.id) : null,
+      gradingId: payload.gradingId
+        ? Number(payload.gradingId)
+        : (scheme?.gradingSchemeId ? Number(scheme.gradingSchemeId) : null),
       academicYearId,
       universityId: user?.universityId ? Number(user.universityId) : null,
       instituteId: user?.instituteId ? Number(user.instituteId) : null,
@@ -599,6 +672,8 @@ export async function createAssessmentPlan({ payload, user }) {
 
     delete planData.term;
     delete planData.sessionId;
+    delete planData.assesmentSchemeId;
+    delete planData.assessmentSchemeId;
 
     return await assessmentPlanRepo.createAssessmentPlan(planData, {
       transaction: t,
@@ -641,6 +716,36 @@ export async function updateAssessmentPlan({
       updatedBy: user?.userId || null,
     };
 
+    const schemeId =
+      payload.academicRegulationAssesmentSchemeId !== undefined
+        ? payload.academicRegulationAssesmentSchemeId
+        : (payload.assesmentSchemeId !== undefined
+            ? payload.assesmentSchemeId
+            : payload.assessmentSchemeId);
+
+    if (schemeId !== undefined) {
+      if (schemeId) {
+        const scheme = await model.academicRegulationAssesmentSchemeModel.findOne({
+          where: { id: Number(schemeId) },
+          transaction: t,
+        });
+        if (!scheme) {
+          const error = new Error(`Assessment scheme with ID ${schemeId} not found`);
+          error.statusCode = 404;
+          throw error;
+        }
+        updateData.academicRegulationAssesmentSchemeId = Number(scheme.id);
+        if (payload.regulationId === undefined && !updateData.regulationId && scheme.academicRegulationId) {
+          updateData.regulationId = Number(scheme.academicRegulationId);
+        }
+        if (payload.gradingId === undefined && scheme.gradingSchemeId) {
+          updateData.gradingId = Number(scheme.gradingSchemeId);
+        }
+      } else {
+        updateData.academicRegulationAssesmentSchemeId = null;
+      }
+    }
+
     if (payload.batchId !== undefined)
       updateData.batchId = payload.batchId ? Number(payload.batchId) : null;
     if (payload.regulationId !== undefined)
@@ -651,6 +756,8 @@ export async function updateAssessmentPlan({
     delete updateData.term;
     delete updateData.sessionId;
     delete updateData.academicYearId;
+    delete updateData.assesmentSchemeId;
+    delete updateData.assessmentSchemeId;
 
     return await assessmentPlanRepo.updateAssessmentPlan(
       assessmentPlanId,
