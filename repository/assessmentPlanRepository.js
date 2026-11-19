@@ -116,16 +116,20 @@ export async function createAssessmentPlan(planData, options = {}) {
   return await getAssessmentPlanById(record.assessmentPlanId, options);
 }
 
-export async function getAssessmentPlans({
-  search,
-  status,
-  courseId,
-  batchId,
-  regulationId,
-  gradingId,
-  page = 1,
-  limit = 10,
-}) {
+export async function getAssessmentPlans(params = {}) {
+  const {
+    search,
+    status,
+    courseId,
+    batchId,
+    regulationId,
+    gradingId,
+    academicRegulationAssesmentSchemeId,
+    assesmentSchemeId,
+    assessmentSchemeId,
+    page = 1,
+    limit = 10,
+  } = params;
   const pageNum = resolvePositiveInt(page, 1);
   const limitNum = resolvePositiveInt(limit, 10);
   const offset = decimalMultiply(decimalSubtract(pageNum, 1), limitNum);
@@ -141,9 +145,9 @@ export async function getAssessmentPlans({
     where.regulationId = Number(regulationId);
   }
   const schemeFilterId =
-    queryParams.academicRegulationAssesmentSchemeId ||
-    queryParams.assesmentSchemeId ||
-    queryParams.assessmentSchemeId;
+    academicRegulationAssesmentSchemeId ||
+    assesmentSchemeId ||
+    assessmentSchemeId;
   if (schemeFilterId) {
     where.academicRegulationAssesmentSchemeId = Number(schemeFilterId);
   }
@@ -704,6 +708,7 @@ export async function findOverviewByCurriculumBatchMappingId({
 
   const batchMapping = await model.curriculumBatchMappingModel.findOne({
     where: whereMapping,
+    subQuery: false,
     attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
     include: [
       {
@@ -1448,25 +1453,6 @@ export async function findCurriculumBatchCoursesWithSessions({
                     ],
                     required: false,
                   },
-                  {
-                    model: model.academicRegulationAssesmentSchemeModel,
-                    as: "assessmentSchemes",
-                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
-                    include: [
-                      {
-                        model: model.gradingModel,
-                        as: "gradingScheme",
-                        attributes: [
-                          "gradingId",
-                          "gradingName",
-                          "gradingCode",
-                          "gradingMethod",
-                        ],
-                        required: false,
-                      },
-                    ],
-                    required: false,
-                  },
                 ],
               },
               {
@@ -1501,6 +1487,27 @@ export async function findCurriculumBatchCoursesWithSessions({
                   "regulationName",
                 ],
                 required: false,
+                include: [
+                  {
+                    model: model.academicRegulationAssesmentSchemeModel,
+                    as: "assessmentSchemes",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include: [
+                      {
+                        model: model.gradingModel,
+                        as: "gradingScheme",
+                        attributes: [
+                          "gradingId",
+                          "gradingName",
+                          "gradingCode",
+                          "gradingMethod",
+                        ],
+                        required: false,
+                      },
+                    ],
+                    required: false,
+                  },
+                ],
               },
             ],
           },
