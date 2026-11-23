@@ -155,6 +155,11 @@ import leaveTypeModel from "./leaveTypeModel.js";
 import leaveTypeEligibilityModel from "./leaveTypeEligibilityModel.js";
 import leaveTypeHolidaysCarryForwardModel from "./leaveTypeHolidaysCarryForwardModel.js";
 import leaveTypeEncashmentModel from "./leaveTypeEncashmentModel.js";
+import attendancePolicyModel from "./attendancePolicyModel.js";
+import attendancePolicyMappingModel from "./attendancePolicyMappingModel.js";
+import attendancePolicyWorkingHoursModel from "./attendancePolicyWorkingHoursModel.js";
+import attendancePolicyLateEarlyRuleModel from "./attendancePolicyLateEarlyRuleModel.js";
+import attendancePolicyPenaltySlabModel from "./attendancePolicyPenaltySlabModel.js";
 import approvalRequestModel from "./approvalRequestModel.js";
 import examScheduleModel from "./examScheduleModel.js";
 import libraryFloorModel from "./libraryFloorModel.js";
@@ -4661,6 +4666,72 @@ curriculumElectiveAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: 'aca
 // Refresh Token Associations
 userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });
 refreshTokenModel.belongsTo(userModel, { foreignKey: 'user_id', as: 'user' });
+
+// Attendance Policy Associations
+attendancePolicyModel.hasOne(attendancePolicyWorkingHoursModel, {
+  foreignKey: "policy_id",
+  as: "workingHours",
+});
+attendancePolicyWorkingHoursModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+attendancePolicyModel.hasOne(attendancePolicyLateEarlyRuleModel, {
+  foreignKey: "policy_id",
+  as: "lateEarlyRules",
+});
+attendancePolicyLateEarlyRuleModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+attendancePolicyModel.hasMany(attendancePolicyPenaltySlabModel, {
+  foreignKey: "policy_id",
+  as: "penaltySlabs",
+});
+attendancePolicyPenaltySlabModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+attendancePolicyModel.hasMany(attendancePolicyMappingModel, {
+  foreignKey: "policy_id",
+  as: "mappings",
+});
+attendancePolicyMappingModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+attendancePolicyMappingModel.belongsTo(roleModel, {
+  foreignKey: "role_id",
+  as: "role",
+});
+attendancePolicyMappingModel.belongsTo(departmentModel, {
+  foreignKey: "department_id",
+  as: "department",
+});
+attendancePolicyMappingModel.belongsTo(employeeModel, {
+  foreignKey: "employee_id",
+  as: "employee",
+});
+
+attendancePolicyModel.belongsTo(universityModel, {
+  foreignKey: "university_id",
+  as: "university",
+});
+attendancePolicyModel.belongsTo(instituteModel, {
+  foreignKey: "institute_id",
+  as: "institute",
+});
+attendancePolicyModel.belongsTo(userModel, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+attendancePolicyModel.belongsTo(userModel, {
+  foreignKey: "updated_by",
+  as: "updater",
+});
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 
