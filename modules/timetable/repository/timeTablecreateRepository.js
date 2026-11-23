@@ -15,8 +15,11 @@ import { doTimeSlotsOverlap, getTimeSlotRange } from "../../../utility/timeSlot.
 
 async function assertScopedRoutine(timeTableRoutineId, options = {}) {
   if (timeTableRoutineId == null) return null;
-  const { transaction, attributes = ["timeTableRoutineId"] } = options;
-  return scoped(model.timeTableRoutineModel).findOne({
+  const { transaction, attributes = ["timeTableRoutineId"], ignoreScope = false } = options;
+  const modelRef = ignoreScope
+    ? model.timeTableRoutineModel
+    : scoped(model.timeTableRoutineModel);
+  return modelRef.findOne({
     where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes,
     transaction,
@@ -2050,7 +2053,10 @@ export async function getRoutineForPublishRepository(
   timeTableRoutineId,
   options = {},
 ) {
-  return scoped(model.timeTableRoutineModel).findOne({
+  const modelRef = options.ignoreScope
+    ? model.timeTableRoutineModel
+    : scoped(model.timeTableRoutineModel);
+  return modelRef.findOne({
     where: { timeTableRoutineId: Number(timeTableRoutineId) },
     attributes: [
       "timeTableRoutineId",
@@ -2072,6 +2078,7 @@ export async function getRoutineCellsForPublishRepository(
   const routine = await assertScopedRoutine(Number(timeTableRoutineId), {
     transaction: options.transaction,
     attributes: ["timeTableRoutineId"],
+    ignoreScope: options.ignoreScope ?? false,
   });
   if (!routine) {
     return [];
@@ -3626,12 +3633,30 @@ export async function deleteTeachersDateWiseByIds(ids, transaction) {
   });
 }
 
+export async function deleteDateWiseDependentsByIds(ids, transaction) {
+  if (!ids || !ids.length) return;
+  await model.attendanceModel.destroy({
+    where: { timeTableCellDateWiseId: { [Op.in]: ids } },
+    transaction,
+    force: true,
+  });
+  await model.lessonMappingModel.destroy({
+    where: { timeTableCellDateWiseId: { [Op.in]: ids } },
+    transaction,
+    force: true,
+  });
+  await model.timeTableCellTeachersDateWiseModel.destroy({
+    where: { timeTableCellDateWiseId: { [Op.in]: ids } },
+    transaction,
+  });
+}
+
 export async function deleteDateWiseCellsByMappingsAndDates(
   mappingIds,
   dates,
   transaction,
 ) {
-  return scoped(model.timeTableCellDateWiseModel).destroy({
+  return model.timeTableCellDateWiseModel.destroy({
     where: {
       timeTableCellId: { [Op.in]: mappingIds },
       date: { [Op.in]: dates },
