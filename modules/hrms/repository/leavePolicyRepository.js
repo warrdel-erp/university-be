@@ -1,5 +1,6 @@
 import * as model from "../../../models/index.js";
 import { scoped } from "../../../utility/scoped.js";
+import { requestContext } from "../../../utility/requestContext.js";
 import sequelize from "../../../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 
@@ -21,8 +22,16 @@ export async function createFullPolicy({ policyData, entitlements = [], roleAssi
     let createdEntitlements = [];
     if (entitlements && entitlements.length > 0) {
       const entitlementRecords = entitlements.map((ent) => ({
-        ...ent,
         policyId,
+        leaveTypeId: ent.leaveTypeId ?? ent.leave_type_id ?? null,
+        customLeaveName: ent.customLeaveName ?? ent.custom_leave_name ?? ent.leaveType ?? ent.name ?? "",
+        annualEntitlement: ent.annualEntitlement ?? ent.annual_entitlement ?? ent.entitlementAnnual ?? 0,
+        entitlementUnit: ent.entitlementUnit ?? ent.entitlement_unit ?? "Days",
+        onJoiningRule: ent.onJoiningRule ?? ent.on_joining_rule ?? null,
+        onSeparationRule: ent.onSeparationRule ?? ent.on_separation_rule ?? null,
+        roundingRule: ent.roundingRule ?? ent.rounding_rule ?? null,
+        distributionFrequency: ent.distributionFrequency ?? ent.distribution_frequency ?? ent.creditMethod ?? null,
+        distributionMethod: ent.distributionMethod ?? ent.distribution_method ?? null,
       }));
       createdEntitlements = await model.leavePolicyEntitlementModel.bulkCreate(entitlementRecords, {
         transaction: t,
@@ -146,16 +155,25 @@ export async function getPolicies(filters = {}) {
         model: model.leavePolicyEntitlementModel,
         as: "entitlements",
         attributes: [
-          "entitlementId",
-          "leaveType",
-          "leaveCode",
-          "entitlementAnnual",
-          "creditMethod",
-          "carryForward",
-          "maxCarryForwardDays",
-          "maximumConsecutiveDays",
-          "keyRules",
-          "status",
+          "id",
+          "policyId",
+          "leaveTypeId",
+          "customLeaveName",
+          "annualEntitlement",
+          "entitlementUnit",
+          "onJoiningRule",
+          "onSeparationRule",
+          "roundingRule",
+          "distributionFrequency",
+          "distributionMethod",
+        ],
+        include: [
+          {
+            model: model.leaveTypeModel,
+            as: "leaveTypeMaster",
+            attributes: ["id", "name", "code", "classification"],
+            required: false,
+          },
         ],
       },
       roleInclude,
@@ -176,6 +194,14 @@ export async function getPolicyById(policyId, options = {}) {
       {
         model: model.leavePolicyEntitlementModel,
         as: "entitlements",
+        include: [
+          {
+            model: model.leaveTypeModel,
+            as: "leaveTypeMaster",
+            attributes: ["id", "name", "code", "classification"],
+            required: false,
+          },
+        ],
       },
       {
         model: model.leavePolicyRoleModel,
@@ -204,17 +230,115 @@ export async function getPolicyById(policyId, options = {}) {
   });
 }
 
-export async function updatePolicy(policyId, data) {
-  const existing = await scoped(model.leavePolicyModel).findOne({
-    attributes: ["policyId"],
-    where: { policyId },
-  });
-  if (!existing) {
-    return [0];
-  }
+export async function updatePolicy(policyId, data, options = {}) {
+  return sequelize.transaction(async (t) => {
+    const txn = options.transaction || t;
 
-  return scoped(model.leavePolicyModel).update(data, {
-    where: { policyId },
+    const existing = await scoped(model.leavePolicyModel).findOne({
+      where: { policyId },
+      transaction: txn,
+    });
+    if (!existing) {
+      return [0];
+    }
+
+    const { entitlements, leaveEntitlements, roleAssignments, ...policyFields } = data;
+    const finalEntitlements = entitlements || leaveEntitlements;
+
+    // Recalculate totalLeavesPerYear if entitlements provided and not explicitly set in payload
+    if (Array.isArray(finalEntitlements) && finalEntitlements.length > 0 && !policyFields.totalLeavesPerYear) {
+      policyFields.totalLeavesPerYear = finalEntitlements.reduce(
+        (sum, e) => sum + (Number(e.annualEntitlement ?? e.annual_entitlement ?? e.entitlementAnnual) || 0),
+        0
+      );
+    }
+
+    const result = await scoped(model.leavePolicyModel).update(policyFields, {
+      where: { policyId },
+      transaction: txn,
+    });
+
+    // Update entitlements if provided
+    if (Array.isArray(finalEntitlements)) {
+      await model.leavePolicyEntitlementModel.destroy({
+        where: { policyId },
+        transaction: txn,
+        force: true,
+      });
+
+      if (finalEntitlements.length > 0) {
+        const entitlementRecords = finalEntitlements.map((ent) => ({
+          policyId,
+          leaveTypeId: ent.leaveTypeId ?? ent.leave_type_id ?? null,
+          customLeaveName: ent.customLeaveName ?? ent.custom_leave_name ?? ent.leaveType ?? ent.name ?? "",
+          annualEntitlement: ent.annualEntitlement ?? ent.annual_entitlement ?? ent.entitlementAnnual ?? 0,
+          entitlementUnit: ent.entitlementUnit ?? ent.entitlement_unit ?? "Days",
+          onJoiningRule: ent.onJoiningRule ?? ent.on_joining_rule ?? null,
+          onSeparationRule: ent.onSeparationRule ?? ent.on_separation_rule ?? null,
+          roundingRule: ent.roundingRule ?? ent.rounding_rule ?? null,
+          distributionFrequency: ent.distributionFrequency ?? ent.distribution_frequency ?? ent.creditMethod ?? null,
+          distributionMethod: ent.distributionMethod ?? ent.distribution_method ?? null,
+        }));
+        await model.leavePolicyEntitlementModel.bulkCreate(entitlementRecords, {
+          transaction: txn,
+          validate: true,
+        });
+      }
+    }
+
+    // Update role assignments if provided
+    if (Array.isArray(roleAssignments)) {
+      const existingRoles = await model.leavePolicyRoleModel.findAll({
+        where: { policyId },
+        attributes: ["id"],
+        transaction: txn,
+      });
+      const existingRoleIds = existingRoles.map((r) => r.id);
+      if (existingRoleIds.length > 0) {
+        await model.leavePolicyEmployeeModel.destroy({
+          where: { policyRoleId: existingRoleIds },
+          transaction: txn,
+        });
+        await model.leavePolicyRoleModel.destroy({
+          where: { policyId },
+          transaction: txn,
+        });
+      }
+
+      for (const ra of roleAssignments) {
+        const roleRecord = await model.leavePolicyRoleModel.create(
+          {
+            policyId,
+            roleId: ra.roleId,
+            assignmentMode: ra.assignmentMode || "ALL",
+            effectiveFrom: ra.effectiveFrom || policyFields.effectiveFrom || existing.effectiveFrom || new Date(),
+            effectiveTo: ra.effectiveTo || policyFields.effectiveTo || existing.effectiveTo || null,
+            universityId: policyFields.universityId || existing.universityId,
+            instituteId: policyFields.instituteId || existing.instituteId,
+            campusId: policyFields.campusId || existing.campusId,
+          },
+          { transaction: txn }
+        );
+
+        const policyRoleId = roleRecord.id || roleRecord.dataValues?.id;
+        if (
+          (ra.assignmentMode === "SELECTED" || ra.assignment_mode === "SELECTED") &&
+          Array.isArray(ra.selectedUserIds) &&
+          ra.selectedUserIds.length > 0
+        ) {
+          const empRecords = ra.selectedUserIds.map((userId) => ({
+            policyRoleId,
+            userId,
+            isActive: true,
+          }));
+          await model.leavePolicyEmployeeModel.bulkCreate(empRecords, {
+            transaction: txn,
+          });
+        }
+      }
+    }
+
+    return result;
   });
 }
 
@@ -237,22 +361,34 @@ export async function deletePolicy(policyId) {
  * Returns roles with employee count and their current leave policy assignment.
  * Powers the "ROLE ASSIGNMENT" table in the UI.
  */
-export async function getRolesSummary({ instituteId, universityId }) {
-  // 1. Get all active roles
+export async function getRolesSummary({ instituteId, universityId } = {}) {
+  const currentUniversityId = universityId || requestContext.getStore()?.universityId;
+
+  // 1. Get all active roles belonging to the current university
+  const roleWhere = { deletedAt: null };
+  if (currentUniversityId) {
+    roleWhere.universityId = currentUniversityId;
+  }
+
   const roles = await model.roleModel.findAll({
-    where: { deletedAt: null },
+    where: roleWhere,
     attributes: ["roleId", "role", "code", "scope"],
     order: [["role", "ASC"]],
   });
 
   // 2. Get active policy role mappings with parent policy details
+  const policyWhere = { deletedAt: null };
+  if (currentUniversityId) {
+    policyWhere.universityId = currentUniversityId;
+  }
+
   const activeAssignments = await model.leavePolicyRoleModel.findAll({
     where: { deletedAt: null },
     include: [
       {
         model: model.leavePolicyModel,
         as: "policy",
-        where: { deletedAt: null },
+        where: policyWhere,
         attributes: ["policyId", "policyName", "policyCode", "status", "effectiveFrom"],
       },
       {
@@ -284,7 +420,7 @@ export async function getRolesSummary({ instituteId, universityId }) {
       LEFT JOIN employee emp ON emp.user_id = u.user_id AND emp.deleted_at IS NULL
       WHERE 1=1
         ${instituteId ? `AND COALESCE(emp.institute_id, usr.default_institute_id) = ${sequelize.escape(instituteId)}` : ""}
-        ${universityId ? `AND COALESCE(emp.university_id, usr.university_id) = ${sequelize.escape(universityId)}` : ""}
+        ${currentUniversityId ? `AND COALESCE(emp.university_id, usr.university_id) = ${sequelize.escape(currentUniversityId)}` : ""}
     `);
     const totalEmployees = parseInt(userCountResult[0]?.count || 0, 10);
 
@@ -337,6 +473,8 @@ export async function getRolesSummary({ instituteId, universityId }) {
  * Powers the "Select Employees" side drawer in the UI.
  */
 export async function getRoleEmployees(roleId, { search, policyId, instituteId, universityId } = {}) {
+  const currentUniversityId = universityId || requestContext.getStore()?.universityId;
+
   // 1. Fetch all distinct users belonging to this role within tenant scope
   let searchQuery = "";
   if (search) {
@@ -362,7 +500,7 @@ export async function getRoleEmployees(roleId, { search, policyId, instituteId, 
         OR u.default_role_id = ${roleId}
       )
       ${instituteId ? `AND COALESCE(e.institute_id, u.default_institute_id) = ${sequelize.escape(instituteId)}` : ""}
-      ${universityId ? `AND COALESCE(e.university_id, u.university_id) = ${sequelize.escape(universityId)}` : ""}
+      ${currentUniversityId ? `AND COALESCE(e.university_id, u.university_id) = ${sequelize.escape(currentUniversityId)}` : ""}
       ${searchQuery}
     ORDER BY COALESCE(e.employee_name, u.user_name) ASC
   `);
@@ -412,10 +550,10 @@ export async function getRoleEmployees(roleId, { search, policyId, instituteId, 
       status: u.userStatus || "Active",
       currentPolicy: currentAssignment
         ? {
-            policyId: currentAssignment.policyId,
-            policyName: currentAssignment.policyName,
-            policyCode: currentAssignment.policyCode,
-          }
+          policyId: currentAssignment.policyId,
+          policyName: currentAssignment.policyName,
+          policyCode: currentAssignment.policyCode,
+        }
         : null,
       isSelected: !!isSelected,
     };

@@ -184,3 +184,49 @@ export async function getMappedAssessmentTypes(req, res) {
     );
   }
 }
+
+export async function publishBatchAssessmentPlans(req, res) {
+  try {
+    const { batchId } = req.params;
+    const result = await assessmentPlanService.publishBatchAssessmentPlans({
+      batchId,
+      user: req.user,
+    });
+    return SuccessResponse(
+      res,
+      200,
+      result.message || "Assessment plans published successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in publishBatchAssessmentPlans:", error.message);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to publish assessment plans",
+    );
+  }
+}
+
+export async function unfreezeBatchAssessmentPlans(req, res) {
+  try {
+    const { batchId } = req.params;
+    const result = await assessmentPlanService.unfreezeBatchAssessmentPlans({
+      batchId,
+      user: req.user,
+    });
+    return SuccessResponse(
+      res,
+      200,
+      result.message || "Assessment plans reverted to draft successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error in unfreezeBatchAssessmentPlans:", error.message);
+    return ErrorResponse(
+      res,
+      error.statusCode || 500,
+      error.message || "Failed to unfreeze assessment plans",
+    );
+  }
+}

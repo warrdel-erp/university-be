@@ -821,6 +821,7 @@ export async function findOverviewByCurriculumBatchMappingId({
               "batchId",
               "curriculumSubjectTermMappingId",
               "subjectId",
+              "isFrozen",
               "universityId",
               "instituteId",
               "createdAt",
@@ -839,6 +840,7 @@ export async function findOverviewByCurriculumBatchMappingId({
                   "assessmentPlanId",
                   "planName",
                   "regulationId",
+                  "status",
                 ],
                 where:
                   Object.keys(planWhere).length > 0 ? planWhere : undefined,
@@ -1402,7 +1404,15 @@ export async function findAssignedSubjectMappings(batchIds = []) {
     where: {
       batchId: { [Op.in]: batchIds },
     },
-    attributes: ["batchId", "subjectId"],
+    attributes: ["batchId", "subjectId", "assessmentPlanId", "isFrozen"],
+    include: [
+      {
+        model: model.assessmentPlanModel,
+        as: "assessmentPlan",
+        attributes: ["assessmentPlanId", "status"],
+        required: false,
+      },
+    ],
   });
 }
 
@@ -1543,4 +1553,155 @@ export async function getMappedAssessmentTypes({
       mappedPlansCount: new Set(comps.map((c) => c.assessmentPlanId)).size,
     };
   });
+}
+
+export async function reloadSubjectMapping(mappingId, options = {}) {
+  return await scoped(model.assessmentPlanSubjectMappingModel).findByPk(
+    Number(mappingId),
+    {
+      include: [
+        {
+          model: model.assessmentPlanModel,
+          as: "assessmentPlan",
+          attributes: [
+            "assessmentPlanId",
+            "planName",
+            "planCode",
+            "batchId",
+            "status",
+            "isActive",
+          ],
+          required: false,
+        },
+        {
+          model: model.subjectModel,
+          as: "subject",
+          attributes: ["subjectId", "subjectName", "subjectCode"],
+          required: false,
+        },
+        {
+          model: model.batchModel,
+          as: "batch",
+          attributes: ["batchId", "batch", "status", "sessionId"],
+          required: false,
+          include: [
+            {
+              model: model.sessionModel,
+              as: "session",
+              attributes: ["sessionId", "sessionName", "courseId"],
+              required: false,
+              include: [
+                {
+                  model: model.courseModel,
+                  as: "course",
+                  attributes: ["courseId", "courseName", "courseCode"],
+                  required: false,
+                },
+              ],
+            },
+          ],
+        },
+        {
+          model: model.curriculumSubjectTermMappingModel,
+          as: "curriculumSubjectTermMapping",
+          attributes: [
+            "curriculumSubjectTermMappingId",
+            "curriculumId",
+            "subjectId",
+            "term",
+            "credit",
+          ],
+          required: false,
+        },
+      ],
+      transaction: options.transaction,
+    },
+  );
+}
+
+export async function findBatchSubjectMappingsWithPlans(batchId, options = {}) {
+  return await scoped(model.assessmentPlanSubjectMappingModel).findAll({
+    where: { batchId: Number(batchId) },
+    include: [
+      {
+        model: model.assessmentPlanModel,
+        as: "assessmentPlan",
+        required: false,
+        include: [
+          {
+            model: model.assessmentPlanComponentModel,
+            as: "components",
+            required: false,
+          },
+        ],
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function publishAssessmentPlansByIds(planIds, userId, options = {}) {
+  if (!planIds || !planIds.length) return [0];
+  return await scoped(model.assessmentPlanModel).update(
+    {
+      status: "Published",
+      updatedBy: userId || null,
+    },
+    {
+      where: {
+        assessmentPlanId: { [Op.in]: planIds },
+      },
+      transaction: options.transaction,
+    },
+  );
+}
+
+export async function unfreezeAssessmentPlansByIds(planIds, userId, options = {}) {
+  if (!planIds || !planIds.length) return [0];
+  return await scoped(model.assessmentPlanModel).update(
+    {
+      status: "Draft",
+      updatedBy: userId || null,
+    },
+    {
+      where: {
+        assessmentPlanId: { [Op.in]: planIds },
+      },
+      transaction: options.transaction,
+    },
+  );
+}
+
+export async function findBlockingExamScheduleForBatch(batchId, options = {}) {
+  return await scoped(model.examScheduleModel).findOne({
+    where: { batchId: Number(batchId) },
+    attributes: ["examScheduleId", "subjectId", "batchId", "examinationSessionId"],
+    transaction: options.transaction,
+  });
+}
+
+export async function freezeSubjectMappingsByBatchId(batchId, userId, options = {}) {
+  return await scoped(model.assessmentPlanSubjectMappingModel).update(
+    {
+      isFrozen: true,
+      updatedBy: userId || null,
+    },
+    {
+      where: { batchId: Number(batchId) },
+      transaction: options.transaction,
+    },
+  );
+}
+
+export async function unfreezeSubjectMappingsByBatchId(batchId, userId, options = {}) {
+  return await scoped(model.assessmentPlanSubjectMappingModel).update(
+    {
+      isFrozen: false,
+      updatedBy: userId || null,
+    },
+    {
+      where: { batchId: Number(batchId) },
+      transaction: options.transaction,
+    },
+  );
 }
