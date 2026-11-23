@@ -150,6 +150,10 @@ import leavePolicyRoleModel from "./leavePolicyRoleModel.js";
 import leavePolicyEmployeeModel from "./leavePolicyEmployeeModel.js";
 import leaveBalanceModel from "./leaveBalanceModel.js";
 import leaveRequestModel from "./leaveRequestModel.js";
+import leaveTypeModel from "./leaveTypeModel.js";
+import leaveTypeEligibilityModel from "./leaveTypeEligibilityModel.js";
+import leaveTypeHolidaysCarryForwardModel from "./leaveTypeHolidaysCarryForwardModel.js";
+import leaveTypeEncashmentModel from "./leaveTypeEncashmentModel.js";
 import approvalRequestModel from "./approvalRequestModel.js";
 import examScheduleModel from "./examScheduleModel.js";
 import libraryFloorModel from "./libraryFloorModel.js";
@@ -3167,6 +3171,14 @@ leavePolicyEntitlementModel.belongsTo(leavePolicyModel, {
   foreignKey: "policy_id",
   as: "policy",
 });
+leavePolicyEntitlementModel.belongsTo(leaveTypeModel, {
+  foreignKey: "leave_type_id",
+  as: "leaveTypeMaster",
+});
+leaveTypeModel.hasMany(leavePolicyEntitlementModel, {
+  foreignKey: "leave_type_id",
+  as: "policyEntitlements",
+});
 
 // Leave Policy Roles Associations
 leavePolicyModel.hasMany(leavePolicyRoleModel, {
@@ -3204,6 +3216,26 @@ leavePolicyEmployeeModel.belongsTo(employeeModel, {
   targetKey: "userId",
   as: "employee",
 });
+
+// Leave Type Associations
+leaveTypeModel.belongsTo(universityModel, { foreignKey: "university_id", as: "university" });
+universityModel.hasMany(leaveTypeModel, { foreignKey: "university_id", as: "leaveTypes" });
+
+leaveTypeModel.belongsTo(instituteModel, { foreignKey: "institute_id", as: "institute" });
+instituteModel.hasMany(leaveTypeModel, { foreignKey: "institute_id", as: "leaveTypes" });
+
+leaveTypeModel.belongsTo(userModel, { foreignKey: "created_by", as: "creator" });
+leaveTypeModel.belongsTo(userModel, { foreignKey: "updated_by", as: "updater" });
+
+// Leave Type 1:1 Detail Associations
+leaveTypeModel.hasOne(leaveTypeEligibilityModel, { foreignKey: "leave_type_id", as: "eligibility" });
+leaveTypeEligibilityModel.belongsTo(leaveTypeModel, { foreignKey: "leave_type_id", as: "leaveType" });
+
+leaveTypeModel.hasOne(leaveTypeHolidaysCarryForwardModel, { foreignKey: "leave_type_id", as: "holidaysCarryForward" });
+leaveTypeHolidaysCarryForwardModel.belongsTo(leaveTypeModel, { foreignKey: "leave_type_id", as: "leaveType" });
+
+leaveTypeModel.hasOne(leaveTypeEncashmentModel, { foreignKey: "leave_type_id", as: "encashment" });
+leaveTypeEncashmentModel.belongsTo(leaveTypeModel, { foreignKey: "leave_type_id", as: "leaveType" });
 
 // Approval Request Associations
 approvalRequestModel.belongsTo(userModel, { foreignKey: "requested_by", as: "requester" });
@@ -4417,6 +4449,10 @@ export {
   leavePolicyRoleModel,
   leavePolicyEmployeeModel,
   leaveRequestModel,
+  leaveTypeModel,
+  leaveTypeEligibilityModel,
+  leaveTypeHolidaysCarryForwardModel,
+  leaveTypeEncashmentModel,
   approvalRequestModel,
   examScheduleModel,
   libraryFloorModel,

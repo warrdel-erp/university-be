@@ -76,14 +76,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"policyName\": \"Teaching Staff Leave Policy\",\n  \"policyCode\": \"LPS-001\",\n  \"leaveYearType\": \"Academic Year (Jul - Jun)\",\n  \"description\": \"Leave entitlement and rules for all teaching staff.\",\n  \"effectiveFrom\": \"2026-07-01\",\n  \"effectiveTo\": null,\n  \"status\": \"Published\",\n  \"leaveEntitlements\": [\n    {\n      \"leaveType\": \"Casual Leave (CL)\",\n      \"leaveCode\": \"CL\",\n      \"entitlementAnnual\": 12,\n      \"creditMethod\": \"Monthly\",\n      \"carryForward\": true,\n      \"maxCarryForwardDays\": 6,\n      \"maximumConsecutiveDays\": 3,\n      \"keyRules\": [\n        \"Probation\",\n        \"Notice\",\n        \"Half-day\"\n      ],\n      \"status\": \"Configured\"\n    },\n    {\n      \"leaveType\": \"Sick Leave (SL)\",\n      \"leaveCode\": \"SL\",\n      \"entitlementAnnual\": 10,\n      \"creditMethod\": \"Monthly\",\n      \"carryForward\": true,\n      \"maxCarryForwardDays\": 10,\n      \"maximumConsecutiveDays\": 5,\n      \"keyRules\": [\n        \"Notice\",\n        \"Document Required\",\n        \"Max Limit\"\n      ],\n      \"status\": \"Configured\"\n    },\n    {\n      \"leaveType\": \"Earned Leave (EL)\",\n      \"leaveCode\": \"EL\",\n      \"entitlementAnnual\": 15,\n      \"creditMethod\": \"Monthly\",\n      \"carryForward\": true,\n      \"maxCarryForwardDays\": 30,\n      \"keyRules\": [\n        \"Encashment\",\n        \"Carry Forward\",\n        \"Min/Max\"\n      ],\n      \"status\": \"Configured\"\n    }\n  ],\n  \"roleAssignments\": [\n    {\n      \"roleId\": 12,\n      \"assignmentMode\": \"SELECTED\",\n      \"effectiveFrom\": \"2026-07-01\",\n      \"selectedUserIds\": [46, 47, 48]\n    },\n    {\n      \"roleId\": 14,\n      \"assignmentMode\": \"ALL\",\n      \"effectiveFrom\": \"2026-07-01\",\n      \"selectedUserIds\": []\n    }\n  ]\n}"
+          "raw": "{\n  \"policyName\": \"Teaching Staff Leave Policy\",\n  \"policyCode\": \"LPS-001\",\n  \"leaveYearType\": \"Academic Year (Jul - Jun)\",\n  \"description\": \"Leave entitlement and rules for all teaching staff.\",\n  \"effectiveFrom\": \"2026-07-01\",\n  \"effectiveTo\": null,\n  \"status\": \"Published\",\n  \"entitlements\": [\n    {\n      \"leaveTypeId\": 1,\n      \"customLeaveName\": \"Casual Leave (CL)\",\n      \"annualEntitlement\": 12,\n      \"entitlementUnit\": \"Days\",\n      \"distributionFrequency\": \"Monthly\",\n      \"distributionMethod\": \"Frontloaded\",\n      \"onJoiningRule\": \"Prorate from joining month\",\n      \"onSeparationRule\": \"Encash remaining balance\",\n      \"roundingRule\": \"Nearest 0.5\"\n    },\n    {\n      \"leaveTypeId\": 2,\n      \"customLeaveName\": \"Sick Leave (SL)\",\n      \"annualEntitlement\": 10,\n      \"entitlementUnit\": \"Days\",\n      \"distributionFrequency\": \"Monthly\",\n      \"distributionMethod\": \"Start of Period\",\n      \"onJoiningRule\": \"Full allocation if joined before 15th\",\n      \"onSeparationRule\": \"Lapse on exit\",\n      \"roundingRule\": \"Round down\"\n    },\n    {\n      \"leaveTypeId\": 3,\n      \"customLeaveName\": \"Earned Leave (EL)\",\n      \"annualEntitlement\": 15,\n      \"entitlementUnit\": \"Days\",\n      \"distributionFrequency\": \"Yearly\",\n      \"distributionMethod\": \"Accrued\",\n      \"onJoiningRule\": \"Prorate\",\n      \"onSeparationRule\": \"Encash up to 30 days\",\n      \"roundingRule\": \"Exact\"\n    }\n  ],\n  \"roleAssignments\": [\n    {\n      \"roleId\": 12,\n      \"assignmentMode\": \"SELECTED\",\n      \"effectiveFrom\": \"2026-07-01\",\n      \"selectedUserIds\": [46, 47, 48]\n    },\n    {\n      \"roleId\": 14,\n      \"assignmentMode\": \"ALL\",\n      \"effectiveFrom\": \"2026-07-01\",\n      \"selectedUserIds\": []\n    }\n  ]\n}"
         },
         "url": {
           "raw": "{{base_url}}/leave-policies",
           "host": ["{{base_url}}"],
           "path": ["leave-policies"]
         },
-        "description": "Creates a complete Leave Policy in a single atomic transaction:\n1. Main policy details (Name, Code, Leave Year, Effective Dates, Status: Draft/Published)\n2. Child table `leave_policy_entitlements` (CL, SL, EL with rules)\n3. Child table `leave_policy_roles` (Role assignments with ALL or SELECTED mode)\n4. Child table `leave_policy_employees` (Explicitly selected user IDs for SELECTED mode)\n5. If status is 'Published', automatically initializes leave_balance for assigned employees."
+        "description": "Creates a complete Leave Policy in a single atomic transaction:\n1. Main policy details (Name, Code, Leave Year, Effective Dates, Status: Draft/Published)\n2. Child table `leave_policy_entitlements` with fields: `leaveTypeId`, `customLeaveName`, `annualEntitlement`, `entitlementUnit`, `distributionFrequency`, `distributionMethod`, `onJoiningRule`, `onSeparationRule`, `roundingRule`\n3. Child table `leave_policy_roles` (Role assignments with ALL or SELECTED mode)\n4. Child table `leave_policy_employees` (Explicitly selected user IDs for SELECTED mode)\n5. If status is 'Published', automatically initializes leave_balance for assigned employees."
       },
       "response": []
     },
@@ -188,14 +188,14 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"policyId\": {{policyId}},\n  \"policyName\": \"Updated Teaching Staff Leave Policy\",\n  \"status\": \"Published\",\n  \"description\": \"Updated description\"\n}"
+          "raw": "{\n  \"policyId\": {{policyId}},\n  \"policyName\": \"Updated Teaching Staff Leave Policy\",\n  \"status\": \"Published\",\n  \"description\": \"Updated description with revised entitlements\",\n  \"entitlements\": [\n    {\n      \"leaveTypeId\": 1,\n      \"customLeaveName\": \"Casual Leave (CL)\",\n      \"annualEntitlement\": 14.5,\n      \"entitlementUnit\": \"Days\",\n      \"distributionFrequency\": \"Monthly\",\n      \"distributionMethod\": \"Frontloaded\",\n      \"onJoiningRule\": \"Prorate\",\n      \"onSeparationRule\": \"Encash remaining balance\",\n      \"roundingRule\": \"Nearest 0.5\"\n    }\n  ]\n}"
         },
         "url": {
           "raw": "{{base_url}}/leave-policies",
           "host": ["{{base_url}}"],
           "path": ["leave-policies"]
         },
-        "description": "Updates master leave policy fields (e.g. changing status from Draft to Published, updating description or dates)."
+        "description": "Updates master leave policy fields (e.g. changing status from Draft to Published, updating description or dates) and optionally updates child `entitlements` and `roleAssignments` in a transaction."
       },
       "response": []
     },
