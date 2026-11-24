@@ -211,7 +211,12 @@ export const AUDIT_EVENTS = Object.freeze({
     // ─── Student ──────────────────────────────────────────────────────
     STUDENT_CREATE:           "STUDENT_CREATE",
     STUDENT_UPDATE:           "STUDENT_UPDATE",
+    STUDENT_DELETE:           "STUDENT_DELETE",
+    STUDENT_IMPORT:           "STUDENT_IMPORT",
     STUDENT_PROMOTE:          "STUDENT_PROMOTE",
+    STUDENT_COURSE_MAP:       "STUDENT_COURSE_MAP",
+    STUDENT_SECTION_MAP:      "STUDENT_SECTION_MAP",
+    STUDENT_ELECTIVE_MAP:     "STUDENT_ELECTIVE_MAP",
 
     // ─── Exam Schedule ────────────────────────────────────────────────
     EXAM_SCHEDULE_CREATE:     "EXAM_SCHEDULE_CREATE",
@@ -394,4 +399,38 @@ export const AUDIT_EVENTS = Object.freeze({
     // ─── Leave Balance ──────────────────────────────────────────────────
     LEAVE_BALANCE_CREATE:                        "LEAVE_BALANCE_CREATE",
     LEAVE_BALANCE_UPDATE:                        "LEAVE_BALANCE_UPDATE",
+
+    // ─── Library Creation & Category ─────────────────────────────────────
+    LIBRARY_CREATE:                              "LIBRARY_CREATE",
+    LIBRARY_UPDATE:                              "LIBRARY_UPDATE",
+    LIBRARY_DELETE:                              "LIBRARY_DELETE",
+    LIBRARY_STRUCTURE_BULK_GENERATE:             "LIBRARY_STRUCTURE_BULK_GENERATE",
+    LIBRARY_CATEGORY_CREATE:                     "LIBRARY_CATEGORY_CREATE",
+    LIBRARY_CATEGORY_UPDATE:                     "LIBRARY_CATEGORY_UPDATE",
+    LIBRARY_CATEGORY_DELETE:                     "LIBRARY_CATEGORY_DELETE",
+
+    // ─── Library Book & Inventory ────────────────────────────────────────
+    LIBRARY_BOOK_CREATE:                         "LIBRARY_BOOK_CREATE",
+    LIBRARY_BOOK_UPDATE:                         "LIBRARY_BOOK_UPDATE",
+    LIBRARY_BOOK_DELETE:                         "LIBRARY_BOOK_DELETE",
+    LIBRARY_BOOK_INVENTORY_DELETE:               "LIBRARY_BOOK_INVENTORY_DELETE",
+    LIBRARY_BOOK_BULK_UPLOAD:                    "LIBRARY_BOOK_BULK_UPLOAD",
+
+    // ─── Library Structure (Floor, Aisle, Rack, Row) ─────────────────────
+    LIBRARY_FLOOR_CREATE:                        "LIBRARY_FLOOR_CREATE",
+    LIBRARY_FLOOR_UPDATE:                        "LIBRARY_FLOOR_UPDATE",
+    LIBRARY_FLOOR_DELETE:                        "LIBRARY_FLOOR_DELETE",
+    LIBRARY_AISLE_CREATE:                        "LIBRARY_AISLE_CREATE",
+    LIBRARY_AISLE_UPDATE:                        "LIBRARY_AISLE_UPDATE",
+    LIBRARY_AISLE_DELETE:                        "LIBRARY_AISLE_DELETE",
+    LIBRARY_RACK_CREATE:                         "LIBRARY_RACK_CREATE",
+    LIBRARY_RACK_UPDATE:                         "LIBRARY_RACK_UPDATE",
+    LIBRARY_RACK_DELETE:                         "LIBRARY_RACK_DELETE",
+    LIBRARY_ROW_CREATE:                          "LIBRARY_ROW_CREATE",
+    LIBRARY_ROW_UPDATE:                          "LIBRARY_ROW_UPDATE",
+    LIBRARY_ROW_DELETE:                          "LIBRARY_ROW_DELETE",
+
+    // ─── Library Issue Book Transaction ──────────────────────────────────
+    LIBRARY_ISSUE_BOOK_CREATE:                   "LIBRARY_ISSUE_BOOK_CREATE",
+    LIBRARY_ISSUE_BOOK_UPDATE:                   "LIBRARY_ISSUE_BOOK_UPDATE",
 });
