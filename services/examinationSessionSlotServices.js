@@ -5,6 +5,8 @@ import * as examinationSessionServices from "./examinationSessionServices.js";
 import { deriveScheduleRoomFlags } from "../utility/roomCapacity.js";
 import { EXAM_SCHEDULE_FILTER_STATUS } from "../constant.js";
 import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function addMinutesToTime(timeStr, minutes) {
   if (!timeStr) return null;
@@ -235,7 +237,7 @@ export async function createExaminationSessionSlot(
   { payload, user },
   options = {},
 ) {
-  return sequelize.transaction(async (t) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_SLOT_CREATE, async ({ transaction: t }) => {
     const examinationSessionId = Number(payload.examinationSessionId);
     const numberOfSlots = payload.numberOfSlots
       ? Number(payload.numberOfSlots)
@@ -513,7 +515,7 @@ export async function updateExaminationSessionSlots(
   { payloadArray, user },
   options = {},
 ) {
-  return sequelize.transaction(async (t) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_SLOT_UPDATE, async ({ transaction: t }) => {
     const results = [];
     for (const payload of payloadArray) {
       const existingSlot =
@@ -569,7 +571,7 @@ export async function deleteExaminationSessionSlot(
   examinationSessionSlotId,
   options = {},
 ) {
-  return sequelize.transaction(async (t) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_SLOT_DELETE, async ({ transaction: t }) => {
     return examinationSessionSlotRepository.deleteExaminationSessionSlot(
       examinationSessionSlotId,
       { ...options, transaction: t },

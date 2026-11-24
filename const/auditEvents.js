@@ -235,12 +235,6 @@ export const AUDIT_EVENTS = Object.freeze({
     HALL_TICKET_PUBLISH:      "HALL_TICKET_PUBLISH",
     HALL_TICKET_BLOCK:        "HALL_TICKET_BLOCK",
 
-    // ─── Question Paper ───────────────────────────────────────────────
-    QUESTION_PAPER_CREATE:    "QUESTION_PAPER_CREATE",
-    QUESTION_PAPER_UPDATE:    "QUESTION_PAPER_UPDATE",
-    QUESTION_PAPER_APPROVE:   "QUESTION_PAPER_APPROVE",
-    QUESTION_PAPER_DELETE:    "QUESTION_PAPER_DELETE",
-
     // ─── Result ───────────────────────────────────────────────────────
     RESULT_GENERATE:          "RESULT_GENERATE",
     RESULT_PUBLISH:           "RESULT_PUBLISH",
@@ -288,4 +282,116 @@ export const AUDIT_EVENTS = Object.freeze({
     INTERNAL_ASSESSMENT_EVALUATION_UPSERT:       "INTERNAL_ASSESSMENT_EVALUATION_UPSERT",
     INTERNAL_ASSESSMENT_FINAL_RESULT_CALCULATE:  "INTERNAL_ASSESSMENT_FINAL_RESULT_CALCULATE",
     INTERNAL_ASSESSMENT_FINAL_RESULT_SUBMIT:     "INTERNAL_ASSESSMENT_FINAL_RESULT_SUBMIT",
+
+    // ─── Examination Session ───────────────────────────────────────────
+    EXAMINATION_SESSION_CREATE:                  "EXAMINATION_SESSION_CREATE",
+    EXAMINATION_SESSION_UPDATE:                  "EXAMINATION_SESSION_UPDATE",
+    EXAMINATION_SESSION_DELETE:                  "EXAMINATION_SESSION_DELETE",
+    EXAMINATION_SESSION_TERM_CREATE:             "EXAMINATION_SESSION_TERM_CREATE",
+    EXAMINATION_SESSION_TERM_DELETE:             "EXAMINATION_SESSION_TERM_DELETE",
+    EXAMINATION_SESSION_MARKS_SAVE:              "EXAMINATION_SESSION_MARKS_SAVE",
+    EXAMINATION_SESSION_MARKS_STATUS_UPDATE:     "EXAMINATION_SESSION_MARKS_STATUS_UPDATE",
+
+    // ─── Examination Session Slot ──────────────────────────────────────
+    EXAMINATION_SESSION_SLOT_CREATE:             "EXAMINATION_SESSION_SLOT_CREATE",
+    EXAMINATION_SESSION_SLOT_UPDATE:             "EXAMINATION_SESSION_SLOT_UPDATE",
+    EXAMINATION_SESSION_SLOT_DELETE:             "EXAMINATION_SESSION_SLOT_DELETE",
+
+    // ─── Evaluation ────────────────────────────────────────────────────
+    EVALUATION_CREATE:                           "EVALUATION_CREATE",
+    EVALUATION_UPDATE:                           "EVALUATION_UPDATE",
+    EVALUATION_DELETE:                           "EVALUATION_DELETE",
+
+    // ─── Exam Invigilator Assignment ───────────────────────────────────
+    EXAM_INVIGILATOR_ASSIGNMENT_CREATE:          "EXAM_INVIGILATOR_ASSIGNMENT_CREATE",
+    EXAM_INVIGILATOR_ASSIGNMENT_UPDATE:          "EXAM_INVIGILATOR_ASSIGNMENT_UPDATE",
+    EXAM_INVIGILATOR_ASSIGNMENT_DELETE:          "EXAM_INVIGILATOR_ASSIGNMENT_DELETE",
+
+    // ─── Exam Result ───────────────────────────────────────────────────
+    EXAM_RESULT_CREATE:                          "EXAM_RESULT_CREATE",
+    EXAM_RESULT_PUBLISH:                         "EXAM_RESULT_PUBLISH",
+    EXAM_RESULT_ZSCORE_RESET:                    "EXAM_RESULT_ZSCORE_RESET",
+
+    // ─── Exam Room Material Bundle ─────────────────────────────────────
+    EXAM_ROOM_MATERIAL_BUNDLE_CREATE:            "EXAM_ROOM_MATERIAL_BUNDLE_CREATE",
+    EXAM_ROOM_MATERIAL_BUNDLE_UPDATE:            "EXAM_ROOM_MATERIAL_BUNDLE_UPDATE",
+    EXAM_ROOM_MATERIAL_BUNDLE_STATUS_UPDATE:     "EXAM_ROOM_MATERIAL_BUNDLE_STATUS_UPDATE",
+
+    // ─── Exam Schedule & Room Capacity ─────────────────────────────────
+    EXAM_ROOM_CAPACITY_CREATE:                   "EXAM_ROOM_CAPACITY_CREATE",
+    EXAM_ROOM_CAPACITY_UPDATE:                   "EXAM_ROOM_CAPACITY_UPDATE",
+    EXAM_ROOM_CAPACITY_DELETE:                   "EXAM_ROOM_CAPACITY_DELETE",
+    EXAM_SEAT_ALLOCATE:                          "EXAM_SEAT_ALLOCATE",
+    EXAM_SCHEDULE_PUBLISH:                       "EXAM_SCHEDULE_PUBLISH",
+
+    // ─── Class Room (Room / Section) ────────────────────────────────────
+    CLASS_ROOM_CREATE:                           "CLASS_ROOM_CREATE",
+    CLASS_ROOM_UPDATE:                           "CLASS_ROOM_UPDATE",
+    CLASS_ROOM_DELETE:                           "CLASS_ROOM_DELETE",
+
+    // ─── Answer Sheet QR ────────────────────────────────────────────────
+    ANSWER_SHEET_QR_BULK_CREATE:                 "ANSWER_SHEET_QR_BULK_CREATE",
+    ANSWER_SHEET_QR_MAP:                         "ANSWER_SHEET_QR_MAP",
+    ANSWER_SHEET_QR_ASSIGN_TEACHERS:             "ANSWER_SHEET_QR_ASSIGN_TEACHERS",
+    ANSWER_SHEET_QR_MARKS_ASSIGN:                "ANSWER_SHEET_QR_MARKS_ASSIGN",
+    ANSWER_SHEET_QR_MARKS_FINAL_SUBMIT:          "ANSWER_SHEET_QR_MARKS_FINAL_SUBMIT",
+    ANSWER_SHEET_ANNOTATION_SAVE:                "ANSWER_SHEET_ANNOTATION_SAVE",
+
+    // ─── Question Paper ─────────────────────────────────────────────────
+    QUESTION_PAPER_CREATE:                       "QUESTION_PAPER_CREATE",
+    QUESTION_PAPER_UPDATE:                       "QUESTION_PAPER_UPDATE",
+    QUESTION_PAPER_DELETE:                       "QUESTION_PAPER_DELETE",
+    QUESTION_PAPER_GENERATE:                     "QUESTION_PAPER_GENERATE",
+    QUESTION_PAPER_APPROVE:                      "QUESTION_PAPER_APPROVE",
+    QUESTION_PAPER_FINAL_APPROVE:                "QUESTION_PAPER_FINAL_APPROVE",
+
+    // ─── Question Bank ──────────────────────────────────────────────────
+    QUESTION_BANK_CREATE:                        "QUESTION_BANK_CREATE",
+    QUESTION_BANK_UPDATE:                        "QUESTION_BANK_UPDATE",
+    QUESTION_BANK_DELETE:                        "QUESTION_BANK_DELETE",
+    QUESTION_BANK_BULK_APPROVE:                  "QUESTION_BANK_BULK_APPROVE",
+    QUESTION_BANK_BULK_REJECT:                   "QUESTION_BANK_BULK_REJECT",
+
+    // ─── Question Paper Blueprint ───────────────────────────────────────
+    QUESTION_PAPER_BLUEPRINT_CREATE:             "QUESTION_PAPER_BLUEPRINT_CREATE",
+    QUESTION_PAPER_BLUEPRINT_DELETE:             "QUESTION_PAPER_BLUEPRINT_DELETE",
+
+    // ─── Employee (Staff Directory) ────────────────────────────────────
+    EMPLOYEE_CREATE:                             "EMPLOYEE_CREATE",
+    EMPLOYEE_UPDATE:                             "EMPLOYEE_UPDATE",
+    EMPLOYEE_DELETE:                             "EMPLOYEE_DELETE",
+    EMPLOYEE_IMPORT:                             "EMPLOYEE_IMPORT",
+
+    // ─── Teacher Substitute ─────────────────────────────────────────────
+    TEACHER_SUBSTITUTE_CREATE:                   "TEACHER_SUBSTITUTE_CREATE",
+    TEACHER_SUBSTITUTE_UPDATE:                   "TEACHER_SUBSTITUTE_UPDATE",
+    TEACHER_SUBSTITUTE_DELETE:                   "TEACHER_SUBSTITUTE_DELETE",
+
+    // ─── Faculty Load ───────────────────────────────────────────────────
+    FACULTY_LOAD_CREATE:                         "FACULTY_LOAD_CREATE",
+    FACULTY_LOAD_UPDATE:                         "FACULTY_LOAD_UPDATE",
+    FACULTY_LOAD_DELETE:                         "FACULTY_LOAD_DELETE",
+
+    // ─── Leave Policy ───────────────────────────────────────────────────
+    LEAVE_POLICY_CREATE:                         "LEAVE_POLICY_CREATE",
+    LEAVE_POLICY_UPDATE:                         "LEAVE_POLICY_UPDATE",
+    LEAVE_POLICY_DELETE:                         "LEAVE_POLICY_DELETE",
+
+    // ─── Leave Type ─────────────────────────────────────────────────────
+    LEAVE_TYPE_CREATE:                           "LEAVE_TYPE_CREATE",
+    LEAVE_TYPE_UPDATE:                           "LEAVE_TYPE_UPDATE",
+    LEAVE_TYPE_STATUS_UPDATE:                    "LEAVE_TYPE_STATUS_UPDATE",
+    LEAVE_TYPE_DELETE:                           "LEAVE_TYPE_DELETE",
+
+    // ─── Leave Request ──────────────────────────────────────────────────
+    LEAVE_REQUEST_CREATE:                        "LEAVE_REQUEST_CREATE",
+    LEAVE_REQUEST_STATUS_UPDATE:                 "LEAVE_REQUEST_STATUS_UPDATE",
+
+    // ─── Approval Request ───────────────────────────────────────────────
+    APPROVAL_REQUEST_CREATE:                     "APPROVAL_REQUEST_CREATE",
+    APPROVAL_REQUEST_ACTION:                     "APPROVAL_REQUEST_ACTION",
+
+    // ─── Leave Balance ──────────────────────────────────────────────────
+    LEAVE_BALANCE_CREATE:                        "LEAVE_BALANCE_CREATE",
+    LEAVE_BALANCE_UPDATE:                        "LEAVE_BALANCE_UPDATE",
 });

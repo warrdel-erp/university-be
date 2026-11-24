@@ -264,7 +264,7 @@ export async function updateExaminationSessionSlot(
     error.statusCode = 404;
     throw error;
   }
-  return slot.update(updateData, { transaction: options.transaction });
+  return slot.update(updateData, { transaction: options.transaction, individualHooks: true });
 }
 
 export async function deleteExaminationSessionSlot(
@@ -293,7 +293,7 @@ export async function deleteExaminationSessionSlot(
     throw error;
   }
 
-  return slot.destroy({ transaction: options.transaction });
+  return slot.destroy({ transaction: options.transaction, individualHooks: true });
 }
 
 /**

@@ -5,6 +5,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as examResultRepository from "../repository/examResultRepository.js";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 import {
   buildStudentGroupFromSchedule,
   lookupStudentCount,
@@ -838,12 +840,11 @@ export async function createExaminationSessionResult(body) {
     throw err;
   }
 
-  const transaction = await sequelize.transaction();
-
-  try {
-    // -------------------------------------------------------------
-    // PASS 1: Validate readiness and collect marks for all students
-    // -------------------------------------------------------------
+  return await withAuditEvent(AUDIT_EVENTS.EXAM_RESULT_CREATE, async ({ transaction }) => {
+    try {
+      // -------------------------------------------------------------
+      // PASS 1: Validate readiness and collect marks for all students
+      // -------------------------------------------------------------
     const evaluatedStudents = [];
 
     for (const studentId of studentIds) {
@@ -1052,23 +1053,21 @@ export async function createExaminationSessionResult(body) {
       });
     }
 
-    await transaction.commit();
-
-    return {
-      examinationSession: context.examinationSession,
-      items: createdResults,
-    };
-  } catch (error) {
-    await transaction.rollback();
-    if (error instanceof UniqueConstraintError) {
-      const err = new Error(
-        "Student result already exists for this examination session.",
-      );
-      err.statusCode = 409;
-      throw err;
+      return {
+        examinationSession: context.examinationSession,
+        items: createdResults,
+      };
+    } catch (error) {
+      if (error instanceof UniqueConstraintError) {
+        const err = new Error(
+          "Student result already exists for this examination session.",
+        );
+        err.statusCode = 409;
+        throw err;
+      }
+      throw error;
     }
-    throw error;
-  }
+  });
 }
 
 export async function getStudentResultDetails(query) {
@@ -1217,8 +1216,7 @@ export async function publishExaminationSessionResults(body) {
     throw err;
   }
 
-  const transaction = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.EXAM_RESULT_PUBLISH, async ({ transaction }) => {
     const results = await examResultRepository.findStudentResultsByExaminationSessionAndStudentIds(
       examinationSessionId,
       studentIds,
@@ -1255,17 +1253,12 @@ export async function publishExaminationSessionResults(body) {
       transaction,
     );
 
-    await transaction.commit();
-
     return {
       message: "Results published successfully.",
       publishBatchId,
       publishedCount: results.length,
     };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function getPublishHistory(query) {
@@ -2849,19 +2842,27 @@ export async function resetSubjectZScoreCalculation(body) {
     throw err;
   }
 
-  const deletedCount = await examResultRepository.deleteSubjectZScoreCalculation({
-    examinationSessionId,
-    subjectId,
-    teacherId,
-  });
+  return await withAuditEvent(
+    AUDIT_EVENTS.EXAM_RESULT_ZSCORE_RESET,
+    async ({ transaction }) => {
+      const deletedCount = await examResultRepository.deleteSubjectZScoreCalculation(
+        {
+          examinationSessionId,
+          subjectId,
+          teacherId,
+        },
+        transaction,
+      );
 
-  return {
-    success: true,
-    message: teacherId
-      ? `Z-Score calculation reset for teacherId=${teacherId}`
-      : "Z-Score calculation reset for subject",
-    deletedCount,
-  };
+      return {
+        success: true,
+        message: teacherId
+          ? `Z-Score calculation reset for teacherId=${teacherId}`
+          : "Z-Score calculation reset for subject",
+        deletedCount,
+      };
+    },
+  );
 }
 
 

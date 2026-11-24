@@ -1,4 +1,6 @@
 import * as repo from "../repository/approvalRequestRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function createApprovalRequest(data, user) {
   const { approvalFor, resourceId, assignedToPositionId } = data;
@@ -26,7 +28,9 @@ export async function createApprovalRequest(data, user) {
     departmentId: data.departmentId || null,
   };
 
-  return repo.createApprovalRequest(payload);
+  return withAuditEvent(AUDIT_EVENTS.APPROVAL_REQUEST_CREATE, async ({ transaction }) => {
+    return repo.createApprovalRequest(payload, { transaction });
+  });
 }
 
 export async function getApprovalRequests(filters = {}, query = {}) {
@@ -138,16 +142,19 @@ export async function processApprovalAction(id, actionData, user) {
     updatePayload.description = description;
   }
 
-  await repo.updateApprovalRequest(id, updatePayload);
+  return withAuditEvent(AUDIT_EVENTS.APPROVAL_REQUEST_ACTION, async ({ transaction }) => {
+    await repo.updateApprovalRequest(id, updatePayload, { transaction });
 
-  // Sync back to target entity if it's a leave request
-  if (current.approvalFor === "leave" && (status === "approved" || status === "rejected")) {
-    const leaveService = await import("./leaveRequestService.js");
-    await leaveService.updateRequestStatus(current.resourceId, status, userId, {
-      skipApprovalSync: true,
-    });
-  }
+    // Sync back to target entity if it's a leave request
+    if (current.approvalFor === "leave" && (status === "approved" || status === "rejected")) {
+      const leaveService = await import("./leaveRequestService.js");
+      await leaveService.updateRequestStatus(current.resourceId, status, userId, {
+        skipApprovalSync: true,
+        transaction,
+      });
+    }
 
-  return repo.getApprovalRequestById(id);
+    return repo.getApprovalRequestById(id, { transaction });
+  });
 }
 

@@ -302,7 +302,7 @@ export async function allocateSeats(allocations, transaction) {
                 throw new Error('Exam schedule room capacity not found');
             }
         }
-        return await model.studentExamSeatModel.bulkCreate(allocations, { transaction });
+        return await model.studentExamSeatModel.bulkCreate(allocations, { transaction, individualHooks: true });
     } catch (error) {
         console.error("Error allocating seats:", error);
         throw error;
@@ -334,6 +334,7 @@ export async function clearExistingAllocations(examScheduleRoomCapacityIds, tran
                 examScheduleRoomCapacityId: { [Op.in]: examScheduleRoomCapacityIds },
             },
             transaction,
+            individualHooks: true,
         });
     } catch (error) {
         console.error("Error clearing existing allocations:", error);
@@ -742,6 +743,7 @@ export async function bulkCreateRoomAssignments(assignments, options = {}) {
     const tx = options?.transaction || (options && options.commit ? options : undefined);
     return await model.examScheduleRoomCapacityModel.bulkCreate(assignments, {
         transaction: tx,
+        individualHooks: true,
     });
 }
 

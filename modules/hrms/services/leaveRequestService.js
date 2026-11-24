@@ -5,6 +5,9 @@ import * as policyRepo from "../repository/leavePolicyRepository.js";
 import * as approvalRepo from "../repository/approvalRequestRepository.js";
 import * as model from "../../../models/index.js";
 import { scoped } from "../../../utility/scoped.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
+import { getCurrentEventId } from "../../../utility/audit/auditContext.js";
 
 export async function addRequest(data) {
   const { userId, policyId, startDate, endDate, totalDays } = data;
@@ -71,7 +74,7 @@ export async function addRequest(data) {
   }
 
   // 5. Atomic Transaction: Deduct Balance + Save Leave Request + Create Approval Request
-  return sequelize.transaction(async (t) => {
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_REQUEST_CREATE, async ({ transaction }) => {
     // Deduct leave balance
     await balanceRepo.updateBalance(
       balance.balanceId,
@@ -79,11 +82,11 @@ export async function addRequest(data) {
         usedLeaves: balance.usedLeaves + Number(totalDays),
         remainingLeaves: balance.remainingLeaves - Number(totalDays),
       },
-      { transaction: t }
+      { transaction }
     );
 
     // Create leave request record
-    const leaveRequest = await repo.addRequest(data, { transaction: t });
+    const leaveRequest = await repo.addRequest(data, { transaction });
     const rawLeave = leaveRequest.toJSON ? leaveRequest.toJSON() : leaveRequest;
 
     // Simultaneously create approval_requests record
@@ -101,7 +104,7 @@ export async function addRequest(data) {
         campusId: data.campusId || rawLeave.campusId || null,
         departmentId: data.departmentId || rawLeave.departmentId || null,
       },
-      { transaction: t }
+      { transaction }
     );
 
     return {
@@ -131,80 +134,98 @@ export async function getRequestById(requestId) {
 }
 
 export async function updateRequestStatus(requestId, status, reviewerId, options = {}) {
-  const request = await repo.getRequestById(requestId);
-  if (!request) throw new Error("Leave request not found");
+  const execute = async (transaction) => {
+    const opts = transaction ? { transaction } : options;
+    const request = await repo.getRequestById(requestId);
+    if (!request) throw new Error("Leave request not found");
 
-  const balance = await balanceRepo.getBalance(request.userId, request.policyId);
+    const balance = await balanceRepo.getBalance(request.userId, request.policyId);
 
-  // If rejected, cancelled, or skipped, refund previously deducted leaves
-  if ((status === "rejected" || status === "cancelled" || status === "skipped") && balance) {
-    await balanceRepo.updateBalance(balance.balanceId, {
-      usedLeaves: Math.max(0, balance.usedLeaves - request.totalDays),
-      remainingLeaves: balance.remainingLeaves + request.totalDays,
-    });
-  }
-
-  const updateData = { status };
-  if (reviewerId) {
-    updateData.reviewedBy = reviewerId;
-    updateData.reviewedAt = new Date();
-  }
-
-  await repo.updateRequest(requestId, updateData);
-
-  // Synchronize or create entry in approval_requests table
-  let approvalData = null;
-  if (!options.skipApprovalSync) {
-    const existingApproval = await scoped(model.approvalRequestModel).findOne({
-      where: {
-        approvalFor: "leave",
-        resourceId: requestId,
-      },
-    });
-
-    if (existingApproval) {
-      const approvalUpdate = {
-        status,
-        actionAt: new Date(),
-      };
-      if (status === "approved" || status === "rejected") {
-        approvalUpdate.approvedById = reviewerId || null;
-      } else if (status === "cancelled" || status === "skipped") {
-        approvalUpdate.skippedByUserId = reviewerId || null;
-      }
-      if (options.description) {
-        approvalUpdate.description = options.description;
-      }
-      await approvalRepo.updateApprovalRequest(existingApproval.id, approvalUpdate);
-      approvalData = await approvalRepo.getApprovalRequestById(existingApproval.id);
-    } else {
-      // If no approval_requests row existed yet, create one now!
-      let targetPositionId = await repo.resolveApproverPosition(request.userId);
-      approvalData = await approvalRepo.createApprovalRequest({
-        approvalFor: "leave",
-        resourceId: requestId,
-        requestedBy: request.userId,
-        assignedToPositionId: targetPositionId || 1,
-        level: 1,
-        status,
-        approvedById: (status === "approved" || status === "rejected") ? reviewerId : null,
-        skippedByUserId: (status === "cancelled" || status === "skipped") ? reviewerId : null,
-        actionAt: new Date(),
-        description: options.description || request.reason || "Leave request",
-        universityId: request.universityId || null,
-        instituteId: request.instituteId || null,
-        campusId: request.campusId || null,
-        departmentId: request.departmentId || null,
-      });
+    // If rejected, cancelled, or skipped, refund previously deducted leaves
+    if ((status === "rejected" || status === "cancelled" || status === "skipped") && balance) {
+      await balanceRepo.updateBalance(
+        balance.balanceId,
+        {
+          usedLeaves: Math.max(0, balance.usedLeaves - request.totalDays),
+          remainingLeaves: balance.remainingLeaves + request.totalDays,
+        },
+        opts
+      );
     }
-  }
 
-  const freshLeave = await repo.getRequestById(requestId);
-  const plainLeave = freshLeave?.toJSON ? freshLeave.toJSON() : freshLeave;
-  return {
-    ...plainLeave,
-    approvalRequest: approvalData,
+    const updateData = { status };
+    if (reviewerId) {
+      updateData.reviewedBy = reviewerId;
+      updateData.reviewedAt = new Date();
+    }
+
+    await repo.updateRequest(requestId, updateData, opts);
+
+    // Synchronize or create entry in approval_requests table
+    let approvalData = null;
+    if (!options.skipApprovalSync) {
+      const existingApproval = await scoped(model.approvalRequestModel).findOne({
+        where: {
+          approvalFor: "leave",
+          resourceId: requestId,
+        },
+        transaction,
+      });
+
+      if (existingApproval) {
+        const approvalUpdate = {
+          status,
+          actionAt: new Date(),
+        };
+        if (status === "approved" || status === "rejected") {
+          approvalUpdate.approvedById = reviewerId || null;
+        } else if (status === "cancelled" || status === "skipped") {
+          approvalUpdate.skippedByUserId = reviewerId || null;
+        }
+        if (options.description) {
+          approvalUpdate.description = options.description;
+        }
+        await approvalRepo.updateApprovalRequest(existingApproval.id, approvalUpdate, opts);
+        approvalData = await approvalRepo.getApprovalRequestById(existingApproval.id, opts);
+      } else {
+        // If no approval_requests row existed yet, create one now!
+        let targetPositionId = await repo.resolveApproverPosition(request.userId, opts);
+        approvalData = await approvalRepo.createApprovalRequest(
+          {
+            approvalFor: "leave",
+            resourceId: requestId,
+            requestedBy: request.userId,
+            assignedToPositionId: targetPositionId || 1,
+            level: 1,
+            status,
+            approvedById: status === "approved" || status === "rejected" ? reviewerId : null,
+            skippedByUserId: status === "cancelled" || status === "skipped" ? reviewerId : null,
+            actionAt: new Date(),
+            description: options.description || request.reason || "Leave request",
+            universityId: request.universityId || null,
+            instituteId: request.instituteId || null,
+            campusId: request.campusId || null,
+            departmentId: request.departmentId || null,
+          },
+          opts
+        );
+      }
+    }
+
+    const freshLeave = await repo.getRequestById(requestId);
+    const plainLeave = freshLeave?.toJSON ? freshLeave.toJSON() : freshLeave;
+    return {
+      ...plainLeave,
+      approvalRequest: approvalData,
+    };
   };
+
+  if (options.transaction || getCurrentEventId() != null) {
+    return execute(options.transaction);
+  }
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_REQUEST_STATUS_UPDATE, async ({ transaction }) => {
+    return execute(transaction);
+  });
 }
 
 export async function getLeavesAssignedToMe(user, query = {}) {

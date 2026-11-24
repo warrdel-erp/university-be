@@ -4,16 +4,16 @@ import { requestContext } from "../../../utility/requestContext.js";
 import sequelize from "../../../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 
-export async function addPolicy(data) {
-  return scoped(model.leavePolicyModel).create(data);
+export async function addPolicy(data, options = {}) {
+  return scoped(model.leavePolicyModel).create(data, options);
 }
 
 /**
  * Creates a complete Leave Policy with its Entitlements (leave types)
  * and Role Assignments (including selected employees).
  */
-export async function createFullPolicy({ policyData, entitlements = [], roleAssignments = [] }) {
-  return sequelize.transaction(async (t) => {
+export async function createFullPolicy({ policyData, entitlements = [], roleAssignments = [] }, options = {}) {
+  const execute = async (t) => {
     // 1. Create main Leave Policy
     const policy = await scoped(model.leavePolicyModel).create(policyData, { transaction: t });
     const policyId = policy.policyId || policy.dataValues?.policyId;
@@ -35,6 +35,7 @@ export async function createFullPolicy({ policyData, entitlements = [], roleAssi
       }));
       createdEntitlements = await model.leavePolicyEntitlementModel.bulkCreate(entitlementRecords, {
         transaction: t,
+        individualHooks: true,
         validate: true,
       });
     }
@@ -73,6 +74,7 @@ export async function createFullPolicy({ policyData, entitlements = [], roleAssi
           }));
           createdEmployees = await model.leavePolicyEmployeeModel.bulkCreate(empRecords, {
             transaction: t,
+            individualHooks: true,
           });
         }
 
@@ -85,7 +87,12 @@ export async function createFullPolicy({ policyData, entitlements = [], roleAssi
 
     // 4. Reload full policy with associations
     return getPolicyById(policyId, { transaction: t });
-  });
+  };
+
+  if (options.transaction) {
+    return execute(options.transaction);
+  }
+  return sequelize.transaction(execute);
 }
 
 export async function getPolicies(filters = {}) {
@@ -231,9 +238,7 @@ export async function getPolicyById(policyId, options = {}) {
 }
 
 export async function updatePolicy(policyId, data, options = {}) {
-  return sequelize.transaction(async (t) => {
-    const txn = options.transaction || t;
-
+  const execute = async (txn) => {
     const existing = await scoped(model.leavePolicyModel).findOne({
       where: { policyId },
       transaction: txn,
@@ -255,6 +260,7 @@ export async function updatePolicy(policyId, data, options = {}) {
 
     const result = await scoped(model.leavePolicyModel).update(policyFields, {
       where: { policyId },
+      individualHooks: true,
       transaction: txn,
     });
 
@@ -262,6 +268,7 @@ export async function updatePolicy(policyId, data, options = {}) {
     if (Array.isArray(finalEntitlements)) {
       await model.leavePolicyEntitlementModel.destroy({
         where: { policyId },
+        individualHooks: true,
         transaction: txn,
         force: true,
       });
@@ -281,6 +288,7 @@ export async function updatePolicy(policyId, data, options = {}) {
         }));
         await model.leavePolicyEntitlementModel.bulkCreate(entitlementRecords, {
           transaction: txn,
+          individualHooks: true,
           validate: true,
         });
       }
@@ -297,10 +305,12 @@ export async function updatePolicy(policyId, data, options = {}) {
       if (existingRoleIds.length > 0) {
         await model.leavePolicyEmployeeModel.destroy({
           where: { policyRoleId: existingRoleIds },
+          individualHooks: true,
           transaction: txn,
         });
         await model.leavePolicyRoleModel.destroy({
           where: { policyId },
+          individualHooks: true,
           transaction: txn,
         });
       }
@@ -333,19 +343,26 @@ export async function updatePolicy(policyId, data, options = {}) {
           }));
           await model.leavePolicyEmployeeModel.bulkCreate(empRecords, {
             transaction: txn,
+            individualHooks: true,
           });
         }
       }
     }
 
     return result;
-  });
+  };
+
+  if (options.transaction) {
+    return execute(options.transaction);
+  }
+  return sequelize.transaction(execute);
 }
 
-export async function deletePolicy(policyId) {
+export async function deletePolicy(policyId, options = {}) {
   const existing = await scoped(model.leavePolicyModel).findOne({
     attributes: ["policyId"],
     where: { policyId },
+    ...(options.transaction ? { transaction: options.transaction } : {}),
   });
   if (!existing) {
     return false;
@@ -353,6 +370,8 @@ export async function deletePolicy(policyId) {
 
   const deleted = await scoped(model.leavePolicyModel).destroy({
     where: { policyId },
+    individualHooks: true,
+    ...(options.transaction ? { transaction: options.transaction } : {}),
   });
   return deleted > 0;
 }

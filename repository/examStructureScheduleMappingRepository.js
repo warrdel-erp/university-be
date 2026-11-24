@@ -196,17 +196,20 @@ export async function deleteExamSchedule(examScheduleId, options = {}) {
   return deleted > 0;
 }
 
-export async function publishExamSchedule(examSetupTypeId, data) {
+export async function publishExamSchedule(examSetupTypeId, data, options = {}) {
   try {
     const existing = await scoped(model.examSetupTypeModel).findOne({
       where: { examSetupTypeId },
       attributes: ['examSetupTypeId'],
+      transaction: options.transaction,
     });
     if (!existing) {
       return [0];
     }
     return await scoped(model.examSetupTypeModel).update(data, {
       where: { examSetupTypeId },
+      transaction: options.transaction,
+      individualHooks: true,
     });
   } catch (error) {
     console.error("Error updating exam Schedule:", error);
