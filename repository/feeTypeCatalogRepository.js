@@ -66,6 +66,7 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, payload, options = 
   const [affected] = await scoped(model.feeTypeCatalogModel).update(payload, {
     where: { feeTypeCatalogId },
     transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -118,6 +119,7 @@ export async function deleteFeeTypeCatalog(feeTypeCatalogId, options = {}) {
   const deleted = await scoped(model.feeTypeCatalogModel).destroy({
     where: { feeTypeCatalogId },
     transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }

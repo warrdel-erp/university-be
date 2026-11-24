@@ -32,7 +32,10 @@ export async function mapSubjectsToPool(electivePoolId, subjectIds = [], created
     createdBy,
   }));
 
-  return model.electivePoolSubjectMappingModel.bulkCreate(rowsToInsert, { transaction });
+  return model.electivePoolSubjectMappingModel.bulkCreate(rowsToInsert, {
+    transaction,
+    individualHooks: true,
+  });
 }
 
 export async function unmapSubjectFromPool(electivePoolId, subjectId, options = {}) {
@@ -42,6 +45,7 @@ export async function unmapSubjectFromPool(electivePoolId, subjectId, options = 
       electivePoolId,
       subjectId,
     },
+    individualHooks: true,
     transaction,
   });
 }

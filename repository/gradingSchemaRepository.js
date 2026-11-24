@@ -144,6 +144,7 @@ export async function updateGradingSchema(gradingSchemaId, data, options = {}) {
   await scoped(model.gradingModel).update(data, {
     where: { gradingId: Number(gradingSchemaId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 
   return await getGradingSchemaById(gradingSchemaId, options);
@@ -153,6 +154,7 @@ export async function deleteGradingSchema(gradingSchemaId, options = {}) {
   return await scoped(model.gradingModel).destroy({
     where: { gradingId: Number(gradingSchemaId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -178,6 +180,7 @@ export async function syncGradingSchemaGrades(gradingSchemaId, gradesList, optio
         gradingGradeId: toDelete.map((g) => g.gradingGradeId),
       },
       transaction: options.transaction,
+      individualHooks: true,
     });
   }
 
@@ -205,7 +208,7 @@ export async function syncGradingSchemaGrades(gradingSchemaId, gradesList, optio
         (g) => Number(g.gradingGradeId) === Number(gradeItem.gradingGradeId)
       );
       if (existingGrade) {
-        await existingGrade.update(gradeData, { transaction: options.transaction });
+        await existingGrade.update(gradeData, { transaction: options.transaction, individualHooks: true });
         continue;
       }
     }
@@ -243,6 +246,7 @@ export async function updateGradingSchemaGrade(gradingSchemaGradeId, gradeData, 
   await model.gradingGradeModel.update(gradeData, {
     where: { gradingGradeId: Number(gradingSchemaGradeId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return await getGradingSchemaGradeById(gradingSchemaGradeId, options);
 }
@@ -251,6 +255,7 @@ export async function deleteGradingSchemaGrade(gradingSchemaGradeId, options = {
   return await model.gradingGradeModel.destroy({
     where: { gradingGradeId: Number(gradingSchemaGradeId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -260,6 +265,7 @@ export async function updateGradingSchemaStatus(gradingSchemaId, status, updated
     {
       where: { gradingId: Number(gradingSchemaId) },
       transaction: options.transaction,
+      individualHooks: true,
     }
   );
   return await getGradingSchemaById(gradingSchemaId, options);

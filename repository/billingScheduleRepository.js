@@ -109,6 +109,7 @@ export async function bulkCreateBillingScheduleSubItems(records, options = {}) {
   if (!records || records.length === 0) return [];
   return scoped(model.billingScheduleSubItemsModel).bulkCreate(records, {
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -171,6 +172,7 @@ export async function updateBillingScheduleItem(billingScheduleItemId, data, opt
   return scoped(model.billingScheduleItemsModel).update(data, {
     where: { billingScheduleItemId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -178,6 +180,7 @@ export async function deleteBillingScheduleItem(billingScheduleItemId, options =
   return scoped(model.billingScheduleItemsModel).destroy({
     where: { billingScheduleItemId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -185,6 +188,7 @@ export async function deleteBillingScheduleSubItemsByItemId(billingScheduleItemI
   return scoped(model.billingScheduleSubItemsModel).destroy({
     where: { billingScheduleItemId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -205,6 +209,7 @@ export async function deleteBillingScheduleSubItemById(billingScheduleSubItemId,
   return scoped(model.billingScheduleSubItemsModel).destroy({
     where: { billingScheduleSubItemId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 

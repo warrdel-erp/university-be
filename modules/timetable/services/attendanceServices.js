@@ -8,6 +8,8 @@ import * as model from "../../../models/index.js";
 import { ATTENDANCE_STATUS } from "../../../constant.js";
 import { decimalDivide, decimalMultiply } from "../../../utility/decimalMoney.js";
 import { resolveProgramYear, resolveStudentClassSectionsId } from "../../../utility/classSectionIncludes.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import {
   assertCopyPeriodDateWiseMatch,
   assertDateWiseCellsBelongToTerm,
@@ -84,8 +86,7 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
     );
   }
 
-  const t = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.ATTENDANCE_MARK, async ({ transaction }) => {
     const attendanceRecords = [];
     for (const dateWiseId of pendingIds) {
       const dateWise = dateWiseById.get(Number(dateWiseId)) || {};
@@ -95,10 +96,12 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
         if (!studentClassSectionsId) {
           const studentObj = await model.studentModel.findByPk(attendance.studentId, {
             attributes: ['studentId', 'classSectionTermId'],
+            transaction,
           });
           if (studentObj && studentObj.classSectionTermId) {
             const termObj = await model.classSectionTermModel.findByPk(studentObj.classSectionTermId, {
               attributes: ['classSectionsId'],
+              transaction,
             });
             studentClassSectionsId = termObj?.classSectionsId || null;
           }
@@ -117,14 +120,9 @@ export async function addAttendance(attendanceData, createdBy, updatedBy) {
       }
     }
 
-    const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction: t });
-    await t.commit();
+    const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction });
     return { addedAttendance, markedPeriods: pendingIds, skippedPeriods: skippedIds };
-  } catch (error) {
-    await t.rollback();
-    console.error('Error adding Attendance:', error);
-    throw error;
-  }
+  });
 };
 
 export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
@@ -218,8 +216,7 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
     }
   }
 
-  const t = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.ATTENDANCE_COPY_PERIOD, async ({ transaction }) => {
     const attendanceRecords = [];
 
     for (const targetDateWiseId of pendingTargetIds) {
@@ -242,8 +239,7 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
       }
     }
 
-    const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction: t });
-    await t.commit();
+    const addedAttendance = await attendanceService.addAttendance(attendanceRecords, { transaction });
 
     return {
       addedAttendance,
@@ -259,11 +255,7 @@ export async function copyAttendancePeriod(copyData, createdBy, updatedBy) {
       markedPeriods: pendingTargetIds,
       skippedPeriods: skippedTargetIds,
     };
-  } catch (error) {
-    await t.rollback();
-    console.error('Error copying attendance period:', error);
-    throw error;
-  }
+  });
 };
 
 function getPeriodSubjectInfo(periodItem) {
@@ -478,14 +470,10 @@ export async function getAttendanceDetails() {
 }
 
 export async function updateAttendance(attendanceId, record, updatedBy) {
-  try {
-    record.updatedBy = updatedBy;
-    const result = await attendanceService.updateAttendance(attendanceId, record);
-    return result;
-  } catch (error) {
-    console.error(`Error updating Attendance:`, error);
-    throw error;
-  }
+  record.updatedBy = updatedBy;
+  return await withAuditEvent(AUDIT_EVENTS.ATTENDANCE_UPDATE, async ({ transaction }) => {
+    return await attendanceService.updateAttendance(attendanceId, record, { transaction });
+  });
 };
 
 /* ----------------  Parse student string ---------------- */
@@ -552,61 +540,63 @@ function validateAttendanceRow(attendance) {
 /* ----------------  Main Import Function ---------------- */
 export async function importAttendanceData(excelData, commonData) {
   try {
-    const dateColumns = Object.keys(excelData[0]).filter(
-      (key) => key !== "Name" && key !== "Scholar No"
-    );
+    return await withAuditEvent(AUDIT_EVENTS.ATTENDANCE_IMPORT, async ({ transaction }) => {
+      const dateColumns = Object.keys(excelData[0]).filter(
+        (key) => key !== "Name" && key !== "Scholar No"
+      );
 
-    const dataRows = excelData.slice(1);
-    let totalEntries = 0;
+      const dataRows = excelData.slice(1);
+      let totalEntries = 0;
 
-    for (const [index, row] of dataRows.entries()) {
-      const parsedStudent = parseStudentString(row.Name);
-      if (!parsedStudent) {
-        throw new Error(`Row ${index + 2}: Invalid student name format`);
-      }
-
-      for (const dateCol of dateColumns) {
-        const status = String(row[dateCol]).trim();
-
-        if (!status) continue;
-
-        if (status.toLowerCase() === 'undefined') {
-          console.log(` Skipping entry where status is 'undefined' for date: ${dateCol}`);
-          continue;
+      for (const [index, row] of dataRows.entries()) {
+        const parsedStudent = parseStudentString(row.Name);
+        if (!parsedStudent) {
+          throw new Error(`Row ${index + 2}: Invalid student name format`);
         }
 
-        const date = parseExcelDate(dateCol);
-        if (!date && !status) continue;
+        for (const dateCol of dateColumns) {
+          const status = String(row[dateCol]).trim();
 
-        const dateWise = await resolveSourcePeriodByDateWiseId(
-          parsedStudent.timeTableCellDateWiseId,
-        );
+          if (!status) continue;
 
-        const attendanceEntry = {
-          studentId: parsedStudent.studentId,
-          classSectionsId: parsedStudent.classSectionsId,
-          timeTableCellDateWiseId: parsedStudent.timeTableCellDateWiseId,
-          timeTableCellId: dateWise.timeTableCellId,
-          date,
-          attendanceStatus: status,
-          ...commonData,
-        };
+          if (status.toLowerCase() === 'undefined') {
+            console.log(` Skipping entry where status is 'undefined' for date: ${dateCol}`);
+            continue;
+          }
 
-        const error = validateAttendanceRow(attendanceEntry);
-        if (error) {
-          throw new Error(
-            `Row ${index + 2} (${parsedStudent.studentName}) — ${error}`
+          const date = parseExcelDate(dateCol);
+          if (!date && !status) continue;
+
+          const dateWise = await resolveSourcePeriodByDateWiseId(
+            parsedStudent.timeTableCellDateWiseId,
           );
-        }
-        await attendanceService.addImportAttendance(attendanceEntry);
-        totalEntries++;
-      }
-    }
 
-    return {
-      success: true,
-      message: `Attendance imported successfully. Total entries: ${totalEntries}`,
-    };
+          const attendanceEntry = {
+            studentId: parsedStudent.studentId,
+            classSectionsId: parsedStudent.classSectionsId,
+            timeTableCellDateWiseId: parsedStudent.timeTableCellDateWiseId,
+            timeTableCellId: dateWise.timeTableCellId,
+            date,
+            attendanceStatus: status,
+            ...commonData,
+          };
+
+          const error = validateAttendanceRow(attendanceEntry);
+          if (error) {
+            throw new Error(
+              `Row ${index + 2} (${parsedStudent.studentName}) — ${error}`
+            );
+          }
+          await attendanceService.addImportAttendance(attendanceEntry, { transaction });
+          totalEntries++;
+        }
+      }
+
+      return {
+        success: true,
+        message: `Attendance imported successfully. Total entries: ${totalEntries}`,
+      };
+    });
   } catch (error) {
     console.error(" Error importing attendance data:", error.message);
     return { success: false, error: error.message };
@@ -1160,33 +1150,32 @@ async function prepareFinalAttendanceRecords(rawEntries, studentIds, commonData)
 }
 
 export async function importBulkAttendanceData(fileBuffer, commonData) {
-  const t = await sequelize.transaction();
   try {
-    const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+    return await withAuditEvent(AUDIT_EVENTS.ATTENDANCE_IMPORT, async ({ transaction }) => {
+      const workbook = xlsx.read(fileBuffer, { type: 'buffer' });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = xlsx.utils.sheet_to_json(sheet, { header: 1 });
 
-    if (rows.length < 3) throw new Error("Invalid Excel format: At least 3 rows required.");
+      if (rows.length < 3) throw new Error("Invalid Excel format: At least 3 rows required.");
 
-    const colMappings = parseAttendanceExcelHeaders(rows[0], rows[1]);
-    if (colMappings.length === 0) throw new Error("No valid attendance periods found in Excel header.");
+      const colMappings = parseAttendanceExcelHeaders(rows[0], rows[1]);
+      if (colMappings.length === 0) throw new Error("No valid attendance periods found in Excel header.");
 
-    const { studentIds, rawEntries } = parseAttendanceExcelRows(rows.slice(2), colMappings);
-    if (rawEntries.length === 0) throw new Error("No attendance data found in the Excel sheet.");
+      const { studentIds, rawEntries } = parseAttendanceExcelRows(rows.slice(2), colMappings);
+      if (rawEntries.length === 0) throw new Error("No attendance data found in the Excel sheet.");
 
-    const finalRecords = await prepareFinalAttendanceRecords(rawEntries, studentIds, commonData);
+      const finalRecords = await prepareFinalAttendanceRecords(rawEntries, studentIds, commonData);
 
-    if (finalRecords.length > 0) {
-      await attendanceService.addAttendance(finalRecords, { transaction: t });
-    }
+      if (finalRecords.length > 0) {
+        await attendanceService.addAttendance(finalRecords, { transaction });
+      }
 
-    await t.commit();
-    return {
-      success: true,
-      message: `Bulk attendance imported successfully. Total entries: ${finalRecords.length}`,
-    };
+      return {
+        success: true,
+        message: `Bulk attendance imported successfully. Total entries: ${finalRecords.length}`,
+      };
+    });
   } catch (error) {
-    if (t) await t.rollback();
     console.error("Error in importBulkAttendanceData:", error.message);
     return { success: false, error: error.message };
   }

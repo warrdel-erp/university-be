@@ -78,7 +78,7 @@ async function assertCodeValueUnique({
   employeeCodeMasterId,
   code,
   excludeTypeId,
-}) {
+}, options = {}) {
   const existing = await scoped(model.employeeCodeMasterType).findOne({
     where: {
       employeeCodeMasterId,
@@ -91,6 +91,7 @@ async function assertCodeValueUnique({
     },
 
     attributes: ["employeeCodeMasterTypeId"],
+    transaction: options.transaction,
   });
 
   if (existing) {
@@ -104,11 +105,12 @@ async function assertCodeValueUnique({
   }
 }
 
-export async function getCodeMasterById(employeeCodeMasterId) {
+export async function getCodeMasterById(employeeCodeMasterId, options = {}) {
   const master = await model.employeeCodeMaster.findOne({
     where: { employeeCodeMasterId },
 
     attributes: ["employeeCodeMasterId", "codeMasterType"],
+    transaction: options.transaction,
   });
 
   if (!master) {
@@ -122,7 +124,7 @@ export async function getCodeMasterById(employeeCodeMasterId) {
   return master;
 }
 
-export async function getAllEmployeeType() {
+export async function getAllEmployeeType(options = {}) {
   try {
     const rows = await model.employeeCodeMaster.findAll({
       attributes: { exclude: excludeMeta },
@@ -131,6 +133,7 @@ export async function getAllEmployeeType() {
         ["codeMasterType", "ASC"],
         ["employeeCodeMasterId", "ASC"],
       ],
+      transaction: options.transaction,
     });
 
     return dedupeCategoriesByType(rows);
@@ -141,7 +144,7 @@ export async function getAllEmployeeType() {
   }
 }
 
-export async function addEmployeeCode(data) {
+export async function addEmployeeCode(data, options = {}) {
   try {
     const { instituteId } = buildScope(model.employeeCodeMasterType);
 
@@ -159,9 +162,11 @@ export async function addEmployeeCode(data) {
       employeeCodeMasterId: data.employeeCodeMasterId,
 
       code: data.code,
-    });
+    }, options);
 
-    return scoped(model.employeeCodeMasterType).create(data);
+    return await scoped(model.employeeCodeMasterType).create(data, {
+      transaction: options.transaction,
+    });
   } catch (error) {
     console.error("Error in add employee code:", error);
 
@@ -285,12 +290,13 @@ export async function getEmployeeCodesTypes(employeeCodeMasterId, key, search) {
   }
 }
 
-export async function updateCodeMasterType(employeeCodeMasterTypeId, info) {
+export async function updateCodeMasterType(employeeCodeMasterTypeId, info, options = {}) {
   try {
     const existing = await scoped(model.employeeCodeMasterType).findOne({
       attributes: ["employeeCodeMasterTypeId", "employeeCodeMasterId", "code"],
 
       where: { employeeCodeMasterTypeId },
+      transaction: options.transaction,
     });
 
     if (!existing) {
@@ -304,11 +310,13 @@ export async function updateCodeMasterType(employeeCodeMasterTypeId, info) {
         code: info.code,
 
         excludeTypeId: employeeCodeMasterTypeId,
-      });
+      }, options);
     }
 
     await scoped(model.employeeCodeMasterType).update(info, {
       where: { employeeCodeMasterTypeId },
+      individualHooks: true,
+      transaction: options.transaction,
     });
 
     return true;
@@ -322,12 +330,13 @@ export async function updateCodeMasterType(employeeCodeMasterTypeId, info) {
   }
 }
 
-export async function deleteCodeMasterType(employeeCodeMasterTypeId) {
+export async function deleteCodeMasterType(employeeCodeMasterTypeId, options = {}) {
   try {
     const existing = await scoped(model.employeeCodeMasterType).findOne({
       attributes: ["employeeCodeMasterTypeId"],
 
       where: { employeeCodeMasterTypeId },
+      transaction: options.transaction,
     });
 
     if (!existing) {
@@ -338,6 +347,7 @@ export async function deleteCodeMasterType(employeeCodeMasterTypeId) {
       where: { employeeCodeMasterTypeId },
 
       individualHooks: true,
+      transaction: options.transaction,
     });
 
     return { message: "employee Code Master Type deleted successfully" };

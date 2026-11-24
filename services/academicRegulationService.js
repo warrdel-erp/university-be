@@ -1,8 +1,10 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as academicRegulationRepo from "../repository/academicRegulationRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 export async function createAcademicRegulation(payload, user) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_REGULATION_CREATE, async ({ transaction: t }) => {
     const sanitizeDate = (val) => (!val || val === "" || val === "Invalid date" ? null : val);
     const { courseId, sessionId, courseMappings, batchMappings, batchId, ...restPayload } = payload;
     let mappings = batchMappings || courseMappings || [];
@@ -41,7 +43,7 @@ export async function getAcademicRegulationById(academicRegulationId) {
 }
 
 export async function updateAcademicRegulation(academicRegulationId, payload, user) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_REGULATION_UPDATE, async ({ transaction: t }) => {
     const existing = await academicRegulationRepo.getAcademicRegulationById(academicRegulationId, { transaction: t });
     if (!existing) {
       const error = new Error("Academic regulation not found");
@@ -161,7 +163,7 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
 }
 
 export async function deleteAcademicRegulation(academicRegulationId) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_REGULATION_DELETE, async ({ transaction: t }) => {
     const result = await academicRegulationRepo.deleteAcademicRegulation(academicRegulationId, { transaction: t });
     if (!result) {
       const error = new Error("Academic regulation not found");
@@ -173,7 +175,7 @@ export async function deleteAcademicRegulation(academicRegulationId) {
 }
 
 export async function createCourseMapping({ academicRegulationId, batchId }, user = null) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_REGULATION_COURSE_MAP, async ({ transaction: t }) => {
     const existingRegulation = await academicRegulationRepo.getAcademicRegulationById(academicRegulationId, { transaction: t });
     if (!existingRegulation) {
       const error = new Error("Academic regulation not found");
@@ -210,7 +212,7 @@ export async function getCourseMappings(filters = {}) {
 }
 
 export async function deleteCourseMapping(academicRegulationCourseMappingId) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_REGULATION_COURSE_UNMAP, async ({ transaction: t }) => {
     await academicRegulationRepo.deleteCourseMapping(academicRegulationCourseMappingId, { transaction: t });
     return { message: "Course mapping deleted successfully" };
   });

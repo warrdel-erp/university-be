@@ -1,4 +1,6 @@
 import * as governanceBodyRepository from "../repository/governanceBodyRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 function parseDateOnly(value) {
     if (value == null || value === '') {
@@ -39,18 +41,20 @@ export async function createGovernanceBody(data, createdBy, updatedBy) {
     validateEffectiveDates(data.effectiveFrom, data.effectiveTo);
     const parentBodyId = await validateParentBody(data.parentBodyId);
 
-    return governanceBodyRepository.createGovernanceBody({
-        name: data.name,
-        code: data.code,
-        category: data.category,
-        description: data.description ?? null,
-        parentBodyId,
-        constitutedOn: parseDateOnly(data.constitutedOn),
-        effectiveFrom: parseDateOnly(data.effectiveFrom),
-        effectiveTo: parseDateOnly(data.effectiveTo),
-        status: data.status ?? 'Active',
-        createdBy,
-        updatedBy,
+    return await withAuditEvent(AUDIT_EVENTS.GOVERNANCE_BODY_CREATE, async ({ transaction }) => {
+        return await governanceBodyRepository.createGovernanceBody({
+            name: data.name,
+            code: data.code,
+            category: data.category,
+            description: data.description ?? null,
+            parentBodyId,
+            constitutedOn: parseDateOnly(data.constitutedOn),
+            effectiveFrom: parseDateOnly(data.effectiveFrom),
+            effectiveTo: parseDateOnly(data.effectiveTo),
+            status: data.status ?? 'Active',
+            createdBy,
+            updatedBy,
+        }, { transaction });
     });
 }
 
@@ -87,7 +91,9 @@ export async function updateGovernanceBody(governanceBodyId, data, updatedBy) {
     const effectiveTo = updateData.effectiveTo ?? existing.effectiveTo ?? existing.dataValues?.effectiveTo;
     validateEffectiveDates(effectiveFrom, effectiveTo);
 
-    return governanceBodyRepository.updateGovernanceBody(governanceBodyId, updateData);
+    return await withAuditEvent(AUDIT_EVENTS.GOVERNANCE_BODY_UPDATE, async ({ transaction }) => {
+        return await governanceBodyRepository.updateGovernanceBody(governanceBodyId, updateData, { transaction });
+    });
 }
 
 export async function deleteGovernanceBody(governanceBodyId) {
@@ -101,6 +107,8 @@ export async function deleteGovernanceBody(governanceBodyId) {
         throw new Error('Cannot delete governance body: child bodies exist');
     }
 
-    const deleted = await governanceBodyRepository.deleteGovernanceBody(governanceBodyId);
-    return deleted ? { governanceBodyId: Number(governanceBodyId) } : null;
+    return await withAuditEvent(AUDIT_EVENTS.GOVERNANCE_BODY_DELETE, async ({ transaction }) => {
+        const deleted = await governanceBodyRepository.deleteGovernanceBody(governanceBodyId, { transaction });
+        return deleted ? { governanceBodyId: Number(governanceBodyId) } : null;
+    });
 }

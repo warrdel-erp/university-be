@@ -270,6 +270,7 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
       {
         where: { academicRegulationId: Number(academicRegulationId) },
         transaction: options.transaction,
+        individualHooks: true,
       }
     );
   }
@@ -278,6 +279,7 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
     await scoped(model.academicRegulationClassificationModel).destroy({
       where: { academicRegulationId: Number(academicRegulationId) },
       transaction: options.transaction,
+      individualHooks: true,
     });
 
     if (classifications.length > 0) {
@@ -339,6 +341,7 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
         where: { academicRegulationCourseMappingId: toDeleteIds },
         force: true,
         transaction: options.transaction,
+        individualHooks: true,
       });
     }
 
@@ -353,7 +356,7 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
               universityId: existing.universityId,
               updatedBy: data.updatedBy,
             },
-            { transaction: options.transaction }
+            { transaction: options.transaction, individualHooks: true }
           );
         } else {
           await scoped(model.academicRegulationCourseMappingModel).create(
@@ -392,6 +395,7 @@ export async function deleteAcademicRegulation(academicRegulationId, options = {
     {
       where: { academicRegulationId: Number(academicRegulationId) },
       transaction: options.transaction,
+      individualHooks: true,
     }
   );
 
@@ -478,7 +482,7 @@ export async function createCourseMapping(data, options = {}) {
         instituteId: data.instituteId,
         updatedBy: data.updatedBy,
       },
-      { transaction: options.transaction }
+      { transaction: options.transaction, individualHooks: true }
     );
     mappingId = softDeleted.academicRegulationCourseMappingId;
   } else {
@@ -552,5 +556,6 @@ export async function deleteCourseMapping(academicRegulationCourseMappingId, opt
     where: { academicRegulationCourseMappingId: Number(academicRegulationCourseMappingId) },
     force: true,
     transaction: options.transaction,
+    individualHooks: true,
   });
 }

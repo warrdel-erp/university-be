@@ -1,6 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import { Op } from "sequelize";
 import * as assessmentPlanRepo from "../repository/assessmentPlanRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 import {
   decimalAdd,
   decimalCompare,
@@ -571,7 +573,7 @@ function nestBatchCoursesWithSessions(sessions, assignedRows, activeBatchYear) {
 }
 
 export async function createAssessmentPlan({ payload, user }) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_CREATE, async ({ transaction: t }) => {
     const academicYearId =
       getAcademicYearId() ||
       (user?.academicYearId ? Number(user.academicYearId) : null);
@@ -617,7 +619,7 @@ export async function updateAssessmentPlan({
   payload,
   user,
 }) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_UPDATE, async ({ transaction: t }) => {
     const existing = await assessmentPlanRepo.getAssessmentPlanById(
       assessmentPlanId,
       { transaction: t },
@@ -653,7 +655,7 @@ export async function updateAssessmentPlan({
 }
 
 export async function deleteAssessmentPlan(assessmentPlanId) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_DELETE, async ({ transaction: t }) => {
     const blockingSchedule =
       await assessmentPlanRepo.findBlockingExamScheduleForAssessmentPlan(
         assessmentPlanId,
@@ -681,7 +683,7 @@ export async function deleteAssessmentPlan(assessmentPlanId) {
 }
 
 export async function createAssessmentPlanComponent({ payload, user }) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_COMPONENT_CREATE, async ({ transaction: t }) => {
     const componentData = {
       ...payload,
       assessmentPlanId: Number(payload.assessmentPlanId),
@@ -706,7 +708,7 @@ export async function updateAssessmentPlanComponent({
   payload,
   user,
 }) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_COMPONENT_UPDATE, async ({ transaction: t }) => {
     const updateData = {
       ...payload,
       updatedBy: user?.userId || null,
@@ -727,7 +729,7 @@ export async function updateAssessmentPlanComponent({
 }
 
 export async function deleteAssessmentPlanComponent(assessmentPlanComponentId) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_COMPONENT_DELETE, async ({ transaction: t }) => {
     const result = await assessmentPlanRepo.deleteAssessmentPlanComponent(
       assessmentPlanComponentId,
       { transaction: t },
@@ -891,7 +893,7 @@ export async function getAssessmentPlanStats() {
 }
 
 export async function createAssessmentPlanSubjectMapping({ payload, user }) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_SUBJECT_MAP, async ({ transaction: t }) => {
     const plan = await assessmentPlanRepo.findPlanForMapping(
       payload.assessmentPlanId,
       { transaction: t },
@@ -1053,7 +1055,7 @@ export async function getAssessmentPlanSubjectMappings(queryParams) {
 }
 
 export async function deleteAssessmentPlanSubjectMapping(mappingId) {
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_SUBJECT_UNMAP, async ({ transaction: t }) => {
     const mapping =
       await assessmentPlanRepo.findAssessmentPlanSubjectMappingById(mappingId, {
         transaction: t,
@@ -1144,7 +1146,7 @@ export async function publishBatchAssessmentPlans({ batchId, user }) {
     throw error;
   }
 
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_BATCH_PUBLISH, async ({ transaction: t }) => {
     const batch = await assessmentPlanRepo.findBatchForMapping(parsedBatchId, {
       transaction: t,
     });
@@ -1243,7 +1245,7 @@ export async function unfreezeBatchAssessmentPlans({ batchId, user }) {
     throw error;
   }
 
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSESSMENT_PLAN_BATCH_UNFREEZE, async ({ transaction: t }) => {
     const blocking = await assessmentPlanRepo.findBlockingExamScheduleForBatch(
       parsedBatchId,
       { transaction: t },

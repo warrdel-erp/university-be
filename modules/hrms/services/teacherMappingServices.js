@@ -6,6 +6,8 @@ import {
     deleteTeachersSectionMapping,
 } from "../repository/teacherSectionMappingRepository.js";
 import { getAcademicYearId } from "../../../utility/requestContext.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export { getTeacherSectionMapping };
 
@@ -380,87 +382,102 @@ export async function getTeacherSubjectMapping({
 }
 
 export async function teacherSubjectMappingService(data, createdBy) {
-    const results = [];
-    const subjectIds = uniqueUserIds([].concat(data.subjectId ?? []));
+    return await withAuditEvent(AUDIT_EVENTS.TEACHER_SUBJECT_MAP, async ({ transaction }) => {
+        const results = [];
+        const subjectIds = uniqueUserIds([].concat(data.subjectId ?? []));
 
-    for (const subjectId of subjectIds) {
-        results.push(
-            await teacherSubjectMappingRepository.teacherSubjectMapping({
-                userId: data.userId,
-                subjectId,
-                createdBy,
-            }),
-        );
-    }
-    return results;
+        for (const subjectId of subjectIds) {
+            results.push(
+                await teacherSubjectMappingRepository.teacherSubjectMapping({
+                    userId: data.userId,
+                    subjectId,
+                    createdBy,
+                }, { transaction }),
+            );
+        }
+        return results;
+    });
 }
 
 export async function teacherSectionMappingService(data, createdBy) {
-    const results = [];
-    for (const classSectionsId of [].concat(data.classSectionsId ?? [])) {
-        results.push(
-            await teacherSectionMapping({
-                userId: data.userId,
-                classSectionsId,
-                createdBy,
-            }),
-        );
-    }
-    return results;
+    return await withAuditEvent(AUDIT_EVENTS.TEACHER_SECTION_MAP, async ({ transaction }) => {
+        const results = [];
+        for (const classSectionsId of [].concat(data.classSectionsId ?? [])) {
+            results.push(
+                await teacherSectionMapping({
+                    userId: data.userId,
+                    classSectionsId,
+                    createdBy,
+                }, { transaction }),
+            );
+        }
+        return results;
+    });
 }
 
 export async function saveOrUpdateTeacherSubjectMapping(list, userId) {
-    const results = [];
+    return await withAuditEvent(AUDIT_EVENTS.TEACHER_SUBJECT_UPDATE, async ({ transaction }) => {
+        const results = [];
 
-    for (const item of list) {
-        const { teacherSubjectMappingId, userId: itemUserId, subjectId } = item;
+        for (const item of list) {
+            const { teacherSubjectMappingId, userId: itemUserId, subjectId } = item;
 
-        if (teacherSubjectMappingId) {
-            const updated = await teacherSubjectMappingRepository.updateTeachersSubjectMapping(
-                teacherSubjectMappingId,
-                {
-                    userId: itemUserId,
-                    ...(subjectId != null && { subjectId }),
-                },
-            );
+            if (teacherSubjectMappingId) {
+                const updated = await teacherSubjectMappingRepository.updateTeachersSubjectMapping(
+                    teacherSubjectMappingId,
+                    {
+                        userId: itemUserId,
+                        ...(subjectId != null && { subjectId }),
+                    },
+                    { transaction },
+                );
+                results.push({
+                    action: "updated",
+                    teacherSubjectMappingId,
+                    result: updated,
+                });
+                continue;
+            }
+
+            const created = await teacherSubjectMappingRepository.teacherSubjectMapping({
+                userId: itemUserId,
+                subjectId,
+                createdBy: userId,
+            }, { transaction });
             results.push({
-                action: "updated",
-                teacherSubjectMappingId,
-                result: updated,
+                action: "created",
+                teacherSubjectMappingId: created.teacherSubjectMappingId,
+                result: created,
             });
-            continue;
         }
 
-        const created = await teacherSubjectMappingRepository.teacherSubjectMapping({
-            userId: itemUserId,
-            subjectId,
-            createdBy: userId,
-        });
-        results.push({
-            action: "created",
-            teacherSubjectMappingId: created.teacherSubjectMappingId,
-            result: created,
-        });
-    }
-
-    return results;
+        return results;
+    });
 }
 
 export async function updateTeacherSectionMapping(data, teacherSectionMappingId) {
-    const results = [];
-    for (const classSectionsId of [].concat(data.classSectionsId ?? [])) {
-        results.push(
-            await updateTeachersSectionMapping(teacherSectionMappingId, {
-                userId: data.userId,
-                classSectionsId,
-            }),
-        );
-    }
-    return results;
+    return await withAuditEvent(AUDIT_EVENTS.TEACHER_SECTION_UPDATE, async ({ transaction }) => {
+        const results = [];
+        for (const classSectionsId of [].concat(data.classSectionsId ?? [])) {
+            results.push(
+                await updateTeachersSectionMapping(teacherSectionMappingId, {
+                    userId: data.userId,
+                    classSectionsId,
+                }, { transaction }),
+            );
+        }
+        return results;
+    });
 }
 
-export { deleteTeachersSectionMapping as deleteTeacherSectionMapping };
+export async function deleteTeacherSectionMapping(teacherSectionMappingId) {
+    return await withAuditEvent(AUDIT_EVENTS.TEACHER_SECTION_UNMAP, async ({ transaction }) => {
+        return deleteTeachersSectionMapping(teacherSectionMappingId, { transaction });
+    });
+}
 
 export async function deleteTeacherSubjectMapping(teacherSubjectMappingId) {
-    return teacherSubjectMappingRepository.deleteTeachersSubjectMapping(teacherSubjectMappingId);
+    return await withAuditEvent(AUDIT_EVENTS.TEACHER_SUBJECT_UNMAP, async ({ transaction }) => {
+        return teacherSubjectMappingRepository.deleteTeachersSubjectMapping(teacherSubjectMappingId, { transaction });
+    });
 }

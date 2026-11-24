@@ -46,7 +46,8 @@ function buildLectureWindowIncludes(filters = {}) {
   ];
 }
 
-export async function addLectureWindow(data, transaction) {
+export async function addLectureWindow(data, options = {}) {
+  const transaction = options.transaction || (options && options.commit ? options : undefined);
   return scoped(model.lectureWindowModel).create(data, { transaction });
 }
 
@@ -93,7 +94,8 @@ export async function getLectureWindowById(lectureWindowId, academicYearId, user
   });
 }
 
-export async function updateLectureWindow(lectureWindowId, data, academicYearId, userId) {
+export async function updateLectureWindow(lectureWindowId, data, academicYearId, userId, options = {}) {
+  const transaction = options.transaction || (options && options.commit ? options : undefined);
   const where = {
     lectureWindowId: Number(lectureWindowId),
     academicYearId: Number(academicYearId),
@@ -105,6 +107,7 @@ export async function updateLectureWindow(lectureWindowId, data, academicYearId,
   const existing = await scoped(model.lectureWindowModel).findOne({
     where,
     attributes: ["lectureWindowId"],
+    transaction,
   });
   if (!existing) {
     return null;
@@ -112,12 +115,15 @@ export async function updateLectureWindow(lectureWindowId, data, academicYearId,
 
   await scoped(model.lectureWindowModel).update(data, {
     where,
+    transaction,
+    individualHooks: true,
   });
 
   return getLectureWindowById(lectureWindowId, academicYearId, userId);
 }
 
-export async function deleteLectureWindow(lectureWindowId, academicYearId, userId, transaction) {
+export async function deleteLectureWindow(lectureWindowId, academicYearId, userId, options = {}) {
+  const transaction = options.transaction || (options && options.commit ? options : undefined);
   const where = {
     lectureWindowId: Number(lectureWindowId),
     academicYearId: Number(academicYearId),
@@ -128,11 +134,13 @@ export async function deleteLectureWindow(lectureWindowId, academicYearId, userI
   const deleted = await scoped(model.lectureWindowModel).destroy({
     where,
     transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }
 
-export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, transaction) {
+export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, options = {}) {
+  const transaction = options.transaction || (options && options.commit ? options : undefined);
   const [updatedCount] = await scoped(model.lessonModel).update(
     { lectureWindowId: Number(lectureWindowId), updatedBy },
     {
@@ -140,12 +148,14 @@ export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy,
         lessonId: { [Op.in]: lessonIds.map(Number) },
       },
       transaction,
+      individualHooks: true,
     },
   );
   return updatedCount;
 }
 
-export async function unlinkLessonsFromWindow(lessonIds, updatedBy, transaction) {
+export async function unlinkLessonsFromWindow(lessonIds, updatedBy, options = {}) {
+  const transaction = options.transaction || (options && options.commit ? options : undefined);
   const [updatedCount] = await scoped(model.lessonModel).update(
     { lectureWindowId: null, updatedBy },
     {
@@ -153,6 +163,7 @@ export async function unlinkLessonsFromWindow(lessonIds, updatedBy, transaction)
         lessonId: { [Op.in]: lessonIds.map(Number) },
       },
       transaction,
+      individualHooks: true,
     },
   );
   return updatedCount;

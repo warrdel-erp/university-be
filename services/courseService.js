@@ -6,6 +6,8 @@ import {
   termsForYear,
   termsPerYear,
 } from "../utility/courseTerms.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 export const getCoursesWithDurationYears = async (options = {}) => {
   const courses = await courseRepository.getCoursesWithDurationYears(options);
@@ -294,15 +296,17 @@ export const getTermOptionsByCourse = async (courseId) => {
 };
 
 export const deleteCourse = async (courseId) => {
-  const result = await courseRepository.deleteCourseById(courseId);
+  return await withAuditEvent(AUDIT_EVENTS.COURSE_DELETE, async ({ transaction }) => {
+    const result = await courseRepository.deleteCourseById(courseId, { transaction });
 
-  if (!result) {
-    const error = new Error("Course not found");
-    error.statusCode = 404;
-    throw error;
-  }
+    if (!result) {
+      const error = new Error("Course not found");
+      error.statusCode = 404;
+      throw error;
+    }
 
-  return result;
+    return result;
+  });
 };
 
 export const getSubjectsByTeacherUserId = async (userId, searchKey, options = {}) => {

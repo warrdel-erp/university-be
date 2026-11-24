@@ -19,6 +19,8 @@ import { recomputeFaculityCurrentLoadHours } from "../../hrms/services/faculityS
 import * as academicGroupRepository from "../../student/repository/academicGroupRepository.js";
 import { findClassSectionTermById } from "../../student/repository/classSectionTermRepository.js";
 import { getHolidayStartEndDate } from "../repository/holidayRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import {
   findDefaultVariantByStructureId,
   findVariantById,
@@ -1331,9 +1333,11 @@ async function resolveCombinedRoutineTargets(
 }
 
 export async function addtimeTableCreate(data, createdBy, updatedBy) {
-  const transaction = await sequelize.transaction();
+  const eventType = (data && data.academicGroupId)
+    ? AUDIT_EVENTS.TIMETABLE_ACADEMIC_GROUP_ROUTINE_CREATE
+    : AUDIT_EVENTS.TIMETABLE_ROUTINE_CREATE;
 
-  try {
+  return await withAuditEvent(eventType, async ({ transaction }) => {
     data.createdBy = createdBy;
     data.updatedBy = updatedBy;
 
@@ -1537,12 +1541,8 @@ export async function addtimeTableCreate(data, createdBy, updatedBy) {
 
     // Cell generation is deferred. It will be generated when a class is mapped via addtimeTableMapping
 
-    await transaction.commit();
     return result;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function gettimeTableCreateDetails(query = {}) {
@@ -1688,8 +1688,7 @@ export async function deleteTimeTableRoutine(timeTableRoutineId) {
   // Allow delete (draft or published) only before startingDate.
   assertRoutineEditable(routine.startingDate);
 
-  const transaction = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_ROUTINE_DELETE, async ({ transaction }) => {
     const deletedScheduleCount =
       await timeTableCreateRepository.deleteSchedulesByRoutineIdRepository(
         timeTableRoutineId,
@@ -1704,22 +1703,16 @@ export async function deleteTimeTableRoutine(timeTableRoutineId) {
       throw new Error("Routine not found");
     }
 
-    await transaction.commit();
     return {
       message: "Routine deleted successfully",
       timeTableRoutineId: Number(timeTableRoutineId),
       deletedScheduleCount,
     };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function deletetimeTableMapping(timeTableCellId, options = {}) {
-  const transaction = await sequelize.transaction();
-
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_CELL_DELETE, async ({ transaction }) => {
     const schedule = await timeTableCreateRepository.getMappingByIdRepository(
       timeTableCellId,
       { transaction },
@@ -1780,16 +1773,12 @@ export async function deletetimeTableMapping(timeTableCellId, options = {}) {
     }
     await recomputeFacultyLoadForUsers(teacherUserIds, transaction);
 
-    await transaction.commit();
     return {
       ...result,
       isPublish: Boolean(routine.isPublish),
       deletedTimeTableCellTeacherIds: result.deletedTimeTableCellTeacherIds,
     };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 async function executeMappingEntry(data, createdBy, updatedBy, transaction) {
@@ -2104,9 +2093,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
   }
 
-  const transaction = await sequelize.transaction();
-
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_CELL_CREATE, async ({ transaction }) => {
     const allCreatedMappings = [];
     const allLoadUserIds = [];
 
@@ -2129,8 +2116,6 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     if (uniqueLoadUserIds.length > 0) {
       await recomputeFacultyLoadForUsers(uniqueLoadUserIds, transaction);
     }
-
-    await transaction.commit();
 
     if (isBulk) {
       return {
@@ -2165,10 +2150,7 @@ export async function addtimeTableMapping(data, createdBy, updatedBy) {
     }
 
     return singleResult;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function cloneTimeTableRoutine(
@@ -2179,8 +2161,6 @@ export async function cloneTimeTableRoutine(
   updatedBy,
   previousDate,
 ) {
-  const transaction = await sequelize.transaction();
-
   const routineCloneFields = [
     "timetableStructureCourseMapperId",
     "courseId",
@@ -2207,7 +2187,7 @@ export async function cloneTimeTableRoutine(
     "combinedGroupId",
   ];
 
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_ROUTINE_CLONE, async ({ transaction }) => {
     const previousRoutine =
       await timeTableCreateRepository.getFullRoutineDetailsRepository(
         previousRoutineId,
@@ -2413,12 +2393,8 @@ export async function cloneTimeTableRoutine(
 
     await recomputeFacultyLoadForUsers(cloneLoadUserIds, transaction);
 
-    await transaction.commit();
     return newRoutine;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function changeTimeTableCreate(body, updatedBy) {
@@ -2534,7 +2510,7 @@ export async function changeTimeTableCreate(body, updatedBy) {
       placementFields.endingDate !== toDateOnlyString(current.endingDate)),
   );
 
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_ROUTINE_UPDATE, async ({ transaction }) => {
     const result = await timeTableCreateRepository.changeTimeTableCreate(
       timeTableRoutineId,
       data,
@@ -2585,11 +2561,13 @@ export async function updatetimeTableCreate(
   assertWeekMappingChangeAllowed(routine, "update");
 
   const data = { timeTableType, updatedBy };
-  const result = await timeTableCreateRepository.updatetimeTableCreate(
-    Number(timeTableCellId),
-    data,
-  );
-  return result;
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_CELL_UPDATE, async ({ transaction }) => {
+    return await timeTableCreateRepository.updatetimeTableCreate(
+      Number(timeTableCellId),
+      data,
+      { transaction },
+    );
+  });
 }
 
 async function findTeacherSlotForUpdate(baseMappingId, item, transaction) {
@@ -2720,9 +2698,7 @@ export async function updateSimpleTeacherMapping(
   createdBy,
   updatedBy,
 ) {
-  const transaction = await sequelize.transaction();
-
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_CELL_UPDATE, async ({ transaction }) => {
     const base = mappingArray[0];
     let baseRow = await timeTableCreateRepository.findMappingById(
       base.timeTableCellId,
@@ -2980,12 +2956,8 @@ export async function updateSimpleTeacherMapping(
       }
     }
 
-    await transaction.commit();
     return { success: true, message: "Teacher mapping updated successfully" };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function getTimeTableMappingDetail(timeTableRoutineId) {
@@ -3948,14 +3920,13 @@ export async function adjustPublishedRoutineDates(
 }
 
 export async function publishTimeTableService(timeTableRoutineId) {
-  const transaction = await sequelize.transaction();
-
   try {
-    const routine =
-      await timeTableCreateRepository.getRoutineForPublishRepository(
-        timeTableRoutineId,
-        { transaction },
-      );
+    return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_ROUTINE_PUBLISH, async ({ transaction }) => {
+      const routine =
+        await timeTableCreateRepository.getRoutineForPublishRepository(
+          timeTableRoutineId,
+          { transaction },
+        );
     if (!routine) {
       throw new Error("Time table create ID not found");
     }
@@ -4087,8 +4058,6 @@ export async function publishTimeTableService(timeTableRoutineId) {
       },
     );
 
-    await transaction.commit();
-
     const dateWiseByCellId = {};
     for (const item of planned) {
       const cellId = Number(item.cell.timeTableCellId);
@@ -4113,8 +4082,8 @@ export async function publishTimeTableService(timeTableRoutineId) {
       teacherDateWiseCount: teacherPayload.length,
       cells: cellSummary,
     };
+    });
   } catch (error) {
-    await transaction.rollback();
     if (error.name === "SequelizeUniqueConstraintError") {
       throw new Error(
         "Date-wise timetable row already exists for this cell and date",
@@ -6399,8 +6368,7 @@ export async function updateDateWiseCell(
   payload,
   updatedBy,
 ) {
-  const transaction = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_DATEWISE_CELL_UPDATE, async ({ transaction }) => {
     await assertPublishedDateWiseCell(timeTableCellDateWiseId, transaction);
     await timeTableCreateRepository.updateDateWiseCellRepository(
       timeTableCellDateWiseId,
@@ -6408,7 +6376,6 @@ export async function updateDateWiseCell(
       updatedBy,
       { transaction },
     );
-    await transaction.commit();
 
     const result = { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) };
     if (payload.timeTableCellTeachersDateWiseId != null) {
@@ -6429,15 +6396,11 @@ export async function updateDateWiseCell(
       result.classRoomSectionId = Number(payload.classRoomSectionId);
     }
     return result;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
-  const transaction = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_TEACHER_DELETE, async ({ transaction }) => {
     const teacherRecord =
       await timeTableCreateRepository.findCellTeacherByIdRepository(
         timeTableCellTeacherId,
@@ -6488,15 +6451,11 @@ export async function deleteTimeTableTeacher(timeTableCellTeacherId) {
 
     await recomputeFacultyLoadForUser(userId, transaction);
 
-    await transaction.commit();
     return {
       message: "Time table teacher deleted successfully",
       deletedTimeTableCellTeacherId: Number(timeTableCellTeacherId),
     };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 import { getCascadingGroupRoutinesService } from "../../student/services/academicGroupScopeService.js";
@@ -6510,7 +6469,7 @@ export const fillMissingSubjectsService = async (data, updatedBy) => {
   }
 
   // Use transaction to ensure data integrity
-  return await sequelize.transaction(async (t) => {
+  return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_FILL_MISSING_SUBJECTS, async ({ transaction: t }) => {
     // 1. Validate subject codes and fetch their subjectIds
     const subjects = await model.subjectModel.findAll({
       where: { subjectCode: subjectCodes },
@@ -6571,14 +6530,14 @@ export const fillMissingSubjectsService = async (data, updatedBy) => {
       // Update time_table_cell
       await model.timeTableCellModel.update(
         { subjectId: subjectId, updatedBy: updatedBy },
-        { where: { timeTableCellId: cellIds }, transaction: t }
+        { where: { timeTableCellId: cellIds }, transaction: t, individualHooks: true }
       );
       updatedCellsCount += cellIds.length;
 
       // Update time_table_cell_date_wise
       const [affectedRows] = await model.timeTableCellDateWiseModel.update(
         { subjectId: subjectId, updatedBy: updatedBy },
-        { where: { timeTableCellId: cellIds }, transaction: t }
+        { where: { timeTableCellId: cellIds }, transaction: t, individualHooks: true }
       );
       updatedDateWiseCount += affectedRows;
 
