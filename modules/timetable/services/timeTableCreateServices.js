@@ -5956,6 +5956,69 @@ function pickSectionRoutineForWeek(routines, week, anchorDate) {
   return publishedMatches[0];
 }
 
+function resolveRoutineDirection(options = {}) {
+  if (!options || typeof options !== "object") return null;
+
+  const val = options["type"];
+    if (typeof val === "string") {
+      const lower = val.trim().toLowerCase();
+      if (lower === "upcoming") return "upcoming";
+      if (lower === "previous")  return "previous";
+    }
+  return null;
+}
+
+function findNearestUpcomingRoutine(routines, anchorDate) {
+  const upcoming = [];
+  for (const routine of routines) {
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    if (!plain.isPublish) continue;
+    const start = toDateOnlyString(plain.startingDate);
+    const end = toDateOnlyString(plain.endingDate);
+    if (!start) continue;
+
+    if (start > anchorDate || (start >= anchorDate && (!end || end >= anchorDate))) {
+      upcoming.push({ routine, start, end: end || start });
+    }
+  }
+
+  if (!upcoming.length) return null;
+
+  upcoming.sort((a, b) => {
+    const cmp = a.start.localeCompare(b.start);
+    if (cmp !== 0) return cmp;
+    return a.end.localeCompare(b.end);
+  });
+
+  return upcoming[0].routine;
+}
+
+function findNearestPreviousRoutine(routines, anchorDate) {
+  const previous = [];
+  for (const routine of routines) {
+    const plain = routine.get ? routine.get({ plain: true }) : routine;
+    if (!plain.isPublish) continue;
+    const start = toDateOnlyString(plain.startingDate);
+    const end = toDateOnlyString(plain.endingDate);
+    const compareDate = end || start;
+    if (!compareDate) continue;
+
+    if (compareDate < anchorDate) {
+      previous.push({ routine, start: start || compareDate, end: compareDate });
+    }
+  }
+
+  if (!previous.length) return null;
+
+  previous.sort((a, b) => {
+    const cmp = b.end.localeCompare(a.end);
+    if (cmp !== 0) return cmp;
+    return b.start.localeCompare(a.start);
+  });
+
+  return previous[0].routine;
+}
+
 async function buildRoutinePeriodGrid(
   routine,
   electiveCells,
@@ -6253,8 +6316,49 @@ export async function getDateWiseCellsBySection(
   // console.log("sessionRow:", sessionRow?.sessionName);
   // console.log("routines length:", routines ? routines.length : 0);
   const { navStart, navEnd } = getSectionRoutineNavigationBounds(routines);
-  const week = getSectionWeekRange(anchorDate, navStart, navEnd);
-  const selectedRoutine = pickSectionRoutineForWeek(routines, week, anchorDate);
+  let week = getSectionWeekRange(anchorDate, navStart, navEnd);
+  let selectedRoutine = pickSectionRoutineForWeek(routines, week, anchorDate);
+
+  let effectiveDate = anchorDate;
+  const hasCurrentRoutine = Boolean(selectedRoutine && routineContainsDate(selectedRoutine, anchorDate));
+  let routineKind = hasCurrentRoutine ? "current" : null;
+
+  const direction = resolveRoutineDirection(options);
+
+  if (direction && (!hasCurrentRoutine)) {
+    let fallbackRoutine = null;
+    let fallbackAnchorDate = null;
+
+    if (direction === "upcoming") {
+      fallbackRoutine = findNearestUpcomingRoutine(routines, anchorDate);
+      if (fallbackRoutine) {
+        const plain = fallbackRoutine.get
+          ? fallbackRoutine.get({ plain: true })
+          : fallbackRoutine;
+        fallbackAnchorDate = toDateOnlyString(plain.startingDate);
+        routineKind = "upcoming";
+      }
+    } else if (direction === "previous") {
+      fallbackRoutine = findNearestPreviousRoutine(routines, anchorDate);
+      if (fallbackRoutine) {
+        const plain = fallbackRoutine.get
+          ? fallbackRoutine.get({ plain: true })
+          : fallbackRoutine;
+        fallbackAnchorDate =
+          toDateOnlyString(plain.endingDate) ||
+          toDateOnlyString(plain.startingDate);
+        routineKind = "previous";
+      }
+    }
+
+    if (fallbackRoutine) {
+      selectedRoutine = fallbackRoutine;
+      effectiveDate = fallbackAnchorDate || anchorDate;
+      week = getSectionWeekRange(effectiveDate, navStart, navEnd);
+    } else {
+      selectedRoutine = null;
+    }
+  }
 
   const common = {
     courseId: Number(courseId),
@@ -6273,6 +6377,7 @@ export async function getDateWiseCellsBySection(
       routine: null,
       routines,
       week,
+      routineType: null,
     };
   }
 
@@ -6317,7 +6422,7 @@ export async function getDateWiseCellsBySection(
     electiveCells,
     classSection,
     employeeByUserId,
-    { date: anchorDate, targetDate: anchorDate },
+    { date: effectiveDate, targetDate: effectiveDate },
   );
 
   const variantSchedules = await buildRoutineVariantSchedules(
@@ -6364,11 +6469,16 @@ export async function getDateWiseCellsBySection(
     );
   }
 
+  if (routine) {
+    routine.routineType = routineKind;
+  }
+
   return {
     ...common,
     routine,
     routines,
     week,
+    routineType: routineKind,
   };
 }
 
