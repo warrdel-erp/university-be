@@ -1766,6 +1766,14 @@ export async function getClassSectionTermsBySetupType(
             "regulationName",
             "evaluationPattern",
           ],
+          include: [
+            {
+              model: model.academicRegulationAssesmentSchemeModel,
+              as: "assessmentSchemes",
+              attributes: ["id", "name", "evaluationPattern"],
+              required: false,
+            },
+          ],
           required: false,
         },
       ],
@@ -1808,14 +1816,16 @@ export async function getClassSectionTermsBySetupType(
       const reg = resolvedBatchId
         ? batchRegulationMap.get(Number(resolvedBatchId)) || null
         : null;
-      const evalPattern = reg?.evaluationPattern || null;
+      const schemes = reg?.assessmentSchemes || [];
+      const hasMatchingScheme =
+        schemes.length > 0
+          ? schemes.some((s) => matchesEvaluationPattern(s.evaluationPattern, options.evaluationPattern))
+          : matchesEvaluationPattern(reg?.evaluationPattern, options.evaluationPattern);
 
-      if (
-        options.evaluationPattern &&
-        !matchesEvaluationPattern(evalPattern, options.evaluationPattern)
-      ) {
+      if (options.evaluationPattern && !hasMatchingScheme) {
         continue;
       }
+      const evalPattern = schemes[0]?.evaluationPattern || reg?.evaluationPattern || null;
 
       const mappedSubjects = new Set();
       const byBatchTerm = mappedBatchTermForGroup
