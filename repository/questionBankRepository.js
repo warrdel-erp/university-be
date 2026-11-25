@@ -56,7 +56,7 @@ export async function getQuestions(filters = {}, pagination = {}) {
                 {
                     model: model.subjectModel,
                     as: "subject",
-                    attributes: ["subjectId", "subjectName"],
+                    attributes: ["subjectId", "subjectName", "courseId"],
                     where: buildScope(model.subjectModel),
                     required: false,
                 },
@@ -154,6 +154,13 @@ export async function getSingleQuestion(id, ownerId = null) {
                     model: model.universityModel,
                     as: "university",
                     attributes: ["university_id", "universityName"],
+                },
+                {
+                    model: model.subjectModel,
+                    as: "subject",
+                    attributes: ["subjectId", "subjectName", "courseId"],
+                    where: buildScope(model.subjectModel),
+                    required: false,
                 },
             ],
         });
