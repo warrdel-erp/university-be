@@ -10,6 +10,8 @@ export async function createAcademicRegulation(payload, user) {
       mappings = [{ batchId: Number(batchId) }];
     }
 
+    const schemes = payload.assessmentSchemes || payload.evaluationPatterns || [];
+
     const regulationData = {
       ...restPayload,
       effectiveFrom: sanitizeDate(restPayload.effectiveFrom),
@@ -20,6 +22,7 @@ export async function createAcademicRegulation(payload, user) {
       createdBy: user?.userId || null,
       updatedBy: user?.userId || null,
       courseMappings: mappings,
+      assessmentSchemes: schemes,
     };
 
     return await academicRegulationRepo.createAcademicRegulation(regulationData, { transaction: t });
@@ -155,6 +158,8 @@ export async function updateAcademicRegulation(academicRegulationId, payload, us
     if (payload.batchMappings !== undefined) updateData.courseMappings = payload.batchMappings;
     else if (payload.courseMappings !== undefined) updateData.courseMappings = payload.courseMappings;
     else if (payload.batchId !== undefined) updateData.courseMappings = payload.batchId ? [{ batchId: Number(payload.batchId) }] : [];
+    if (payload.assessmentSchemes !== undefined) updateData.assessmentSchemes = payload.assessmentSchemes;
+    else if (payload.evaluationPatterns !== undefined) updateData.assessmentSchemes = payload.evaluationPatterns;
 
     return await academicRegulationRepo.updateAcademicRegulation(academicRegulationId, updateData, { transaction: t });
   });
@@ -213,5 +218,117 @@ export async function deleteCourseMapping(academicRegulationCourseMappingId) {
   return await sequelize.transaction(async (t) => {
     await academicRegulationRepo.deleteCourseMapping(academicRegulationCourseMappingId, { transaction: t });
     return { message: "Course mapping deleted successfully" };
+  });
+}
+
+// ==========================================
+// ASSESSMENT SCHEME (EVALUATION PATTERN) CRUD
+// ==========================================
+
+export async function createAssessmentScheme(payload, user = null) {
+  return await sequelize.transaction(async (t) => {
+    const regulationId = Number(payload.academicRegulationId);
+    const existingRegulation = await academicRegulationRepo.getAcademicRegulationById(regulationId, { transaction: t });
+    if (!existingRegulation) {
+      const error = new Error("Academic regulation not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (!existingRegulation.isActive) {
+      const error = new Error("Academic regulation is not active");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const universityId = user?.universityId || existingRegulation.universityId;
+    const instituteId = user?.instituteId || existingRegulation.instituteId;
+    const userId = user?.userId || existingRegulation.updatedBy || existingRegulation.createdBy;
+
+    const schemeData = {
+      ...payload,
+      academicRegulationId: regulationId,
+      name: payload.name || payload.patternName,
+      code: payload.code !== undefined ? payload.code : (payload.patternCode ?? null),
+      gradingSchemeId: payload.gradingSchemeId ? Number(payload.gradingSchemeId) : null,
+      isActive: payload.isActive !== undefined ? payload.isActive : true,
+      universityId: Number(universityId),
+      instituteId: Number(instituteId),
+      createdBy: Number(userId),
+      updatedBy: Number(userId),
+    };
+
+    delete schemeData.patternName;
+    delete schemeData.patternCode;
+
+    return await academicRegulationRepo.createAssessmentScheme(schemeData, { transaction: t });
+  });
+}
+
+export async function getAssessmentSchemes(filters = {}) {
+  return await academicRegulationRepo.getAssessmentSchemes(filters);
+}
+
+export async function getAssessmentSchemeById(id) {
+  const scheme = await academicRegulationRepo.getAssessmentSchemeById(id);
+  if (!scheme) {
+    const error = new Error("Assessment scheme not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  return scheme;
+}
+
+export async function updateAssessmentScheme(id, payload, user = null) {
+  return await sequelize.transaction(async (t) => {
+    const existing = await academicRegulationRepo.getAssessmentSchemeById(id, { transaction: t });
+    if (!existing) {
+      const error = new Error("Assessment scheme not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const updateData = {
+      ...payload,
+      updatedBy: user?.userId || existing.updatedBy,
+    };
+
+    if (payload.name || payload.patternName) {
+      updateData.name = payload.name || payload.patternName;
+    }
+    if (payload.code !== undefined || payload.patternCode !== undefined) {
+      updateData.code = payload.code !== undefined ? payload.code : payload.patternCode;
+    }
+    if (payload.gradingSchemeId !== undefined) {
+      updateData.gradingSchemeId = payload.gradingSchemeId ? Number(payload.gradingSchemeId) : null;
+    }
+
+    delete updateData.patternName;
+    delete updateData.patternCode;
+    delete updateData.id;
+    delete updateData.academicRegulationId;
+
+    return await academicRegulationRepo.updateAssessmentScheme(id, updateData, { transaction: t });
+  });
+}
+
+export async function deleteAssessmentScheme(id) {
+  return await sequelize.transaction(async (t) => {
+    const existing = await academicRegulationRepo.getAssessmentSchemeById(id, { transaction: t });
+    if (!existing) {
+      const error = new Error("Assessment scheme not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const isMapped = await academicRegulationRepo.isAssessmentSchemeMappedToPlan(id, { transaction: t });
+    if (isMapped) {
+      const error = new Error("Cannot delete assessment scheme as it is currently mapped to one or more assessment plans");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await academicRegulationRepo.deleteAssessmentScheme(id, { transaction: t });
+    return { message: "Assessment scheme deleted successfully" };
   });
 }

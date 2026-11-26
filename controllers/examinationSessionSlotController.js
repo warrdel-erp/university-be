@@ -97,3 +97,33 @@ export const deleteExaminationSessionSlot = async (req, res) => {
     return ErrorResponse(res, statusCode, error.message || "Failed to delete examination session slot");
   }
 };
+
+export const addMoreSlots = async (req, res) => {
+  try {
+    const examinationSessionId =req.body?.examinationSessionId
+
+    if (!examinationSessionId) {
+      return ErrorResponse(res, 400, "examinationSessionId is required");
+    }
+
+    const result =await examinationSessionSlotServices.addMoreSlotsToExaminationSession({
+        payload:req.body,
+        user: req.user,
+      });
+
+    return SuccessResponse(
+      res,
+      201,
+      "Examination session slots added successfully",
+      result,
+    );
+  } catch (error) {
+    console.error("Error adding examination session slots:", error);
+    const statusCode = error.statusCode || 500;
+    return ErrorResponse(
+      res,
+      statusCode,
+      error.message || "Failed to add examination session slots",
+    );
+  }
+};
