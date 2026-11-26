@@ -27,12 +27,18 @@ export async function isGradingSchemaMappedToAcademicRegulation(gradingSchemaId,
     where.universityId = Number(universityId);
   }
 
-  const count = await model.academicRegulationModel.count({
-    where,
-    transaction: options.transaction,
-  });
+  const [countReg, countScheme] = await Promise.all([
+    model.academicRegulationModel.count({
+      where,
+      transaction: options.transaction,
+    }),
+    model.academicRegulationAssesmentSchemeModel.count({
+      where,
+      transaction: options.transaction,
+    }),
+  ]);
 
-  return count > 0;
+  return countReg > 0 || countScheme > 0;
 }
 
 export async function getGradingSchemas({ search, status, gradingMethod, distributionMethod, page = 1, limit = 10 }) {
@@ -84,15 +90,27 @@ export async function getGradingSchemas({ search, status, gradingMethod, distrib
       regWhere.universityId = rows[0].universityId;
     }
 
-    const mappedRegulations = await model.academicRegulationModel.findAll({
-      attributes: ["gradingSchemeId"],
-      where: regWhere,
-      raw: true,
-    });
+    const [mappedRegulations, mappedSchemes] = await Promise.all([
+      model.academicRegulationModel.findAll({
+        attributes: ["gradingSchemeId"],
+        where: regWhere,
+        raw: true,
+      }),
+      model.academicRegulationAssesmentSchemeModel.findAll({
+        attributes: ["gradingSchemeId"],
+        where: regWhere,
+        raw: true,
+      }),
+    ]);
 
     for (const reg of mappedRegulations) {
       if (reg.gradingSchemeId) {
         mappedGradingIds.add(Number(reg.gradingSchemeId));
+      }
+    }
+    for (const scheme of mappedSchemes) {
+      if (scheme.gradingSchemeId) {
+        mappedGradingIds.add(Number(scheme.gradingSchemeId));
       }
     }
   }

@@ -14,6 +14,11 @@ import {
   createCourseMapping,
   getCourseMappings,
   deleteCourseMapping,
+  createAssessmentScheme,
+  getAssessmentSchemes,
+  getAssessmentSchemeById,
+  updateAssessmentScheme,
+  deleteAssessmentScheme,
 } from "../controllers/academicRegulationController.js";
 
 const router = express.Router();
@@ -28,6 +33,81 @@ const classificationItemSchema = z.object({
   minimumCgpa: z.coerce.number().optional().nullable(),
   minimumPercentage: z.coerce.number().optional().nullable(),
   sortOrder: z.coerce.number().int().optional().nullable(),
+});
+
+export const assessmentSchemeItemSchema = z.object({
+  id: positiveIntegerId.optional(),
+  name: z.string().min(1).max(100).optional(),
+  patternName: z.string().min(1).max(100).optional(),
+  code: z.string().max(50).optional().nullable(),
+  patternCode: z.string().max(50).optional().nullable(),
+  evaluationPattern: z.enum(EVALUATION_PATTERNS).optional().default('INTERNAL_EXTERNAL'),
+  gradingSchemeId: positiveIntegerId.optional().nullable(),
+  internalWeightage: z.coerce.number().optional().nullable(),
+  externalWeightage: z.coerce.number().optional().nullable(),
+  maximumInternalMarks: z.coerce.number().int().optional().nullable(),
+  maximumExternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumInternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumExternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumOverallMarks: z.coerce.number().int().optional().nullable(),
+  minimumOverallPercentage: z.coerce.number().optional().nullable(),
+  isActive: z.boolean().optional().default(true),
+}).transform(val => ({
+  ...val,
+  name: val.name || val.patternName || 'Default Assessment Scheme',
+  code: val.code !== undefined ? val.code : (val.patternCode ?? null),
+}));
+
+export const createSingleAssessmentSchemeBody = z.object({
+  academicRegulationId: z.coerce.number().int().positive(),
+  name: z.string().min(1).max(100).optional(),
+  patternName: z.string().min(1).max(100).optional(),
+  code: z.string().max(50).optional().nullable(),
+  patternCode: z.string().max(50).optional().nullable(),
+  evaluationPattern: z.enum(EVALUATION_PATTERNS).optional().default('INTERNAL_EXTERNAL'),
+  gradingSchemeId: positiveIntegerId.optional().nullable(),
+  internalWeightage: z.coerce.number().optional().nullable(),
+  externalWeightage: z.coerce.number().optional().nullable(),
+  maximumInternalMarks: z.coerce.number().int().optional().nullable(),
+  maximumExternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumInternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumExternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumOverallMarks: z.coerce.number().int().optional().nullable(),
+  minimumOverallPercentage: z.coerce.number().optional().nullable(),
+  isActive: z.boolean().optional().default(true),
+}).transform(val => ({
+  ...val,
+  name: val.name || val.patternName || 'Assessment Scheme',
+  code: val.code !== undefined ? val.code : (val.patternCode ?? null),
+}));
+
+export const updateSingleAssessmentSchemeBody = z.object({
+  name: z.string().min(1).max(100).optional(),
+  patternName: z.string().min(1).max(100).optional(),
+  code: z.string().max(50).optional().nullable(),
+  patternCode: z.string().max(50).optional().nullable(),
+  evaluationPattern: z.enum(EVALUATION_PATTERNS).optional(),
+  gradingSchemeId: positiveIntegerId.optional().nullable(),
+  internalWeightage: z.coerce.number().optional().nullable(),
+  externalWeightage: z.coerce.number().optional().nullable(),
+  maximumInternalMarks: z.coerce.number().int().optional().nullable(),
+  maximumExternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumInternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumExternalMarks: z.coerce.number().int().optional().nullable(),
+  minimumOverallMarks: z.coerce.number().int().optional().nullable(),
+  minimumOverallPercentage: z.coerce.number().optional().nullable(),
+  isActive: z.boolean().optional(),
+}).transform(val => ({
+  ...val,
+  ...(val.name || val.patternName ? { name: val.name || val.patternName } : {}),
+  ...(val.code !== undefined || val.patternCode !== undefined ? { code: val.code !== undefined ? val.code : val.patternCode } : {}),
+}));
+
+export const getAssessmentSchemesQuerySchema = z.object({
+  academicRegulationId: z.preprocess(emptyToUndefined, positiveIntegerId.optional()),
+  evaluationPattern: z.enum(EVALUATION_PATTERNS).optional(),
+  isActive: z.union([z.boolean(), z.string()]).optional(),
+  search: z.string().optional(),
 });
 
 export const getCourseMappingsQuerySchema = z.object({
@@ -57,6 +137,8 @@ export const createAcademicRegulationBody = z.object({
   // ==========================================
   // STEP 2: EVALUATION PATTERN & WEIGHTAGE
   // ==========================================
+  assessmentSchemes: z.array(assessmentSchemeItemSchema).optional().nullable(),
+  evaluationPatterns: z.array(assessmentSchemeItemSchema).optional().nullable(),
   evaluationPattern: z.enum(EVALUATION_PATTERNS).optional().nullable(),
   internalWeightage: z.coerce.number().optional().nullable(),
   externalWeightage: z.coerce.number().optional().nullable(),
@@ -211,6 +293,8 @@ export const updateAcademicRegulationBody = z.object({
   // ==========================================
   // STEP 2: EVALUATION PATTERN & WEIGHTAGE
   // ==========================================
+  assessmentSchemes: z.array(assessmentSchemeItemSchema).optional().nullable(),
+  evaluationPatterns: z.array(assessmentSchemeItemSchema).optional().nullable(),
   evaluationPattern: z.enum(EVALUATION_PATTERNS).optional().nullable(),
   internalWeightage: z.coerce.number().optional().nullable(),
   externalWeightage: z.coerce.number().optional().nullable(),
@@ -367,6 +451,61 @@ router.get(
   checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
   validate({ query: listAcademicRegulationQuery }),
   getAcademicRegulations
+);
+
+// ==========================================
+// ASSESSMENT SCHEME STANDALONE ENDPOINTS
+// ==========================================
+router.post(
+  "/assessmentScheme",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_ADD.value, null),
+  validate({ body: createSingleAssessmentSchemeBody }),
+  createAssessmentScheme
+);
+
+router.get(
+  "/assessmentScheme",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  validate({ query: getAssessmentSchemesQuerySchema }),
+  getAssessmentSchemes
+);
+
+router.get(
+  "/assessmentScheme/regulation/:academicRegulationId",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  getAssessmentSchemes
+);
+
+router.get(
+  "/assessmentScheme/detail/:id",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  getAssessmentSchemeById
+);
+
+router.get(
+  "/assessmentScheme/:id",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP.value, null),
+  getAssessmentSchemeById
+);
+
+router.patch(
+  "/assessmentScheme/:id",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  validate({ body: updateSingleAssessmentSchemeBody }),
+  updateAssessmentScheme
+);
+
+router.delete(
+  "/assessmentScheme/:id",
+  useAuth,
+  checkAccess(PERMISSIONS.GRADING_SETUP_EDIT.value, null),
+  deleteAssessmentScheme
 );
 
 router.get(

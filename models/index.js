@@ -115,6 +115,7 @@ import academicGroupStudentModel from "./academicGroupStudentModel.js";
 import academicRegulationModel from "./academicRegulationModel.js";
 import academicRegulationClassificationModel from "./academicRegulationClassificationModel.js";
 import academicRegulationCourseMappingModel from "./academicRegulationCourseMappingModel.js";
+import academicRegulationAssesmentSchemeModel from "./academicRegulationAssesmentSchemeModel.js";
 import syllabusDetailsModel from "./syllabusDetailsModel.js";
 import syllabusModel from "./syllabusModel.js";
 import sessionModel from "./sessionModel.js";
@@ -4158,6 +4159,23 @@ academicRegulationClassificationModel.belongsTo(academicRegulationModel, {
   as: "academicRegulation",
 });
 
+academicRegulationModel.hasMany(academicRegulationAssesmentSchemeModel, {
+  foreignKey: "academicRegulationId",
+  as: "assessmentSchemes",
+});
+academicRegulationAssesmentSchemeModel.belongsTo(academicRegulationModel, {
+  foreignKey: "academicRegulationId",
+  as: "academicRegulation",
+});
+academicRegulationAssesmentSchemeModel.belongsTo(gradingModel, {
+  foreignKey: "gradingSchemeId",
+  as: "gradingScheme",
+});
+gradingModel.hasMany(academicRegulationAssesmentSchemeModel, {
+  foreignKey: "gradingSchemeId",
+  as: "regulationAssessmentSchemes",
+});
+
 academicRegulationModel.hasMany(academicRegulationCourseMappingModel, {
   foreignKey: "academicRegulationId",
   as: "courseMappings",
@@ -4208,6 +4226,15 @@ assessmentPlanModel.belongsTo(academicRegulationModel, {
 });
 academicRegulationModel.hasMany(assessmentPlanModel, {
   foreignKey: "regulationId",
+  as: "assessmentPlans",
+});
+
+assessmentPlanModel.belongsTo(academicRegulationAssesmentSchemeModel, {
+  foreignKey: "academicRegulationAssesmentSchemeId",
+  as: "assessmentScheme",
+});
+academicRegulationAssesmentSchemeModel.hasMany(assessmentPlanModel, {
+  foreignKey: "academicRegulationAssesmentSchemeId",
   as: "assessmentPlans",
 });
 
@@ -4313,6 +4340,7 @@ export {
   academicRegulationModel,
   academicRegulationClassificationModel,
   academicRegulationCourseMappingModel,
+  academicRegulationAssesmentSchemeModel,
   settingModel,
   universityModel,
   campusModel,
