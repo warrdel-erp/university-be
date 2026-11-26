@@ -134,6 +134,25 @@ export async function getMaxSlotNumber(examinationSessionId, options = {}) {
   return highestSlot?.slotNumber ? Number(highestSlot.slotNumber) : 0;
 }
 
+export async function getLastSlot(examinationSessionId, options = {}) {
+  return scoped(model.examinationSessionSlotModel).findOne({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    order: [["slotNumber", "DESC"]],
+    attributes: [
+      "examinationSessionSlotId",
+      "slotNumber",
+      "startTime",
+      "endTime",
+      "durationMinutes",
+      "universityId",
+      "instituteId",
+    ],
+    transaction: options.transaction,
+    paranoid: false,
+    raw: true,
+  });
+}
+
 export async function createExaminationSessionSlot(slotData, options = {}) {
   return scoped(model.examinationSessionSlotModel).create(slotData, {
     transaction: options.transaction,

@@ -745,11 +745,29 @@ export async function findExamSchedulesBySlotIds(slotIds, options = {}) {
   });
 }
 
+function buildTermOverlapWhere(terms) {
+  if (!Array.isArray(terms) || terms.length === 0) return null;
+
+  const conditions = terms.map((item) => {
+    if (typeof item === "number" || typeof item === "string") {
+      return { term: Number(item) };
+    }
+    const cond = { term: Number(item.term) };
+    if (item.courseId != null) cond.courseId = Number(item.courseId);
+    if (item.sessionId != null) cond.sessionId = Number(item.sessionId);
+    if (item.batchId != null) cond.batchId = Number(item.batchId);
+    return cond;
+  });
+
+  return conditions.length === 1 ? conditions[0] : { [Op.or]: conditions };
+}
+
 export async function findOverlapTermForAssessmentType(assessmentTypeId, terms, options = {}) {
+  const whereClause = buildTermOverlapWhere(terms);
+  if (!whereClause) return null;
+
   return scoped(model.examinationSessionTermModel).findOne({
-    where: {
-      term: { [Op.in]: terms },
-    },
+    where: whereClause,
     include: [
       {
         model: model.examinationSessionModel,
@@ -763,10 +781,11 @@ export async function findOverlapTermForAssessmentType(assessmentTypeId, terms, 
 }
 
 export async function findOverlapTermForAssessmentTypeExcludingSession(assessmentTypeId, sessionId, terms, options = {}) {
+  const whereClause = buildTermOverlapWhere(terms);
+  if (!whereClause) return null;
+
   return scoped(model.examinationSessionTermModel).findOne({
-    where: {
-      term: { [Op.in]: terms },
-    },
+    where: whereClause,
     include: [
       {
         model: model.examinationSessionModel,
