@@ -1,5 +1,71 @@
 import * as eventLogRepository from "../repository/eventLogRepository.js";
 import * as eventRepository from "../repository/eventRepository.js";
+import {
+  AUDIT_LOG_ACTIONS,
+  AUDIT_LOG_STATUSES,
+  AUDIT_DATE_RANGES,
+} from "../const/auditEvents.js";
+
+export { AUDIT_LOG_ACTIONS, AUDIT_LOG_STATUSES, AUDIT_DATE_RANGES };
+
+/**
+ * Resolves standard date range string into concrete start and end Date objects
+ */
+export function resolveDateRange(range) {
+  if (!range) return null;
+  const normalized = String(range).trim().toUpperCase();
+  if (normalized === "ALL" || normalized === "ALL TIME") {
+    return null;
+  }
+
+  const now = new Date();
+
+  if (normalized === "TODAY") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    return { startDate: start, endDate: end };
+  }
+
+  if (normalized === "YESTERDAY") {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 1);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setDate(end.getDate() - 1);
+    end.setHours(23, 59, 59, 999);
+    return { startDate: start, endDate: end };
+  }
+
+  if (
+    normalized === "WEEK" ||
+    normalized === "LAST 7 DAYS" ||
+    normalized === "LAST_7_DAYS"
+  ) {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 7);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    return { startDate: start, endDate: end };
+  }
+
+  if (
+    normalized === "MONTH" ||
+    normalized === "LAST 30 DAYS" ||
+    normalized === "LAST_30_DAYS"
+  ) {
+    const start = new Date(now);
+    start.setDate(start.getDate() - 30);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    return { startDate: start, endDate: end };
+  }
+
+  return null;
+}
 
 /**
  * Computes structured diff and changedFields array between oldData and newData
@@ -108,138 +174,26 @@ export function mapAuditLogRow(row) {
 }
 
 /**
- * Service to fetch paginated audit logs with search, filtering and sorting
- */
-export async function getAuditLogs(query = {}, tenantContext = {}) {
-  try {
-    const filters = {
-      eventId: query.eventId ? Number(query.eventId) : undefined,
-      entity: query.entity ? String(query.entity).trim() : undefined,
-      entityId: query.entityId ? String(query.entityId).trim() : undefined,
-      action: query.action ? String(query.action).trim().toUpperCase() : undefined,
-      eventType: query.eventType ? String(query.eventType).trim().toUpperCase() : undefined,
-      status: query.status ? String(query.status).trim().toUpperCase() : undefined,
-      userId: query.userId ? Number(query.userId) : undefined,
-      startDate: query.startDate,
-      endDate: query.endDate,
-      search: query.search ? String(query.search).trim() : undefined,
-    };
-
-    // Tenant scoping
-    if (!tenantContext.bypass) {
-      if (tenantContext.universityId) {
-        filters.universityId = Number(tenantContext.universityId);
-      }
-    } else if (query.universityId) {
-      filters.universityId = Number(query.universityId);
-    }
-
-    if (query.instituteId) {
-      filters.instituteId = Number(query.instituteId);
-    }
-    if (query.academicYearId) {
-      filters.academicYearId = Number(query.academicYearId);
-    }
-
-    const pagination = {
-      page: query.page,
-      limit: query.limit,
-      sortBy: query.sortBy,
-      sortOrder: query.sortOrder,
-    };
-
-    const result = await eventLogRepository.findAndCountAuditLogs(
-      filters,
-      pagination,
-    );
-
-    return {
-      totalRecords: result.totalRecords,
-      totalPages: result.totalPages,
-      currentPage: result.currentPage,
-      pageSize: result.pageSize,
-      rows: result.rows.map(mapAuditLogRow),
-    };
-  } catch (error) {
-    console.error("Error in Audit Log Service (getAuditLogs):", error);
-    throw error;
-  }
-}
-
-/**
- * Service to fetch single audit log detail by ID
- */
-export async function getAuditLogById(id, tenantContext = {}) {
-  try {
-    const eventLogId = Number(id);
-    if (!eventLogId || isNaN(eventLogId)) {
-      const error = new Error("Invalid audit log ID");
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const row = await eventLogRepository.findAuditLogById(eventLogId);
-    if (!row) {
-      const error = new Error("Audit log entry not found");
-      error.statusCode = 404;
-      throw error;
-    }
-
-    if (!tenantContext.bypass && tenantContext.universityId) {
-      if (
-        row.universityId &&
-        Number(row.universityId) !== Number(tenantContext.universityId)
-      ) {
-        const error = new Error("Audit log entry not found");
-        error.statusCode = 404;
-        throw error;
-      }
-    }
-
-    return mapAuditLogRow(row);
-  } catch (error) {
-    console.error("Error in Audit Log Service (getAuditLogById):", error);
-    throw error;
-  }
-}
-
-/**
- * Service to fetch distinct audited entities
- */
-export async function getAuditLogEntities(universityId) {
-  try {
-    return await eventLogRepository.getDistinctEntities(universityId);
-  } catch (error) {
-    console.error("Error in Audit Log Service (getAuditLogEntities):", error);
-    throw error;
-  }
-}
-
-/**
- * Service to fetch available audit actions
- */
-export function getAuditLogActions() {
-  return [
-    "CREATE",
-    "UPDATE",
-    "DELETE",
-    "BULK_CREATE",
-    "BULK_UPDATE",
-    "BULK_DELETE",
-  ];
-}
-
-/**
  * Service to fetch paginated audit events with search, filtering and sorting
  */
 export async function getAuditEvents(query = {}) {
   try {
+    const dateRangeParam = query.daterange || query.dateRange || query.range;
+    const resolvedDates = resolveDateRange(dateRangeParam);
+
+    const startDate = query.startDate || resolvedDates?.startDate;
+    const endDate = query.endDate || resolvedDates?.endDate;
+
+    const actionParam = query.action || query.actions;
+    const statusParam = query.status || query.statuses;
+
     const filters = {
+      action: actionParam,
+      status: statusParam,
       eventType: query.eventType ? String(query.eventType).trim().toUpperCase() : undefined,
-      status: query.status ? String(query.status).trim().toUpperCase() : undefined,
       userId: query.userId ? Number(query.userId) : undefined,
-      startDate: query.startDate,
-      endDate: query.endDate,
+      startDate,
+      endDate,
       search: query.search ? String(query.search).trim() : undefined,
     };
 
@@ -257,6 +211,11 @@ export async function getAuditEvents(query = {}) {
       totalPages: result.totalPages,
       currentPage: result.currentPage,
       pageSize: result.pageSize,
+      filters: {
+        actions: AUDIT_LOG_ACTIONS,
+        statuses: AUDIT_LOG_STATUSES,
+        dateRanges: AUDIT_DATE_RANGES,
+      },
       rows: result.rows.map((row) => {
         const plain = row?.get ? row.get({ plain: true }) : row;
         return {
@@ -370,7 +329,7 @@ export async function getLogsByEventId(id) {
 
     return {
       event: {
-       ...eventPlain,
+        ...eventPlain,
         logsCount: logs.length,
       },
       logs: logs.map(mapAuditLogRow),
@@ -380,16 +339,3 @@ export async function getLogsByEventId(id) {
     throw error;
   }
 }
-
-/**
- * Service to fetch distinct event types
- */
-export async function getAuditEventTypes(universityId) {
-  try {
-    return await eventRepository.getDistinctEventTypes(universityId);
-  } catch (error) {
-    console.error("Error in Audit Log Service (getAuditEventTypes):", error);
-    throw error;
-  }
-}
-
