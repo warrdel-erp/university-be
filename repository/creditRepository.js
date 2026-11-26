@@ -2,7 +2,7 @@ import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
 import { Op } from 'sequelize';
 
-export async function addCredit(creditData) {
+export async function addCredit(creditData, options = {}) {
   try {
     if (Array.isArray(creditData) && creditData.length > 0) {
       const courseIds = [...new Set(creditData.filter(r => !r.departmentId && r.courseId).map(r => r.courseId))];
@@ -10,7 +10,8 @@ export async function addCredit(creditData) {
         const courses = await model.courseModel.findAll({
           where: { courseId: { [Op.in]: courseIds } },
           attributes: ['courseId', 'departmentId'],
-          raw: true
+          raw: true,
+          ...options,
         });
         const map = new Map(courses.map(c => [c.courseId, c.departmentId]));
         for (const r of creditData) {
@@ -20,7 +21,7 @@ export async function addCredit(creditData) {
         }
       }
     }
-    return await scoped(model.creditModel).bulkCreate(creditData);
+    return await scoped(model.creditModel).bulkCreate(creditData, options);
   } catch (error) {
     console.error('Error in add Credit:', error);
     throw error;
@@ -92,24 +93,26 @@ export async function getSingleCreditDetails(creditId) {
   }
 }
 
-export async function deleteCredit(creditId) {
+export async function deleteCredit(creditId, options = {}) {
   const existing = await scoped(model.creditModel).findOne({
     where: { creditId },
     attributes: ['creditId'],
+    ...options,
   });
   if (!existing) {
     return false;
   }
 
-  const deleted = await scoped(model.creditModel).destroy({ where: { creditId } });
+  const deleted = await scoped(model.creditModel).destroy({ where: { creditId }, ...options });
   return deleted > 0;
 }
 
-export async function updateCredit(creditId, CreditData) {
+export async function updateCredit(creditId, CreditData, options = {}) {
   try {
     const existing = await scoped(model.creditModel).findOne({
       where: { creditId },
       attributes: ['creditId'],
+      ...options,
     });
     if (!existing) {
       return [0];
@@ -117,6 +120,7 @@ export async function updateCredit(creditId, CreditData) {
 
     return await scoped(model.creditModel).update(CreditData, {
       where: { creditId },
+      ...options,
     });
   } catch (error) {
     console.error(`Error updating Credit creation ${creditId}:`, error);

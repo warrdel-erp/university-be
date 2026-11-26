@@ -529,4 +529,119 @@ export const AUDIT_EVENTS = Object.freeze({
     JOB_CREATE:                                  "JOB_CREATE",
     JOB_UPDATE:                                  "JOB_UPDATE",
     JOB_DELETE:                                  "JOB_DELETE",
+
+    // ─── Academic Year ──────────────────────────────────────────────────────
+    ACADEMIC_YEAR_CREATE:                        "ACADEMIC_YEAR_CREATE",
+    ACADEMIC_YEAR_UPDATE:                        "ACADEMIC_YEAR_UPDATE",
+    ACADEMIC_YEAR_DELETE:                        "ACADEMIC_YEAR_DELETE",
+    ACADEMIC_YEAR_ACTIVATE_AND_COPY:             "ACADEMIC_YEAR_ACTIVATE_AND_COPY",
+
+    // ─── Academic Session ───────────────────────────────────────────────────
+    SESSION_CREATE:                              "SESSION_CREATE",
+    SESSION_UPDATE:                              "SESSION_UPDATE",
+    SESSION_DELETE:                              "SESSION_DELETE",
+    SESSION_COURSE_MAP:                          "SESSION_COURSE_MAP",
+    SESSION_COURSE_UNMAP:                        "SESSION_COURSE_UNMAP",
+    SESSION_COURSE_MAPPING_UPDATE:               "SESSION_COURSE_MAPPING_UPDATE",
+    SESSION_BATCH_MAP:                           "SESSION_BATCH_MAP",
+    SESSION_BATCH_UNMAP:                         "SESSION_BATCH_UNMAP",
+
+    // ─── Batch ──────────────────────────────────────────────────────────────
+    BATCH_CREATE:                                "BATCH_CREATE",
+    BATCH_UPDATE:                                "BATCH_UPDATE",
+    BATCH_DELETE:                                "BATCH_DELETE",
+    BATCH_PUBLISH:                               "BATCH_PUBLISH",
+
+    // ─── Specialization ─────────────────────────────────────────────────────
+    SPECIALIZATION_UPDATE:                       "SPECIALIZATION_UPDATE",
+
+    // ─── Credit ─────────────────────────────────────────────────────────────
+    CREDIT_CREATE:                               "CREDIT_CREATE",
+    CREDIT_UPDATE:                               "CREDIT_UPDATE",
+    CREDIT_DELETE:                               "CREDIT_DELETE",
+
+    // ─── Syllabus ───────────────────────────────────────────────────────────
+    SYLLABUS_CREATE:                             "SYLLABUS_CREATE",
+    SYLLABUS_UPDATE:                             "SYLLABUS_UPDATE",
+    SYLLABUS_DELETE:                             "SYLLABUS_DELETE",
+    SYLLABUS_UNIT_CREATE:                        "SYLLABUS_UNIT_CREATE",
+    SYLLABUS_UNIT_UPDATE:                        "SYLLABUS_UNIT_UPDATE",
+    SYLLABUS_UNIT_DELETE:                        "SYLLABUS_UNIT_DELETE",
+
+    // ─── Subject Weightage ──────────────────────────────────────────────────
+    SUBJECT_WEIGHTAGE_BULK_CREATE:               "SUBJECT_WEIGHTAGE_BULK_CREATE",
+
+    // ─── Program Outcome (PO) ───────────────────────────────────────────────
+    PO_CREATE:                                   "PO_CREATE",
+    PO_UPDATE:                                   "PO_UPDATE",
+    PO_DELETE:                                   "PO_DELETE",
+
+    // ─── Course Outcome (CO) ────────────────────────────────────────────────
+    CO_CREATE:                                   "CO_CREATE",
+    CO_UPDATE:                                   "CO_UPDATE",
+    CO_DELETE:                                   "CO_DELETE",
+    CO_WEIGHTAGE_CREATE:                         "CO_WEIGHTAGE_CREATE",
+    CO_WEIGHTAGE_UPDATE:                         "CO_WEIGHTAGE_UPDATE",
+
+    // ─── Roles & Permissions ────────────────────────────────────────────────
+    ROLE_CREATE:                                 "ROLE_CREATE",
+    ROLE_UPDATE:                                 "ROLE_UPDATE",
+    ROLE_DELETE:                                 "ROLE_DELETE",
+    ROLE_PERMISSIONS_ASSIGN:                     "ROLE_PERMISSIONS_ASSIGN",
+    PERMISSION_CREATE:                           "PERMISSION_CREATE",
+    PERMISSION_UPDATE:                           "PERMISSION_UPDATE",
+    PERMISSION_DELETE:                           "PERMISSION_DELETE",
+    ROLE_PERMISSION_CREATE:                      "ROLE_PERMISSION_CREATE",
+    ROLE_PERMISSION_UPDATE:                      "ROLE_PERMISSION_UPDATE",
+    ROLE_PERMISSION_DELETE:                      "ROLE_PERMISSION_DELETE",
+    USER_ROLE_PERMISSION_CREATE:                 "USER_ROLE_PERMISSION_CREATE",
+    USER_ROLE_PERMISSION_UPDATE:                 "USER_ROLE_PERMISSION_UPDATE",
+    USER_ROLE_PERMISSION_DELETE:                 "USER_ROLE_PERMISSION_DELETE",
+    USER_ROLE_ASSIGN:                            "USER_ROLE_ASSIGN",
+    USER_ROLE_REMOVE:                            "USER_ROLE_REMOVE",
+
+    // ─── User Management ────────────────────────────────────────────────────
+    USER_REGISTER:                               "USER_REGISTER",
+    USER_STUDENT_REGISTER:                       "USER_STUDENT_REGISTER",
+    USER_EMPLOYEE_REGISTER:                      "USER_EMPLOYEE_REGISTER",
+    USER_PASSWORD_CHANGE:                        "USER_PASSWORD_CHANGE",
+    USER_STATUS_CHANGE:                          "USER_STATUS_CHANGE",
+    USER_DEFAULTS_SAVE:                          "USER_DEFAULTS_SAVE",
+    USER_INITIAL_SETUP:                          "USER_INITIAL_SETUP",
+    USER_FULL_ACCESS_GRANT:                      "USER_FULL_ACCESS_GRANT",
+
+    // ─── Curriculum Elective Requirements & Assignments ─────────────────────
+    CURRICULUM_ELECTIVE_REQUIREMENT_CREATE:        "CURRICULUM_ELECTIVE_REQUIREMENT_CREATE",
+    CURRICULUM_ELECTIVE_REQUIREMENT_UPDATE:        "CURRICULUM_ELECTIVE_REQUIREMENT_UPDATE",
+    CURRICULUM_ELECTIVE_REQUIREMENT_STATUS_TOGGLE: "CURRICULUM_ELECTIVE_REQUIREMENT_STATUS_TOGGLE",
+    CURRICULUM_ELECTIVE_REQUIREMENT_DELETE:        "CURRICULUM_ELECTIVE_REQUIREMENT_DELETE",
+    CURRICULUM_ELECTIVE_STUDENT_ASSIGN:            "CURRICULUM_ELECTIVE_STUDENT_ASSIGN",
+    CURRICULUM_ELECTIVE_STUDENT_BULK_ASSIGN:       "CURRICULUM_ELECTIVE_STUDENT_BULK_ASSIGN",
+    CURRICULUM_ELECTIVE_STUDENT_UNASSIGN:          "CURRICULUM_ELECTIVE_STUDENT_UNASSIGN",
+    CURRICULUM_ELECTIVE_STUDENT_BULK_UNASSIGN:     "CURRICULUM_ELECTIVE_STUDENT_BULK_UNASSIGN",
+    ELECTIVE_SUBJECT_CREATE:                       "ELECTIVE_SUBJECT_CREATE",
+    ELECTIVE_SUBJECT_UPDATE:                       "ELECTIVE_SUBJECT_UPDATE",
+    ELECTIVE_SUBJECT_DELETE:                       "ELECTIVE_SUBJECT_DELETE",
+    ELECTIVE_SUBJECT_STUDENTS_MAP:                 "ELECTIVE_SUBJECT_STUDENTS_MAP",
+    ELECTIVE_SUBJECT_STUDENT_UNMAP:                "ELECTIVE_SUBJECT_STUDENT_UNMAP",
+
+    // ─── Exam Attendance & Teacher Exam Assignment ──────────────────────────
+    EXAM_ATTENDANCE_CREATE:                      "EXAM_ATTENDANCE_CREATE",
+    EXAM_ATTENDANCE_UPDATE:                      "EXAM_ATTENDANCE_UPDATE",
+    EXAM_ATTENDANCE_DELETE:                      "EXAM_ATTENDANCE_DELETE",
+    EXAM_ATTENDANCE_MARK:                        "EXAM_ATTENDANCE_MARK",
+    EXAM_ROOM_ATTENDANCE_STATUS_UPDATE:          "EXAM_ROOM_ATTENDANCE_STATUS_UPDATE",
+    TEACHER_EXAM_ASSIGNMENT_CREATE:              "TEACHER_EXAM_ASSIGNMENT_CREATE",
+    TEACHER_EXAM_ASSIGNMENT_DELETE:              "TEACHER_EXAM_ASSIGNMENT_DELETE",
+    RESULT_STUDENT_CREATE:                       "RESULT_STUDENT_CREATE",
+
+    // ─── Asset Category ─────────────────────────────────────────────────────
+    ASSET_CATEGORY_CREATE:                       "ASSET_CATEGORY_CREATE",
+    ASSET_CATEGORY_UPDATE:                       "ASSET_CATEGORY_UPDATE",
+    ASSET_CATEGORY_DELETE:                       "ASSET_CATEGORY_DELETE",
+
+    // ─── Sub Account ────────────────────────────────────────────────────────
+    SUB_ACCOUNT_CREATE:                          "SUB_ACCOUNT_CREATE",
+    SUB_ACCOUNT_UPDATE:                          "SUB_ACCOUNT_UPDATE",
+    SUB_ACCOUNT_DELETE:                          "SUB_ACCOUNT_DELETE",
 });

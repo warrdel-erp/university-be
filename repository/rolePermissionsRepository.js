@@ -1,12 +1,13 @@
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
-export async function addRolePermissions(RolePermissionsData) {
+export async function addRolePermissions(RolePermissionsData, options = {}) {
   try {
     if (RolePermissionsData.roleId) {
       const role = await model.roleModel.findOne({
         where: { roleId: RolePermissionsData.roleId },
         attributes: ["roleId", "role", "code"],
+        ...options,
       });
       if (role?.code) {
         const error = new Error(`Permissions for system-generated role '${role.role}' cannot be modified.`);
@@ -14,7 +15,7 @@ export async function addRolePermissions(RolePermissionsData) {
         throw error;
       }
     }
-    return scoped(model.rolePermissionsModel).create(RolePermissionsData);
+    return scoped(model.rolePermissionsModel).create(RolePermissionsData, options);
   } catch (error) {
     console.error("Error in add RolePermissions :", error);
     throw error;
@@ -58,7 +59,7 @@ export async function getSingleRolePermissionsDetails(rolePermissionsId) {
   }
 }
 
-export async function deleteRolePermissions(rolePermissionsId) {
+export async function deleteRolePermissions(rolePermissionsId, options = {}) {
   const existing = await scoped(model.rolePermissionsModel).findOne({
     attributes: ["rolePermissionsId", "roleId"],
     where: { rolePermissionsId },
@@ -69,6 +70,7 @@ export async function deleteRolePermissions(rolePermissionsId) {
         attributes: ["roleId", "role", "code"],
       },
     ],
+    ...options,
   });
   if (!existing) {
     return false;
@@ -82,11 +84,12 @@ export async function deleteRolePermissions(rolePermissionsId) {
 
   const deleted = await scoped(model.rolePermissionsModel).destroy({
     where: { rolePermissionsId },
+    ...options,
   });
   return deleted > 0;
 }
 
-export async function updateRolePermissions(rolePermissionsId, RolePermissionsData) {
+export async function updateRolePermissions(rolePermissionsId, RolePermissionsData, options = {}) {
   try {
     const existing = await scoped(model.rolePermissionsModel).findOne({
       attributes: ["rolePermissionsId", "roleId"],
@@ -98,6 +101,7 @@ export async function updateRolePermissions(rolePermissionsId, RolePermissionsDa
           attributes: ["roleId", "role", "code"],
         },
       ],
+      ...options,
     });
     if (!existing) {
       return [0];
@@ -111,6 +115,7 @@ export async function updateRolePermissions(rolePermissionsId, RolePermissionsDa
 
     return scoped(model.rolePermissionsModel).update(RolePermissionsData, {
       where: { rolePermissionsId },
+      ...options,
     });
   } catch (error) {
     console.error(`Error updating RolePermissions creation ${rolePermissionsId}:`, error);
