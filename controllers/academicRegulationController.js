@@ -111,3 +111,65 @@ export async function deleteCourseMapping(req, res) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete course mapping");
   }
 }
+
+export async function createAssessmentScheme(req, res) {
+  try {
+    const data = req.body;
+    const user = req.user;
+    const result = await academicRegulationService.createAssessmentScheme(data, user);
+    return SuccessResponse(res, 201, "Assessment scheme created successfully", result);
+  } catch (error) {
+    console.error("Error in createAssessmentScheme:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to create assessment scheme");
+  }
+}
+
+export async function getAssessmentSchemes(req, res) {
+  try {
+    const filters = {
+      ...req.query,
+      ...(req.params.academicRegulationId && { academicRegulationId: req.params.academicRegulationId }),
+    };
+    const result = await academicRegulationService.getAssessmentSchemes(filters);
+    return SuccessResponse(res, 200, "Assessment schemes fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getAssessmentSchemes:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch assessment schemes");
+  }
+}
+
+export async function getAssessmentSchemeById(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await academicRegulationService.getAssessmentSchemeById(id);
+    return SuccessResponse(res, 200, "Assessment scheme fetched successfully", result);
+  } catch (error) {
+    console.error("Error in getAssessmentSchemeById:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to fetch assessment scheme");
+  }
+}
+
+export async function updateAssessmentScheme(req, res) {
+  try {
+    const { id } = req.params;
+    const data = req.body;
+    const user = req.user;
+    const result = await academicRegulationService.updateAssessmentScheme(id, data, user);
+    return SuccessResponse(res, 200, "Assessment scheme updated successfully", result);
+  } catch (error) {
+    console.error("Error in updateAssessmentScheme:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to update assessment scheme");
+  }
+}
+
+export async function deleteAssessmentScheme(req, res) {
+  try {
+    const { id } = req.params;
+    const result = await academicRegulationService.deleteAssessmentScheme(id);
+    return SuccessResponse(res, 200, result.message || "Assessment scheme deleted successfully");
+  } catch (error) {
+    console.error("Error in deleteAssessmentScheme:", error.message);
+    return ErrorResponse(res, error.statusCode || 500, error.message || "Failed to delete assessment scheme");
+  }
+}
+

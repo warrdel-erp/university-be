@@ -358,10 +358,13 @@ export const studentRegister = async (registerStudentData, transaction) => {
     // Roles are dynamic — only assign a role if a valid roleId was resolved.
     if (roleId != null) {
       const roleName = await getSingleRoleDetails(roleId);
+      const resourceIds = registerStudentData.instituteId
+        ? [Number(registerStudentData.instituteId)]
+        : [];
       await userRoleService.assignRoleToUser(
         userId,
         roleName?.dataValues?.role || role,
-        [],
+       resourceIds,
         activeTransaction,
       );
     }

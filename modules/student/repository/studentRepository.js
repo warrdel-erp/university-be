@@ -2610,6 +2610,111 @@ export async function countStudentsInActiveYearClassSections(batchId, classSecti
     });
 }
 
+export async function getStudentsForQrPdf(filters = {}) {
+    const where = {};
+
+    if (filters.studentId) {
+        where.studentId = Number(filters.studentId);
+    } else if (filters.studentIds) {
+        const ids = Array.isArray(filters.studentIds)
+            ? filters.studentIds.map(Number).filter(Number.isFinite)
+            : String(filters.studentIds).split(',').map((s) => Number(s.trim())).filter(Number.isFinite);
+        if (ids.length > 0) {
+            where.studentId = { [Op.in]: ids };
+        }
+    }
+
+    if (filters.courseId) {
+        where.courseId = Number(filters.courseId);
+    }
+    if (filters.batchId) {
+        where.batchId = Number(filters.batchId);
+    }
+    if (filters.classSectionTermId) {
+        where.classSectionTermId = Number(filters.classSectionTermId);
+    }
+
+    const limit = filters.limit ? Math.min(Number(filters.limit), 2000) : 500;
+
+    const rows = await scoped(model.studentModel).findAll({
+        where,
+        attributes: [
+            'studentId',
+            'uuid',
+            'scholarNumber',
+            'enrollNumber',
+            'firstName',
+            'middleName',
+            'lastName',
+            'courseId',
+            'batchId',
+            'classSectionTermId',
+        ],
+        include: [
+            {
+                model: model.courseModel,
+                as: 'course',
+                attributes: ['courseId', 'courseName'],
+            },
+            {
+                model: model.batchModel,
+                as: 'batch',
+                attributes: ['batchId', 'batch'],
+            },
+            studentClassSectionTermWithSectionInclude({
+                includeSectionTerms: false,
+                sectionAttributes: ['classSectionsId', 'section', 'year'],
+            }),
+        ],
+        order: [['studentId', 'ASC']],
+        limit,
+    });
+
+    return rows.map((r) => r.get({ plain: true }));
+}
+
+export async function getStudentByUuid(uuid) {
+    if (!uuid) return null;
+
+    const student = await scoped(model.studentModel).findOne({
+        where: { uuid },
+        attributes: {
+            exclude: ['createdAt', 'updatedAt', 'deletedAt'],
+        },
+        include: [
+            {
+                model: model.courseModel,
+                as: 'course',
+                attributes: ['courseId', 'courseName', 'courseCode'],
+            },
+            {
+                model: model.batchModel,
+                as: 'batch',
+                attributes: ['batchId', 'batch'],
+            },
+            {
+                model: model.instituteModel,
+                as: 'institute',
+                attributes: ['instituteId', 'instituteName'],
+            },
+            {
+                model: model.campusModel,
+                as: 'campus',
+                attributes: ['campusId', 'campusName'],
+            },
+            studentClassSectionTermWithSectionInclude({
+                includeSectionTerms: false,
+                sectionAttributes: ['classSectionsId', 'section', 'year'],
+            }),
+        ],
+    });
+
+    if (!student) return null;
+    return student.get({ plain: true });
+}
+
+
+
 
 
 

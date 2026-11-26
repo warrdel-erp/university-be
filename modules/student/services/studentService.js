@@ -273,7 +273,7 @@ export async function addStudent(
     );
     const studentId = student.dataValues.studentId;
 
-    const { email, phoneNumber, mobileNumber, scholarNumber } =
+    const { email, phoneNumber, mobileNumber, scholarNumber, instituteId } =
       student.dataValues;
     const role = "Student";
     const registerStudentData = {
@@ -284,6 +284,7 @@ export async function addStudent(
       scholarNumber,
       role,
       universityId,
+      instituteId: instituteId ?? info.instituteId,
       roleId,
     };
 
@@ -765,6 +766,7 @@ export async function importStudentData(excelData, data) {
         mobileNumber,
         scholarNumber,
         universityId,
+        instituteId,
       } = result.dataValues;
       const registerStudentData = {
         studentId,
@@ -773,6 +775,7 @@ export async function importStudentData(excelData, data) {
         mobileNumber,
         scholarNumber,
         universityId,
+        instituteId: instituteId ?? convertedData.instituteId,
         role,
         roleId: importRoleId,
       };

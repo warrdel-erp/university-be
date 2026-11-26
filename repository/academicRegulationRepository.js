@@ -49,8 +49,9 @@ export async function findActiveBatchRegulationMappings(batchIds, excludeAcademi
 }
 
 export async function createAcademicRegulation(data, options = {}) {
-  const { courseMappings, batchMappings, ...regulationData } = data;
+  const { courseMappings, batchMappings, assessmentSchemes, evaluationPatterns, ...regulationData } = data;
   const mappings = batchMappings || courseMappings;
+  const schemes = assessmentSchemes || evaluationPatterns || [];
 
   const submittedBatchIds = Array.isArray(mappings)
     ? [...new Set(mappings.map((item) => Number(item?.batchId ?? item)).filter((id) => Number.isInteger(id) && id > 0))]
@@ -94,10 +95,27 @@ export async function createAcademicRegulation(data, options = {}) {
     );
   }
 
+  if (Array.isArray(schemes) && schemes.length > 0) {
+    const schemesToCreate = schemes.map((s) => ({
+      ...s,
+      academicRegulationId: record.academicRegulationId,
+      instituteId: record.instituteId,
+      universityId: record.universityId,
+      createdBy: data.createdBy,
+      updatedBy: data.updatedBy,
+    }));
+
+    await Promise.all(
+      schemesToCreate.map((item) =>
+        scoped(model.academicRegulationAssesmentSchemeModel).create(item, { transaction: options.transaction })
+      )
+    );
+  }
+
   return await getAcademicRegulationById(record.academicRegulationId, options);
 }
 
-export async function getAcademicRegulations({ search, status, batchId, courseId, academicYearRange, page = 1, limit = 10 }) {
+export async function getAcademicRegulations({ search, status, batchId, courseId, academicYearRange, page = 1, limit = 10 } = {}) {
   const pageNum = Math.max(1, Number(page) || 1);
   const limitNum = Math.max(1, Number(limit) || 10);
   const offset = (pageNum - 1) * limitNum;
@@ -165,6 +183,20 @@ export async function getAcademicRegulations({ search, status, batchId, courseId
         required: false,
       },
       {
+        model: model.academicRegulationAssesmentSchemeModel,
+        as: "assessmentSchemes",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+        include: [
+          {
+            model: model.gradingModel,
+            as: "gradingScheme",
+            attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+            required: false,
+          },
+        ],
+        required: false,
+      },
+      {
         model: model.academicRegulationCourseMappingModel,
         as: "courseMappings",
         include: [
@@ -219,6 +251,20 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
         required: false,
       },
       {
+        model: model.academicRegulationAssesmentSchemeModel,
+        as: "assessmentSchemes",
+        attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+        include: [
+          {
+            model: model.gradingModel,
+            as: "gradingScheme",
+            attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+            required: false,
+          },
+        ],
+        required: false,
+      },
+      {
         model: model.academicRegulationCourseMappingModel,
         as: "courseMappings",
         include: [
@@ -246,8 +292,9 @@ export async function getAcademicRegulationById(academicRegulationId, options = 
 }
 
 export async function updateAcademicRegulation(academicRegulationId, data, options = {}) {
-  const { classifications, courseMappings, batchMappings, ...updatePayload } = data;
+  const { classifications, courseMappings, batchMappings, assessmentSchemes, evaluationPatterns, ...updatePayload } = data;
   const mappings = batchMappings || courseMappings;
+  const schemes = assessmentSchemes || evaluationPatterns;
 
   const existing = await scoped(model.academicRegulationModel).findOne({
     where: { academicRegulationId: Number(academicRegulationId) },
@@ -294,6 +341,57 @@ export async function updateAcademicRegulation(academicRegulationId, data, optio
           scoped(model.academicRegulationClassificationModel).create(item, { transaction: options.transaction })
         )
       );
+    }
+  }
+
+  if (Array.isArray(schemes)) {
+    const existingSchemes = await scoped(model.academicRegulationAssesmentSchemeModel).findAll({
+      where: { academicRegulationId: Number(academicRegulationId) },
+      transaction: options.transaction,
+    });
+
+    const incomingIds = schemes
+      .map((s) => Number(s.id))
+      .filter((id) => Number.isInteger(id) && id > 0);
+
+    const schemesToDelete = existingSchemes.filter(
+      (es) => !incomingIds.includes(Number(es.id))
+    );
+
+    if (schemesToDelete.length > 0) {
+      await scoped(model.academicRegulationAssesmentSchemeModel).destroy({
+        where: { id: schemesToDelete.map((s) => s.id) },
+        transaction: options.transaction,
+      });
+    }
+
+    for (const s of schemes) {
+      const sId = Number(s.id);
+      if (sId && existingSchemes.some((es) => Number(es.id) === sId)) {
+        await scoped(model.academicRegulationAssesmentSchemeModel).update(
+          {
+            ...s,
+            updatedBy: data.updatedBy,
+          },
+          {
+            where: { id: sId },
+            transaction: options.transaction,
+          }
+        );
+      } else {
+        const { id: _, ...newSchemeData } = s;
+        await scoped(model.academicRegulationAssesmentSchemeModel).create(
+          {
+            ...newSchemeData,
+            academicRegulationId: Number(academicRegulationId),
+            instituteId: existing.instituteId,
+            universityId: existing.universityId,
+            createdBy: data.updatedBy || data.createdBy,
+            updatedBy: data.updatedBy,
+          },
+          { transaction: options.transaction }
+        );
+      }
     }
   }
 
@@ -557,5 +655,116 @@ export async function deleteCourseMapping(academicRegulationCourseMappingId, opt
     force: true,
     transaction: options.transaction,
     individualHooks: true,
+  });
+}
+
+// ==========================================
+// ASSESSMENT SCHEME (EVALUATION PATTERN) CRUD
+// ==========================================
+
+export async function createAssessmentScheme(data, options = {}) {
+  const scheme = await scoped(model.academicRegulationAssesmentSchemeModel).create(data, options);
+  return await getAssessmentSchemeById(scheme.id, options);
+}
+
+export async function getAssessmentSchemes(filters = {}, options = {}) {
+  const where = {};
+  if (filters.academicRegulationId) {
+    where.academicRegulationId = Number(filters.academicRegulationId);
+  }
+  if (filters.evaluationPattern) {
+    where.evaluationPattern = filters.evaluationPattern;
+  }
+  if (filters.isActive !== undefined) {
+    where.isActive = filters.isActive;
+  }
+  if (filters.search) {
+    where[Op.or] = [
+      { name: { [Op.like]: `%${filters.search}%` } },
+      { code: { [Op.like]: `%${filters.search}%` } },
+    ];
+  }
+
+  const queryOptions = {
+    where,
+    include: [
+      {
+        model: model.gradingModel,
+        as: "gradingScheme",
+        attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+        required: false,
+      },
+      {
+        model: model.academicRegulationModel,
+        as: "academicRegulation",
+        attributes: ["academicRegulationId", "regulationCode", "regulationName", "status"],
+        required: false,
+      },
+    ],
+    order: [["id", "ASC"]],
+    transaction: options.transaction,
+  };
+
+  if (filters.page && filters.limit) {
+    const pageNum = Math.max(1, Number(filters.page) || 1);
+    const limitNum = Math.max(1, Number(filters.limit) || 10);
+    queryOptions.limit = limitNum;
+    queryOptions.offset = (pageNum - 1) * limitNum;
+    queryOptions.distinct = true;
+
+    const { count, rows } = await scoped(model.academicRegulationAssesmentSchemeModel).findAndCountAll(queryOptions);
+    return {
+      totalRecords: count,
+      totalPages: Math.ceil(count / limitNum),
+      currentPage: pageNum,
+      pageSize: limitNum,
+      data: rows,
+    };
+  }
+
+  return await scoped(model.academicRegulationAssesmentSchemeModel).findAll(queryOptions);
+}
+
+export async function getAssessmentSchemeById(id, options = {}) {
+  return await scoped(model.academicRegulationAssesmentSchemeModel).findOne({
+    where: { id: Number(id) },
+    include: [
+      {
+        model: model.gradingModel,
+        as: "gradingScheme",
+        attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+        required: false,
+      },
+      {
+        model: model.academicRegulationModel,
+        as: "academicRegulation",
+        attributes: ["academicRegulationId", "regulationCode", "regulationName", "status"],
+        required: false,
+      },
+    ],
+    transaction: options.transaction,
+  });
+}
+
+export async function updateAssessmentScheme(id, data, options = {}) {
+  await scoped(model.academicRegulationAssesmentSchemeModel).update(data, {
+    where: { id: Number(id) },
+    transaction: options.transaction,
+  });
+  return await getAssessmentSchemeById(id, options);
+}
+
+export async function isAssessmentSchemeMappedToPlan(id, options = {}) {
+  const count = await scoped(model.assessmentPlanModel).count({
+    where: { academicRegulationAssesmentSchemeId: Number(id) },
+    transaction: options.transaction,
+  });
+  return count > 0;
+}
+
+export async function deleteAssessmentScheme(id, options = {}) {
+  return await scoped(model.academicRegulationAssesmentSchemeModel).destroy({
+    where: { id: Number(id) },
+    transaction: options.transaction,
   });
 }

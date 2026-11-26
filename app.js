@@ -23,6 +23,7 @@ import libraryModule from "./modules/library/index.js";
 import feeTypeCategory from "./router/feeTypeCategoryRoute.js";
 import feeTypeCatalog from "./router/feeTypeCatalogRoute.js";
 import feePolicy from "./router/feePolicyRoute.js";
+import attendancePolicy from "./router/attendancePolicyRoute.js";
 import assetManagementModule from "./modules/asset-management/index.js";
 import role from "./router/roleRoute.js";
 import permission from "./router/permissionRoute.js";
@@ -152,6 +153,7 @@ app.use("/feePlanItem", feePlanItem);
 app.use("/billingSchedule", billingSchedule);
 app.use("/billingSchedulePaymentTerms", billingSchedulePaymentTerms);
 app.use("/feePolicy", feePolicy);
+app.use("/attendancePolicy", attendancePolicy);
 app.use("/authorization", userPermission);
 app.use(libraryModule);
 

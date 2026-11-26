@@ -894,6 +894,27 @@ export async function findAssessmentPlanSubjectsForTerm(
           gradingSchemeInclude(),
           academicRegulationInclude(false),
           {
+            model: models.academicRegulationAssesmentSchemeModel,
+            as: 'assessmentScheme',
+            required: false,
+            attributes: [
+              'id',
+              'name',
+              'code',
+              'evaluationPattern',
+              'gradingSchemeId',
+              'internalWeightage',
+              'externalWeightage',
+              'maximumInternalMarks',
+              'maximumExternalMarks',
+              'minimumInternalMarks',
+              'minimumExternalMarks',
+              'minimumOverallMarks',
+              'minimumOverallPercentage',
+            ],
+            include: [gradingSchemeInclude()],
+          },
+          {
             model: models.assessmentPlanComponentModel,
             as: 'components',
             required: true,
@@ -1023,7 +1044,15 @@ function academicRegulationInclude(required, batchYear = null) {
       'minimumExternalMarks',
     ],
     where: regulationWhere,
-    include: [gradingSchemeInclude()],
+    include: [
+      gradingSchemeInclude(),
+      {
+        model: models.academicRegulationAssesmentSchemeModel,
+        as: 'assessmentSchemes',
+        required: false,
+        include: [gradingSchemeInclude()],
+      },
+    ],
   };
 }
 

@@ -116,16 +116,20 @@ export async function createAssessmentPlan(planData, options = {}) {
   return await getAssessmentPlanById(record.assessmentPlanId, options);
 }
 
-export async function getAssessmentPlans({
-  search,
-  status,
-  courseId,
-  batchId,
-  regulationId,
-  gradingId,
-  page = 1,
-  limit = 10,
-}) {
+export async function getAssessmentPlans(params = {}) {
+  const {
+    search,
+    status,
+    courseId,
+    batchId,
+    regulationId,
+    gradingId,
+    academicRegulationAssesmentSchemeId,
+    assesmentSchemeId,
+    assessmentSchemeId,
+    page = 1,
+    limit = 10,
+  } = params;
   const pageNum = resolvePositiveInt(page, 1);
   const limitNum = resolvePositiveInt(limit, 10);
   const offset = decimalMultiply(decimalSubtract(pageNum, 1), limitNum);
@@ -139,6 +143,13 @@ export async function getAssessmentPlans({
   }
   if (regulationId) {
     where.regulationId = Number(regulationId);
+  }
+  const schemeFilterId =
+    academicRegulationAssesmentSchemeId ||
+    assesmentSchemeId ||
+    assessmentSchemeId;
+  if (schemeFilterId) {
+    where.academicRegulationAssesmentSchemeId = Number(schemeFilterId);
   }
   if (gradingId) {
     where.gradingId = Number(gradingId);
@@ -188,6 +199,34 @@ export async function getAssessmentPlans({
           "evaluationPattern",
           "internalWeightage",
           "externalWeightage",
+        ],
+        required: false,
+      },
+      {
+        model: model.academicRegulationAssesmentSchemeModel,
+        as: "assessmentScheme",
+        attributes: [
+          "id",
+          "name",
+          "code",
+          "evaluationPattern",
+          "gradingSchemeId",
+          "internalWeightage",
+          "externalWeightage",
+          "maximumInternalMarks",
+          "maximumExternalMarks",
+          "minimumInternalMarks",
+          "minimumExternalMarks",
+          "minimumOverallMarks",
+          "minimumOverallPercentage",
+        ],
+        include: [
+          {
+            model: model.gradingModel,
+            as: "gradingScheme",
+            attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+            required: false,
+          },
         ],
         required: false,
       },
@@ -273,6 +312,34 @@ export async function getAssessmentPlanById(assessmentPlanId, options = {}) {
           "evaluationPattern",
           "internalWeightage",
           "externalWeightage",
+        ],
+        required: false,
+      },
+      {
+        model: model.academicRegulationAssesmentSchemeModel,
+        as: "assessmentScheme",
+        attributes: [
+          "id",
+          "name",
+          "code",
+          "evaluationPattern",
+          "gradingSchemeId",
+          "internalWeightage",
+          "externalWeightage",
+          "maximumInternalMarks",
+          "maximumExternalMarks",
+          "minimumInternalMarks",
+          "minimumExternalMarks",
+          "minimumOverallMarks",
+          "minimumOverallPercentage",
+        ],
+        include: [
+          {
+            model: model.gradingModel,
+            as: "gradingScheme",
+            attributes: ["gradingId", "gradingName", "gradingCode", "gradingMethod"],
+            required: false,
+          },
         ],
         required: false,
       },
@@ -647,6 +714,7 @@ export async function findOverviewByCurriculumBatchMappingId({
 
   const batchMapping = await model.curriculumBatchMappingModel.findOne({
     where: whereMapping,
+    subQuery: false,
     attributes: ["curriculumBatchMappingId", "curriculumId", "batchId"],
     include: [
       {
@@ -696,6 +764,25 @@ export async function findOverviewByCurriculumBatchMappingId({
                       "gradingName",
                       "gradingCode",
                       "gradingMethod",
+                    ],
+                    required: false,
+                  },
+                  {
+                    model: model.academicRegulationAssesmentSchemeModel,
+                    as: "assessmentSchemes",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include: [
+                      {
+                        model: model.gradingModel,
+                        as: "gradingScheme",
+                        attributes: [
+                          "gradingId",
+                          "gradingName",
+                          "gradingCode",
+                          "gradingMethod",
+                        ],
+                        required: false,
+                      },
                     ],
                     required: false,
                   },
@@ -846,12 +933,31 @@ export async function findOverviewByCurriculumBatchMappingId({
                   "assessmentPlanId",
                   "planName",
                   "regulationId",
+                  "academicRegulationAssesmentSchemeId",
                   "status",
                 ],
                 where:
                   Object.keys(planWhere).length > 0 ? planWhere : undefined,
                 required: Object.keys(planWhere).length > 0,
                 include: [
+                  {
+                    model: model.academicRegulationAssesmentSchemeModel,
+                    as: "assessmentScheme",
+                    required: false,
+                    include: [
+                      {
+                        model: model.gradingModel,
+                        as: "gradingScheme",
+                        attributes: [
+                          "gradingId",
+                          "gradingName",
+                          "gradingCode",
+                          "gradingMethod",
+                        ],
+                        required: false,
+                      },
+                    ],
+                  },
                   {
                     model: model.academicRegulationModel,
                     as: "academicRegulation",
@@ -1388,6 +1494,27 @@ export async function findCurriculumBatchCoursesWithSessions({
                   "regulationName",
                 ],
                 required: false,
+                include: [
+                  {
+                    model: model.academicRegulationAssesmentSchemeModel,
+                    as: "assessmentSchemes",
+                    attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+                    include: [
+                      {
+                        model: model.gradingModel,
+                        as: "gradingScheme",
+                        attributes: [
+                          "gradingId",
+                          "gradingName",
+                          "gradingCode",
+                          "gradingMethod",
+                        ],
+                        required: false,
+                      },
+                    ],
+                    required: false,
+                  },
+                ],
               },
             ],
           },

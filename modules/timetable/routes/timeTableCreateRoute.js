@@ -333,12 +333,15 @@ const classSubjectCountQuerySchema = z.object({
   classSectionTermId: positiveIntegerId,
 });
 
-const getDateWiseCellsQuerySchema = z.object({
-  courseId: positiveIntegerId,
-  sessionId: positiveIntegerId,
-  classSectionTermId: positiveIntegerId.optional(),
-  date: z.string().optional(),
-});
+const getDateWiseCellsQuerySchema = z
+  .object({
+    courseId: positiveIntegerId,
+    sessionId: positiveIntegerId,
+    classSectionTermId: positiveIntegerId.optional(),
+    date: z.string().optional(),
+    type: z.string().optional(),
+  })
+  .passthrough();
 
 const updateDateWiseCellSchema = z
   .object({
