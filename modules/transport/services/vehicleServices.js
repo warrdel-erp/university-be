@@ -1,11 +1,11 @@
 import * as transportVehicleRepository from "../repository/vehicleRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function createVehicle(vehicleData) {
-  try {
-    return transportVehicleRepository.createVehicle(vehicleData);
-  } catch (error) {
-    throw new Error(`Failed to create vehicle: ${error.message}`);
-  }
+  return withAuditEvent(AUDIT_EVENTS.VEHICLE_CREATE, async ({ transaction }) => {
+    return transportVehicleRepository.createVehicle(vehicleData, transaction);
+  });
 }
 
 export async function getAllVehicles() {
@@ -27,24 +27,19 @@ export async function getVehicleById(vehicleId) {
 }
 
 export async function updateVehicle(vehicleId, vehicleData, userId) {
-  try {
+  return withAuditEvent(AUDIT_EVENTS.VEHICLE_UPDATE, async ({ transaction }) => {
     const updatedBy = userId;
     const vehicleUpdate = { ...vehicleData, updatedBy };
-    const [updatedRows] = await transportVehicleRepository.updateVehicle(vehicleId, vehicleUpdate);
+    const [updatedRows] = await transportVehicleRepository.updateVehicle(vehicleId, vehicleUpdate, transaction);
     if (updatedRows === 0) throw new Error("Vehicle not found or no changes made");
     return updatedRows;
-  } catch (error) {
-    throw new Error(`Failed to update vehicle: ${error.message}`);
-  }
+  });
 }
 
 export async function deleteVehicle(vehicleId) {
-  try {
-    const deletedRows = await transportVehicleRepository.deleteVehicle(vehicleId);
+  return withAuditEvent(AUDIT_EVENTS.VEHICLE_DELETE, async ({ transaction }) => {
+    const deletedRows = await transportVehicleRepository.deleteVehicle(vehicleId, transaction);
     if (deletedRows === 0) throw new Error("Vehicle not found");
     return deletedRows;
-  } catch (error) {
-    throw new Error(`Failed to delete vehicle: ${error.message}`);
-  }
+  });
 }
-

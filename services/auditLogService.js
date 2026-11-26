@@ -1,4 +1,5 @@
 import * as eventLogRepository from "../repository/eventLogRepository.js";
+import * as eventRepository from "../repository/eventRepository.js";
 
 /**
  * Computes structured diff and changedFields array between oldData and newData
@@ -112,6 +113,7 @@ export function mapAuditLogRow(row) {
 export async function getAuditLogs(query = {}, tenantContext = {}) {
   try {
     const filters = {
+      eventId: query.eventId ? Number(query.eventId) : undefined,
       entity: query.entity ? String(query.entity).trim() : undefined,
       entityId: query.entityId ? String(query.entityId).trim() : undefined,
       action: query.action ? String(query.action).trim().toUpperCase() : undefined,
@@ -225,5 +227,169 @@ export function getAuditLogActions() {
     "BULK_UPDATE",
     "BULK_DELETE",
   ];
+}
+
+/**
+ * Service to fetch paginated audit events with search, filtering and sorting
+ */
+export async function getAuditEvents(query = {}) {
+  try {
+    const filters = {
+      eventType: query.eventType ? String(query.eventType).trim().toUpperCase() : undefined,
+      status: query.status ? String(query.status).trim().toUpperCase() : undefined,
+      userId: query.userId ? Number(query.userId) : undefined,
+      startDate: query.startDate,
+      endDate: query.endDate,
+      search: query.search ? String(query.search).trim() : undefined,
+    };
+
+    const pagination = {
+      page: query.page,
+      limit: query.limit,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+    };
+
+    const result = await eventRepository.findAndCountEvents(filters, pagination);
+
+    return {
+      totalRecords: result.totalRecords,
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      pageSize: result.pageSize,
+      rows: result.rows.map((row) => {
+        const plain = row?.get ? row.get({ plain: true }) : row;
+        return {
+          eventId: plain.eventId,
+          eventType: plain.eventType,
+          status: plain.status,
+          userId: plain.userId,
+          user: plain.user
+            ? {
+                userId: plain.user.userId,
+                userName: plain.user.userName,
+                email: plain.user.email,
+              }
+            : null,
+          universityId: plain.universityId,
+          instituteId: plain.instituteId,
+          academicYearId: plain.academicYearId,
+          errorMessage: plain.errorMessage,
+          logsCount: Number(plain.logsCount || 0),
+          completedAt: plain.completedAt,
+          createdAt: plain.createdAt,
+          updatedAt: plain.updatedAt,
+        };
+      }),
+    };
+  } catch (error) {
+    console.error("Error in Audit Log Service (getAuditEvents):", error);
+    throw error;
+  }
+}
+
+/**
+ * Service to fetch single audit event detail by ID
+ */
+export async function getAuditEventById(id, tenantContext = {}) {
+  try {
+    const eventId = Number(id);
+    if (!eventId || isNaN(eventId)) {
+      const error = new Error("Invalid event ID");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const row = await eventRepository.findEventById(eventId);
+    if (!row) {
+      const error = new Error("Audit event not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (!tenantContext.bypass && tenantContext.universityId) {
+      if (
+        row.universityId &&
+        Number(row.universityId) !== Number(tenantContext.universityId)
+      ) {
+        const error = new Error("Audit event not found");
+        error.statusCode = 404;
+        throw error;
+      }
+    }
+
+    const plain = row?.get ? row.get({ plain: true }) : row;
+    return {
+      eventId: plain.eventId,
+      eventType: plain.eventType,
+      status: plain.status,
+      userId: plain.userId,
+      user: plain.user
+        ? {
+            userId: plain.user.userId,
+            userName: plain.user.userName,
+            email: plain.user.email,
+          }
+        : null,
+      universityId: plain.universityId,
+      instituteId: plain.instituteId,
+      academicYearId: plain.academicYearId,
+      errorMessage: plain.errorMessage,
+      logsCount: Number(plain.logsCount || 0),
+      completedAt: plain.completedAt,
+      createdAt: plain.createdAt,
+      updatedAt: plain.updatedAt,
+    };
+  } catch (error) {
+    console.error("Error in Audit Log Service (getAuditEventById):", error);
+    throw error;
+  }
+}
+
+/**
+ * Service to fetch all audit logs for a specific eventId
+ */
+export async function getLogsByEventId(id) {
+  try {
+    const eventId = Number(id);
+    if (!eventId || isNaN(eventId)) {
+      const error = new Error("Invalid event ID");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const event = await eventRepository.findEventById(eventId);
+    if (!event) {
+      const error = new Error("Audit event not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const logs = await eventLogRepository.findLogsByEventId(eventId);
+    const eventPlain = event?.get ? event.get({ plain: true }) : event;
+
+    return {
+      event: {
+       ...eventPlain,
+        logsCount: logs.length,
+      },
+      logs: logs.map(mapAuditLogRow),
+    };
+  } catch (error) {
+    console.error("Error in Audit Log Service (getLogsByEventId):", error);
+    throw error;
+  }
+}
+
+/**
+ * Service to fetch distinct event types
+ */
+export async function getAuditEventTypes(universityId) {
+  try {
+    return await eventRepository.getDistinctEventTypes(universityId);
+  } catch (error) {
+    console.error("Error in Audit Log Service (getAuditEventTypes):", error);
+    throw error;
+  }
 }
 

@@ -1,4 +1,5 @@
 
+import sequelize from "../database/sequelizeConfig.js";
 import curriculumModel from "./curriculumModel.js";
 import curriculumCategoryModel from "./curriculumCategoryModel.js";
 import subjectComponentModel from "./subjectComponentModel.js";
@@ -4529,9 +4530,8 @@ export {
   billingScheduleSubItemsModel,
   billingSchedulePaymentTermsModel,
   refreshTokenModel,
+  sequelize,
 };
-
-import sequelize from "../database/sequelizeConfig.js";
 
 // Session Batch Mapping Associations
 sessionModel.hasMany(batchModel, { foreignKey: 'session_id', as: 'batches' });

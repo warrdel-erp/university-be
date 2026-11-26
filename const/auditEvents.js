@@ -433,4 +433,100 @@ export const AUDIT_EVENTS = Object.freeze({
     // ─── Library Issue Book Transaction ──────────────────────────────────
     LIBRARY_ISSUE_BOOK_CREATE:                   "LIBRARY_ISSUE_BOOK_CREATE",
     LIBRARY_ISSUE_BOOK_UPDATE:                   "LIBRARY_ISSUE_BOOK_UPDATE",
+
+    // ─── Dormitory: Room Type ─────────────────────────────────────────────
+    ROOM_TYPE_CREATE:                            "ROOM_TYPE_CREATE",
+    ROOM_TYPE_UPDATE:                            "ROOM_TYPE_UPDATE",
+    ROOM_TYPE_DELETE:                            "ROOM_TYPE_DELETE",
+
+    // ─── Dormitory: Dormitory List ────────────────────────────────────────
+    DORMITORY_LIST_CREATE:                       "DORMITORY_LIST_CREATE",
+    DORMITORY_LIST_UPDATE:                       "DORMITORY_LIST_UPDATE",
+    DORMITORY_LIST_DELETE:                       "DORMITORY_LIST_DELETE",
+
+    // ─── Dormitory: Add Dormitory (Room) ──────────────────────────────────
+    DORMITORY_ROOM_CREATE:                       "DORMITORY_ROOM_CREATE",
+    DORMITORY_ROOM_UPDATE:                       "DORMITORY_ROOM_UPDATE",
+    DORMITORY_ROOM_DELETE:                       "DORMITORY_ROOM_DELETE",
+
+    // ─── Transport: Route ─────────────────────────────────────────────────
+    TRANSPORT_ROUTE_CREATE:                      "TRANSPORT_ROUTE_CREATE",
+    TRANSPORT_ROUTE_UPDATE:                      "TRANSPORT_ROUTE_UPDATE",
+    TRANSPORT_ROUTE_DELETE:                      "TRANSPORT_ROUTE_DELETE",
+
+    // ─── Transport: Vehicle ───────────────────────────────────────────────
+    VEHICLE_CREATE:                              "VEHICLE_CREATE",
+    VEHICLE_UPDATE:                              "VEHICLE_UPDATE",
+    VEHICLE_DELETE:                              "VEHICLE_DELETE",
+
+    // ─── Transport: Assign Vehicle ────────────────────────────────────────
+    ASSIGN_VEHICLE_CREATE:                       "ASSIGN_VEHICLE_CREATE",
+    ASSIGN_VEHICLE_UPDATE:                       "ASSIGN_VEHICLE_UPDATE",
+    ASSIGN_VEHICLE_DELETE:                       "ASSIGN_VEHICLE_DELETE",
+
+    // ─── Student: Previous Academic ────────────────────────────────────────
+    PREVIOUS_ACADEMIC_MARKS_UPLOAD:              "PREVIOUS_ACADEMIC_MARKS_UPLOAD",
+
+    // ─── Organization: Head ────────────────────────────────────────────────
+    HEAD_CREATE:                                 "HEAD_CREATE",
+    HEAD_UPDATE:                                 "HEAD_UPDATE",
+    HEAD_DELETE:                                 "HEAD_DELETE",
+
+    // ─── Organization: Building ────────────────────────────────────────────
+    BUILDING_CREATE:                             "BUILDING_CREATE",
+    BUILDING_UPDATE:                             "BUILDING_UPDATE",
+    BUILDING_DELETE:                             "BUILDING_DELETE",
+
+    // ─── Organization: Floor ───────────────────────────────────────────────
+    FLOOR_CREATE:                                "FLOOR_CREATE",
+    FLOOR_UPDATE:                                "FLOOR_UPDATE",
+    FLOOR_DELETE:                                "FLOOR_DELETE",
+
+    // ─── Organization: Staff ───────────────────────────────────────────────
+    STAFF_CREATE:                                "STAFF_CREATE",
+    STAFF_UPDATE:                                "STAFF_UPDATE",
+    STAFF_DELETE:                                "STAFF_DELETE",
+
+    // ─── Asset Management: Asset ───────────────────────────────────────────
+    ASSET_CREATE:                                "ASSET_CREATE",
+    ASSET_UPDATE:                                "ASSET_UPDATE",
+    ASSET_DELETE:                                "ASSET_DELETE",
+    ASSET_INVENTORY_DELETE:                      "ASSET_INVENTORY_DELETE",
+
+    // ─── Asset Management: Asset Issue & Return ────────────────────────────
+    ASSET_ISSUE_CREATE:                          "ASSET_ISSUE_CREATE",
+    ASSET_ISSUE_UPDATE:                          "ASSET_ISSUE_UPDATE",
+    ASSET_RETURN_CREATE:                         "ASSET_RETURN_CREATE",
+
+    // ─── Asset Management: AMC Vendor ──────────────────────────────────────
+    AMC_VENDOR_CREATE:                           "AMC_VENDOR_CREATE",
+    AMC_VENDOR_UPDATE:                           "AMC_VENDOR_UPDATE",
+    AMC_VENDOR_DELETE:                           "AMC_VENDOR_DELETE",
+
+    // ─── Asset Management: AMC Contract ────────────────────────────────────
+    AMC_CONTRACT_CREATE:                         "AMC_CONTRACT_CREATE",
+    AMC_CONTRACT_UPDATE:                         "AMC_CONTRACT_UPDATE",
+    AMC_CONTRACT_DELETE:                         "AMC_CONTRACT_DELETE",
+    AMC_CONTRACT_SUBMIT:                         "AMC_CONTRACT_SUBMIT",
+    AMC_CONTRACT_APPROVE:                        "AMC_CONTRACT_APPROVE",
+
+    // ─── Asset Management: AMC Service Ticket ──────────────────────────────
+    AMC_SERVICE_TICKET_CREATE:                   "AMC_SERVICE_TICKET_CREATE",
+    AMC_SERVICE_TICKET_UPDATE:                   "AMC_SERVICE_TICKET_UPDATE",
+    AMC_SERVICE_TICKET_DELETE:                   "AMC_SERVICE_TICKET_DELETE",
+
+    // ─── Notice ─────────────────────────────────────────────────────────────
+    NOTICE_CREATE:                               "NOTICE_CREATE",
+    NOTICE_UPDATE:                               "NOTICE_UPDATE",
+    NOTICE_DELETE:                               "NOTICE_DELETE",
+
+    // ─── Job Settings ───────────────────────────────────────────────────────
+    JOB_TYPE_CREATE:                             "JOB_TYPE_CREATE",
+    JOB_TYPE_UPDATE:                             "JOB_TYPE_UPDATE",
+    JOB_TYPE_DELETE:                             "JOB_TYPE_DELETE",
+
+    // ─── Job ────────────────────────────────────────────────────────────────
+    JOB_CREATE:                                  "JOB_CREATE",
+    JOB_UPDATE:                                  "JOB_UPDATE",
+    JOB_DELETE:                                  "JOB_DELETE",
 });

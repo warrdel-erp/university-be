@@ -2,6 +2,8 @@ import * as previousAcademicRepository from '../repository/previousAcademicRepos
 import { buildTermName, resolveTotalTerms, termsForYear, termsPerYear } from '../../../utility/courseTerms.js';
 import sequelize from '../../../database/sequelizeConfig.js';
 import xlsx from 'xlsx';
+import { withAuditEvent } from '../../../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../../../const/auditEvents.js';
 import {
   decimalAdd,
   decimalCompare,
@@ -2257,10 +2259,16 @@ export async function uploadTermMarks(curriculumBatchTermMappingId, file, sessio
   let failure = null;
 
   try {
-    const result = await processTermMarksUpload(
-      curriculumBatchTermMappingId,
-      file,
-      sessionId,
+    const result = await withAuditEvent(
+      AUDIT_EVENTS.PREVIOUS_ACADEMIC_MARKS_UPLOAD,
+      async ({ transaction }) => {
+        return processTermMarksUpload(
+          curriculumBatchTermMappingId,
+          file,
+          sessionId,
+          transaction,
+        );
+      },
     );
     created = result.created;
     updated = result.updated;
@@ -2405,7 +2413,7 @@ function formatUploadError(error) {
   return error.message || 'Upload failed';
 }
 
-async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessionId = null) {
+async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessionId = null, transaction = null) {
   if (!file || (!file.data && !file.buffer)) {
     const error = new Error('Excel file is required (form-data field: marks)');
     error.statusCode = 400;
@@ -2561,13 +2569,17 @@ async function processTermMarksUpload(curriculumBatchTermMappingId, file, sessio
     };
   }
 
-  const transaction = await sequelize.transaction();
-  try {
+  if (transaction) {
     await previousAcademicRepository.upsertStudentResultItems(resultItems, transaction);
-    await transaction.commit();
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  } else {
+    const txn = await sequelize.transaction();
+    try {
+      await previousAcademicRepository.upsertStudentResultItems(resultItems, txn);
+      await txn.commit();
+    } catch (error) {
+      await txn.rollback();
+      throw error;
+    }
   }
 
   return {

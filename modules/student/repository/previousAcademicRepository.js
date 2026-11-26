@@ -511,7 +511,7 @@ export async function ensureCurriculumBatchTermMappings(
     });
   }
 
-  await scoped(models.curriculumBatchTermMappingModel).bulkCreate(rows, { transaction });
+  await scoped(models.curriculumBatchTermMappingModel).bulkCreate(rows, { transaction, individualHooks: true });
 
   return scoped(models.curriculumBatchTermMappingModel).findAll({
     where: { curriculumBatchMappingId: Number(curriculumBatchMappingId) },
@@ -943,13 +943,14 @@ export async function findSubjectTermMappingsByCurriculumTerm(curriculumId, term
 }
 
 export async function createStudentResultItems(rows, transaction) {
-  return scoped(models.studentResultItemModel).bulkCreate(rows, { transaction });
+  return scoped(models.studentResultItemModel).bulkCreate(rows, { transaction, individualHooks: true });
 }
 
 export async function upsertStudentResultItems(rows, transaction) {
   return scoped(models.studentResultItemModel).bulkCreate(rows, {
     transaction,
     updateOnDuplicate: ['maximumMarks', 'obtainedMarks', 'creditEarned', 'attempt', 'updatedAt'],
+    individualHooks: true,
   });
 }
 
@@ -1152,5 +1153,6 @@ export async function updateStudentResultItem(studentResultItemId, payload, tran
   return scoped(models.studentResultItemModel).update(payload, {
     where: { studentResultItemId },
     transaction,
+    individualHooks: true,
   });
 }

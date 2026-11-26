@@ -469,10 +469,23 @@ export async function getAttendanceDetails() {
   };
 }
 
-export async function updateAttendance(attendanceId, record, updatedBy) {
-  record.updatedBy = updatedBy;
+export async function updateAttendance(attendanceRecords, updatedBy) {
+  if (!attendanceRecords.length) {
+    throw new Error("Attendance records are required");
+  }
+
   return await withAuditEvent(AUDIT_EVENTS.ATTENDANCE_UPDATE, async ({ transaction }) => {
-    return await attendanceService.updateAttendance(attendanceId, record, { transaction });
+    const results = [];
+    for (const record of attendanceRecords) {
+      const { attendanceId } = record;
+      if (!attendanceId) {
+        throw new Error("Attendance Id is required for each record");
+      }
+      record.updatedBy = updatedBy;
+      const updated = await attendanceService.updateAttendance(attendanceId, record, { transaction });
+      results.push(updated);
+    }
+    return results;
   });
 };
 

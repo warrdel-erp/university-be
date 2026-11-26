@@ -1,4 +1,5 @@
 import { Op } from "sequelize";
+import sequelize from "../database/sequelizeConfig.js";
 import * as model from "../models/index.js";
 
 export async function createEventLog(payload, options = {}) {
@@ -31,6 +32,9 @@ export async function findAndCountAuditLogs(filters = {}, pagination = {}, optio
   }
   if (filters.academicYearId != null) {
     where.academicYearId = filters.academicYearId;
+  }
+  if (filters.eventId != null) {
+    where.eventId = Number(filters.eventId);
   }
   if (filters.entity) {
     where.entity = filters.entity;
@@ -147,12 +151,34 @@ export async function findAuditLogById(eventLogId, options = {}) {
   });
 }
 
+export async function findLogsByEventId(eventId, options = {}) {
+  return await model.eventLogModel.findAll({
+    where: { eventId },
+    include: [
+      {
+        model: model.eventModel,
+        as: "event",
+        include: [
+          {
+            model: model.userModel,
+            as: "user",
+            attributes: ["userId", "userName", "email"],
+            required: false,
+          },
+        ],
+      },
+    ],
+    order: [["eventLogId", "ASC"]],
+    transaction: options.transaction,
+  });
+}
+
 export async function getDistinctEntities(universityId) {
   const where = universityId ? { universityId } : {};
   const rows = await model.eventLogModel.findAll({
     where,
     attributes: [
-      [model.sequelize.fn("DISTINCT", model.sequelize.col("entity")), "entity"],
+      [sequelize.fn("DISTINCT", sequelize.col("entity")), "entity"],
     ],
     raw: true,
   });

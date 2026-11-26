@@ -124,7 +124,6 @@ app.use(httpAuditLogger);
 app.use("/api/logs", logsRoute);
 
 // Database Event Audit Logs API
-app.use("/auditLog", auditLogRoute);
 app.use("/api/audit-logs", auditLogRoute);
 
 //routes

@@ -24,26 +24,11 @@ async function writeAuditLog(model, instance, action, oldData, newData, transact
   const tableName = model.tableName;
   const store = requestContext.getStore();
 
-  const universityId =
-    instance.universityId ??
-    instance.get?.("universityId") ??
-    instance.dataValues?.universityId ??
-    store?.universityId ??
-    null;
+  const universityId = store?.universityId;
 
-  const instituteId =
-    instance.instituteId ??
-    instance.get?.("instituteId") ??
-    instance.dataValues?.instituteId ??
-    store?.instituteId ??
-    null;
+  const instituteId = store?.instituteId;
 
-  const academicYearId =
-    instance.academicYearId ??
-    instance.get?.("academicYearId") ??
-    instance.dataValues?.academicYearId ??
-    store?.academicYearId ??
-    null;
+  const academicYearId = store?.academicYearId;
 
   await createEventLog(
     {
@@ -110,7 +95,7 @@ export function registerAuditHooks(model) {
 }
 
 /**
- * Enables audit hooks for models listed in AUDIT_ENABLED_TABLES (or all non-excluded when AUDIT_ALL_MODELS is true).
+ * Enables audit hooks for all models except those listed in AUDIT_EXCLUDED_MODELS.
  *
  * Usage in models/index.js (after model exports exist):
  *   registerAuditedModels(models);
