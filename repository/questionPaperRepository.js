@@ -68,6 +68,12 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
           attributes: ["userId", "userName"],
         },
         {
+          model: model.questionPaperModel,
+          as: "parentQuestionPaper",
+          attributes: ["id", "name"],
+          required: false,
+        },
+        {
           model: model.examScheduleModel,
           as: "examSchedule",
           required: true,
@@ -112,6 +118,12 @@ export async function getSingleQuestionPaper(id, ownerId = null) {
           model: model.userModel,
           as: "creator",
           attributes: ["userId", "userName"],
+        },
+        {
+          model: model.questionPaperModel,
+          as: "parentQuestionPaper",
+          attributes: ["id", "name"],
+          required: false,
         },
         {
           model: model.examScheduleModel,

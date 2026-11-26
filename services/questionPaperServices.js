@@ -118,6 +118,13 @@ function transformQuestionPaper(paper, schedule) {
         name: paper.name,
         examScheduleId: paper.examScheduleId,
         blueprintId: paper.blueprintId,
+        parentId: paper.parentId ?? null,
+        parentQuestionPaper: paper.parentQuestionPaper
+            ? {
+                id: paper.parentQuestionPaper.id,
+                name: paper.parentQuestionPaper.name,
+            }
+            : null,
         status: paper.status,
         totalMarks: paper.totalMarks,
         duration: transformedSchedule?.duration ?? null,
@@ -147,6 +154,51 @@ export async function updateQuestionPaper(id, questionPaperData, updatedBy, owne
 
 export async function deleteQuestionPaper(id, ownerId = null) {
     return await questionPaperRepository.deleteQuestionPaper(id, ownerId);
+}
+
+export async function cloneQuestionPaper(sourceId, cloneData, createdBy, updatedBy, ownerId = null) {
+    const sourcePaper = await questionPaperRepository.getSingleQuestionPaper(sourceId, ownerId);
+    if (!sourcePaper) {
+        return null;
+    }
+
+    const targetExamScheduleId = cloneData.examScheduleId || sourcePaper.examScheduleId;
+    const examSchedule = await questionPaperRepository.getExamScheduleById(targetExamScheduleId);
+    if (!examSchedule) {
+        const error = new Error(`Exam schedule with id ${targetExamScheduleId} not found`);
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const newName = cloneData.name?.trim() || `${sourcePaper.name} (Copy)`;
+    const newBlueprintId = cloneData.blueprintId !== undefined ? cloneData.blueprintId : sourcePaper.blueprintId;
+
+    let finalSections = [];
+    if (cloneData.questionPaper && Array.isArray(cloneData.questionPaper) && cloneData.questionPaper.length > 0) {
+        finalSections = cloneData.questionPaper;
+    } else {
+        finalSections = Array.isArray(sourcePaper.questionPaper) ? sourcePaper.questionPaper : [];
+    }
+
+    const totalMarks = calculateTotalMarks(finalSections);
+    const remarks = cloneData.remarks !== undefined ? cloneData.remarks : sourcePaper.remarks;
+
+    const newPaperData = {
+        name: newName,
+        examScheduleId: targetExamScheduleId,
+        blueprintId: newBlueprintId,
+        parentId: sourcePaper.id,
+        status: questionStatus[0],
+        finalApproval: "Pending",
+        questionPaper: finalSections,
+        totalMarks,
+        remarks: remarks || null,
+        createdBy,
+        updatedBy
+    };
+
+    const createdRecord = await questionPaperRepository.addQuestionPaper(newPaperData);
+    return await getSingleQuestionPaper(createdRecord.id, ownerId ? createdBy : null);
 }
 
 export async function generateQuestionPaper(name, blueprintId, examScheduleId, numberOfPapers, createdBy, updatedBy) {
