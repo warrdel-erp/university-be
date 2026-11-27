@@ -4,6 +4,7 @@ import { scoped } from "../utility/scoped.js";
 
 const defaultAttributes = [
   "id",
+  "universityId",
   "componentName",
   "code",
   "description",
