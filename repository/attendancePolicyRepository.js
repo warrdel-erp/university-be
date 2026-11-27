@@ -250,7 +250,34 @@ export async function getPolicyMetrics(filter = {}) {
   };
 }
 
+export async function findPolicyByCode(policyCode, options = {}) {
+  const { universityId, instituteId, excludePolicyId = null, transaction = null, paranoid = true } = options;
+  if (!policyCode) return null;
+  const where = {
+    policyCode: String(policyCode).trim(),
+  };
+  if (universityId) where.universityId = universityId;
+  if (instituteId) where.instituteId = instituteId;
+  if (excludePolicyId) {
+    where.policyId = { [Op.ne]: excludePolicyId };
+  }
+  return await attendancePolicyModel.findOne({
+    where,
+    transaction,
+    paranoid,
+  });
+}
+
 export async function deletePolicy(policyId, transaction = null) {
+  const policy = await attendancePolicyModel.findByPk(policyId, { transaction });
+  if (policy && policy.policyCode) {
+    // Suffix code on soft-delete to prevent collision in MySQL if a new policy is created later with the same code
+    const deletedCode = `${policy.policyCode}_deleted_${Date.now()}`;
+    await attendancePolicyModel.update(
+      { policyCode: deletedCode },
+      { where: { policyId }, transaction }
+    );
+  }
   return await attendancePolicyModel.destroy({
     where: { policyId },
     transaction,

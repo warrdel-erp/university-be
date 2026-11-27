@@ -5,6 +5,8 @@ import { PERMISSIONS } from "../const/permissions.js";
 import { VALID_SCOPES } from "../const/scopes.js";
 import { isSystemRole } from "../const/roles.js";
 import { isPermissionAllowedForScope, getEffectiveScope } from "../utility/permissionUtility.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function assertValidScope(scope) {
   if (!VALID_SCOPES.includes(scope)) {
@@ -20,19 +22,21 @@ function findDisallowedPermissions(permissionKeys, scope) {
 }
 
 export async function addRole(RoleData) {
-  assertValidScope(RoleData.scope || "INSTITUTE");
-  if (isSystemRole(RoleData.role)) {
-    const error = new Error(`Cannot create role with reserved system name '${RoleData.role}'.`);
-    error.statusCode = 403;
-    throw error;
-  }
-  const existing = await RoleCreationService.findRoleByRoleName(RoleData.role);
-  if (existing) {
-    const error = new Error(`Role with name '${RoleData.role}' already exists.`);
-    error.statusCode = 400;
-    throw error;
-  }
-  return RoleCreationService.addRole({ ...RoleData, scope: RoleData.scope || "INSTITUTE" });
+  return withAuditEvent(AUDIT_EVENTS.ROLE_CREATE, async ({ transaction }) => {
+    assertValidScope(RoleData.scope || "INSTITUTE");
+    if (isSystemRole(RoleData.role)) {
+      const error = new Error(`Cannot create role with reserved system name '${RoleData.role}'.`);
+      error.statusCode = 403;
+      throw error;
+    }
+    const existing = await RoleCreationService.findRoleByRoleName(RoleData.role);
+    if (existing) {
+      const error = new Error(`Role with name '${RoleData.role}' already exists.`);
+      error.statusCode = 400;
+      throw error;
+    }
+    return RoleCreationService.addRole({ ...RoleData, scope: RoleData.scope || "INSTITUTE" }, { transaction });
+  });
 }
 
 export async function getRoleDetails() {
@@ -44,52 +48,56 @@ export async function getSingleRoleDetails(roleId) {
 }
 
 export async function deleteRole(roleId) {
-  const role = await model.roleModel.findOne({ where: { roleId } });
-  if (!role) {
-    return false;
-  }
-  if (isSystemRole(role)) {
-    const error = new Error(`System role '${role.role}' cannot be deleted.`);
-    error.statusCode = 403;
-    throw error;
-  }
-  return RoleCreationService.deleteRole(roleId);
+  return withAuditEvent(AUDIT_EVENTS.ROLE_DELETE, async ({ transaction }) => {
+    const role = await model.roleModel.findOne({ where: { roleId }, transaction });
+    if (!role) {
+      return false;
+    }
+    if (isSystemRole(role)) {
+      const error = new Error(`System role '${role.role}' cannot be deleted.`);
+      error.statusCode = 403;
+      throw error;
+    }
+    return RoleCreationService.deleteRole(roleId, { transaction });
+  });
 }
 
 export async function updateRole(roleId, RoleData) {
-  const role = await model.roleModel.findOne({ where: { roleId } });
-  if (!role) {
-    const error = new Error(`Role not found: ${roleId}`);
-    error.statusCode = 404;
-    throw error;
-  }
-  if (isSystemRole(role)) {
-    const error = new Error(`System role '${role.role}' cannot be modified.`);
-    error.statusCode = 403;
-    throw error;
-  }
-  if (RoleData.role && isSystemRole(RoleData.role)) {
-    const error = new Error(`Cannot rename role to reserved system name '${RoleData.role}'.`);
-    error.statusCode = 403;
-    throw error;
-  }
-
-  if (RoleData.scope !== undefined) {
-    assertValidScope(RoleData.scope);
-
-    // Narrowing a role's scope must not leave it holding permissions that no longer fit
-    const existing = await model.rolePermissionsModel.findAll({ where: { roleId } });
-    const disallowed = findDisallowedPermissions(
-      existing.map((rp) => rp.permission),
-      RoleData.scope,
-    );
-    if (disallowed.length > 0) {
-      throw new Error(
-        `Role has permissions not allowed at ${RoleData.scope} scope: ${disallowed.join(", ")}`,
-      );
+  return withAuditEvent(AUDIT_EVENTS.ROLE_UPDATE, async ({ transaction }) => {
+    const role = await model.roleModel.findOne({ where: { roleId }, transaction });
+    if (!role) {
+      const error = new Error(`Role not found: ${roleId}`);
+      error.statusCode = 404;
+      throw error;
     }
-  }
-  return RoleCreationService.updateRole(roleId, RoleData);
+    if (isSystemRole(role)) {
+      const error = new Error(`System role '${role.role}' cannot be modified.`);
+      error.statusCode = 403;
+      throw error;
+    }
+    if (RoleData.role && isSystemRole(RoleData.role)) {
+      const error = new Error(`Cannot rename role to reserved system name '${RoleData.role}'.`);
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (RoleData.scope !== undefined) {
+      assertValidScope(RoleData.scope);
+
+      // Narrowing a role's scope must not leave it holding permissions that no longer fit
+      const existing = await model.rolePermissionsModel.findAll({ where: { roleId }, transaction });
+      const disallowed = findDisallowedPermissions(
+        existing.map((rp) => rp.permission),
+        RoleData.scope,
+      );
+      if (disallowed.length > 0) {
+        throw new Error(
+          `Role has permissions not allowed at ${RoleData.scope} scope: ${disallowed.join(", ")}`,
+        );
+      }
+    }
+    return RoleCreationService.updateRole(roleId, RoleData, { transaction });
+  });
 }
 
 /**
@@ -121,10 +129,7 @@ export async function getRolePermissions(roleId) {
  * @param {Array<string|{permission: string}>} permissions
  */
 export async function assignRolePermissions(roleId, permissions, transaction = null) {
-  const internalTransaction = !transaction ? await sequelize.transaction() : null;
-  const activeTransaction = transaction || internalTransaction;
-
-  try {
+  const runner = async (activeTransaction) => {
     const roleRecord = await model.roleModel.findOne({
       where: { role_id: roleId },
       transaction: activeTransaction
@@ -158,15 +163,16 @@ export async function assignRolePermissions(roleId, permissions, transaction = n
       transaction: activeTransaction
     });
 
-    const result = await model.rolePermissionsModel.bulkCreate(
+    return await model.rolePermissionsModel.bulkCreate(
       keys.map((permission) => ({ roleId: Number(roleId), permission })),
       { transaction: activeTransaction },
     );
+  };
 
-    if (internalTransaction) await internalTransaction.commit();
-    return result;
-  } catch (error) {
-    if (internalTransaction) await internalTransaction.rollback();
-    throw error;
+  if (transaction) {
+    return runner(transaction);
   }
+  return withAuditEvent(AUDIT_EVENTS.ROLE_PERMISSIONS_ASSIGN, async ({ transaction: auditTx }) => {
+    return runner(auditTx);
+  });
 }

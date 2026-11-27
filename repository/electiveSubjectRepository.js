@@ -5,13 +5,13 @@ import { Op } from 'sequelize';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
-export async function addElectiveSubject(electiveSubjectData) {
+export async function addElectiveSubject(electiveSubjectData, options = {}) {
     try {
         if (!electiveSubjectData.departmentId && electiveSubjectData.courseId) {
-            const course = await model.courseModel.findByPk(electiveSubjectData.courseId, { attributes: ['departmentId'] });
+            const course = await model.courseModel.findByPk(electiveSubjectData.courseId, { attributes: ['departmentId'], ...options });
             if (course?.departmentId) electiveSubjectData.departmentId = course.departmentId;
         }
-        return await scoped(model.electiveSubjectModel).create(electiveSubjectData);
+        return await scoped(model.electiveSubjectModel).create(electiveSubjectData, options);
     } catch (error) {
         console.error('Error in add electiveSubject :', error);
         throw error;
@@ -106,17 +106,19 @@ export async function getSingleElectiveSubjectByAcedmicId(academicYearId) {
     }
 }
 
-export async function deleteElectiveSubject(electiveSubjectId) {
+export async function deleteElectiveSubject(electiveSubjectId, options = {}) {
     const deleted = await scoped(model.electiveSubjectModel).destroy({
         where: { electiveSubjectId },
+        ...options,
     });
     return deleted > 0;
 }
 
-export async function updateElectiveSubject(electiveSubjectId, electiveSubjectData) {
+export async function updateElectiveSubject(electiveSubjectId, electiveSubjectData, options = {}) {
     try {
         return await scoped(model.electiveSubjectModel).update(electiveSubjectData, {
             where: { electiveSubjectId },
+            ...options,
         });
     } catch (error) {
         console.error(`Error updating electiveSubject creation ${electiveSubjectId}:`, error);
@@ -269,7 +271,7 @@ export async function getEligibleStudentsForElective(electiveSubjectId, options 
     }
 }
 
-export async function mapStudentsToElective(electiveSubjectId, studentIds, createdBy) {
+export async function mapStudentsToElective(electiveSubjectId, studentIds, createdBy, options = {}) {
     try {
         const existingMappings = await scoped(model.studentElectiveSubjectModel).findAll({
             where: {
@@ -277,6 +279,7 @@ export async function mapStudentsToElective(electiveSubjectId, studentIds, creat
                 studentId: studentIds,
             },
             attributes: ['studentId'],
+            ...options,
         });
 
         const existingStudentIds = new Set(existingMappings.map((m) => m.studentId));
@@ -292,14 +295,14 @@ export async function mapStudentsToElective(electiveSubjectId, studentIds, creat
             createdBy,
         }));
 
-        return await scoped(model.studentElectiveSubjectModel).bulkCreate(recordsToCreate);
+        return await scoped(model.studentElectiveSubjectModel).bulkCreate(recordsToCreate, options);
     } catch (error) {
         console.error('Error mapping students to elective:', error);
         throw error;
     }
 }
 
-export async function unmapStudentFromElective(electiveSubjectId, studentId) {
+export async function unmapStudentFromElective(electiveSubjectId, studentId, options = {}) {
     try {
         const deleted = await scoped(model.studentElectiveSubjectModel).destroy({
             where: {
@@ -307,6 +310,7 @@ export async function unmapStudentFromElective(electiveSubjectId, studentId) {
                 studentId: parseInt(studentId, 10),
             },
             force: true,
+            ...options,
         });
         return deleted > 0;
     } catch (error) {

@@ -963,7 +963,7 @@ async function initializeEligibilityRecords(
 }
 
 export async function createExaminationSession(sessionData, options = {}) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_CREATE, async ({ transaction }) => {
     const { terms, academicYearId, ...mainData } = sessionData;
     const tx = { ...options, transaction };
     const resolvedTerms = await resolveTermItemsWithBatch(terms, transaction);
@@ -1085,7 +1085,7 @@ export async function updateExaminationSession(
   updateData = {},
   options = {},
 ) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_UPDATE, async ({ transaction }) => {
     const sessionId = Number(id);
     const { terms, academicYearId, ...mainUpdateData } = updateData;
     const tx = { ...options, transaction };
@@ -1212,7 +1212,7 @@ export async function updateExaminationSession(
 }
 
 export async function deleteExaminationSession(id, options = {}) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_DELETE, async ({ transaction }) => {
     const existing =
       await examinationSessionRepository.getExaminationSessionById(id, {
         ...options,
@@ -1231,7 +1231,7 @@ export async function deleteExaminationSession(id, options = {}) {
 }
 
 export async function createExaminationSessionTerm(termData, options = {}) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_TERM_CREATE, async ({ transaction }) => {
     const examinationSessionId = Number(termData.examinationSessionId);
     const termNumber = Number(termData.term);
     let courseId =
@@ -1372,7 +1372,7 @@ export async function deleteExaminationSessionTerm(
   param,
   options = {},
 ) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_TERM_DELETE, async ({ transaction }) => {
     let existing = null;
     if (typeof param === "object" && param !== null) {
       if (param.examinationSessionTermId) {
@@ -3728,7 +3728,7 @@ export async function getSessionSkuStats(examinationSessionId, options = {}) {
     hallTickets: {
       total: hallTicketStats.students,
       totalExamSchedules: totalExamSchedule,
-      totalHallTicketGenerated: hallTicketStats.hallTicketsGenerated,
+      totalHallTicketGenerated: hallTicketStats.hallTicketsPublished,
     },
     bundles: {
       total: totalBundles,
@@ -5052,7 +5052,7 @@ export async function saveExaminationSessionSubjectMarks(
     throw error;
   }
 
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_MARKS_SAVE, async ({ transaction }) => {
     // 1. Validate Examination Session
     const sessionRecord = await scoped(model.examinationSessionModel).findByPk(
       examinationSessionId,
@@ -5344,6 +5344,7 @@ export async function saveExaminationSessionSubjectMarks(
           {
             where: { studentResultItemId: existing.studentResultItemId },
             transaction,
+            individualHooks: true,
           },
         );
 
@@ -5462,7 +5463,7 @@ export async function updateExaminationSessionSubjectMarksStatus(
     throw error;
   }
 
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_MARKS_STATUS_UPDATE, async ({ transaction }) => {
     // 1. Validate Examination Session
     const sessionRecord = await scoped(model.examinationSessionModel).findByPk(
       examinationSessionId,
@@ -5662,6 +5663,7 @@ export async function updateExaminationSessionSubjectMarksStatus(
             studentResultItemId: { [Op.in]: toUpdateIds },
           },
           transaction,
+          individualHooks: true,
         },
       );
     }

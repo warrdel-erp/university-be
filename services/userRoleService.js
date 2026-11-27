@@ -3,15 +3,15 @@ import * as repository from "../repository/userRoleRepository.js";
 import * as permissionRepository from "../repository/userPermissionRepository.js";
 import * as model from "../models/index.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 /**
  * Assign a role to a user. `resourceIds` are the institute/campus/... ids the role applies to,
  * according to the role's scope (not needed for UNIVERSITY/OWN roles).
  */
 export async function assignRoleToUser(userId, roleId, resourceIds = [], transaction = null) {
-  const internalTransaction = !transaction ? await sequelize.transaction() : null;
-  const activeTransaction = transaction || internalTransaction;
-  try {
+  const runner = async (activeTransaction) => {
     const user = await model.userModel.findByPk(userId, {
       attributes: ["userId", "universityId"],
       transaction: activeTransaction,
@@ -41,21 +41,19 @@ export async function assignRoleToUser(userId, roleId, resourceIds = [], transac
     }
 
     // Add role
-    const roleResult = await repository.addUserRole(userId, roleData.roleId, resourceIds, activeTransaction);
+    return await repository.addUserRole(userId, roleData.roleId, resourceIds, activeTransaction);
+  };
 
-    if (internalTransaction) await internalTransaction.commit();
-    return roleResult;
-  } catch (error) {
-    if (internalTransaction) await internalTransaction.rollback();
-    console.error("Service: Error in assignRoleToUser:", error);
-    throw error;
+  if (transaction) {
+    return runner(transaction);
   }
+  return withAuditEvent(AUDIT_EVENTS.USER_ROLE_ASSIGN, async ({ transaction: auditTx }) => {
+    return runner(auditTx);
+  });
 }
 
 export async function removeRoleFromUser(userId, roleId, transaction = null) {
-  const internalTransaction = !transaction ? await sequelize.transaction() : null;
-  const activeTransaction = transaction || internalTransaction;
-  try {
+  const runner = async (activeTransaction) => {
     const user = await model.userModel.findByPk(userId, {
       attributes: ["userId", "universityId"],
       transaction: activeTransaction,
@@ -83,14 +81,15 @@ export async function removeRoleFromUser(userId, roleId, transaction = null) {
 
     // Remove role
     await repository.removeUserRole(userId, roleData.roleId, activeTransaction);
-
-    if (internalTransaction) await internalTransaction.commit();
     return true;
-  } catch (error) {
-    if (internalTransaction) await internalTransaction.rollback();
-    console.error("Service: Error in removeRoleFromUser:", error);
-    throw error;
+  };
+
+  if (transaction) {
+    return runner(transaction);
   }
+  return withAuditEvent(AUDIT_EVENTS.USER_ROLE_REMOVE, async ({ transaction: auditTx }) => {
+    return runner(auditTx);
+  });
 }
 
 export async function getUserRoles(userId) {

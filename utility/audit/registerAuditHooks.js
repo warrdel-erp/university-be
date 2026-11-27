@@ -1,5 +1,6 @@
 import { AUDIT_ACTIONS } from "../../const/auditActions.js";
 import { getCurrentEventId } from "./auditContext.js";
+import { requestContext } from "../requestContext.js";
 import {
   isAuditModelExcluded,
   isModelAuditEnabled,
@@ -21,6 +22,13 @@ async function writeAuditLog(model, instance, action, oldData, newData, transact
   if (eventId == null) return;
 
   const tableName = model.tableName;
+  const store = requestContext.getStore();
+
+  const universityId = store?.universityId;
+
+  const instituteId = store?.instituteId;
+
+  const academicYearId = store?.academicYearId;
 
   await createEventLog(
     {
@@ -30,9 +38,9 @@ async function writeAuditLog(model, instance, action, oldData, newData, transact
       action,
       oldData,
       newData,
-      universityId: instance.universityId ?? null,
-      instituteId: instance.instituteId ?? null,
-      academicYearId: instance.academicYearId ?? null,
+      universityId,
+      instituteId,
+      academicYearId,
     },
     { transaction },
   );
@@ -87,7 +95,7 @@ export function registerAuditHooks(model) {
 }
 
 /**
- * Enables audit hooks for models listed in AUDIT_ENABLED_TABLES (or all non-excluded when AUDIT_ALL_MODELS is true).
+ * Enables audit hooks for all models except those listed in AUDIT_EXCLUDED_MODELS.
  *
  * Usage in models/index.js (after model exports exist):
  *   registerAuditedModels(models);

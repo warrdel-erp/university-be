@@ -54,5 +54,5 @@ export async function bulkCreateHistory(dataList, transaction) {
             throw new Error(`Student not found: ${data.studentId}`);
         }
     }
-    return model.studentClassSectionsHistoryModel.bulkCreate(dataList, { transaction });
+    return model.studentClassSectionsHistoryModel.bulkCreate(dataList, { transaction, individualHooks: true });
 }

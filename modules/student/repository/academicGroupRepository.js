@@ -374,6 +374,7 @@ export async function getAllScopes({ search, publishStatus } = {}) {
 export async function updateScope(academicGroupScopeId, payload, transaction) {
     const [count] = await scoped(model.academicGroupScopeModel).update(payload, {
         where: { academicGroupScopeId: Number(academicGroupScopeId) },
+        individualHooks: true,
         transaction,
     });
     return count > 0;
@@ -384,6 +385,7 @@ export async function softDeleteScope(academicGroupScopeId, updatedBy, transacti
         { updatedBy },
         {
             where: { academicGroupScopeId: Number(academicGroupScopeId) },
+            individualHooks: true,
             transaction,
         },
     );
@@ -392,6 +394,7 @@ export async function softDeleteScope(academicGroupScopeId, updatedBy, transacti
     }
     await scoped(model.academicGroupScopeModel).destroy({
         where: { academicGroupScopeId: Number(academicGroupScopeId) },
+        individualHooks: true,
         transaction,
     });
     return true;
@@ -429,6 +432,7 @@ export async function getGroupWithScope(academicGroupId) {
 export async function updateGroup(academicGroupId, payload, transaction) {
     const [count] = await scoped(model.academicGroupModel).update(payload, {
         where: { academicGroupId: Number(academicGroupId) },
+        individualHooks: true,
         transaction,
     });
     return count > 0;
@@ -439,6 +443,7 @@ export async function softDeleteGroup(academicGroupId, updatedBy, transaction) {
         { updatedBy },
         {
             where: { academicGroupId: Number(academicGroupId) },
+            individualHooks: true,
             transaction,
         },
     );
@@ -447,6 +452,7 @@ export async function softDeleteGroup(academicGroupId, updatedBy, transaction) {
     }
     await scoped(model.academicGroupModel).destroy({
         where: { academicGroupId: Number(academicGroupId) },
+        individualHooks: true,
         transaction,
     });
     return true;
@@ -849,7 +855,7 @@ export async function findExistingGroupStudents(academicGroupId, studentIds, tra
 }
 
 export async function bulkCreateGroupStudents(rows, transaction) {
-    return scoped(model.academicGroupStudentModel).bulkCreate(rows, { transaction });
+    return scoped(model.academicGroupStudentModel).bulkCreate(rows, { transaction, individualHooks: true });
 }
 
 export async function softDeleteGroupStudentsByGroupId(academicGroupId, updatedBy, transaction) {
@@ -857,11 +863,13 @@ export async function softDeleteGroupStudentsByGroupId(academicGroupId, updatedB
         { updatedBy },
         {
             where: { academicGroupId: Number(academicGroupId) },
+            individualHooks: true,
             transaction,
         },
     );
     return scoped(model.academicGroupStudentModel).destroy({
         where: { academicGroupId: Number(academicGroupId) },
+        individualHooks: true,
         transaction,
     });
 }
@@ -869,10 +877,11 @@ export async function softDeleteGroupStudentsByGroupId(academicGroupId, updatedB
 export async function softDeleteGroupStudents(where, updatedBy, transaction) {
     await scoped(model.academicGroupStudentModel).update(
         { updatedBy },
-        { where, transaction },
+        { where, individualHooks: true, transaction },
     );
     return scoped(model.academicGroupStudentModel).destroy({
         where,
+        individualHooks: true,
         transaction,
     });
 }
@@ -936,7 +945,7 @@ export async function findPrimaryFaculty(academicGroupId, transaction) {
 }
 
 export async function bulkCreateGroupUsers(rows, transaction) {
-    return scoped(model.academicGroupUserModel).bulkCreate(rows, { transaction });
+    return scoped(model.academicGroupUserModel).bulkCreate(rows, { transaction, individualHooks: true });
 }
 
 export async function getGroupUserById(academicGroupUserId) {
@@ -959,6 +968,7 @@ export async function getGroupUsersByAcademicGroupId(academicGroupId) {
 export async function updateGroupUser(academicGroupUserId, payload, transaction) {
     const [count] = await scoped(model.academicGroupUserModel).update(payload, {
         where: { academicGroupUserId: Number(academicGroupUserId) },
+        individualHooks: true,
         transaction,
     });
     return count > 0;
@@ -969,11 +979,13 @@ export async function softDeleteGroupUsersByGroupId(academicGroupId, updatedBy, 
         { updatedBy },
         {
             where: { academicGroupId: Number(academicGroupId) },
+            individualHooks: true,
             transaction,
         },
     );
     return scoped(model.academicGroupUserModel).destroy({
         where: { academicGroupId: Number(academicGroupId) },
+        individualHooks: true,
         transaction,
     });
 }
@@ -981,10 +993,11 @@ export async function softDeleteGroupUsersByGroupId(academicGroupId, updatedBy, 
 export async function softDeleteGroupUsers(where, updatedBy, transaction) {
     await scoped(model.academicGroupUserModel).update(
         { updatedBy },
-        { where, transaction },
+        { where, individualHooks: true, transaction },
     );
     return scoped(model.academicGroupUserModel).destroy({
         where,
+        individualHooks: true,
         transaction,
     });
 }

@@ -1,4 +1,5 @@
 
+import sequelize from "../database/sequelizeConfig.js";
 import curriculumModel from "./curriculumModel.js";
 import curriculumCategoryModel from "./curriculumCategoryModel.js";
 import subjectComponentModel from "./subjectComponentModel.js";
@@ -265,6 +266,14 @@ previousAcademicUploadLogModel.belongsTo(sessionModel, {
 // Event / EventLog associations
 eventModel.hasMany(eventLogModel, { foreignKey: "eventId", as: "eventLogs" });
 eventLogModel.belongsTo(eventModel, { foreignKey: "eventId", as: "event" });
+eventModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+userModel.hasMany(eventModel, { foreignKey: "userId", as: "events" });
+eventModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+eventModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+eventModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "academicYear" });
+eventLogModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+eventLogModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+eventLogModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "academicYear" });
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, {
@@ -4563,9 +4572,8 @@ export {
   billingScheduleSubItemsModel,
   billingSchedulePaymentTermsModel,
   refreshTokenModel,
+  sequelize,
 };
-
-import sequelize from "../database/sequelizeConfig.js";
 
 // Session Batch Mapping Associations
 sessionModel.hasMany(batchModel, { foreignKey: 'session_id', as: 'batches' });

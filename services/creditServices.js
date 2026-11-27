@@ -1,13 +1,17 @@
 import * as creditRepository from '../repository/creditRepository.js';
+import { withAuditEvent } from '../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../const/auditEvents.js';
 
 export async function addCredit(credits, createdBy, updatedBy) {
-  const creditData = credits.map((item) => ({
-    ...item,
-    createdBy,
-    updatedBy,
-  }));
+  return withAuditEvent(AUDIT_EVENTS.CREDIT_CREATE, async ({ transaction }) => {
+    const creditData = credits.map((item) => ({
+      ...item,
+      createdBy,
+      updatedBy,
+    }));
 
-  return await creditRepository.addCredit(creditData);
+    return await creditRepository.addCredit(creditData, { transaction });
+  });
 }
 
 export async function getCreditDetails(courseId, sessionId) {
@@ -19,10 +23,14 @@ export async function getSingleCreditDetails(creditId) {
 }
 
 export async function deleteCredit(creditId) {
-  return await creditRepository.deleteCredit(creditId);
+  return withAuditEvent(AUDIT_EVENTS.CREDIT_DELETE, async ({ transaction }) => {
+    return await creditRepository.deleteCredit(creditId, { transaction });
+  });
 }
 
 export async function updateCredit(creditId, creditData, updatedBy) {
-  creditData.updatedBy = updatedBy;
-  await creditRepository.updateCredit(creditId, creditData);
+  return withAuditEvent(AUDIT_EVENTS.CREDIT_UPDATE, async ({ transaction }) => {
+    creditData.updatedBy = updatedBy;
+    return await creditRepository.updateCredit(creditId, creditData, { transaction });
+  });
 }

@@ -19,6 +19,8 @@ const positiveIntegerId = z.coerce
 
 const addSubjectComponentSchema = z
   .object({
+    universityId: positiveIntegerId.optional(),
+    university_id: positiveIntegerId.optional(),
     componentName: z.string().trim().min(1, "componentName is required").max(150).optional(),
     component_name: z.string().trim().min(1).max(150).optional(),
     name: z.string().trim().min(1).max(150).optional(),
@@ -40,6 +42,8 @@ const updateSubjectComponentSchema = z
   .object({
     id: positiveIntegerId.optional(),
     subjectComponentId: positiveIntegerId.optional(),
+    universityId: positiveIntegerId.optional(),
+    university_id: positiveIntegerId.optional(),
     componentName: z.string().trim().min(1).max(150).optional(),
     component_name: z.string().trim().min(1).max(150).optional(),
     name: z.string().trim().min(1).max(150).optional(),

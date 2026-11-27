@@ -4,6 +4,7 @@ import { scoped } from "../utility/scoped.js";
 
 const defaultAttributes = [
   "id",
+  "universityId",
   "categoryName",
   "code",
   "isElectiveCoursework",
@@ -79,6 +80,7 @@ export async function updateCurriculumCategory(id, data, options = {}) {
   const { transaction } = options;
   const [affected] = await scoped(model.curriculumCategoryModel).update(data, {
     where: { id },
+    individualHooks: true,
     transaction,
   });
   return affected;
@@ -88,6 +90,7 @@ export async function deleteCurriculumCategory(id, options = {}) {
   const { transaction } = options;
   const deleted = await scoped(model.curriculumCategoryModel).destroy({
     where: { id },
+    individualHooks: true,
     transaction,
   });
   return deleted > 0;

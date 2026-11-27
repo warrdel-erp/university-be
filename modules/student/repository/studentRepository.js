@@ -948,6 +948,7 @@ export async function updateStudentDetails(studentId, data, transaction) {
             where: {
                 studentId: studentId
             },
+            individualHooks: true,
             transaction
         });
         return result;
@@ -976,6 +977,7 @@ export async function updateStudentEntranceDetails(studentsEntranceDetailId, dat
             where: {
                 studentsEntranceDetailId: studentsEntranceDetailId
             },
+            individualHooks: true,
             transaction
         });
         return result;
@@ -1004,6 +1006,7 @@ export async function updateStudentAddressDetails(studentsAddressId, data, trans
             where: {
                 studentsAddressId: studentsAddressId
             },
+            individualHooks: true,
             transaction
         });
         return result;
@@ -1032,6 +1035,7 @@ export async function updateStudentCorsAddressDetails(studentCorAddressId, data,
             where: {
                 studentCorAddressId: studentCorAddressId
             },
+            individualHooks: true,
             transaction
         });
         return result;
@@ -1190,9 +1194,10 @@ export async function getEmptyEnrollNumber({ page = 1, limit = 10, search, batch
     }
 };
 
-export async function deleteStudentDetail(studentId) {
+export async function deleteStudentDetail(studentId, options = {}) {
+    const opts = options?.transaction ? options : (options?.commit ? { transaction: options } : options);
     try {
-        const existing = await assertScopedStudent(studentId);
+        const existing = await assertScopedStudent(studentId, opts);
         if (!existing) {
             throw new Error('Student not found');
         }
@@ -1200,6 +1205,7 @@ export async function deleteStudentDetail(studentId) {
         await scoped(model.studentModel).destroy({
             where: { studentId },
             individualHooks: true,
+            ...(opts?.transaction ? { transaction: opts.transaction } : {}),
         });
         return { message: 'Student deleted successfully' };
     } catch (error) {
@@ -1208,23 +1214,26 @@ export async function deleteStudentDetail(studentId) {
     }
 };
 
-export async function deleteStudentEntranceDetail(studentsEntranceDetailId) {
+export async function deleteStudentEntranceDetail(studentsEntranceDetailId, options = {}) {
+    const opts = options?.transaction ? options : (options?.commit ? { transaction: options } : options);
     try {
         const entrance = await model.studentsEntranceDetail.findOne({
             where: { studentsEntranceDetailId },
             attributes: ['studentId'],
+            ...(opts?.transaction ? { transaction: opts.transaction } : {}),
         });
         if (!entrance) {
             throw new Error('Entrance detail not found');
         }
-        const student = await assertScopedStudent(entrance.studentId);
+        const student = await assertScopedStudent(entrance.studentId, opts);
         if (!student) {
             throw new Error('Student not found');
         }
 
         await model.studentsEntranceDetail.destroy({
             where: { studentsEntranceDetailId },
-            individualHooks: true
+            individualHooks: true,
+            ...(opts?.transaction ? { transaction: opts.transaction } : {}),
         });
         return { message: 'Student entrance details deleted successfully' };
     } catch (error) {
@@ -1233,23 +1242,26 @@ export async function deleteStudentEntranceDetail(studentsEntranceDetailId) {
     }
 };
 
-export async function deleteStudentAddressDetail(studentsAddressId) {
+export async function deleteStudentAddressDetail(studentsAddressId, options = {}) {
+    const opts = options?.transaction ? options : (options?.commit ? { transaction: options } : options);
     try {
         const address = await model.studentsAddress.findOne({
             where: { studentsAddressId },
             attributes: ['studentId'],
+            ...(opts?.transaction ? { transaction: opts.transaction } : {}),
         });
         if (!address) {
             throw new Error('Address not found');
         }
-        const student = await assertScopedStudent(address.studentId);
+        const student = await assertScopedStudent(address.studentId, opts);
         if (!student) {
             throw new Error('Student not found');
         }
 
         await model.studentsAddress.destroy({
             where: { studentsAddressId },
-            individualHooks: true
+            individualHooks: true,
+            ...(opts?.transaction ? { transaction: opts.transaction } : {}),
         });
         return { message: 'Student address deleted successfully' };
     } catch (error) {
@@ -1302,7 +1314,7 @@ export async function findStudentAddressByStudentId(StudentId) {
     }
 };
 
-export async function studentCourseMapping(data) {
+export async function studentCourseMapping(data, transaction) {
     try {
         let classSectionTermId =
             data.classSectionTermId != null ? Number(data.classSectionTermId) : null;
@@ -1311,6 +1323,7 @@ export async function studentCourseMapping(data) {
             const student = await scoped(model.studentModel).findOne({
                 where: { studentId: data.studentId },
                 attributes: ['classSectionTermId'],
+                transaction,
             });
             classSectionTermId = student?.classSectionTermId ?? null;
         }
@@ -1327,7 +1340,7 @@ export async function studentCourseMapping(data) {
             classSectionTermId,
             createdBy: data.createdBy,
         };
-        const result = await model.subjectMapperModel.create(payload);
+        const result = await model.subjectMapperModel.create(payload, { transaction });
         return result;
     } catch (error) {
         console.error("Error in student mapping course:", error);
@@ -1427,6 +1440,7 @@ export async function sectionStudentMapping(data, transaction) {
 
         await scoped(model.studentModel).update(updatePayload, {
             where: { studentId: Number(data.studentId) },
+            individualHooks: true,
             transaction,
         });
 
@@ -1477,6 +1491,7 @@ export async function sectionStudentMappingExcel(data, transaction) {
 
             await scoped(model.studentModel).update(updatePayload, {
                 where: { studentId: Number(row.studentId) },
+                individualHooks: true,
                 transaction,
             });
             results.push({
@@ -1622,9 +1637,9 @@ export async function getSectionStudentMapping(classSectionTermId, academicYearI
     }
 };
 
-export async function addElectiveSubject(data) {
+export async function addElectiveSubject(data, transaction) {
     try {
-        const result = await model.studentElectiveSubjectModel.create(data);
+        const result = await model.studentElectiveSubjectModel.create(data, { transaction });
         return result;
     } catch (error) {
         console.error("Error in student  Elective Subject Model:", error);
@@ -1661,6 +1676,7 @@ export async function promoteStudent(studentId, data, transaction) {
 
         const result1 = await scoped(model.studentModel).update(studentUpdate, {
             where: { studentId },
+            individualHooks: true,
             transaction,
         });
 
@@ -1856,7 +1872,8 @@ export async function updateStudentfeeStatus(studentId, data) {
         const result = await scoped(model.studentModel).update(data, {
             where: {
                 studentId: studentId
-            }
+            },
+            individualHooks: true
         });
         return result;
     } catch (error) {

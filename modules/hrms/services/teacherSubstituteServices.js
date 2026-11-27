@@ -1,4 +1,6 @@
 import sequelize from "../../../database/sequelizeConfig.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import * as teacherSubstituteRepository from "../repository/teacherSubstituteRepository.js";
 
 async function resolveSubstituteEmployee(substituteUserId, universityId, transaction) {
@@ -17,7 +19,7 @@ async function resolveSubstituteEmployee(substituteUserId, universityId, transac
 }
 
 export async function addTeacherSubstitute(data, createdBy, updatedBy) {
-    return sequelize.transaction(async (transaction) => {
+    return withAuditEvent(AUDIT_EVENTS.TEACHER_SUBSTITUTE_CREATE, async ({ transaction }) => {
         const { userId, substituteUserId, universityId } = data;
 
         const teacherEmployee = await teacherSubstituteRepository.findEmployeeInScope(
@@ -62,7 +64,7 @@ export async function getTeacherSubstituteById(teacherSubstituteId) {
 }
 
 export async function updateTeacherSubstitute(teacherSubstituteId, data, updatedBy) {
-    return sequelize.transaction(async (transaction) => {
+    return withAuditEvent(AUDIT_EVENTS.TEACHER_SUBSTITUTE_UPDATE, async ({ transaction }) => {
         const {
             teacherSubstituteId: _id,
             userId: _userId,
@@ -121,7 +123,7 @@ export async function updateTeacherSubstitute(teacherSubstituteId, data, updated
 }
 
 export async function deleteTeacherSubstitute(teacherSubstituteId) {
-    return sequelize.transaction((transaction) =>
+    return withAuditEvent(AUDIT_EVENTS.TEACHER_SUBSTITUTE_DELETE, async ({ transaction }) =>
         teacherSubstituteRepository.deleteTeacherSubstitute(teacherSubstituteId, { transaction }),
     );
 }

@@ -1,6 +1,8 @@
 import * as examStructureRepository from "../repository/examStructureRepository.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 import { countStudentsForExamGroup } from "../modules/student/services/studentCountServices.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 export async function addExamStructure(examDetail, createdBy, updatedBy) {
     examDetail.createdBy = createdBy;
@@ -43,7 +45,9 @@ export async function addExamType(examDetail, user) {
         payload.updatedBy = user;
     }
 
-    return await examStructureRepository.addExamType(payload);
+    return withAuditEvent(AUDIT_EVENTS.EXAM_SETUP_TYPE_CREATE, async ({ transaction }) => {
+        return await examStructureRepository.addExamType(payload, { transaction });
+    });
 };
 
 export async function getDetailByExamType(examSetupTypeId) {
@@ -155,7 +159,9 @@ export async function getAllExamTypes(academicYearId, termNumber, options = {}) 
 };
 
 export async function deleteExamType(examSetupTypeId) {
-    return await examStructureRepository.deleteExamType(examSetupTypeId);
+    return withAuditEvent(AUDIT_EVENTS.EXAM_SETUP_TYPE_DELETE, async ({ transaction }) => {
+        return await examStructureRepository.deleteExamType(examSetupTypeId, { transaction });
+    });
 };
 
 export async function updateExamType(examSetupTypeId, examDetail, updatedBy) {
@@ -165,5 +171,7 @@ export async function updateExamType(examSetupTypeId, examDetail, updatedBy) {
         payload.managedBy = "FACULTY";
     }
 
-    await examStructureRepository.updateExamType(examSetupTypeId, payload);
+    return withAuditEvent(AUDIT_EVENTS.EXAM_SETUP_TYPE_UPDATE, async ({ transaction }) => {
+        return await examStructureRepository.updateExamType(examSetupTypeId, payload, { transaction });
+    });
 };

@@ -145,6 +145,7 @@ export async function updateRequest(requestId, data, options = {}) {
 
   return scoped(model.leaveRequestModel).update(data, {
     where: { requestId },
+    individualHooks: true,
     transaction: options.transaction,
   });
 }

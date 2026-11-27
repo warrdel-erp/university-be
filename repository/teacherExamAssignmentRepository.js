@@ -11,7 +11,7 @@ async function assertScopedExamSchedule(examScheduleId, transaction) {
   });
 }
 
-export async function findAssignment(whereClause) {
+export async function findAssignment(whereClause, options = {}) {
   try {
     return await scoped(model.teacherExamAssignmentModel).findOne({
       where: whereClause,
@@ -24,6 +24,7 @@ export async function findAssignment(whereClause) {
           attributes: ["examScheduleId"],
         },
       ],
+      ...options,
     });
   } catch (error) {
     console.error("Error in findAssignment repository:", error);
@@ -31,9 +32,9 @@ export async function findAssignment(whereClause) {
   }
 }
 
-export async function assignExam(data) {
+export async function assignExam(data, options = {}) {
   try {
-    const schedule = await assertScopedExamSchedule(data.examScheduleId);
+    const schedule = await assertScopedExamSchedule(data.examScheduleId, options.transaction);
     if (!schedule) {
       throw new Error("Exam schedule not found");
     }
@@ -43,7 +44,7 @@ export async function assignExam(data) {
       academicYearId = activeCtx?.activeAcademicYearId || null;
     }
     data.academicYearId = academicYearId;
-    const result = await scoped(model.teacherExamAssignmentModel).create(data);
+    const result = await scoped(model.teacherExamAssignmentModel).create(data, options);
     return result;
   } catch (error) {
     console.error("Error in assignExam repository:", error);
@@ -114,17 +115,19 @@ export async function getAssignments(whereClause) {
   }
 }
 
-export async function deleteAssignment(teacherExamAssignmentId) {
+export async function deleteAssignment(teacherExamAssignmentId, options = {}) {
   try {
     const existing = await scoped(model.teacherExamAssignmentModel).findOne({
       where: { teacherExamAssignmentId },
       attributes: ["teacherExamAssignmentId"],
+      ...options,
     });
     if (!existing) {
       return 0;
     }
     const result = await scoped(model.teacherExamAssignmentModel).destroy({
       where: { teacherExamAssignmentId },
+      ...options,
     });
     return result;
   } catch (error) {

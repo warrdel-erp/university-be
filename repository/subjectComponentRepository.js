@@ -4,6 +4,7 @@ import { scoped } from "../utility/scoped.js";
 
 const defaultAttributes = [
   "id",
+  "universityId",
   "componentName",
   "code",
   "description",
@@ -76,6 +77,7 @@ export async function updateSubjectComponent(id, data, options = {}) {
   const { transaction } = options;
   const [affected] = await scoped(model.subjectComponentModel).update(data, {
     where: { id },
+    individualHooks: true,
     transaction,
   });
   return affected;
@@ -93,6 +95,7 @@ export async function deleteSubjectComponent(id, options = {}) {
   const { transaction } = options;
   const deleted = await scoped(model.subjectComponentModel).destroy({
     where: { id },
+    individualHooks: true,
     transaction,
   });
   return deleted > 0;
@@ -148,6 +151,7 @@ export async function removeSubjectComponentMapping(subjectId, subjectComponentI
   const { transaction } = options;
   return scoped(model.subjectComponentMappingModel).destroy({
     where: { subjectId, subjectComponentId },
+    individualHooks: true,
     transaction,
   });
 }
@@ -156,6 +160,7 @@ export async function removeAllMappingsForSubject(subjectId, options = {}) {
   const { transaction } = options;
   return scoped(model.subjectComponentMappingModel).destroy({
     where: { subjectId },
+    individualHooks: true,
     transaction,
   });
 }

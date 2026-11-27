@@ -1,25 +1,31 @@
+import * as model from "../../../models/index.js";
 import * as instituteRepository from "../repository/instituteRepository.js";
 import * as campusRepository from "../repository/campusRepository.js";
 import { getTenantStore } from "../../../utility/requestContext.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export const createInstitute = async (data) => {
   try {
-    const { campusId, affiliatedUniversity = [], academicYear, ...instituteData } = data;
-    const universityId = getTenantStore().universityId;
+    return await withAuditEvent(AUDIT_EVENTS.INSTITUTE_CREATE, async ({ transaction }) => {
+      const { campusId, affiliatedUniversity = [], academicYear, ...instituteData } = data;
+      const universityId = getTenantStore().universityId;
 
-    const campus = await campusRepository.getCampusById(campusId);
-    if (!campus || Number(campus.universityId) !== Number(universityId)) {
-      const error = new Error("Campus not found or does not belong to this university");
-      error.statusCode = 404;
-      throw error;
-    }
+      const campus = await campusRepository.getCampusById(campusId, { transaction });
+      if (!campus || Number(campus.universityId) !== Number(universityId)) {
+        const error = new Error("Campus not found or does not belong to this university");
+        error.statusCode = 404;
+        throw error;
+      }
 
-    const row = await instituteRepository.createInstitute(
-      { ...instituteData, campusId, universityId },
-      affiliatedUniversity,
-      academicYear,
-    );
-    return mapInstituteRow(row);
+      const row = await instituteRepository.createInstitute(
+        { ...instituteData, campusId, universityId },
+        affiliatedUniversity,
+        academicYear,
+        { transaction },
+      );
+      return mapInstituteRow(row);
+    });
   } catch (error) {
     console.error("Error in Institute Service (createInstitute):", error);
     throw error;
@@ -28,29 +34,31 @@ export const createInstitute = async (data) => {
 
 export const updateInstitute = async (instituteId, body) => {
   try {
-    const universityId = getTenantStore().universityId;
-    const { campusId, instituteName, instituteCode } = body;
-    const data = {};
+    return await withAuditEvent(AUDIT_EVENTS.INSTITUTE_UPDATE, async ({ transaction }) => {
+      const universityId = getTenantStore().universityId;
+      const { campusId, instituteName, instituteCode } = body;
+      const data = {};
 
-    if (campusId !== undefined) {
-      const campus = await campusRepository.getCampusById(campusId);
-      if (!campus || Number(campus.universityId) !== Number(universityId)) {
-        const error = new Error("Campus not found or does not belong to this university");
+      if (campusId !== undefined) {
+        const campus = await campusRepository.getCampusById(campusId, { transaction });
+        if (!campus || Number(campus.universityId) !== Number(universityId)) {
+          const error = new Error("Campus not found or does not belong to this university");
+          error.statusCode = 404;
+          throw error;
+        }
+        data.campusId = campusId;
+      }
+      if (instituteName !== undefined) data.instituteName = instituteName;
+      if (instituteCode !== undefined) data.instituteCode = instituteCode;
+
+      const row = await instituteRepository.updateInstitute(instituteId, data, { transaction });
+      if (!row) {
+        const error = new Error("Institute not found");
         error.statusCode = 404;
         throw error;
       }
-      data.campusId = campusId;
-    }
-    if (instituteName !== undefined) data.instituteName = instituteName;
-    if (instituteCode !== undefined) data.instituteCode = instituteCode;
-
-    const row = await instituteRepository.updateInstitute(instituteId, data);
-    if (!row) {
-      const error = new Error("Institute not found");
-      error.statusCode = 404;
-      throw error;
-    }
-    return mapInstituteRow(row);
+      return mapInstituteRow(row);
+    });
   } catch (error) {
     console.error("Error in Institute Service (updateInstitute):", error);
     throw error;
@@ -59,31 +67,34 @@ export const updateInstitute = async (instituteId, body) => {
 
 export const updateAffiliatedUniversity = async (affiliatedUniversityId, body) => {
   try {
-    const data = {};
-    if (body.affiliatedUniversityName !== undefined) {
-      data.affiliatedUniversityName = body.affiliatedUniversityName;
-    }
-    if (body.affiliatedUniversityCode !== undefined) {
-      data.affiliatedUniversityCode = body.affiliatedUniversityCode;
-    }
+    return await withAuditEvent(AUDIT_EVENTS.AFFILIATED_UNIVERSITY_UPDATE, async ({ transaction }) => {
+      const data = {};
+      if (body.affiliatedUniversityName !== undefined) {
+        data.affiliatedUniversityName = body.affiliatedUniversityName;
+      }
+      if (body.affiliatedUniversityCode !== undefined) {
+        data.affiliatedUniversityCode = body.affiliatedUniversityCode;
+      }
 
-    const row = await instituteRepository.updateAffiliatedUniversity(
-      affiliatedUniversityId,
-      data
-    );
-    if (!row) {
-      const error = new Error("Affiliated university not found");
-      error.statusCode = 404;
-      throw error;
-    }
+      const row = await instituteRepository.updateAffiliatedUniversity(
+        affiliatedUniversityId,
+        data,
+        { transaction },
+      );
+      if (!row) {
+        const error = new Error("Affiliated university not found");
+        error.statusCode = 404;
+        throw error;
+      }
 
-    const plain = row.get ? row.get({ plain: true }) : row;
-    return {
-      affiliatedUniversityId: plain.affiliatedUniversityId,
-      instituteId: plain.instituteId,
-      affiliatedUniversityName: plain.affiliatedUniversityName,
-      affiliatedUniversityCode: plain.affiliatedUniversityCode,
-    };
+      const plain = row.get ? row.get({ plain: true }) : row;
+      return {
+        affiliatedUniversityId: plain.affiliatedUniversityId,
+        instituteId: plain.instituteId,
+        affiliatedUniversityName: plain.affiliatedUniversityName,
+        affiliatedUniversityCode: plain.affiliatedUniversityCode,
+      };
+    });
   } catch (error) {
     console.error("Error in Institute Service (updateAffiliatedUniversity):", error);
     throw error;
@@ -124,6 +135,53 @@ export const listInstitutes = async (campusId) => {
     return rows.map(mapInstituteRow);
   } catch (error) {
     console.error("Error in Institute Service (listInstitutes):", error);
+    throw error;
+  }
+};
+
+export const deleteAffiliatedUniversity = async (affiliatedUniversityId) => {
+  try {
+    const existing = await instituteRepository.getAffiliatedUniversityById(affiliatedUniversityId);
+    if (!existing) {
+      const error = new Error("Affiliated university not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Dependency check 1: Active courses mapped to this affiliated university
+    const mappedCourse = await model.courseModel.findOne({
+      where: {
+        affiliatedUniversityId,
+        deletedAt: null,
+      },
+      attributes: ["courseId", "courseName"],
+    });
+
+    if (mappedCourse) {
+      const error = new Error(`Cannot delete affiliated university: It is currently linked to course "${mappedCourse.courseName}".`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Dependency check 2: Active students mapped to this affiliated university
+    const mappedStudent = await model.studentModel.findOne({
+      where: {
+        affiliatedUniversityId,
+        deletedAt: null,
+      },
+      attributes: ["studentId"],
+    });
+
+    if (mappedStudent) {
+      const error = new Error("Cannot delete affiliated university: It is currently linked to active students.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    await instituteRepository.deleteAffiliatedUniversity(affiliatedUniversityId);
+    return { affiliatedUniversityId };
+  } catch (error) {
+    console.error("Error in Institute Service (deleteAffiliatedUniversity):", error);
     throw error;
   }
 };

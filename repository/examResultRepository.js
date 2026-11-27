@@ -559,7 +559,11 @@ export async function createStudentResult(payload, transaction) {
 }
 
 export async function updateStudentResults(where, payload, transaction) {
-  return scoped(model.studentResultModel).update(payload, { where, transaction });
+  return scoped(model.studentResultModel).update(payload, {
+    where,
+    transaction,
+    individualHooks: true,
+  });
 }
 
 export async function findPublishBatches(examinationSessionId) {
@@ -661,6 +665,7 @@ export async function saveSubjectZScoreCalculation(data, transaction) {
       {
         where: { id: existing.id },
         transaction,
+        individualHooks: true,
       },
     );
     return existing.id;
@@ -695,6 +700,7 @@ export async function deleteSubjectZScoreCalculation({ examinationSessionId, sub
   return scoped(model.subjectZScoreCalculationModel).destroy({
     where,
     transaction,
+    individualHooks: true,
   });
 }
 

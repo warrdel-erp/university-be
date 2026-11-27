@@ -293,6 +293,7 @@ export async function returnIssueInventoryItems(items, assetReturnTransactionId,
           assetReturnTransactionId: null,
         },
         transaction: options.transaction,
+        individualHooks: true,
       }
     );
     affected += count;

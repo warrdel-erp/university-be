@@ -8,6 +8,8 @@ import * as fileHandler from "../../../utility/fileHandler.js";
 import moment from "moment";
 import { uploadFile } from "../../../utility/awsServices.js";
 import sequelize from "../../../database/sequelizeConfig.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import { getSettingValue } from "../../../repository/settingRepository.js";
 import { getEmployeeCodesTypesForStudentImport } from "../../../repository/codeMasterRepository.js";
 import {
@@ -149,8 +151,7 @@ export async function addStudent(
   academicYearId,
   sessionId,
 ) {
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_CREATE, async ({ transaction }) => {
     // Upload files and update info object
     if (files && Object.keys(files).length > 0) {
       const uploadPromises = Object.keys(files).map(async (key) => {
@@ -384,8 +385,6 @@ export async function addStudent(
       transaction,
     );
 
-    await transaction.commit();
-
     const plainStudent =
       typeof student.get === "function"
         ? student.get({ plain: true })
@@ -411,13 +410,7 @@ export async function addStudent(
       corsAddressDetails: CorsAddressDetails,
       allDropDownData,
     };
-  } catch (error) {
-    if (!transaction.finished) {
-      await transaction.rollback();
-    }
-    console.error("Error adding student:", error);
-    throw error;
-  }
+  });
 }
 
 async function assertStudentEnrollNumberAvailable(enrollNumber) {
@@ -655,8 +648,7 @@ async function resolveImportRoleId(roleId) {
 }
 
 export async function importStudentData(excelData, data) {
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_IMPORT, async ({ transaction }) => {
     const studentMapping = [];
     const results = [];
     const importRoleId = await resolveImportRoleId(data.roleId);
@@ -839,9 +831,6 @@ export async function importStudentData(excelData, data) {
       await historyRepository.bulkCreateHistory(historyEntries, transaction);
     }
 
-    // Step 11: Commit transaction
-    await transaction.commit();
-
     return {
       insertedCount: results.length,
       students: results.map((student) => ({
@@ -851,13 +840,7 @@ export async function importStudentData(excelData, data) {
         courseId: student.dataValues.courseId,
       })),
     };
-  } catch (error) {
-    if (!transaction.finished) {
-      await transaction.rollback();
-    }
-    console.error("Error in importing student data:", error);
-    throw error;
-  }
+  });
 }
 
 // this correct final
@@ -1156,9 +1139,7 @@ async function applyStudentMetaDataUpdates(studentId, info, transaction) {
 }
 
 export async function updateStudentDetails(StudentId, info, files, createdBy) {
-  const transaction = await sequelize.transaction();
-
-  try {
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_UPDATE, async ({ transaction }) => {
     // Upload files if present
     if (files && typeof files === "object") {
       for (const key of Object.keys(files)) {
@@ -1279,8 +1260,6 @@ export async function updateStudentDetails(StudentId, info, files, createdBy) {
 
     await applyStudentMetaDataUpdates(StudentId, info, transaction);
 
-    await transaction.commit();
-
     const studentRow = await getSingleStudentDetail(StudentId);
     if (!studentRow) {
       throw new Error("Student not found");
@@ -1293,48 +1272,43 @@ export async function updateStudentDetails(StudentId, info, files, createdBy) {
       rowsUpdated,
       student: plainStudent,
     };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error updating student:", error);
-    throw error;
-  }
+  });
 }
 
 export async function deleteStudentDetail(studentId) {
-  try {
-    // Fetch entrance and address details in parallel
-    const [entranceDetails, addressDetails] = await Promise.all([
-      studentRepository.findEntranceDetailsByStudentId(studentId),
-      studentRepository.findStudentAddressByStudentId(studentId),
-    ]);
-
-    // Extract IDs
-    const entranceIds = entranceDetails.map(
-      (detail) => detail.dataValues.students_entrance_detail_id,
-    );
-    const addressId = addressDetails?.dataValues?.students_address_id;
-
-    // Perform deletions in parallel
-    const [deleteEntranceResult, deleteAddressResult, deleteStudentResult] =
-      await Promise.all([
-        studentRepository.deleteStudentEntranceDetail(entranceIds),
-        studentRepository.deleteStudentAddressDetail(addressId),
-        studentRepository.deleteStudentDetail(studentId),
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_DELETE, async ({ transaction }) => {
+    try {
+      // Fetch entrance and address details in parallel
+      const [entranceDetails, addressDetails] = await Promise.all([
+        studentRepository.findEntranceDetailsByStudentId(studentId),
+        studentRepository.findStudentAddressByStudentId(studentId),
       ]);
 
-    // Check if all deletions successful
-    if (deleteEntranceResult && deleteAddressResult && deleteStudentResult) {
-      return { message: "Student and related records deleted successfully" };
-    } else {
-      return { message: "Some records were not found or not deleted" };
+      // Extract IDs
+      const entranceIds = entranceDetails.map(
+        (detail) => detail.dataValues.students_entrance_detail_id,
+      );
+      const addressId = addressDetails?.dataValues?.students_address_id;
+
+      // Perform deletions in parallel
+      const [deleteEntranceResult, deleteAddressResult, deleteStudentResult] =
+        await Promise.all([
+          studentRepository.deleteStudentEntranceDetail(entranceIds, { transaction }),
+          studentRepository.deleteStudentAddressDetail(addressId, { transaction }),
+          studentRepository.deleteStudentDetail(studentId, { transaction }),
+        ]);
+
+      // Check if all deletions successful
+      if (deleteEntranceResult && deleteAddressResult && deleteStudentResult) {
+        return { message: "Student and related records deleted successfully" };
+      } else {
+        return { message: "Some records were not found or not deleted" };
+      }
+    } catch (error) {
+      console.error("Error deleting student:", error);
+      throw error;
     }
-  } catch (error) {
-    console.error("Error deleting student:", error);
-    return {
-      message: "An error occurred while trying to delete the student",
-      error: error.message,
-    };
-  }
+  });
 }
 
 export async function getEmptyEnrollNumber({
@@ -1356,11 +1330,13 @@ export async function getEmptyEnrollNumber({
 }
 
 export async function studentCourseMapping(data) {
-  return await studentRepository.studentCourseMapping(data);
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_COURSE_MAP, async ({ transaction }) => {
+    return await studentRepository.studentCourseMapping(data, transaction);
+  });
 }
 
 export async function sectionStudentMapping(data, createdBy) {
-  try {
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_SECTION_MAP, async ({ transaction }) => {
     const classSectionTermId = Number(data.classSectionTermId);
     if (!classSectionTermId) {
       const error = new Error("classSectionTermId is required");
@@ -1378,8 +1354,8 @@ export async function sectionStudentMapping(data, createdBy) {
           studentId: id,
           classSectionTermId,
           createdBy,
-        });
-      const result = await studentRepository.sectionStudentMapping(entryData);
+        }, transaction);
+      const result = await studentRepository.sectionStudentMapping(entryData, transaction);
 
       const placement = await resolveClassSectionPlacementFromTermId(
         entryData.classSectionTermId,
@@ -1391,21 +1367,18 @@ export async function sectionStudentMapping(data, createdBy) {
           classSectionTermId: entryData.classSectionTermId,
           status: "current",
           createdBy,
-        });
+        }, transaction);
       }
 
       await studentRepository.updateStudentDetails(id, {
         classSectionTermId: entryData.classSectionTermId,
-      });
+      }, transaction);
 
       results.push(result);
     }
 
     return results;
-  } catch (error) {
-    console.error("Error in sectionStudentMapping:", error);
-    throw error;
-  }
+  });
 }
 
 export async function getSectionStudentMapping(
@@ -1427,8 +1400,10 @@ export async function getSectionStudentMapping(
 }
 
 export async function addElectiveSubject(data, createdBy) {
-  data.createdBy = createdBy;
-  return await studentRepository.addElectiveSubject(data);
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_ELECTIVE_MAP, async ({ transaction }) => {
+    data.createdBy = createdBy;
+    return await studentRepository.addElectiveSubject(data, transaction);
+  });
 }
 
 function asPlain(record) {
@@ -1954,8 +1929,7 @@ export async function promoteStudent(data) {
     currentSection?.classSectionsId ?? currentTermRow.classSectionsId ?? null;
   const createdBy = data.createdBy ?? null;
 
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.STUDENT_PROMOTE, async ({ transaction }) => {
     const result = await studentRepository.promoteStudent(
       data.studentId,
       {
@@ -1989,8 +1963,6 @@ export async function promoteStudent(data) {
       transaction,
     );
 
-    await transaction.commit();
-
     return {
       message: "Student promoted",
       result,
@@ -2011,10 +1983,7 @@ export async function promoteStudent(data) {
         },
       },
     };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 function incrementScholarNumber(scholarNumber) {

@@ -1,17 +1,18 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function addPo(poData) {
+export async function addPo(poData, options = {}) {
   try {
     const course = await scoped(model.courseModel).findOne({
       attributes: ["courseId"],
       where: { courseId: poData.courseId },
+      ...options,
     });
     if (!course) {
       throw new Error("Course not found");
     }
 
-    return scoped(model.poModel).create(poData);
+    return scoped(model.poModel).create(poData, options);
   } catch (error) {
     console.error("Error in add Po :", error);
     throw error;
@@ -77,11 +78,12 @@ export async function getSinglePoDetails(poId) {
   }
 }
 
-export async function updatePo(poId, poData) {
+export async function updatePo(poId, poData, options = {}) {
   try {
     const existing = await scoped(model.poModel).findOne({
       attributes: ["poId"],
       where: { poId },
+      ...options,
     });
     if (!existing) {
       return [0];
@@ -91,28 +93,30 @@ export async function updatePo(poId, poData) {
       const course = await scoped(model.courseModel).findOne({
         attributes: ["courseId"],
         where: { courseId: poData.courseId },
+        ...options,
       });
       if (!course) {
         return [0];
       }
     }
 
-    return scoped(model.poModel).update(poData, { where: { poId } });
+    return scoped(model.poModel).update(poData, { where: { poId }, ...options });
   } catch (error) {
     console.error(`Error updating Po creation ${poId}:`, error);
     throw error;
   }
 }
 
-export async function deletePo(poId) {
+export async function deletePo(poId, options = {}) {
   const existing = await scoped(model.poModel).findOne({
     attributes: ["poId"],
     where: { poId },
+    ...options,
   });
   if (!existing) {
     return false;
   }
 
-  const deleted = await scoped(model.poModel).destroy({ where: { poId } });
+  const deleted = await scoped(model.poModel).destroy({ where: { poId }, ...options });
   return deleted > 0;
 }

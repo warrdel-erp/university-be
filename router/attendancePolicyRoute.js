@@ -70,11 +70,13 @@ const step3Schema = z.object({
 
 const duplicateSchema = z.object({
   newPolicyName: z.string().optional(),
+  newPolicyCode: z.string().optional().nullable(),
 });
 
 const createVersionSchema = z.object({
   versionNumber: z.string().min(1),
   effectiveFrom: z.string().optional().nullable(),
+  policyCode: z.string().optional().nullable(),
 });
 
 // Routes

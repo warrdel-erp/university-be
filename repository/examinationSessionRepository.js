@@ -161,7 +161,7 @@ export async function updateExaminationSession(id, updateData, options = {}) {
   return scoped(model.examinationSessionModel).update(updateData, {
     where: { examinationSessionId: Number(id) },
     transaction: options.transaction,
-    individualHooks: options.individualHooks === true,
+    individualHooks: true,
   });
 }
 
@@ -169,6 +169,7 @@ export async function deleteExaminationSession(id, options = {}) {
   return scoped(model.examinationSessionModel).destroy({
     where: { examinationSessionId: Number(id) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -214,6 +215,7 @@ export async function createExaminationSessionTerms(termData, options = {}) {
   if (!termData.length) return [];
   return scoped(model.examinationSessionTermModel).bulkCreate(termData, {
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -225,6 +227,7 @@ export async function deleteExaminationSessionTermsBySessionId(examinationSessio
   return scoped(model.examinationSessionTermModel).destroy({
     where: { examinationSessionId: Number(examinationSessionId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -240,6 +243,7 @@ export async function deleteExaminationSessionTermsByTerms(
       term: { [Op.in]: terms },
     },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -308,6 +312,7 @@ export async function deleteExaminationSessionTerm(examinationSessionTermId, opt
   return model.examinationSessionTermModel.destroy({
     where: { examinationSessionTermId: Number(examinationSessionTermId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -486,6 +491,7 @@ export async function findCurriculumSubjectsByCourseAndTerm(
     transaction: options.transaction,
   });
 }
+
 
 /**
  * SubjectIds that have assessment_plan_subject_mapping for courseId + sessionId.
@@ -1609,7 +1615,11 @@ export async function countHallTicketCoverageByExamScheduleIds(
 
   const [tickets, results, seats] = await Promise.all([
     scoped(model.studentHallTicketModel).findAll({
-      where: { examinationSessionId: Number(examinationSessionId) },
+      where: {
+        examinationSessionId: Number(examinationSessionId),
+        isPublished: true,
+        isBlocked: false,
+      },
       attributes: ["studentId"],
       raw: true,
       transaction: options.transaction,

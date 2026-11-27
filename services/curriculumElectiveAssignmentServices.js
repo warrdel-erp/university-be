@@ -4,6 +4,8 @@ import * as assignmentRepo from "../repository/curriculumElectiveAssignmentRepos
 import * as requirementRepo from "../repository/curriculumElectiveRequirementRepository.js";
 import * as models from "../models/index.js";
 import { requestContext } from "../utility/requestContext.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -311,156 +313,184 @@ export async function getCurriculumElectiveAssignmentById(id, options = {}) {
  * Assign a student to an elective course under a requirement
  */
 export async function assignStudent(body = {}, options = {}) {
-  const ctx = requestContext.get();
-  const studentId = body.studentId || body.student_id;
-  const subjectId = body.subjectId || body.subject_id;
-  const curriculumElectiveRequirementId =
-    body.curriculumElectiveRequirementId ||
-    body.curriculum_elective_requirement_id ||
-    body.requirementId;
+  const runner = async (activeOptions) => {
+    const ctx = requestContext.get();
+    const studentId = body.studentId || body.student_id;
+    const subjectId = body.subjectId || body.subject_id;
+    const curriculumElectiveRequirementId =
+      body.curriculumElectiveRequirementId ||
+      body.curriculum_elective_requirement_id ||
+      body.requirementId;
 
-  if (!studentId) throw httpError("studentId is required", 400);
-  if (!subjectId) throw httpError("subjectId is required", 400);
-  if (!curriculumElectiveRequirementId)
-    throw httpError("curriculumElectiveRequirementId is required", 400);
+    if (!studentId) throw httpError("studentId is required", 400);
+    if (!subjectId) throw httpError("subjectId is required", 400);
+    if (!curriculumElectiveRequirementId)
+      throw httpError("curriculumElectiveRequirementId is required", 400);
 
-  const req = await requirementRepo.findCurriculumElectiveRequirementById(
-    curriculumElectiveRequirementId,
-    options
-  );
-  if (!req) {
-    throw httpError("Curriculum elective requirement not found", 404);
-  }
+    const req = await requirementRepo.findCurriculumElectiveRequirementById(
+      curriculumElectiveRequirementId,
+      activeOptions
+    );
+    if (!req) {
+      throw httpError("Curriculum elective requirement not found", 404);
+    }
 
-  const universityId =
-    body.universityId || req.universityId || ctx?.universityId || ctx?.user?.universityId;
-  const instituteId =
-    body.instituteId || req.instituteId || ctx?.instituteId || ctx?.user?.defaultInstituteId;
-  const academicYearId =
-    body.academicYearId || req.academicYearId || ctx?.academicYearId || ctx?.user?.defaultAcademicYearId || null;
-  const userId = ctx?.userId || ctx?.user?.userId || body.userId || null;
+    const universityId =
+      body.universityId || req.universityId || ctx?.universityId || ctx?.user?.universityId;
+    const instituteId =
+      body.instituteId || req.instituteId || ctx?.instituteId || ctx?.user?.defaultInstituteId;
+    const academicYearId =
+      body.academicYearId || req.academicYearId || ctx?.academicYearId || ctx?.user?.defaultAcademicYearId || null;
+    const userId = ctx?.userId || ctx?.user?.userId || body.userId || null;
 
-  const data = {
-    curriculumElectiveRequirementId,
-    studentId,
-    subjectId,
-    assignmentSource: body.assignmentSource || "Direct",
-    status: body.status || "Assigned",
-    universityId,
-    instituteId,
-    academicYearId,
-    userId,
+    const data = {
+      curriculumElectiveRequirementId,
+      studentId,
+      subjectId,
+      assignmentSource: body.assignmentSource || "Direct",
+      status: body.status || "Assigned",
+      universityId,
+      instituteId,
+      academicYearId,
+      userId,
+    };
+
+    const assignment = await assignmentRepo.upsertAssignment(data, activeOptions);
+    return {
+      message: "Student assigned successfully",
+      assignment,
+    };
   };
 
-  const assignment = await assignmentRepo.upsertAssignment(data, options);
-  return {
-    message: "Student assigned successfully",
-    assignment,
-  };
+  if (options.transaction) return runner(options);
+  return withAuditEvent(AUDIT_EVENTS.CURRICULUM_ELECTIVE_STUDENT_ASSIGN, async ({ transaction }) => {
+    return runner({ ...options, transaction });
+  });
 }
 
 /**
  * Bulk assign students to elective course
  */
 export async function bulkAssignStudents(body = {}, options = {}) {
-  const ctx = requestContext.get();
-  const { studentIds, subjectId, assignmentSource = "Direct" } = body;
-  const curriculumElectiveRequirementId =
-    body.curriculumElectiveRequirementId ||
-    body.curriculum_elective_requirement_id ||
-    body.requirementId;
+  const runner = async (activeOptions) => {
+    const ctx = requestContext.get();
+    const { studentIds, subjectId, assignmentSource = "Direct" } = body;
+    const curriculumElectiveRequirementId =
+      body.curriculumElectiveRequirementId ||
+      body.curriculum_elective_requirement_id ||
+      body.requirementId;
 
-  if (!Array.isArray(studentIds) || studentIds.length === 0) {
-    throw httpError("studentIds array cannot be empty", 400);
-  }
-  if (!subjectId) throw httpError("subjectId is required", 400);
-  if (!curriculumElectiveRequirementId)
-    throw httpError("curriculumElectiveRequirementId is required", 400);
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      throw httpError("studentIds array cannot be empty", 400);
+    }
+    if (!subjectId) throw httpError("subjectId is required", 400);
+    if (!curriculumElectiveRequirementId)
+      throw httpError("curriculumElectiveRequirementId is required", 400);
 
-  const req = await requirementRepo.findCurriculumElectiveRequirementById(
-    curriculumElectiveRequirementId,
-    options
-  );
-  if (!req) {
-    throw httpError("Curriculum elective requirement not found", 404);
-  }
+    const req = await requirementRepo.findCurriculumElectiveRequirementById(
+      curriculumElectiveRequirementId,
+      activeOptions
+    );
+    if (!req) {
+      throw httpError("Curriculum elective requirement not found", 404);
+    }
 
-  const universityId =
-    body.universityId || req.universityId || ctx?.universityId || ctx?.user?.universityId;
-  const instituteId =
-    body.instituteId || req.instituteId || ctx?.instituteId || ctx?.user?.defaultInstituteId;
-  const academicYearId =
-    body.academicYearId || req.academicYearId || ctx?.academicYearId || ctx?.user?.defaultAcademicYearId || null;
-  const userId = ctx?.userId || ctx?.user?.userId || body.userId || null;
+    const universityId =
+      body.universityId || req.universityId || ctx?.universityId || ctx?.user?.universityId;
+    const instituteId =
+      body.instituteId || req.instituteId || ctx?.instituteId || ctx?.user?.defaultInstituteId;
+    const academicYearId =
+      body.academicYearId || req.academicYearId || ctx?.academicYearId || ctx?.user?.defaultAcademicYearId || null;
+    const userId = ctx?.userId || ctx?.user?.userId || body.userId || null;
 
-  const records = studentIds.map((studentId) => ({
-    curriculumElectiveRequirementId,
-    studentId,
-    subjectId,
-    assignmentSource,
-    status: "Assigned",
-    universityId,
-    instituteId,
-    academicYearId,
-    userId,
-  }));
+    const records = studentIds.map((studentId) => ({
+      curriculumElectiveRequirementId,
+      studentId,
+      subjectId,
+      assignmentSource,
+      status: "Assigned",
+      universityId,
+      instituteId,
+      academicYearId,
+      userId,
+    }));
 
-  const results = await assignmentRepo.bulkUpsertAssignments(records, options);
-  return {
-    message: `${results.length} students assigned successfully`,
-    assignedCount: results.length,
-    assignments: results,
+    const results = await assignmentRepo.bulkUpsertAssignments(records, activeOptions);
+    return {
+      message: `${results.length} students assigned successfully`,
+      assignedCount: results.length,
+      assignments: results,
+    };
   };
+
+  if (options.transaction) return runner(options);
+  return withAuditEvent(AUDIT_EVENTS.CURRICULUM_ELECTIVE_STUDENT_BULK_ASSIGN, async ({ transaction }) => {
+    return runner({ ...options, transaction });
+  });
 }
 
 /**
  * Unassign student from an assignment by ID or requirement & student ID
  */
 export async function unassignStudent(params = {}, options = {}) {
-  const { id, curriculumElectiveRequirementId, studentId } = params;
+  const runner = async (activeOptions) => {
+    const { id, curriculumElectiveRequirementId, studentId } = params;
 
-  if (id) {
-    const success = await assignmentRepo.deleteAssignmentById(id, options);
-    if (!success) {
-      throw httpError("Assignment record not found", 404);
+    if (id) {
+      const success = await assignmentRepo.deleteAssignmentById(id, activeOptions);
+      if (!success) {
+        throw httpError("Assignment record not found", 404);
+      }
+      return { message: "Student unassigned successfully" };
     }
-    return { message: "Student unassigned successfully" };
-  }
 
-  if (curriculumElectiveRequirementId && studentId) {
-    const success = await assignmentRepo.unassignStudent(
-      curriculumElectiveRequirementId,
-      studentId,
-      options
-    );
-    if (!success) {
-      throw httpError("Assignment record not found", 404);
+    if (curriculumElectiveRequirementId && studentId) {
+      const success = await assignmentRepo.unassignStudent(
+        curriculumElectiveRequirementId,
+        studentId,
+        activeOptions
+      );
+      if (!success) {
+        throw httpError("Assignment record not found", 404);
+      }
+      return { message: "Student unassigned successfully" };
     }
-    return { message: "Student unassigned successfully" };
-  }
 
-  throw httpError("Either id or curriculumElectiveRequirementId and studentId must be provided", 400);
+    throw httpError("Either id or curriculumElectiveRequirementId and studentId must be provided", 400);
+  };
+
+  if (options.transaction) return runner(options);
+  return withAuditEvent(AUDIT_EVENTS.CURRICULUM_ELECTIVE_STUDENT_UNASSIGN, async ({ transaction }) => {
+    return runner({ ...options, transaction });
+  });
 }
 
 /**
  * Bulk unassign students from requirement
  */
 export async function bulkUnassignStudents(body = {}, options = {}) {
-  const { curriculumElectiveRequirementId, studentIds } = body;
-  if (!curriculumElectiveRequirementId) {
-    throw httpError("curriculumElectiveRequirementId is required", 400);
-  }
-  if (!Array.isArray(studentIds) || studentIds.length === 0) {
-    throw httpError("studentIds array cannot be empty", 400);
-  }
+  const runner = async (activeOptions) => {
+    const { curriculumElectiveRequirementId, studentIds } = body;
+    if (!curriculumElectiveRequirementId) {
+      throw httpError("curriculumElectiveRequirementId is required", 400);
+    }
+    if (!Array.isArray(studentIds) || studentIds.length === 0) {
+      throw httpError("studentIds array cannot be empty", 400);
+    }
 
-  const deletedCount = await assignmentRepo.bulkUnassignStudents(
-    curriculumElectiveRequirementId,
-    studentIds,
-    options
-  );
-  return {
-    message: `${deletedCount} students unassigned successfully`,
-    unassignedCount: deletedCount,
+    const deletedCount = await assignmentRepo.bulkUnassignStudents(
+      curriculumElectiveRequirementId,
+      studentIds,
+      activeOptions
+    );
+    return {
+      message: `${deletedCount} students unassigned successfully`,
+      unassignedCount: deletedCount,
+    };
   };
+
+  if (options.transaction) return runner(options);
+  return withAuditEvent(AUDIT_EVENTS.CURRICULUM_ELECTIVE_STUDENT_BULK_UNASSIGN, async ({ transaction }) => {
+    return runner({ ...options, transaction });
+  });
 }

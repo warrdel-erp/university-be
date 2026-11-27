@@ -14,7 +14,7 @@ export async function addSession(req, res) {
         );
         res.status(201).json({ message: "Data added successfully", session });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(400).json({ message: error.message, error: error.message });
     }
 }
 

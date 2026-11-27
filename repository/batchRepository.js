@@ -16,6 +16,7 @@ const SESSION_BATCH_ATTRS = [
 const SESSION_ATTRS = ['sessionId', 'sessionName', 'academicYearId', 'courseId'];
 const COURSE_ATTRS = [
   'courseId',
+  'course_levelId',
   'courseName',
   'courseCode',
   'courseDuration',
