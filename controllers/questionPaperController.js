@@ -221,6 +221,14 @@ export async function updateMyQuestionPaper(req, res) {
     const { userId } = validation;
     try {
         const { id } = req.body;
+        const existingPaper = await questionPaperServices.getSingleQuestionPaper(id, userId);
+        if (!existingPaper) {
+            return ErrorResponse(res, 404, "Question paper not found or unauthorized");
+        }
+        if (existingPaper.status === questionStatus[1]) {
+            return ErrorResponse(res, 400, "Approved question papers cannot be modified");
+        }
+
         const result = await questionPaperServices.updateQuestionPaper(id, req.body, userId, userId);
 
         if (result[0] > 0) {
@@ -243,6 +251,13 @@ export async function deleteMyQuestionPaper(req, res) {
         const { id } = req.params;
         if (!id) {
             return ErrorResponse(res, 400, "id is required");
+        }
+        const existingPaper = await questionPaperServices.getSingleQuestionPaper(id, userId);
+        if (!existingPaper) {
+            return ErrorResponse(res, 404, "Question paper not found or unauthorized");
+        }
+        if (existingPaper.status === questionStatus[1]) {
+            return ErrorResponse(res, 400, "Approved question papers cannot be deleted");
         }
         const deleted = await questionPaperServices.deleteQuestionPaper(id, userId);
         if (deleted) {
