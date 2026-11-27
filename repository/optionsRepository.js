@@ -92,12 +92,22 @@ export async function getCourseProgramData(courseId) {
     });
 }
 
+function formatBatchLabel(batchYear) {
+    if (!batchYear) return '';
+    const start = Number(batchYear);
+    if (!Number.isFinite(start)) {
+        return `Batch ${batchYear}`;
+    }
+    return `Batch ${start}-${String(start + 1).slice(-2)}`;
+}
+
 export async function getClassSectionOptions(courseId, term, sessionId, year, batchId) {
-    return await scoped(model.classSectionModel).findAll({
+    const rows = await scoped(model.classSectionModel).findAll({
         attributes: [
-            ['section', 'label'],
+            ['section', 'sectionName'],
             ['class_sections_id', 'value'],
             'year',
+            'batchId',
         ],
         where: {
             ...(courseId != null && { courseId: Number(courseId) }),
@@ -105,7 +115,32 @@ export async function getClassSectionOptions(courseId, term, sessionId, year, ba
             ...(batchId != null && { batchId: Number(batchId) }),
             ...(year != null && { year: Number(year) }),
         },
-        include: [classSectionTermsInclude({ term, required: term != null })],
+        include: [
+            classSectionTermsInclude({ term, required: term != null }),
+            {
+                model: model.batchModel,
+                as: 'batch',
+                attributes: ['batchId', 'batch'],
+                required: false,
+            },
+        ],
+    });
+
+    return rows.map((row) => {
+        const plain = row.toJSON ? row.toJSON() : row;
+        const sectionName = plain.sectionName || plain.section || '';
+        const batchYear = plain.batch?.batch;
+        const batchTag = formatBatchLabel(batchYear);
+        const label = batchTag ? `${sectionName} (${batchTag})` : sectionName;
+
+        return {
+            label,
+            value: plain.value ?? plain.classSectionsId,
+            section: sectionName,
+            year: plain.year,
+            batchId: plain.batchId,
+            classSectionTerms: plain.classSectionTerms || [],
+        };
     });
 }
 
@@ -784,15 +819,41 @@ export async function getClassSectionFilterOptions({
         where.year = yearFilter;
     }
 
-    return scoped(model.classSectionModel).findAll({
+    const rows = await scoped(model.classSectionModel).findAll({
         attributes: [
-            ['section', 'label'],
+            ['section', 'sectionName'],
             ['class_sections_id', 'value'],
             'year',
+            'batchId',
         ],
         where,
-        include: [classSectionTermsInclude({ term, required: term != null })],
+        include: [
+            classSectionTermsInclude({ term, required: term != null }),
+            {
+                model: model.batchModel,
+                as: 'batch',
+                attributes: ['batchId', 'batch'],
+                required: false,
+            },
+        ],
         order: [['year', 'ASC'], ['section', 'ASC']],
+    });
+
+    return rows.map((row) => {
+        const plain = row.toJSON ? row.toJSON() : row;
+        const sectionName = plain.sectionName || plain.section || '';
+        const batchYear = plain.batch?.batch;
+        const batchTag = formatBatchLabel(batchYear);
+        const label = batchTag ? `${sectionName} (${batchTag})` : sectionName;
+
+        return {
+            label,
+            value: plain.value ?? plain.classSectionsId,
+            section: sectionName,
+            year: plain.year,
+            batchId: plain.batchId,
+            classSectionTerms: plain.classSectionTerms || [],
+        };
     });
 }
 

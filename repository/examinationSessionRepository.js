@@ -1615,7 +1615,11 @@ export async function countHallTicketCoverageByExamScheduleIds(
 
   const [tickets, results, seats] = await Promise.all([
     scoped(model.studentHallTicketModel).findAll({
-      where: { examinationSessionId: Number(examinationSessionId) },
+      where: {
+        examinationSessionId: Number(examinationSessionId),
+        isPublished: true,
+        isBlocked: false,
+      },
       attributes: ["studentId"],
       raw: true,
       transaction: options.transaction,

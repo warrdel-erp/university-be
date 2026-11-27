@@ -263,6 +263,19 @@ export async function getAllCourses({ campusId } = {}) {
           where: buildScope(model.sessionModel),
           required: false,
         },
+        {
+          model: model.sessionCouseMappingModel,
+          as: 'sessionCourseMappings',
+          required: false,
+          include: [
+            {
+              model: model.sessionModel,
+              as: 'session',
+              attributes: ['sessionId', 'sessionName', 'academicYearId'],
+              required: false,
+            },
+          ],
+        },
       ],
     });
   } catch (error) {
