@@ -390,6 +390,7 @@ export async function updateAssessmentPlan(
     await scoped(model.assessmentPlanModel).update(mainUpdateData, {
       where: { assessmentPlanId: planId },
       transaction: opts.transaction,
+      individualHooks: true,
     });
   }
 
@@ -397,6 +398,7 @@ export async function updateAssessmentPlan(
     await scoped(model.assessmentPlanComponentModel).destroy({
       where: { assessmentPlanId: planId },
       transaction: opts.transaction,
+      individualHooks: true,
     });
 
     if (components.length > 0) {
@@ -415,6 +417,7 @@ export async function updateAssessmentPlan(
         componentsToCreate,
         {
           transaction: opts.transaction,
+          individualHooks: true,
         },
       );
     }
@@ -440,6 +443,7 @@ export async function deleteAssessmentPlan(assessmentPlanId, options = {}) {
     {
       where: { assessmentPlanId: Number(assessmentPlanId) },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
 
@@ -644,6 +648,7 @@ export async function updateAssessmentPlanComponent(
   await scoped(model.assessmentPlanComponentModel).update(payloadToUpdate, {
     where: { assessmentPlanComponentId: compId },
     transaction: opts.transaction,
+    individualHooks: true,
   });
 
   return await scoped(model.assessmentPlanComponentModel).findOne({
@@ -668,6 +673,7 @@ export async function deleteAssessmentPlanComponent(
   await scoped(model.assessmentPlanComponentModel).destroy({
     where: { assessmentPlanComponentId: Number(assessmentPlanComponentId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 
   return { message: "Assessment plan component deleted successfully" };
@@ -1370,6 +1376,7 @@ export async function deleteAssessmentPlanSubjectMapping(
   await scoped(model.assessmentPlanSubjectMappingModel).destroy({
     where: { assessmentPlanSubjectMappingId: Number(mappingId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 
   return { message: "Subject assessment plan mapping deleted successfully" };
@@ -1779,6 +1786,7 @@ export async function publishAssessmentPlansByIds(planIds, userId, options = {})
         assessmentPlanId: { [Op.in]: planIds },
       },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
 }
@@ -1795,6 +1803,7 @@ export async function unfreezeAssessmentPlansByIds(planIds, userId, options = {}
         assessmentPlanId: { [Op.in]: planIds },
       },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
 }
@@ -1816,6 +1825,7 @@ export async function freezeSubjectMappingsByBatchId(batchId, userId, options = 
     {
       where: { batchId: Number(batchId) },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
 }
@@ -1829,6 +1839,7 @@ export async function unfreezeSubjectMappingsByBatchId(batchId, userId, options 
     {
       where: { batchId: Number(batchId) },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
 }

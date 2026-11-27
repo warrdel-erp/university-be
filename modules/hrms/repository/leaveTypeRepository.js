@@ -267,6 +267,7 @@ export async function updateLeaveType(id, payload, options = {}) {
     if (Object.keys(leaveTypeData).length > 0) {
       await scoped(model.leaveTypeModel).update(leaveTypeData, {
         where: { id },
+        individualHooks: true,
         transaction,
       });
     }
@@ -280,6 +281,7 @@ export async function updateLeaveType(id, payload, options = {}) {
       if (existing) {
         await model.leaveTypeEligibilityModel.update(eligibility, {
           where: { leaveTypeId: id },
+          individualHooks: true,
           transaction,
         });
       } else {
@@ -299,6 +301,7 @@ export async function updateLeaveType(id, payload, options = {}) {
       if (existing) {
         await model.leaveTypeHolidaysCarryForwardModel.update(holidaysCarryForward, {
           where: { leaveTypeId: id },
+          individualHooks: true,
           transaction,
         });
       } else {
@@ -318,6 +321,7 @@ export async function updateLeaveType(id, payload, options = {}) {
       if (existing) {
         await model.leaveTypeEncashmentModel.update(encashment, {
           where: { leaveTypeId: id },
+          individualHooks: true,
           transaction,
         });
       } else {
@@ -344,37 +348,48 @@ export async function updateLeaveType(id, payload, options = {}) {
 /**
  * Update status directly (e.g. 'Draft' -> 'Published', 'Active' <-> 'Inactive')
  */
-export async function updateLeaveTypeStatus(id, status, updatedBy) {
+export async function updateLeaveTypeStatus(id, status, updatedBy, options = {}) {
   const updateData = { status };
   if (updatedBy) updateData.updatedBy = updatedBy;
 
   await scoped(model.leaveTypeModel).update(updateData, {
     where: { id },
+    individualHooks: true,
+    ...(options.transaction ? { transaction: options.transaction } : {}),
   });
 
-  return getLeaveTypeById(id);
+  return getLeaveTypeById(id, options);
 }
 
 /**
  * Soft delete leave type and its 1:1 detail records.
  */
-export async function deleteLeaveType(id) {
-  return sequelize.transaction(async (t) => {
+export async function deleteLeaveType(id, options = {}) {
+  const execute = async (t) => {
     await model.leaveTypeEligibilityModel.destroy({
       where: { leaveTypeId: id },
+      individualHooks: true,
       transaction: t,
     });
     await model.leaveTypeHolidaysCarryForwardModel.destroy({
       where: { leaveTypeId: id },
+      individualHooks: true,
       transaction: t,
     });
     await model.leaveTypeEncashmentModel.destroy({
       where: { leaveTypeId: id },
+      individualHooks: true,
       transaction: t,
     });
     return scoped(model.leaveTypeModel).destroy({
       where: { id },
+      individualHooks: true,
       transaction: t,
     });
-  });
+  };
+
+  if (options.transaction) {
+    return execute(options.transaction);
+  }
+  return sequelize.transaction(execute);
 }

@@ -12,6 +12,8 @@ import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsB
 import * as studentRepository from '../modules/student/repository/studentRepository.js';
 import { resolveProgramTerm, resolveStudentSection } from '../utility/classSectionIncludes.js';
 import { buildTermName, termsForYear, resolveTotalTerms } from '../utility/courseTerms.js';
+import { withAuditEvent } from '../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../const/auditEvents.js';
 
 function coercePositiveInt(value) {
     if (value == null || value === '') return null;
@@ -169,29 +171,27 @@ export async function addAffiliatedUniversity(data, createdBy) {
 }
 
 export async function addCourse(data, createdBy) {
-    const normalized = normalizeAddCoursePayload(data);
+    return await withAuditEvent(AUDIT_EVENTS.COURSE_CREATE, async ({ transaction }) => {
+        const normalized = normalizeAddCoursePayload(data);
 
-    if (!normalized.course_levelId) {
-        throw new Error('course_levelId is required');
-    }
-    if (!normalized.courses.length) {
-        throw new Error('courses array is required');
-    }
-
-    let affiliatedUniversityId = normalized.affiliatedUniversityId ?? null;
-    if (affiliatedUniversityId) {
-        const affiliated = await instituteRepository.getAffiliatedUniversityById(affiliatedUniversityId);
-        if (!affiliated) {
-            throw new Error('affiliatedUniversityId not found for this institute');
+        if (!normalized.course_levelId) {
+            throw new Error('course_levelId is required');
         }
-    } else {
-        affiliatedUniversityId = await instituteRepository.findDefaultAffiliatedUniversityId();
-    }
+        if (!normalized.courses.length) {
+            throw new Error('courses array is required');
+        }
 
-    const results = [];
-    const transaction = await sequelize.transaction();
+        let affiliatedUniversityId = normalized.affiliatedUniversityId ?? null;
+        if (affiliatedUniversityId) {
+            const affiliated = await instituteRepository.getAffiliatedUniversityById(affiliatedUniversityId, { transaction });
+            if (!affiliated) {
+                throw new Error('affiliatedUniversityId not found for this institute');
+            }
+        } else {
+            affiliatedUniversityId = await instituteRepository.findDefaultAffiliatedUniversityId({ transaction });
+        }
 
-    try {
+        const results = [];
         for (const course of normalized.courses) {
             if (!course.courseName || !course.courseCode) {
                 throw new Error('courseName and courseCode are required for each course');
@@ -236,85 +236,85 @@ export async function addCourse(data, createdBy) {
             results.push(result);
         }
 
-        await transaction.commit();
         return results;
-    } catch (error) {
-        await transaction.rollback();
-        console.error('Error adding courses:', error);
-        throw error;
-    }
+    });
 }
 
 export async function updateCourse(data) {
-    const {
-        courseId,
-        courseName,
-        courseCode,
-        departmentId: departmentIdInput,
-        subAccountId: subAccountIdInput,
-        affiliatedUniversityId: affiliatedUniversityIdInput,
-    } = data;
+    return await withAuditEvent(AUDIT_EVENTS.COURSE_UPDATE, async ({ transaction }) => {
+        const {
+            courseId,
+            courseName,
+            courseCode,
+            departmentId: departmentIdInput,
+            subAccountId: subAccountIdInput,
+            affiliatedUniversityId: affiliatedUniversityIdInput,
+        } = data;
 
-    const course = await getCourseByCourseId(courseId);
-    if (!course) {
-        throw new Error('Course not found');
-    }
-
-    const updateData = {};
-    if (courseName != null) {
-        updateData.courseName = courseName;
-    }
-    if (courseCode != null) {
-        updateData.courseCode = courseCode;
-    }
-
-    const programId =
-        departmentIdInput !== undefined
-            ? departmentIdInput
-            : subAccountIdInput;
-
-    if (programId !== undefined) {
-        if (programId == null) {
-            throw new Error('departmentId cannot be null');
+        const course = await getCourseByCourseId(courseId);
+        if (!course) {
+            throw new Error('Course not found');
         }
-        updateData.departmentId = await resolveDepartmentId(programId);
-    }
 
-    if (affiliatedUniversityIdInput !== undefined) {
-        if (affiliatedUniversityIdInput == null) {
-            updateData.affiliatedUniversityId = null;
-        } else {
-            const affiliated = await instituteRepository.getAffiliatedUniversityById(
-                affiliatedUniversityIdInput,
-            );
-            if (!affiliated) {
-                throw new Error('affiliatedUniversityId not found for this institute');
+        const updateData = {};
+        if (courseName != null) {
+            updateData.courseName = courseName;
+        }
+        if (courseCode != null) {
+            updateData.courseCode = courseCode;
+        }
+
+        const programId =
+            departmentIdInput !== undefined
+                ? departmentIdInput
+                : subAccountIdInput;
+
+        if (programId !== undefined) {
+            if (programId == null) {
+                throw new Error('departmentId cannot be null');
             }
-            updateData.affiliatedUniversityId = affiliatedUniversityIdInput;
+            updateData.departmentId = await resolveDepartmentId(programId);
         }
-    }
 
-    const updated = await updateCourseById(courseId, updateData);
-    if (!updated) {
-        throw new Error('Course not found');
-    }
+        if (affiliatedUniversityIdInput !== undefined) {
+            if (affiliatedUniversityIdInput == null) {
+                updateData.affiliatedUniversityId = null;
+            } else {
+                const affiliated = await instituteRepository.getAffiliatedUniversityById(
+                    affiliatedUniversityIdInput,
+                    { transaction },
+                );
+                if (!affiliated) {
+                    throw new Error('affiliatedUniversityId not found for this institute');
+                }
+                updateData.affiliatedUniversityId = affiliatedUniversityIdInput;
+            }
+        }
 
-    return updated;
+        const updated = await updateCourseById(courseId, updateData, { transaction });
+        if (!updated) {
+            throw new Error('Course not found');
+        }
+
+        return updated;
+    });
 }
 
 export async function changeCourseStatus(courseId, isActive) {
-    const course = await getCourseByCourseId(courseId);
-    if (!course) {
-        throw new Error('Course not found');
-    }
+    return await withAuditEvent(AUDIT_EVENTS.COURSE_STATUS_CHANGE, async ({ transaction }) => {
+        const course = await getCourseByCourseId(courseId);
+        if (!course) {
+            throw new Error('Course not found');
+        }
 
-    await changeCourseStatuss(courseId, { isActive });
+        await changeCourseStatuss(courseId, { isActive }, { transaction });
 
-    return {
-        courseId: Number(courseId),
-        isActive,
-        message: isActive ? 'Course activated successfully' : 'Course deactivated successfully',
-    };
+        return {
+            courseId: Number(courseId),
+            isActive,
+            message: isActive ? 'Course activated successfully' : 'Course deactivated successfully',
+        };
+    });
 }
 
 export async function addSpecialization(data, createdBy) {
@@ -342,36 +342,40 @@ export async function addSubject(data, createdBy) {
     const { courseId, specializationId, componentIds, subjectComponentIds, ...subject } = data;
     await assertCourseIsActive(courseId, 'have new subjects added');
 
-    const created = await mainRepository.addSubject({
-        ...subject,
-        courseId,
-        specializationId,
-        createdBy,
-        isActive: subject.isActive ?? true,
-    });
+    return await withAuditEvent(AUDIT_EVENTS.SUBJECT_CREATE, async ({ transaction }) => {
+        const created = await mainRepository.addSubject({
+            ...subject,
+            courseId,
+            specializationId,
+            createdBy,
+            isActive: subject.isActive ?? true,
+        }, { transaction });
 
-    const targetComponentIds = componentIds || subjectComponentIds;
-    let mappedComponents = [];
-    if (Array.isArray(targetComponentIds) && targetComponentIds.length > 0) {
-        await syncSubjectComponents(created.subjectId, targetComponentIds);
-        const mappings = await model.subjectComponentMappingModel.findAll({
-            where: { subjectId: created.subjectId },
-            include: [{ model: model.subjectComponentModel, as: 'component' }]
-        });
-        mappedComponents = mappings.map(m => m.component);
-    } else if (subject.subjectCategory) {
-        const comp = await model.subjectComponentModel.findOne({
-            where: { componentName: subject.subjectCategory.trim() }
-        });
-        if (comp) {
-            await syncSubjectComponents(created.subjectId, [comp.id]);
-            mappedComponents = [comp];
+        const targetComponentIds = componentIds || subjectComponentIds;
+        let mappedComponents = [];
+        if (Array.isArray(targetComponentIds) && targetComponentIds.length > 0) {
+            await syncSubjectComponents(created.subjectId, targetComponentIds, { transaction });
+            const mappings = await model.subjectComponentMappingModel.findAll({
+                where: { subjectId: created.subjectId },
+                include: [{ model: model.subjectComponentModel, as: 'component' }],
+                transaction,
+            });
+            mappedComponents = mappings.map(m => m.component);
+        } else if (subject.subjectCategory) {
+            const comp = await model.subjectComponentModel.findOne({
+                where: { componentName: subject.subjectCategory.trim() },
+                transaction,
+            });
+            if (comp) {
+                await syncSubjectComponents(created.subjectId, [comp.id], { transaction });
+                mappedComponents = [comp];
+            }
         }
-    }
 
-    const plain = created.get ? created.get({ plain: true }) : { ...created };
-    plain.components = mappedComponents;
-    return plain;
+        const plain = created.get ? created.get({ plain: true }) : { ...created };
+        plain.components = mappedComponents;
+        return plain;
+    });
 }
 
 export async function updateSubject(data) {
@@ -381,14 +385,16 @@ export async function updateSubject(data) {
         await assertCourseIsActive(payload.courseId, 'receive subject updates');
     }
 
-    const result = await mainRepository.updateSubject(subjectId, payload);
+    return await withAuditEvent(AUDIT_EVENTS.SUBJECT_UPDATE, async ({ transaction }) => {
+        const result = await mainRepository.updateSubject(subjectId, payload, { transaction });
 
-    const targetComponentIds = componentIds || subjectComponentIds;
-    if (Array.isArray(targetComponentIds)) {
-        await syncSubjectComponents(subjectId, targetComponentIds);
-    }
+        const targetComponentIds = componentIds || subjectComponentIds;
+        if (Array.isArray(targetComponentIds)) {
+            await syncSubjectComponents(subjectId, targetComponentIds, { transaction });
+        }
 
-    return result;
+        return result;
+    });
 }
 
 export async function addClassSections(data, createdBy) {
@@ -406,19 +412,13 @@ export async function addClassSections(data, createdBy) {
         seenKeys.add(key);
     }
 
-    const transaction = await sequelize.transaction();
-    try {
+    return await withAuditEvent(AUDIT_EVENTS.CLASS_SECTION_CREATE, async ({ transaction }) => {
         const results = [];
         for (const item of items) {
             results.push(await createOneClassSection(item, createdBy, transaction));
         }
-        await transaction.commit();
         return isBulk ? results : results[0];
-    } catch (error) {
-        await transaction.rollback();
-        console.error('Error adding class:', error);
-        throw error;
-    }
+    });
 }
 
 async function createOneClassSection(data, createdBy, transaction) {

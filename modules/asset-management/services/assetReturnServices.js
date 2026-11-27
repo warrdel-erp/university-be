@@ -3,6 +3,8 @@ import sequelize from "../../../database/sequelizeConfig.js";
 import * as issueRepo from "../repository/assetIssueRepository.js";
 import * as returnRepo from "../repository/assetReturnRepository.js";
 import * as paymentRepo from "../../../repository/studentFeePaymentRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import {
   decimalAdd,
   decimalCompare,
@@ -506,7 +508,7 @@ async function processAssetReturnItems(returnDate, items, transaction, options =
 }
 
 export async function returnAssetIssueItems(body, createdBy) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.ASSET_RETURN_CREATE, async ({ transaction }) => {
     return await processAssetReturnItems(body.returnDate, body.items, transaction, {
       securityAmount: body.securityAmount,
       fineAmount: body.fineAmount,

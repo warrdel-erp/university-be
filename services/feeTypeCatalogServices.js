@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as feeTypeCatalogRepo from "../repository/feeTypeCatalogRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function catalogUpdatePayload(body) {
   const { feeTypeCatalogId, ...rest } = body;
@@ -7,7 +9,7 @@ function catalogUpdatePayload(body) {
 }
 
 export async function addFeeTypeCatalog(body) {
-  const row = await sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_TYPE_CATALOG_CREATE, async ({ transaction }) => {
     const { name, amount, feeTypeCategoryId, ledgerType, description, refundable, code } = body;
 
     const category = await feeTypeCatalogRepo.findFeeTypeCategoryByIdForInstitute(
@@ -33,8 +35,6 @@ export async function addFeeTypeCatalog(body) {
 
     return created.get({ plain: true });
   });
-
-  return row;
 }
 
 export async function listFeeTypeCatalogs() {
@@ -50,7 +50,7 @@ export async function getSingleFeeTypeCatalog(feeTypeCatalogId) {
 }
 
 export async function updateFeeTypeCatalog(feeTypeCatalogId, body) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_TYPE_CATALOG_UPDATE, async ({ transaction }) => {
     const existing = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, {
       transaction,
     });
@@ -82,7 +82,7 @@ export async function updateFeeTypeCatalog(feeTypeCatalogId, body) {
 }
 
 export async function deleteFeeTypeCatalog(feeTypeCatalogId) {
-  await sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_TYPE_CATALOG_DELETE, async ({ transaction }) => {
     const existing = await feeTypeCatalogRepo.findFeeTypeCatalogById(feeTypeCatalogId, {
       transaction,
     });
@@ -105,7 +105,6 @@ export async function deleteFeeTypeCatalog(feeTypeCatalogId) {
     if (!ok) {
       throw new Error("Delete failed");
     }
+    return true;
   });
-
-  return true;
 }

@@ -51,8 +51,9 @@ const positionListInclude = [
     },
 ];
 
-export async function addOrgPosition(data) {
-    const transaction = await sequelize.transaction();
+export async function addOrgPosition(data, options = {}) {
+    const transaction = options.transaction || await sequelize.transaction();
+    const ownsTransaction = !options.transaction;
     try {
         let isLevelHead = data.isLevelHead === true;
 
@@ -82,10 +83,14 @@ export async function addOrgPosition(data) {
             { ...data, isLevelHead },
             { transaction },
         );
-        await transaction.commit();
+        if (ownsTransaction) {
+            await transaction.commit();
+        }
         return getOrgPositionById(position.departmentPositionId);
     } catch (error) {
-        await transaction.rollback();
+        if (ownsTransaction) {
+            await transaction.rollback();
+        }
         throw error;
     }
 }
@@ -453,9 +458,10 @@ export async function updateOrgPosition(departmentPositionId, data, options = {}
     }
 }
 
-export async function deleteOrgPosition(departmentPositionId, updatedBy) {
+export async function deleteOrgPosition(departmentPositionId, updatedBy, options = {}) {
     const positionId = Number(departmentPositionId);
-    const transaction = await sequelize.transaction();
+    const transaction = options.transaction || await sequelize.transaction();
+    const ownsTransaction = !options.transaction;
     try {
         const existing = await scoped(model.departmentPositionsModel).findOne({
             attributes: ['departmentPositionId', 'departmentId', 'level', 'positionName', 'isDefault'],
@@ -463,7 +469,9 @@ export async function deleteOrgPosition(departmentPositionId, updatedBy) {
             transaction,
         });
         if (!existing) {
-            await transaction.rollback();
+            if (ownsTransaction) {
+                await transaction.rollback();
+            }
             return false;
         }
 
@@ -473,10 +481,12 @@ export async function deleteOrgPosition(departmentPositionId, updatedBy) {
 
         await scoped(model.userDepartmentPositionsModel).destroy({
             where: { departmentPositionId: positionId },
+            individualHooks: true,
             transaction,
         });
         const deleted = await scoped(model.departmentPositionsModel).destroy({
             where: { departmentPositionId: positionId },
+            individualHooks: true,
             transaction,
         });
 
@@ -489,10 +499,14 @@ export async function deleteOrgPosition(departmentPositionId, updatedBy) {
             );
         }
 
-        await transaction.commit();
+        if (ownsTransaction) {
+            await transaction.commit();
+        }
         return deleted > 0;
     } catch (error) {
-        await transaction.rollback();
+        if (ownsTransaction) {
+            await transaction.rollback();
+        }
         throw error;
     }
 }
@@ -509,10 +523,12 @@ export async function findActiveHead(departmentPositionId, userId, transaction) 
     });
 }
 
-export async function addHead(data) {
+export async function addHead(data, options = {}) {
     return scoped(model.userDepartmentPositionsModel).create({
         ...data,
         status: 'ACTIVE',
+    }, {
+        transaction: options.transaction,
     });
 }
 
@@ -539,9 +555,10 @@ export async function getHeadById(userDepartmentPositionId) {
     });
 }
 
-export async function updateHead(userDepartmentPositionId, data, updatedBy) {
+export async function updateHead(userDepartmentPositionId, data, updatedBy, options = {}) {
     const headId = Number(userDepartmentPositionId);
-    const transaction = await sequelize.transaction();
+    const transaction = options.transaction || await sequelize.transaction();
+    const ownsTransaction = !options.transaction;
     try {
         const existing = await scoped(model.userDepartmentPositionsModel).findOne({
             where: {
@@ -551,7 +568,9 @@ export async function updateHead(userDepartmentPositionId, data, updatedBy) {
             transaction,
         });
         if (!existing) {
-            await transaction.rollback();
+            if (ownsTransaction) {
+                await transaction.rollback();
+            }
             return null;
         }
 
@@ -562,25 +581,33 @@ export async function updateHead(userDepartmentPositionId, data, updatedBy) {
                     userDepartmentPositionId: headId,
                     status: 'ACTIVE',
                 },
+                individualHooks: true,
                 transaction,
             },
         );
         if (count === 0) {
-            await transaction.rollback();
+            if (ownsTransaction) {
+                await transaction.rollback();
+            }
             return null;
         }
 
-        await transaction.commit();
+        if (ownsTransaction) {
+            await transaction.commit();
+        }
         return getHeadById(headId);
     } catch (error) {
-        await transaction.rollback();
+        if (ownsTransaction) {
+            await transaction.rollback();
+        }
         throw error;
     }
 }
 
-export async function deleteHead(userDepartmentPositionId, updatedBy, endDate) {
+export async function deleteHead(userDepartmentPositionId, updatedBy, endDate, options = {}) {
     const headId = Number(userDepartmentPositionId);
-    const transaction = await sequelize.transaction();
+    const transaction = options.transaction || await sequelize.transaction();
+    const ownsTransaction = !options.transaction;
     try {
         const existing = await scoped(model.userDepartmentPositionsModel).findOne({
             where: {
@@ -590,7 +617,9 @@ export async function deleteHead(userDepartmentPositionId, updatedBy, endDate) {
             transaction,
         });
         if (!existing) {
-            await transaction.rollback();
+            if (ownsTransaction) {
+                await transaction.rollback();
+            }
             return false;
         }
 
@@ -609,18 +638,25 @@ export async function deleteHead(userDepartmentPositionId, updatedBy, endDate) {
                     userDepartmentPositionId: headId,
                     status: 'ACTIVE',
                 },
+                individualHooks: true,
                 transaction,
             },
         );
         if (count === 0) {
-            await transaction.rollback();
+            if (ownsTransaction) {
+                await transaction.rollback();
+            }
             return false;
         }
 
-        await transaction.commit();
+        if (ownsTransaction) {
+            await transaction.commit();
+        }
         return true;
     } catch (error) {
-        await transaction.rollback();
+        if (ownsTransaction) {
+            await transaction.rollback();
+        }
         throw error;
     }
 }

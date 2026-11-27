@@ -3,6 +3,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/electivePoolSubjectMappingRepository.js";
 import * as poolRepo from "../repository/electivePoolRepository.js";
 import { requestContext } from "../utility/requestContext.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -84,7 +86,7 @@ export async function mapSubjectsToPool(body) {
 
   const store = requestContext.getStore() || {};
 
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.ELECTIVE_POOL_SUBJECT_MAP, async ({ transaction }) => {
     const inserted = await repo.mapSubjectsToPool(
       parseInt(electivePoolId, 10),
       subjectIds,
@@ -115,20 +117,23 @@ export async function unmapSubjectFromPool(body) {
     throw httpError("subjectId is required", 400);
   }
 
-  const deleted = await repo.unmapSubjectFromPool(
-    parseInt(electivePoolId, 10),
-    parseInt(subjectId, 10)
-  );
+  return await withAuditEvent(AUDIT_EVENTS.ELECTIVE_POOL_SUBJECT_UNMAP, async ({ transaction }) => {
+    const deleted = await repo.unmapSubjectFromPool(
+      parseInt(electivePoolId, 10),
+      parseInt(subjectId, 10),
+      { transaction }
+    );
 
-  if (!deleted) {
-    throw httpError("Subject was not mapped to this elective pool", 404);
-  }
+    if (!deleted) {
+      throw httpError("Subject was not mapped to this elective pool", 404);
+    }
 
-  return {
-    poolId: parseInt(electivePoolId, 10),
-    subjectId: parseInt(subjectId, 10),
-    removed: true,
-  };
+    return {
+      poolId: parseInt(electivePoolId, 10),
+      subjectId: parseInt(subjectId, 10),
+      removed: true,
+    };
+  });
 }
 
 export async function getMappedSubjectsForPool(poolId) {

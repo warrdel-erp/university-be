@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as gradingSchemaRepo from "../repository/gradingSchemaRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 export async function createGradingSchema(payload, user) {
   const universityId = user?.universityId || payload.universityId;
@@ -16,8 +18,7 @@ export async function createGradingSchema(payload, user) {
     throw error;
   }
 
-  const t = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_CREATE, async ({ transaction: t }) => {
     const gradingData = {
       universityId: Number(universityId),
       gradingName: payload.gradingName,
@@ -42,12 +43,8 @@ export async function createGradingSchema(payload, user) {
       }
     }
 
-    await t.commit();
     return createdGrading;
-  } catch (error) {
-    await t.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function getGradingSchemas(filters) {
@@ -90,8 +87,7 @@ export async function updateGradingSchema(gradingSchemaId, payload, user) {
     }
   }
 
-  const t = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_UPDATE, async ({ transaction: t }) => {
     const updateData = {
       updatedBy: user?.userId || null,
     };
@@ -123,12 +119,8 @@ export async function updateGradingSchema(gradingSchemaId, payload, user) {
       await gradingSchemaRepo.syncGradingSchemaGrades(gradingSchemaId, payload.grades, { transaction: t });
     }
 
-    await t.commit();
-    return await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId);
-  } catch (error) {
-    await t.rollback();
-    throw error;
-  }
+    return await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId, { transaction: t });
+  });
 }
 
 export async function deleteGradingSchema(gradingSchemaId) {
@@ -146,33 +138,30 @@ export async function deleteGradingSchema(gradingSchemaId) {
     throw error;
   }
 
-  const t = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_DELETE, async ({ transaction: t }) => {
     await gradingSchemaRepo.deleteGradingSchema(gradingSchemaId, { transaction: t });
-    await t.commit();
     return { message: "Grading schema deleted successfully" };
-  } catch (error) {
-    await t.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function createGradingSchemaGrade(gradingSchemaId, payload) {
-  const schema = await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId);
-  if (!schema) {
-    const error = new Error("Grading schema not found");
-    error.statusCode = 404;
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_GRADE_CREATE, async ({ transaction }) => {
+    const schema = await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId, { transaction });
+    if (!schema) {
+      const error = new Error("Grading schema not found");
+      error.statusCode = 404;
+      throw error;
+    }
 
-  const isMapped = schema.get("isMapped") ?? await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(gradingSchemaId, schema.universityId);
-  if (isMapped) {
-    const error = new Error("Cannot add grades to grading schema as it is mapped to an academic regulation");
-    error.statusCode = 400;
-    throw error;
-  }
+    const isMapped = schema.get("isMapped") ?? await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(gradingSchemaId, schema.universityId);
+    if (isMapped) {
+      const error = new Error("Cannot add grades to grading schema as it is mapped to an academic regulation");
+      error.statusCode = 400;
+      throw error;
+    }
 
-  return await gradingSchemaRepo.createGradingSchemaGrade(gradingSchemaId, payload);
+    return await gradingSchemaRepo.createGradingSchemaGrade(gradingSchemaId, payload, { transaction });
+  });
 }
 
 export async function getGradingSchemaGrades(gradingSchemaId) {
@@ -196,55 +185,73 @@ export async function getGradingSchemaGradeById(gradingSchemaGradeId) {
 }
 
 export async function updateGradingSchemaGrade(gradingSchemaGradeId, payload) {
-  const grade = await getGradingSchemaGradeById(gradingSchemaGradeId);
-  const isMapped = await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(grade.gradingId);
-  if (isMapped) {
-    const error = new Error("Cannot edit grade as the grading schema is mapped to an academic regulation");
-    error.statusCode = 400;
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_GRADE_UPDATE, async ({ transaction }) => {
+    const grade = await gradingSchemaRepo.getGradingSchemaGradeById(gradingSchemaGradeId, { transaction });
+    if (!grade) {
+      const error = new Error("Grading schema grade not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    const isMapped = await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(grade.gradingId);
+    if (isMapped) {
+      const error = new Error("Cannot edit grade as the grading schema is mapped to an academic regulation");
+      error.statusCode = 400;
+      throw error;
+    }
 
-  return await gradingSchemaRepo.updateGradingSchemaGrade(gradingSchemaGradeId, payload);
+    return await gradingSchemaRepo.updateGradingSchemaGrade(gradingSchemaGradeId, payload, { transaction });
+  });
 }
 
 export async function deleteGradingSchemaGrade(gradingSchemaGradeId) {
-  const grade = await getGradingSchemaGradeById(gradingSchemaGradeId);
-  const isMapped = await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(grade.gradingId);
-  if (isMapped) {
-    const error = new Error("Cannot delete grade as the grading schema is mapped to an academic regulation");
-    error.statusCode = 400;
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_GRADE_DELETE, async ({ transaction }) => {
+    const grade = await gradingSchemaRepo.getGradingSchemaGradeById(gradingSchemaGradeId, { transaction });
+    if (!grade) {
+      const error = new Error("Grading schema grade not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    const isMapped = await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(grade.gradingId);
+    if (isMapped) {
+      const error = new Error("Cannot delete grade as the grading schema is mapped to an academic regulation");
+      error.statusCode = 400;
+      throw error;
+    }
 
-  await gradingSchemaRepo.deleteGradingSchemaGrade(gradingSchemaGradeId);
-  return { message: "Grade deleted successfully" };
+    await gradingSchemaRepo.deleteGradingSchemaGrade(gradingSchemaGradeId, { transaction });
+    return { message: "Grade deleted successfully" };
+  });
 }
 
 export async function publishGradingSchema(gradingSchemaId, user) {
-  const existing = await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId);
-  if (!existing) {
-    const error = new Error("Grading schema not found");
-    error.statusCode = 404;
-    throw error;
-  }
-  return await gradingSchemaRepo.updateGradingSchemaStatus(gradingSchemaId, "PUBLISHED", user?.userId || null);
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_PUBLISH, async ({ transaction }) => {
+    const existing = await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId, { transaction });
+    if (!existing) {
+      const error = new Error("Grading schema not found");
+      error.statusCode = 404;
+      throw error;
+    }
+    return await gradingSchemaRepo.updateGradingSchemaStatus(gradingSchemaId, "PUBLISHED", user?.userId || null, { transaction });
+  });
 }
 
 export async function saveGradingSchemaDraft(gradingSchemaId, user) {
-  const existing = await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId);
-  if (!existing) {
-    const error = new Error("Grading schema not found");
-    error.statusCode = 404;
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.GRADING_SCHEMA_DRAFT, async ({ transaction }) => {
+    const existing = await gradingSchemaRepo.getGradingSchemaById(gradingSchemaId, { transaction });
+    if (!existing) {
+      const error = new Error("Grading schema not found");
+      error.statusCode = 404;
+      throw error;
+    }
 
-  const isMapped = existing.get("isMapped") ?? await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(gradingSchemaId, existing.universityId);
-  if (isMapped) {
-    const error = new Error("Cannot change grading schema status to draft as it is mapped to an academic regulation");
-    error.statusCode = 400;
-    throw error;
-  }
+    const isMapped = existing.get("isMapped") ?? await gradingSchemaRepo.isGradingSchemaMappedToAcademicRegulation(gradingSchemaId, existing.universityId);
+    if (isMapped) {
+      const error = new Error("Cannot change grading schema status to draft as it is mapped to an academic regulation");
+      error.statusCode = 400;
+      throw error;
+    }
 
-  return await gradingSchemaRepo.updateGradingSchemaStatus(gradingSchemaId, "DRAFT", user?.userId || null);
+    return await gradingSchemaRepo.updateGradingSchemaStatus(gradingSchemaId, "DRAFT", user?.userId || null, { transaction });
+  });
 }
 

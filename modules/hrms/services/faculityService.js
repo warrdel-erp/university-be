@@ -1,4 +1,6 @@
 import * as faculityLoadRepository from "../repository/faculityLoadRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import {
   decimalAdd,
   decimalDivide,
@@ -232,11 +234,13 @@ async function attachLiveWeeklyLoad(rows) {
 }
 
 export async function addFaculityLoad(data, createdBy, updatedBy) {
-  const payload = normalizeLoadWritePayload(data);
-  payload.createdBy = createdBy;
-  payload.updatedBy = updatedBy;
-  const result = await faculityLoadRepository.addFaculityLoad(payload);
-  return formatFaculityLoad(result, 0);
+  return withAuditEvent(AUDIT_EVENTS.FACULTY_LOAD_CREATE, async ({ transaction }) => {
+    const payload = normalizeLoadWritePayload(data);
+    payload.createdBy = createdBy;
+    payload.updatedBy = updatedBy;
+    const result = await faculityLoadRepository.addFaculityLoad(payload, { transaction });
+    return formatFaculityLoad(result, 0);
+  });
 }
 
 export async function getFaculityLoadDetails(academicYearId) {
@@ -252,21 +256,25 @@ export async function getSingleFaculityLoadDetails(userId) {
 }
 
 export async function updateFaculityLoad(faculityLoadId, info, updatedBy) {
-  try {
-    const payload = normalizeLoadWritePayload(info);
-    payload.updatedBy = updatedBy;
-    return faculityLoadRepository.updateFaculityLoad(faculityLoadId, payload);
-  } catch (error) {
-    console.error("Error updating faculity load:", error);
-    throw error.message === "Invalid currentLoad" ||
-      error.message === "Invalid definedLoad"
-      ? error
-      : new Error("Failed to update time table");
-  }
+  return withAuditEvent(AUDIT_EVENTS.FACULTY_LOAD_UPDATE, async ({ transaction }) => {
+    try {
+      const payload = normalizeLoadWritePayload(info);
+      payload.updatedBy = updatedBy;
+      return await faculityLoadRepository.updateFaculityLoad(faculityLoadId, payload, { transaction });
+    } catch (error) {
+      console.error("Error updating faculity load:", error);
+      throw error.message === "Invalid currentLoad" ||
+        error.message === "Invalid definedLoad"
+        ? error
+        : new Error("Failed to update time table");
+    }
+  });
 }
 
 export async function deleteFaculityLoad(faculityLoadId) {
-  return faculityLoadRepository.deleteFaculityLoad(faculityLoadId);
+  return withAuditEvent(AUDIT_EVENTS.FACULTY_LOAD_DELETE, async ({ transaction }) => {
+    return faculityLoadRepository.deleteFaculityLoad(faculityLoadId, { transaction });
+  });
 }
 
 /**

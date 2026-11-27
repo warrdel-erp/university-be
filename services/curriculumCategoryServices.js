@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/curriculumCategoryRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -9,6 +11,12 @@ function httpError(message, statusCode = 400) {
 
 function normalizePayload(body = {}) {
   const payload = {};
+
+  if (body.universityId !== undefined) {
+    payload.universityId = body.universityId;
+  } else if (body.university_id !== undefined) {
+    payload.universityId = body.university_id;
+  }
 
   if (body.categoryName !== undefined) {
     payload.categoryName = body.categoryName;
@@ -43,7 +51,7 @@ export async function addCurriculumCategory(body) {
     throw httpError("code is required", 400);
   }
 
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_CATEGORY_CREATE, async ({ transaction }) => {
     const existing = await repo.findCurriculumCategoryByCode(normalized.code, { transaction });
     if (existing) {
       throw httpError(`Curriculum category with code '${normalized.code}' already exists`, 409);
@@ -51,6 +59,7 @@ export async function addCurriculumCategory(body) {
 
     const created = await repo.createCurriculumCategory(
       {
+        ...(normalized.universityId ? { universityId: normalized.universityId } : {}),
         categoryName: normalized.categoryName,
         code: normalized.code,
         isElectiveCoursework: normalized.isElectiveCoursework ?? true,
@@ -96,7 +105,7 @@ export async function getCurriculumCategoryById(id) {
 export async function updateCurriculumCategory(id, body) {
   const normalized = normalizePayload(body);
 
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_CATEGORY_UPDATE, async ({ transaction }) => {
     const existing = await repo.findCurriculumCategoryById(id, { transaction });
     if (!existing) {
       throw httpError(`Curriculum category not found with ID ${id}`, 404);
@@ -122,7 +131,7 @@ export async function updateCurriculumCategory(id, body) {
 }
 
 export async function deleteCurriculumCategory(id) {
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_CATEGORY_DELETE, async ({ transaction }) => {
     const existing = await repo.findCurriculumCategoryById(id, { transaction });
     if (!existing) {
       throw httpError(`Curriculum category not found with ID ${id}`, 404);

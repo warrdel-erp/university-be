@@ -87,6 +87,7 @@ import examResult from "./router/examResultRoute.js";
 import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
 import logsRoute from "./router/logsRoute.js";
+import auditLogRoute from "./router/auditLogRoute.js";
 
 // middleware
 setupLogging(app);
@@ -122,6 +123,9 @@ app.use(httpAuditLogger);
 
 // API Request Inspector & Logs Dashboard
 app.use("/api/logs", logsRoute);
+
+// Database Event Audit Logs API
+app.use("/api/audit-logs", auditLogRoute);
 
 //routes
 

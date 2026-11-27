@@ -1,6 +1,8 @@
 import sequelize from "../../../database/sequelizeConfig.js";
 import * as repo from "../repository/amcServiceTicketRepository.js";
 import { resolveIssueMemberFromUserId } from "../repository/assetIssueRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import {
   currentTicketYear,
   formatTicketNumber,
@@ -76,7 +78,7 @@ function assertAssetIssuedToMember(assetId, assetIds) {
 
 export async function addServiceTicket(body) {
   try {
-    return await sequelize.transaction(async (transaction) => {
+    return await withAuditEvent(AUDIT_EVENTS.AMC_SERVICE_TICKET_CREATE, async ({ transaction }) => {
       const assetCategoryId = await resolveAssetCategoryId(body.assetId, transaction);
       const amcVendorId = await resolveAmcVendorId(
         body.amcVendorId,
@@ -185,7 +187,7 @@ export async function getMySingleServiceTicket(userId, serviceTicketId) {
 
 export async function updateServiceTicket(serviceTicketId, body) {
   try {
-    return await sequelize.transaction(async (transaction) => {
+    return await withAuditEvent(AUDIT_EVENTS.AMC_SERVICE_TICKET_UPDATE, async ({ transaction }) => {
       const existing = assertTicketExists(
         await repo.findServiceTicketMetaById(serviceTicketId, { transaction })
       );
@@ -223,7 +225,7 @@ export async function updateServiceTicket(serviceTicketId, body) {
 
 export async function deleteServiceTicket(serviceTicketId) {
   try {
-    return await sequelize.transaction(async (transaction) => {
+    return await withAuditEvent(AUDIT_EVENTS.AMC_SERVICE_TICKET_DELETE, async ({ transaction }) => {
       const existing = assertTicketExists(
         await repo.findServiceTicketMetaById(serviceTicketId, { transaction })
       );

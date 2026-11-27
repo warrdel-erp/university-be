@@ -263,13 +263,17 @@ export async function createInventoryItem(data, options = {}) {
 }
 
 export async function bulkCreateInventoryItems(rows, options = {}) {
-  return scoped(model.assetInventoryItemModel).bulkCreate(rows, { transaction: options.transaction });
+  return scoped(model.assetInventoryItemModel).bulkCreate(rows, {
+    transaction: options.transaction,
+    individualHooks: true,
+  });
 }
 
 export async function updateInventoryItem(assetInventoryItemId, assetId, payload, options = {}) {
   const [affected] = await scoped(model.assetInventoryItemModel).update(payload, {
     where: { assetInventoryItemId, assetId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -374,6 +378,7 @@ export async function deleteInventoryItem(assetInventoryItemId, options = {}) {
   const deleted = await scoped(model.assetInventoryItemModel).destroy({
     where: { assetInventoryItemId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }
@@ -382,6 +387,7 @@ export async function updateAsset(assetId, payload, options = {}) {
   const [affected] = await scoped(model.assetModel).update(payload, {
     where: { assetId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -390,6 +396,7 @@ export async function deleteAsset(assetId, options = {}) {
   const deleted = await scoped(model.assetModel).destroy({
     where: { assetId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }

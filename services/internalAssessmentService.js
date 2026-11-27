@@ -1,6 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as InternalAssessmentRepository from "../repository/internalAssessmentRepository.js";
 import * as AssessmentEvaluationRepository from "../repository/assessmentEvaluationRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 import {
   decimalAdd,
   decimalCompare,
@@ -216,47 +218,44 @@ export async function createInternalAssessment(payload) {
     payload.issueDate = new Date();
   }
 
-  const transaction = await sequelize.transaction();
+  return await withAuditEvent(
+    AUDIT_EVENTS.INTERNAL_ASSESSMENT_CREATE,
+    async ({ transaction }) => {
+      const assessment =
+        await InternalAssessmentRepository.createInternalAssessment(
+          payload,
+          transaction,
+        );
 
-  try {
-    const assessment =
-      await InternalAssessmentRepository.createInternalAssessment(
-        payload,
+      const { students } =
+        await InternalAssessmentRepository.getStudentsByClassSectionTermId(
+          payload.classSectionTermId,
+          { transaction },
+        );
+
+      const evaluationRows = [];
+      for (const student of students) {
+        evaluationRows.push({
+          studentId: student.studentId,
+          internalAssessmentId: assessment.internalAssessmentId,
+          obtainedMarks: null,
+          universityId: assessment.universityId,
+          instituteId: assessment.instituteId,
+          academicYearId: assessment.academicYearId,
+        });
+      }
+
+      await InternalAssessmentRepository.createStudentEvaluationPlaceholders(
+        evaluationRows,
         transaction,
       );
 
-    const { students } =
-      await InternalAssessmentRepository.getStudentsByClassSectionTermId(
-        payload.classSectionTermId,
+      return await InternalAssessmentRepository.getInternalAssessmentById(
+        assessment.internalAssessmentId,
         { transaction },
       );
-
-    const evaluationRows = [];
-    for (const student of students) {
-      evaluationRows.push({
-        studentId: student.studentId,
-        internalAssessmentId: assessment.internalAssessmentId,
-        obtainedMarks: null,
-        universityId: assessment.universityId,
-        instituteId: assessment.instituteId,
-        academicYearId: assessment.academicYearId,
-      });
-    }
-
-    await InternalAssessmentRepository.createStudentEvaluationPlaceholders(
-      evaluationRows,
-      transaction,
-    );
-
-    await transaction.commit();
-
-    return InternalAssessmentRepository.getInternalAssessmentById(
-      assessment.internalAssessmentId,
-    );
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+    },
+  );
 }
 
 export async function getInternalAssessmentsBySubject(filters) {
@@ -287,41 +286,49 @@ export async function getUserDashboardSku(userId) {
 }
 
 export async function updateInternalAssessment(internalAssessmentId, payload) {
-  const existing =
-    await InternalAssessmentRepository.getInternalAssessmentById(
-      Number(internalAssessmentId),
-    );
+  return await withAuditEvent(
+    AUDIT_EVENTS.INTERNAL_ASSESSMENT_UPDATE,
+    async ({ transaction }) => {
+      const existing =
+        await InternalAssessmentRepository.getInternalAssessmentById(
+          Number(internalAssessmentId),
+          { transaction },
+        );
 
-  if (!existing) {
-    const error = new Error("Internal assessment not found");
-    error.statusCode = 404;
-    throw error;
-  }
+      if (!existing) {
+        const error = new Error("Internal assessment not found");
+        error.statusCode = 404;
+        throw error;
+      }
 
-  const weightagePercentage =
-    payload.weightagePercentage !== undefined
-      ? Number(payload.weightagePercentage)
-      : existing.weightagePercentage != null
-        ? Number(existing.weightagePercentage)
-        : null;
+      const weightagePercentage =
+        payload.weightagePercentage !== undefined
+          ? Number(payload.weightagePercentage)
+          : existing.weightagePercentage != null
+            ? Number(existing.weightagePercentage)
+            : null;
 
-  const weightage =
-    existing.weightage != null ? Number(existing.weightage) : null;
+      const weightage =
+        existing.weightage != null ? Number(existing.weightage) : null;
 
-  if (weightagePercentage != null && weightage != null) {
-    payload.normalizedMaxMarks = decimalMultiply(
-      weightage,
-      decimalDivide(weightagePercentage, 100),
-    );
-  }
+      if (weightagePercentage != null && weightage != null) {
+        payload.normalizedMaxMarks = decimalMultiply(
+          weightage,
+          decimalDivide(weightagePercentage, 100),
+        );
+      }
 
-  await InternalAssessmentRepository.updateInternalAssessment(
-    Number(internalAssessmentId),
-    payload,
-  );
+      await InternalAssessmentRepository.updateInternalAssessment(
+        Number(internalAssessmentId),
+        payload,
+        transaction,
+      );
 
-  return InternalAssessmentRepository.getInternalAssessmentById(
-    Number(internalAssessmentId),
+      return await InternalAssessmentRepository.getInternalAssessmentById(
+        Number(internalAssessmentId),
+        { transaction },
+      );
+    },
   );
 }
 
@@ -390,60 +397,60 @@ export async function getStudentsByClassSectionTermId(classSectionTermId) {
 }
 
 export async function upsertStudentEvaluations(internalAssessmentId, marks) {
-  const assessment =
-    await InternalAssessmentRepository.getInternalAssessmentById(
-      Number(internalAssessmentId),
-    );
+  return await withAuditEvent(
+    AUDIT_EVENTS.INTERNAL_ASSESSMENT_EVALUATION_UPSERT,
+    async ({ transaction }) => {
+      const assessment =
+        await InternalAssessmentRepository.getInternalAssessmentById(
+          Number(internalAssessmentId),
+          { transaction },
+        );
 
-  if (!assessment) {
-    const error = new Error("Internal assessment not found");
-    error.statusCode = 404;
-    throw error;
-  }
+      if (!assessment) {
+        const error = new Error("Internal assessment not found");
+        error.statusCode = 404;
+        throw error;
+      }
 
-  const maximumMarks = Number(assessment.maximumMarks);
+      const maximumMarks = Number(assessment.maximumMarks);
 
-  for (const mark of marks) {
-    if (
-      mark.obtainedMarks !== null &&
-      Number(mark.obtainedMarks) > maximumMarks
-    ) {
-      const error = new Error(
-        `obtainedMarks cannot exceed maximumMarks (${maximumMarks}) for studentId ${mark.studentId}`,
+      for (const mark of marks) {
+        if (
+          mark.obtainedMarks !== null &&
+          Number(mark.obtainedMarks) > maximumMarks
+        ) {
+          const error = new Error(
+            `obtainedMarks cannot exceed maximumMarks (${maximumMarks}) for studentId ${mark.studentId}`,
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+      }
+
+      const rows = [];
+      for (const mark of marks) {
+        rows.push({
+          internalAssessmentId: Number(internalAssessmentId),
+          studentId: mark.studentId,
+          obtainedMarks: mark.obtainedMarks,
+          universityId: assessment.universityId,
+          instituteId: assessment.instituteId,
+          academicYearId: assessment.academicYearId,
+        });
+      }
+
+      await InternalAssessmentRepository.upsertStudentEvaluations(
+        rows,
+        transaction,
       );
-      error.statusCode = 400;
-      throw error;
-    }
-  }
 
-  const transaction = await sequelize.transaction();
-
-  try {
-    const rows = [];
-    for (const mark of marks) {
-      rows.push({
-        internalAssessmentId: Number(internalAssessmentId),
-        studentId: mark.studentId,
-        obtainedMarks: mark.obtainedMarks,
-        universityId: assessment.universityId,
-        instituteId: assessment.instituteId,
-        academicYearId: assessment.academicYearId,
-      });
-    }
-
-    await InternalAssessmentRepository.upsertStudentEvaluations(
-      rows,
-      transaction,
-    );
-    await transaction.commit();
-
-    return InternalAssessmentRepository.getStudentEvaluationsByAssessmentId(
-      Number(internalAssessmentId),
-    );
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+      return await InternalAssessmentRepository.getStudentEvaluationsByAssessmentId(
+        Number(internalAssessmentId),
+        undefined,
+        { transaction },
+      );
+    },
+  );
 }
 
 export async function calculateAndStoreFinalResults(payload) {
@@ -451,57 +458,55 @@ export async function calculateAndStoreFinalResults(payload) {
   const classSectionTermId = Number(payload.classSectionTermId);
   const userId = Number(payload.userId);
 
-  const transaction = await sequelize.transaction();
+  return await withAuditEvent(
+    AUDIT_EVENTS.INTERNAL_ASSESSMENT_FINAL_RESULT_CALCULATE,
+    async ({ transaction }) => {
+      const submittedCount =
+        await AssessmentEvaluationRepository.countSubmittedFinalResults({
+          subjectId,
+          classSectionTermId,
+          transaction,
+        });
 
-  try {
-    const submittedCount =
-      await AssessmentEvaluationRepository.countSubmittedFinalResults({
+      if (submittedCount > 0) {
+        const error = new Error(
+          "Final IA already submitted for this subject and class section. Recalculation is not allowed.",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const { rows, iaMaximumMarks, includedAssessmentCount, weightageSum } =
+        await buildCalculatedFinalResultRows({
+          subjectId,
+          classSectionTermId,
+          userId,
+          iaMaximumMarksInput: payload.iaMaximumMarks,
+          status: "pending",
+          submittedAt: null,
+          transaction,
+        });
+
+      await AssessmentEvaluationRepository.upsertFinalResults(rows, transaction);
+
+      const results = await AssessmentEvaluationRepository.getFinalResults({
         subjectId,
         classSectionTermId,
         transaction,
       });
 
-    if (submittedCount > 0) {
-      const error = new Error(
-        "Final IA already submitted for this subject and class section. Recalculation is not allowed.",
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const { rows, iaMaximumMarks, includedAssessmentCount, weightageSum } =
-      await buildCalculatedFinalResultRows({
+      return {
         subjectId,
         classSectionTermId,
-        userId,
-        iaMaximumMarksInput: payload.iaMaximumMarks,
+        iaMaximumMarks,
+        includedAssessmentCount,
+        weightageSum,
+        studentCount: results.length,
         status: "pending",
-        submittedAt: null,
-        transaction,
-      });
-
-    await AssessmentEvaluationRepository.upsertFinalResults(rows, transaction);
-    await transaction.commit();
-
-    const results = await AssessmentEvaluationRepository.getFinalResults({
-      subjectId,
-      classSectionTermId,
-    });
-
-    return {
-      subjectId,
-      classSectionTermId,
-      iaMaximumMarks,
-      includedAssessmentCount,
-      weightageSum,
-      studentCount: results.length,
-      status: "pending",
-      results,
-    };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+        results,
+      };
+    },
+  );
 }
 
 export async function submitFinalResults(payload) {
@@ -509,59 +514,57 @@ export async function submitFinalResults(payload) {
   const classSectionTermId = Number(payload.classSectionTermId);
   const userId = Number(payload.userId);
 
-  const transaction = await sequelize.transaction();
+  return await withAuditEvent(
+    AUDIT_EVENTS.INTERNAL_ASSESSMENT_FINAL_RESULT_SUBMIT,
+    async ({ transaction }) => {
+      const submittedCount =
+        await AssessmentEvaluationRepository.countSubmittedFinalResults({
+          subjectId,
+          classSectionTermId,
+          transaction,
+        });
 
-  try {
-    const submittedCount =
-      await AssessmentEvaluationRepository.countSubmittedFinalResults({
+      if (submittedCount > 0) {
+        const error = new Error(
+          "Final IA already submitted for this subject and class section",
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      const submittedAt = new Date();
+      const { rows, iaMaximumMarks, includedAssessmentCount, weightageSum } =
+        await buildCalculatedFinalResultRows({
+          subjectId,
+          classSectionTermId,
+          userId,
+          iaMaximumMarksInput: payload.iaMaximumMarks,
+          status: "submitted",
+          submittedAt,
+          transaction,
+        });
+
+      await AssessmentEvaluationRepository.upsertFinalResults(rows, transaction);
+
+      const results = await AssessmentEvaluationRepository.getFinalResults({
         subjectId,
         classSectionTermId,
         transaction,
       });
 
-    if (submittedCount > 0) {
-      const error = new Error(
-        "Final IA already submitted for this subject and class section",
-      );
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const submittedAt = new Date();
-    const { rows, iaMaximumMarks, includedAssessmentCount, weightageSum } =
-      await buildCalculatedFinalResultRows({
+      return {
         subjectId,
         classSectionTermId,
-        userId,
-        iaMaximumMarksInput: payload.iaMaximumMarks,
+        iaMaximumMarks,
+        includedAssessmentCount,
+        weightageSum,
+        studentCount: results.length,
+        submittedCount: results.length,
         status: "submitted",
-        submittedAt,
-        transaction,
-      });
-
-    await AssessmentEvaluationRepository.upsertFinalResults(rows, transaction);
-    await transaction.commit();
-
-    const results = await AssessmentEvaluationRepository.getFinalResults({
-      subjectId,
-      classSectionTermId,
-    });
-
-    return {
-      subjectId,
-      classSectionTermId,
-      iaMaximumMarks,
-      includedAssessmentCount,
-      weightageSum,
-      studentCount: results.length,
-      submittedCount: results.length,
-      status: "submitted",
-      results,
-    };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+        results,
+      };
+    },
+  );
 }
 
 export async function getFinalResults(filters) {

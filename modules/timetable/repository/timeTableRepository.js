@@ -222,14 +222,15 @@ export async function findRoutineByStructureCourseMapperId(timetableStructureCou
     });
 }
 
-export async function deleteStructureCourseMappingById(timetableStructureCourseMapperId) {
-    const mapping = await getStructureCourseMappingById(timetableStructureCourseMapperId);
+export async function deleteStructureCourseMappingById(timetableStructureCourseMapperId, options = {}) {
+    const mapping = await getStructureCourseMappingById(timetableStructureCourseMapperId, options);
     if (!mapping) {
         throw new Error('Course mapping not found');
     }
 
     const routineUsingMapping = await findRoutineByStructureCourseMapperId(
         timetableStructureCourseMapperId,
+        options,
     );
     if (routineUsingMapping) {
         throw new Error('Course mapping is used in a routine and cannot be deleted');
@@ -237,6 +238,8 @@ export async function deleteStructureCourseMappingById(timetableStructureCourseM
 
     await scoped(model.timeTableStructureCourseModel).destroy({
         where: { timetableStructureCourseMapperId: Number(timetableStructureCourseMapperId) },
+        transaction: options.transaction,
+        individualHooks: true,
     });
 
     return {
@@ -254,6 +257,7 @@ export async function updateStructureCourseMappingById(timetableStructureCourseM
             timetableStructureCourseMapperId,
         },
         transaction: options.transaction,
+        individualHooks: true,
     });
 
     if (updates.courseId !== previousCourseId) {
@@ -267,6 +271,7 @@ export async function updateStructureCourseMappingById(timetableStructureCourseM
                     timetableStructureCourseMapperId,
                 },
                 transaction: options.transaction,
+                individualHooks: true,
             },
         );
     }

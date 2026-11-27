@@ -11,6 +11,8 @@ import {
   lookupStudentCount,
 } from "../utility/studentCount.js";
 import { getStudentCountMapByGroups } from "../modules/student/services/studentCountServices.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function createBadRequestError(message) {
   const error = new Error(message);
@@ -19,7 +21,7 @@ function createBadRequestError(message) {
 }
 
 export async function createAssignment(assignmentData, options = {}) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.EXAM_INVIGILATOR_ASSIGNMENT_CREATE, async ({ transaction }) => {
     const { userId, examDate, examinationSessionSlotId } = assignmentData;
 
     const conflict =
@@ -45,7 +47,7 @@ export async function createAssignment(assignmentData, options = {}) {
 }
 
 export async function updateAssignment(id, updateData, options = {}) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.EXAM_INVIGILATOR_ASSIGNMENT_UPDATE, async ({ transaction }) => {
     const assignmentId = Number(id);
     const existing =
       await examInvigilatorAssignmentRepository.getAssignmentById(
@@ -125,7 +127,7 @@ export async function getAssignments(filters, options = {}) {
 }
 
 export async function deleteAssignment(id, options = {}) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.EXAM_INVIGILATOR_ASSIGNMENT_DELETE, async ({ transaction }) => {
     const existing =
       await examInvigilatorAssignmentRepository.getAssignmentById(id, {
         ...options,

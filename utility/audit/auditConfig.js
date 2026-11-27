@@ -1,19 +1,9 @@
-// Models excluded from auditing to prevent recursive loops
+// Models excluded from auditing to prevent recursive loops or auth noise
 export const AUDIT_EXCLUDED_MODELS = new Set([
   "event",
   "event_log",
   "previous_academic_upload_log",
-]);
-
-/**
- * Gradual rollout allowlist (tableName values).
- * Set AUDIT_ALL_MODELS = true when ready to audit every non-excluded model.
- */
-export const AUDIT_ALL_MODELS = false;
-
-export const AUDIT_ENABLED_TABLES = new Set([
-  "exam_schedule",
-  "examination_session",
+  "refresh_tokens",
 ]);
 
 export function isAuditModelExcluded(model) {
@@ -24,10 +14,12 @@ export function isAuditModelExcluded(model) {
   );
 }
 
+/**
+ * All models are audited by default unless explicitly listed in AUDIT_EXCLUDED_MODELS.
+ */
 export function isModelAuditEnabled(model) {
-  if (!model?.tableName || isAuditModelExcluded(model)) return false;
-  if (AUDIT_ALL_MODELS) return true;
-  return AUDIT_ENABLED_TABLES.has(model.tableName);
+  if (!model?.tableName) return false;
+  return !isAuditModelExcluded(model);
 }
 
 // Globally sensitive fields that will be redacted from all logs

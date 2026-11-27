@@ -169,6 +169,7 @@ export async function updateInvoicePaymentStatus(
     {
       where: { studentFeeInvoiceId },
       transaction: options.transaction,
+      individualHooks: true,
     }
   );
 }

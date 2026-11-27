@@ -19,6 +19,8 @@ const positiveIntegerId = z.coerce
 
 const addCurriculumCategorySchema = z
   .object({
+    universityId: positiveIntegerId.optional(),
+    university_id: positiveIntegerId.optional(),
     categoryName: z.string().trim().min(1, "categoryName is required").max(150).optional(),
     category_name: z.string().trim().min(1).max(150).optional(),
     code: z.string().trim().min(1, "code is required").max(20),
@@ -35,6 +37,8 @@ const updateCurriculumCategorySchema = z
   .object({
     id: positiveIntegerId.optional(),
     curriculumCategoryId: positiveIntegerId.optional(),
+    universityId: positiveIntegerId.optional(),
+    university_id: positiveIntegerId.optional(),
     categoryName: z.string().trim().min(1).max(150).optional(),
     category_name: z.string().trim().min(1).max(150).optional(),
     code: z.string().trim().min(1).max(20).optional(),

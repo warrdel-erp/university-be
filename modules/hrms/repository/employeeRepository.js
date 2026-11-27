@@ -522,7 +522,7 @@ export async function updateEmployee(employeeId, data, transaction) {
 
         return await scoped(model.employeeModel).update(
             data,
-            { where: { employeeId: existing.employeeId }, transaction },
+            { where: { employeeId: existing.employeeId }, transaction, individualHooks: true },
         );
     } catch (error) {
         console.error('Error in update employee:', error);
@@ -595,9 +595,10 @@ export async function getSingleEmployeeDetails(id) {
     }
 }
 
-export async function deleteEmployeeDetail(employeeId) {
+export async function deleteEmployeeDetail(employeeId, options = {}) {
+    const opts = options?.transaction ? options : (options?.commit ? { transaction: options } : options);
     try {
-        const existing = await assertScopedEmployee(employeeId);
+        const existing = await assertScopedEmployee(employeeId, opts);
         if (!existing) {
             throw new Error('Employee not found');
         }
@@ -607,6 +608,7 @@ export async function deleteEmployeeDetail(employeeId) {
         await scoped(model.employeeModel).destroy({
             where: { userId: existing.userId },
             individualHooks: true,
+            ...(opts?.transaction ? { transaction: opts.transaction } : {}),
         });
         return { message: 'employee deleted successfully' };
     } catch (error) {

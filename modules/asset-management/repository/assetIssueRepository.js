@@ -184,13 +184,17 @@ export async function createAssetIssue(payload, options = {}) {
 }
 
 export async function createAssetIssueInventoryItems(payload, options = {}) {
-  return model.assetIssueInventoryItemModel.bulkCreate(payload, { transaction: options.transaction });
+  return model.assetIssueInventoryItemModel.bulkCreate(payload, {
+    transaction: options.transaction,
+    individualHooks: true,
+  });
 }
 
 export async function updateAssetIssue(assetIssueTransactionId, payload, options = {}) {
   const [affected] = await scoped(model.assetIssueTransactionModel).update(payload, {
     where: { assetIssueTransactionId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -354,6 +358,7 @@ export async function updateAssetIssueInventoryItemById(
   const [affected] = await model.assetIssueInventoryItemModel.update(payload, {
     where: { assetIssueInventoryItemId, assetIssueTransactionId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -781,6 +786,7 @@ export async function updateAssetStatusByIds(assetIds, status, options = {}) {
     {
       where: { assetId: assetIds },
       transaction: options.transaction,
+      individualHooks: true,
     }
   );
   return affected;

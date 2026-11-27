@@ -52,10 +52,11 @@ export async function courseSectionMapping(sessionData, transaction) {
     }
 }
 
-export async function updateCouseSessionMapping(sessionCourseMappingId, data) {
+export async function updateCouseSessionMapping(sessionCourseMappingId, data, options = {}) {
     try {
         return await scoped(model.sessionCouseMappingModel).update(data, {
-            where: { sessionCourseMappingId }
+            where: { sessionCourseMappingId },
+            ...options,
         });
     } catch (error) {
         console.error(`Error updating course session mapping for ${sessionCourseMappingId}:`, error);
@@ -165,8 +166,8 @@ export async function isSessionMappedwithcourse(sessionId) {
     }
 }
 
-export async function deleteSession(sessionId) {
-    const deleted = await scoped(model.sessionModel).destroy({ where: { sessionId } });
+export async function deleteSession(sessionId, options = {}) {
+    const deleted = await scoped(model.sessionModel).destroy({ where: { sessionId }, ...options });
     return deleted > 0;
 }
 
@@ -298,9 +299,10 @@ export async function getCourseSessionMappingBlocker({ courseId, sessionId, sess
     return `Cannot remove mapping: ${blocker.label} are already created for this course and session.`;
 }
 
-export async function deleteCourseSessionMapping(sessionCourseMappingId) {
+export async function deleteCourseSessionMapping(sessionCourseMappingId, options = {}) {
     const deleted = await scoped(model.sessionCouseMappingModel).destroy({
-        where: { sessionCourseMappingId }
+        where: { sessionCourseMappingId },
+        ...options,
     });
     return deleted > 0;
 }
@@ -417,8 +419,9 @@ export async function syncCourseSessionMappings({
     return { inserted: courseIdsToInsert.length };
 }
 
-export async function createSessionWithCourseMappings(sessionData, createdBy, updatedBy) {
-    const transaction = await sequelize.transaction();
+export async function createSessionWithCourseMappings(sessionData, createdBy, updatedBy, options = {}) {
+    const isExternalTransaction = Boolean(options.transaction);
+    const transaction = options.transaction || (await sequelize.transaction());
 
     try {
         const payload = {
@@ -433,17 +436,22 @@ export async function createSessionWithCourseMappings(sessionData, createdBy, up
 
         const session = await addSession(payload, transaction);
 
-        await transaction.commit();
+        if (!isExternalTransaction) {
+            await transaction.commit();
+        }
         return session;
     } catch (error) {
-        await transaction.rollback();
+        if (!isExternalTransaction) {
+            await transaction.rollback();
+        }
         console.error('Error creating session and mapping:', error);
         throw error;
     }
 }
 
-export async function updateSessionWithCourseMappings(sessionId, sessionData, updatedBy) {
-    const transaction = await sequelize.transaction();
+export async function updateSessionWithCourseMappings(sessionId, sessionData, updatedBy, options = {}) {
+    const isExternalTransaction = Boolean(options.transaction);
+    const transaction = options.transaction || (await sequelize.transaction());
 
     try {
         const numericSessionId = Number(sessionId);
@@ -468,10 +476,14 @@ export async function updateSessionWithCourseMappings(sessionId, sessionData, up
             transaction,
         );
 
-        await transaction.commit();
+        if (!isExternalTransaction) {
+            await transaction.commit();
+        }
         return getSingleSessionDetails(numericSessionId);
     } catch (error) {
-        await transaction.rollback();
+        if (!isExternalTransaction) {
+            await transaction.rollback();
+        }
         console.error('Error updating session and course mappings:', error);
         throw error;
     }

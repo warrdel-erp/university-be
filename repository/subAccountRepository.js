@@ -3,20 +3,22 @@ import { scoped } from '../utility/scoped.js';
 
 const excludeMeta = ['createdAt', 'updatedAt', 'deletedAt', 'createdBy', 'updatedBy'];
 
-export async function getAccountById(accountId) {
+export async function getAccountById(accountId, options = {}) {
     return await scoped(model.accountModel).findOne({
         where: { accountId },
         attributes: { exclude: excludeMeta },
+        ...options,
     });
 }
 
 /** Default parent account when FE does not send accountId (seed: Academics, else first account). */
-export async function resolveDefaultAccountId() {
+export async function resolveDefaultAccountId(options = {}) {
     const academics = await model.accountModel.findOne({
         where: { accountName: 'Academics' },
         attributes: ['accountId'],
         order: [['accountId', 'ASC']],
         raw: true,
+        ...options,
     });
     if (academics?.accountId) {
         return academics.accountId;
@@ -26,6 +28,7 @@ export async function resolveDefaultAccountId() {
         attributes: ['accountId'],
         order: [['accountId', 'ASC']],
         raw: true,
+        ...options,
     });
     if (!first?.accountId) {
         throw new Error('No account found. Create an account or pass accountId.');
@@ -33,9 +36,9 @@ export async function resolveDefaultAccountId() {
     return first.accountId;
 }
 
-export async function addSubAccount(SubAccountData) {
+export async function addSubAccount(SubAccountData, options = {}) {
     try {
-        return await scoped(model.subAccountModel).create(SubAccountData);
+        return await scoped(model.subAccountModel).create(SubAccountData, options);
     } catch (error) {
         console.error('Error in add SubAccount :', error);
         throw error;
@@ -79,24 +82,26 @@ export async function getSingleSubAccountDetails(subAccountId) {
     }
 }
 
-export async function deleteSubAccount(subAccountId) {
+export async function deleteSubAccount(subAccountId, options = {}) {
     const existing = await scoped(model.subAccountModel).findOne({
         where: { subAccountId },
         attributes: ['subAccountId'],
+        ...options,
     });
     if (!existing) {
         return false;
     }
 
-    const deleted = await scoped(model.subAccountModel).destroy({ where: { subAccountId } });
+    const deleted = await scoped(model.subAccountModel).destroy({ where: { subAccountId }, ...options });
     return deleted > 0;
 }
 
-export async function updateSubAccount(subAccountId, SubAccountData) {
+export async function updateSubAccount(subAccountId, SubAccountData, options = {}) {
     try {
         const existing = await scoped(model.subAccountModel).findOne({
             where: { subAccountId },
             attributes: ['subAccountId'],
+            ...options,
         });
         if (!existing) {
             return false;
@@ -104,6 +109,7 @@ export async function updateSubAccount(subAccountId, SubAccountData) {
 
         await scoped(model.subAccountModel).update(SubAccountData, {
             where: { subAccountId },
+            ...options,
         });
         return true;
     } catch (error) {

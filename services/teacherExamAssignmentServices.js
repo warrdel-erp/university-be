@@ -1,6 +1,8 @@
 import * as teacherExamAssignmentRepository from "../repository/teacherExamAssignmentRepository.js";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 async function resolveEmployeeIdFromUserId(userId) {
   const employee = await scoped(model.employeeModel).findOne({
@@ -15,47 +17,59 @@ async function resolveEmployeeIdFromUserId(userId) {
   return Number(employee.employeeId);
 }
 
-export async function assignExam(data) {
-  const employeeId = await resolveEmployeeIdFromUserId(data.userId);
+export async function assignExam(data, options = {}) {
+  const runner = async (transaction) => {
+    const opts = { ...options, transaction };
+    const employeeId = await resolveEmployeeIdFromUserId(data.userId);
 
-  const schedule = await scoped(model.examScheduleModel).findByPk(data.examScheduleId, {
-    attributes: ["examScheduleId", "examinationSessionId"],
-  });
-
-  if (!schedule) {
-    const error = new Error("Exam schedule not found.");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  if (schedule.examinationSessionId) {
-    const session = await scoped(model.examinationSessionModel).findByPk(schedule.examinationSessionId, {
-      attributes: ["status"],
+    const schedule = await scoped(model.examScheduleModel).findByPk(data.examScheduleId, {
+      attributes: ["examScheduleId", "examinationSessionId"],
+      transaction: opts.transaction,
     });
 
-    if (!session || session.status !== "Published") {
-      const error = new Error("Examination session must be published before assigning teachers.");
-      error.statusCode = 400;
+    if (!schedule) {
+      const error = new Error("Exam schedule not found.");
+      error.statusCode = 404;
       throw error;
     }
-  }
 
-  const existing = await teacherExamAssignmentRepository.findAssignment({
-    examScheduleId: data.examScheduleId,
-    employeeId,
-  });
-  if (existing) {
-    const error = new Error("This teacher is already assigned to the selected exam schedule.");
-    error.statusCode = 409;
-    throw error;
-  }
+    if (schedule.examinationSessionId) {
+      const session = await scoped(model.examinationSessionModel).findByPk(schedule.examinationSessionId, {
+        attributes: ["status"],
+        transaction: opts.transaction,
+      });
 
-  return await teacherExamAssignmentRepository.assignExam({
-    examScheduleId: data.examScheduleId,
-    employeeId,
-    deadline: data.deadline,
-    createdBy: data.createdBy,
-    updatedBy: data.updatedBy,
+      if (!session || session.status !== "Published") {
+        const error = new Error("Examination session must be published before assigning teachers.");
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    const existing = await teacherExamAssignmentRepository.findAssignment({
+      examScheduleId: data.examScheduleId,
+      employeeId,
+    }, opts);
+    if (existing) {
+      const error = new Error("This teacher is already assigned to the selected exam schedule.");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    return await teacherExamAssignmentRepository.assignExam({
+      examScheduleId: data.examScheduleId,
+      employeeId,
+      deadline: data.deadline,
+      createdBy: data.createdBy,
+      updatedBy: data.updatedBy,
+    }, opts);
+  };
+
+  if (options?.transaction) {
+    return runner(options.transaction);
+  }
+  return withAuditEvent(AUDIT_EVENTS.TEACHER_EXAM_ASSIGNMENT_CREATE, async ({ transaction }) => {
+    return runner(transaction);
   });
 }
 
@@ -104,6 +118,11 @@ export async function getAssignments(filters) {
   });
 }
 
-export async function deleteAssignment(teacherExamAssignmentId) {
-  return await teacherExamAssignmentRepository.deleteAssignment(teacherExamAssignmentId);
+export async function deleteAssignment(teacherExamAssignmentId, options = {}) {
+  if (options?.transaction) {
+    return await teacherExamAssignmentRepository.deleteAssignment(teacherExamAssignmentId, options);
+  }
+  return await withAuditEvent(AUDIT_EVENTS.TEACHER_EXAM_ASSIGNMENT_DELETE, async ({ transaction }) => {
+    return await teacherExamAssignmentRepository.deleteAssignment(teacherExamAssignmentId, { ...options, transaction });
+  });
 }

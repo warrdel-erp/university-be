@@ -136,7 +136,7 @@ async function findExistingTeacherSubjectMapping(userId, subjectId) {
     });
 }
 
-export async function teacherSubjectMapping(data) {
+export async function teacherSubjectMapping(data, options = {}) {
     try {
         const employee = await findEmployeeInInstitute(data.userId);
         if (!employee) {
@@ -157,7 +157,9 @@ export async function teacherSubjectMapping(data) {
             throw error;
         }
 
-        return await scoped(model.teacherSubjectMappingModel).create(data);
+        return await scoped(model.teacherSubjectMappingModel).create(data, {
+            transaction: options.transaction,
+        });
     } catch (error) {
         console.error('Error in teacher Subject Mapping:', error);
         throw error;
@@ -445,7 +447,7 @@ export async function findTeacherSubjectMappingRows({
     });
 }
 
-export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info) {
+export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info, options = {}) {
     try {
         const existing = await findTeacherSubjectMappingInInstitute(teacherSubjectMappingId);
         if (!existing) {
@@ -468,6 +470,8 @@ export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info
 
         return await scoped(model.teacherSubjectMappingModel).update(info, {
             where: { teacherSubjectMappingId },
+            individualHooks: true,
+            transaction: options.transaction,
         });
     } catch (error) {
         console.error(`Error updating teacher subject mapping details ${teacherSubjectMappingId}:`, error);
@@ -475,7 +479,7 @@ export async function updateTeachersSubjectMapping(teacherSubjectMappingId, info
     }
 }
 
-export async function deleteTeachersSubjectMapping(teacherSubjectMappingId) {
+export async function deleteTeachersSubjectMapping(teacherSubjectMappingId, options = {}) {
     try {
         const existing = await findTeacherSubjectMappingInInstitute(teacherSubjectMappingId);
         if (!existing) {
@@ -485,6 +489,7 @@ export async function deleteTeachersSubjectMapping(teacherSubjectMappingId) {
         await scoped(model.teacherSubjectMappingModel).destroy({
             where: { teacherSubjectMappingId },
             individualHooks: true,
+            transaction: options.transaction,
         });
         return { message: 'teacher Subject Mapping deleted successfully' };
     } catch (error) {
