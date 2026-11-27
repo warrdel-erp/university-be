@@ -30,6 +30,7 @@ export async function bulkCreatePaymentTerms(records, options = {}) {
   if (!records || records.length === 0) return [];
   return scoped(model.billingSchedulePaymentTermsModel).bulkCreate(records, {
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -83,6 +84,7 @@ export async function updatePaymentTerm(billingSchedulePaymentTermsId, data, opt
   return scoped(model.billingSchedulePaymentTermsModel).update(data, {
     where: { billingSchedulePaymentTermsId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -90,6 +92,7 @@ export async function deletePaymentTerm(billingSchedulePaymentTermsId, options =
   return scoped(model.billingSchedulePaymentTermsModel).destroy({
     where: { billingSchedulePaymentTermsId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -97,6 +100,7 @@ export async function deletePaymentTermsByItemId(billingScheduleItemId, options 
   return scoped(model.billingSchedulePaymentTermsModel).destroy({
     where: { billingScheduleItemId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 

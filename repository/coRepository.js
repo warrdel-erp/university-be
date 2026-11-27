@@ -1,18 +1,19 @@
 import * as model from '../models/index.js';
 import { scoped } from '../utility/scoped.js';
 
-export async function addCo(coData) {
+export async function addCo(coData, options = {}) {
     try {
         if ((!coData.departmentId || !coData.courseId) && coData.subjectId) {
             const subject = await model.subjectModel.findByPk(coData.subjectId, {
-                include: [{ model: model.courseModel, as: 'courseInfo', attributes: ['courseId', 'departmentId'] }]
+                include: [{ model: model.courseModel, as: 'courseInfo', attributes: ['courseId', 'departmentId'] }],
+                ...options,
             });
             if (subject) {
                 if (!coData.courseId && subject.courseId) coData.courseId = subject.courseId;
                 if (!coData.departmentId && subject.courseInfo?.departmentId) coData.departmentId = subject.courseInfo.departmentId;
             }
         }
-        return await scoped(model.coModel).create(coData);
+        return await scoped(model.coModel).create(coData, options);
     } catch (error) {
         console.error('Error in add co :', error);
         throw error;
@@ -70,11 +71,12 @@ export async function getSingleCoDetails(coId) {
     }
 }
 
-export async function updateCo(coId, poData) {
+export async function updateCo(coId, poData, options = {}) {
     try {
         const existing = await scoped(model.coModel).findOne({
             where: { coId },
             attributes: ['coId'],
+            ...options,
         });
         if (!existing) {
             return [0];
@@ -82,6 +84,7 @@ export async function updateCo(coId, poData) {
 
         return await scoped(model.coModel).update(poData, {
             where: { coId },
+            ...options,
         });
     } catch (error) {
         console.error(`Error updating co creation ${coId}:`, error);
@@ -89,22 +92,23 @@ export async function updateCo(coId, poData) {
     }
 }
 
-export async function deleteCo(coId) {
+export async function deleteCo(coId, options = {}) {
     const existing = await scoped(model.coModel).findOne({
         where: { coId },
         attributes: ['coId'],
+        ...options,
     });
     if (!existing) {
         return false;
     }
 
-    const deleted = await scoped(model.coModel).destroy({ where: { coId } });
+    const deleted = await scoped(model.coModel).destroy({ where: { coId }, ...options });
     return deleted > 0;
 }
 
-export async function addCoWeightage(coData) {
+export async function addCoWeightage(coData, options = {}) {
     try {
-        return await scoped(model.coWeightageModel).bulkCreate(coData);
+        return await scoped(model.coWeightageModel).bulkCreate(coData, options);
     } catch (error) {
         console.error('Error in add weightage :', error);
         throw error;
@@ -176,11 +180,12 @@ export async function getSingleCoDetailsWeightage(coWeightageId) {
     }
 }
 
-export async function updateCoWeightage(coWeightageId, poData) {
+export async function updateCoWeightage(coWeightageId, poData, options = {}) {
     try {
         const existing = await scoped(model.coWeightageModel).findOne({
             where: { coWeightageId },
             attributes: ['coWeightageId'],
+            ...options,
         });
         if (!existing) {
             return [0];
@@ -188,6 +193,7 @@ export async function updateCoWeightage(coWeightageId, poData) {
 
         return await scoped(model.coWeightageModel).update(poData, {
             where: { coWeightageId },
+            ...options,
         });
     } catch (error) {
         console.error(`Error updating co weightage ${coWeightageId}:`, error);

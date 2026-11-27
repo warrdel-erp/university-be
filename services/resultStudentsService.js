@@ -1,9 +1,13 @@
 import { data } from '../const/resultStudents.js';
 import { parseCustomDate } from '../utility/dateFormat.js';
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
-export const addResultStudent = (data) => {
-    return formateData(data)
-}
+export const addResultStudent = async (data) => {
+    return await withAuditEvent(AUDIT_EVENTS.RESULT_STUDENT_CREATE, async () => {
+        return formateData(data);
+    });
+};
 
 export const getStudentResult = async (rollNo, dob) => {
     const student = data.find(item => item.rollNo === rollNo && item.dob === dob);

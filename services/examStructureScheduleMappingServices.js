@@ -472,8 +472,14 @@ export async function addExamStructureSchedule(
 ) {
   examScheduleDetail.createdBy = createdBy;
   examScheduleDetail.updatedBy = updatedBy;
-  return examStructureScheduleRepository.addExamStructureSchedule(
-    examScheduleDetail,
+  return withAuditEvent(
+    AUDIT_EVENTS.EXAM_SCHEDULE_CREATE,
+    async ({ transaction }) => {
+      return examStructureScheduleRepository.addExamStructureSchedule(
+        examScheduleDetail,
+        { transaction },
+      );
+    },
   );
 }
 
@@ -627,9 +633,15 @@ export async function getExamStructureSchedule(examSetupTypeId) {
 export async function publishExamSchedule(publishExamStructureSchedule) {
   const { examSetupTypeId } = publishExamStructureSchedule;
   const data = { isPublish: true };
-  return await examStructureScheduleRepository.publishExamSchedule(
-    examSetupTypeId,
-    data,
+  return withAuditEvent(
+    AUDIT_EVENTS.EXAM_SCHEDULE_PUBLISH,
+    async ({ transaction }) => {
+      return await examStructureScheduleRepository.publishExamSchedule(
+        examSetupTypeId,
+        data,
+        { transaction },
+      );
+    },
   );
 }
 function getExamSlotMinutes(examTime, duration) {

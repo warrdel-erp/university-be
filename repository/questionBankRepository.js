@@ -17,9 +17,11 @@ function questionFiltersWhere(filters, subjectIds) {
     };
 }
 
-export async function addQuestion(questionData) {
+export async function addQuestion(questionData, options = {}) {
     try {
-        const result = await scoped(model.questionBankModel).create(questionData);
+        const result = await scoped(model.questionBankModel).create(questionData, {
+            transaction: options.transaction,
+        });
         return result;
     } catch (error) {
         console.error("Error adding question to bank:", error);
@@ -113,12 +115,13 @@ export async function countQuestions(filters = {}) {
     }
 }
 
-export async function bulkUpdateStatus(ids, status, updatedBy) {
+export async function bulkUpdateStatus(ids, status, updatedBy, options = {}) {
     try {
         const validCount = await scoped(model.questionBankModel).count({
             where: {
                 id: ids,
             },
+            transaction: options.transaction,
         });
 
         if (validCount !== ids.length) {
@@ -127,7 +130,11 @@ export async function bulkUpdateStatus(ids, status, updatedBy) {
 
         const result = await scoped(model.questionBankModel).update(
             { status, updatedBy },
-            { where: { id: ids } },
+            {
+                where: { id: ids },
+                transaction: options.transaction,
+                individualHooks: true,
+            },
         );
         return result;
     } catch (error) {
@@ -164,7 +171,7 @@ export async function getSingleQuestion(id, ownerId = null) {
     }
 }
 
-export async function updateQuestion(id, questionData, ownerId = null) {
+export async function updateQuestion(id, questionData, ownerId = null, options = {}) {
     try {
         const whereClause = { id };
         if (ownerId !== null) {
@@ -173,12 +180,15 @@ export async function updateQuestion(id, questionData, ownerId = null) {
         const existing = await scoped(model.questionBankModel).findOne({
             where: whereClause,
             attributes: ['id'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return [0];
         }
         const result = await scoped(model.questionBankModel).update(questionData, {
             where: whereClause,
+            transaction: options.transaction,
+            individualHooks: true,
         });
         return result;
     } catch (error) {
@@ -187,7 +197,7 @@ export async function updateQuestion(id, questionData, ownerId = null) {
     }
 }
 
-export async function deleteQuestion(id, ownerId = null) {
+export async function deleteQuestion(id, ownerId = null, options = {}) {
     try {
         const whereClause = { id };
         if (ownerId !== null) {
@@ -196,11 +206,16 @@ export async function deleteQuestion(id, ownerId = null) {
         const existing = await scoped(model.questionBankModel).findOne({
             where: whereClause,
             attributes: ['id'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return false;
         }
-        const deleted = await scoped(model.questionBankModel).destroy({ where: whereClause });
+        const deleted = await scoped(model.questionBankModel).destroy({
+            where: whereClause,
+            transaction: options.transaction,
+            individualHooks: true,
+        });
         return deleted > 0;
     } catch (error) {
         console.error("Error deleting question from bank:", error);

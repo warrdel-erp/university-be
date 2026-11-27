@@ -5,14 +5,13 @@ import {
   updateTransportRouteById,
   deleteTransportRouteById,
 } from "../repository/transportRouteRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function addTransportRouteService(data) {
-  try {
-    return createTransportRoute(data);
-  } catch (error) {
-    console.error("Error in addTransportRouteService:", error);
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.TRANSPORT_ROUTE_CREATE, async ({ transaction }) => {
+    return createTransportRoute(data, transaction);
+  });
 }
 
 export async function getAllTransportRouteService() {
@@ -34,20 +33,13 @@ export async function getSingleTransportRouteService(id) {
 }
 
 export async function updateTransportRouteService(id, data) {
-  try {
-    return updateTransportRouteById(id, data);
-  } catch (error) {
-    console.error(`Error in updateTransportRouteService for ID ${id}:`, error);
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.TRANSPORT_ROUTE_UPDATE, async ({ transaction }) => {
+    return updateTransportRouteById(id, data, transaction);
+  });
 }
 
 export async function deleteTransportRouteService(id) {
-  try {
-    return deleteTransportRouteById(id);
-  } catch (error) {
-    console.error(`Error in deleteTransportRouteService for ID ${id}:`, error);
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.TRANSPORT_ROUTE_DELETE, async ({ transaction }) => {
+    return deleteTransportRouteById(id, transaction);
+  });
 }
-

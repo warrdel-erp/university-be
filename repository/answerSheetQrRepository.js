@@ -95,7 +95,7 @@ export async function countUnusedByInstitute(transaction) {
 }
 
 export async function bulkCreateAnswerSheetQr(rows, transaction) {
-  return scoped(model.answerSheetQrModel).bulkCreate(rows, { transaction });
+  return scoped(model.answerSheetQrModel).bulkCreate(rows, { transaction, individualHooks: true });
 }
 
 export async function getAnswerSheetQrById(id, transaction) {
@@ -252,7 +252,7 @@ export async function mapAnswerSheetQrOnce(
     return { studentExamAlreadyMapped: true, row };
   }
 
-  await row.update({ studentId, examScheduleId }, { transaction });
+  await row.update({ studentId, examScheduleId }, { transaction, individualHooks: true });
 
   return { row, answerSheetAlreadyMapped: false, studentExamAlreadyMapped: false };
 }
@@ -310,6 +310,7 @@ export async function assignTeacherByAnswerSheetIds(
     {
       where: { id: { [Op.in]: ids } },
       transaction,
+      individualHooks: true,
     }
   );
   return affectedCount;
@@ -326,6 +327,7 @@ export async function assignMarksByAnswerSheetId(
     {
       where: { id },
       transaction,
+      individualHooks: true,
     }
   );
   return affectedCount;
@@ -350,7 +352,7 @@ export async function bulkFinalSubmitByIds(
 
   const [affectedCount] = await scoped(model.answerSheetQrModel).update(
     { markingStatus: "submit", evaluatedAt },
-    { where, transaction },
+    { where, transaction, individualHooks: true },
   );
   return affectedCount;
 }
@@ -372,7 +374,7 @@ export async function finalSubmitWithObtainedMarksById(
 
   const [affectedCount] = await scoped(model.answerSheetQrModel).update(
     { obtainedMarks, markingStatus: "submit", evaluatedAt },
-    { where, transaction },
+    { where, transaction, individualHooks: true },
   );
   return affectedCount;
 }

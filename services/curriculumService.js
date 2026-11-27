@@ -5,6 +5,8 @@ import * as models from '../models/index.js';
 import { scoped, buildScope } from '../utility/scoped.js';
 import { resolveBatchCurrentPosition, resolveTotalTerms } from '../utility/courseTerms.js';
 import { resolveActiveAcademicYearContext } from '../utility/curriculumSubjectsByActiveYear.js';
+import { withAuditEvent } from '../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../const/auditEvents.js';
 
 function httpError(message, statusCode) {
   const error = new Error(message);
@@ -531,7 +533,9 @@ export async function create(data) {
       409,
     );
   }
-  return curriculumRepository.create(data);
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_CREATE, async ({ transaction }) => {
+    return await curriculumRepository.create(data, { transaction });
+  });
 }
 
 export async function update(curriculumId, data) {
@@ -568,8 +572,10 @@ export async function update(curriculumId, data) {
     httpError('No valid fields to update', 400);
   }
 
-  await curriculumRepository.update(curriculumId, updates);
-  return curriculumRepository.findById(curriculumId);
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_UPDATE, async ({ transaction }) => {
+    await curriculumRepository.update(curriculumId, updates, { transaction });
+    return await curriculumRepository.findById(curriculumId, { transaction });
+  });
 }
 
 export async function publish(curriculumId, publishStatus) {
@@ -604,8 +610,10 @@ export async function publish(curriculumId, publishStatus) {
     }
   }
 
-  await curriculumRepository.update(curriculumId, { publishStatus });
-  return curriculumRepository.findById(curriculumId);
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_PUBLISH_STATUS_CHANGE, async ({ transaction }) => {
+    await curriculumRepository.update(curriculumId, { publishStatus }, { transaction });
+    return await curriculumRepository.findById(curriculumId, { transaction });
+  });
 }
 
 export async function remove(curriculumId) {
@@ -626,19 +634,14 @@ export async function remove(curriculumId) {
     );
   }
 
-  const transaction = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_DELETE, async ({ transaction }) => {
     await curriculumRepository.deleteSubjectTermMappingsByCurriculumId(
       curriculumId,
       { transaction },
     );
     await curriculumRepository.remove(curriculumId, { transaction });
-    await transaction.commit();
     return { curriculumId: Number(curriculumId), deleted: true };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function getAvailableSubjects(curriculumId, query = {}) {
@@ -926,7 +929,12 @@ export async function mapSubjects(curriculumId, payload) {
     credit: s.credit,
   }));
 
-  return models.curriculumSubjectTermMappingModel.bulkCreate(mappings);
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_SUBJECT_MAP, async ({ transaction }) => {
+    return await models.curriculumSubjectTermMappingModel.bulkCreate(mappings, {
+      transaction,
+      individualHooks: true,
+    });
+  });
 }
 
 export async function updateSubjectTermMapping(
@@ -974,10 +982,13 @@ export async function updateSubjectTermMapping(
     }
   }
 
-  return curriculumRepository.updateSubjectTermMapping(
-    curriculumSubjectTermMappingId,
-    data,
-  );
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_SUBJECT_MAPPING_UPDATE, async ({ transaction }) => {
+    return await curriculumRepository.updateSubjectTermMapping(
+      curriculumSubjectTermMappingId,
+      data,
+      { transaction },
+    );
+  });
 }
 
 export async function unmapSubject(curriculumSubjectTermMappingId) {
@@ -993,15 +1004,18 @@ export async function unmapSubject(curriculumSubjectTermMappingId) {
     httpError('Curriculum not found', 404);
   }
 
-  await curriculumRepository.deleteSubjectTermMapping(
-    curriculumSubjectTermMappingId,
-  );
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_SUBJECT_UNMAP, async ({ transaction }) => {
+    await curriculumRepository.deleteSubjectTermMapping(
+      curriculumSubjectTermMappingId,
+      { transaction },
+    );
 
-  return {
-    curriculumSubjectTermMappingId: Number(curriculumSubjectTermMappingId),
-    curriculumId: mapping.curriculumId,
-    deleted: true,
-  };
+    return {
+      curriculumSubjectTermMappingId: Number(curriculumSubjectTermMappingId),
+      curriculumId: mapping.curriculumId,
+      deleted: true,
+    };
+  });
 }
 
 /**
@@ -1092,10 +1106,12 @@ export async function mapBatch(curriculumId, batchId, userId) {
     );
   }
 
-  return models.curriculumBatchMappingModel.create({
-    curriculumId,
-    batchId: Number(batchId),
-    createdBy: userId,
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_BATCH_MAP, async ({ transaction }) => {
+    return await models.curriculumBatchMappingModel.create({
+      curriculumId,
+      batchId: Number(batchId),
+      createdBy: userId,
+    }, { transaction });
   });
 }
 
@@ -1132,21 +1148,16 @@ export async function unmapBatch(curriculumBatchMappingId) {
     );
   }
 
-  const transaction = await sequelize.transaction();
-  try {
+  return await withAuditEvent(AUDIT_EVENTS.CURRICULUM_BATCH_UNMAP, async ({ transaction }) => {
     await curriculumRepository.deleteBatchMapping(curriculumBatchMappingId, {
       transaction,
     });
-    await transaction.commit();
     return {
       curriculumBatchMappingId: Number(curriculumBatchMappingId),
       curriculumId: mapping.curriculumId,
       batchId: mapping.batchId,
       deleted: true,
     };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 

@@ -1,0 +1,320 @@
+{
+  "info": {
+    "_postman_id": "attendance-policy-v1-collection-001",
+    "name": "Staff Attendance Policy Management APIs",
+    "description": "Comprehensive APIs for Staff Attendance Policies based on HR Attendance Policy configuration UI.\n\nCovers:\n- Top Metrics (Total Policies, Active, Employees Covered)\n- Policy Listing with Filters & Pagination\n- Tab 1: General & Applicability Mappings (Roles, Departments, Employees)\n- Tab 2: Working Hours, Missing Punch Handling, OD, and Regularisation\n- Tab 3: Late Entry, Early Exit, Excessive Lateness & Repeated Violation Slabs\n- Tab 4: Review & Publish\n- Actions: Duplicate, Create New Version, Archive, Delete\n\nBase path: `/attendancePolicy`",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Top Metrics (Summary Cards)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/metrics",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "metrics"]
+        },
+        "description": "Returns top 3 summary cards: Total Policies, Active Policies, and Employees Covered count."
+      },
+      "response": []
+    },
+    {
+      "name": "2. List Policies (Main Table with Filters)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy?page=1&limit=10&status=Active&search=",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy"],
+          "query": [
+            {
+              "key": "page",
+              "value": "1",
+              "description": "Page number"
+            },
+            {
+              "key": "limit",
+              "value": "10",
+              "description": "Rows per page"
+            },
+            {
+              "key": "status",
+              "value": "Active",
+              "description": "Filter by status: Active, Scheduled, Draft, Archived, All"
+            },
+            {
+              "key": "search",
+              "value": "",
+              "description": "Filter by policy name"
+            }
+          ]
+        },
+        "description": "Fetches paginated list of policies with mapped categories and employee counts."
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Single Policy Details (All Tabs)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1"]
+        },
+        "description": "Fetches complete details of a single policy including working hours, late/early rules, penalty slabs, and role mappings."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Tab 1: Save General & Applicability (Create Draft)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyName\": \"Teaching Staff Attendance\",\n  \"policyCode\": \"POL-TEACH-01\",\n  \"description\": \"Standard attendance rules for teaching staff.\",\n  \"versionNumber\": \"v1.0\",\n  \"effectiveFrom\": \"2026-11-01\",\n  \"effectiveTo\": \"2027-03-31\",\n  \"applicableSchedule\": \"General Shift\",\n  \"mappings\": [\n    {\n      \"roleId\": 1,\n      \"departmentId\": null,\n      \"employeeId\": null\n    },\n    {\n      \"roleId\": 2,\n      \"departmentId\": null,\n      \"employeeId\": null\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/step-1",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "step-1"]
+        },
+        "description": "Saves Step 1 (General details and Applicability mappings) and creates a Draft policy."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Tab 1: Update General & Applicability",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"policyName\": \"Teaching Staff Attendance Updated\",\n  \"policyCode\": \"POL-TEACH-01\",\n  \"description\": \"Updated description for teaching staff attendance policy.\",\n  \"versionNumber\": \"v1.0\",\n  \"effectiveFrom\": \"2026-11-01\",\n  \"effectiveTo\": \"2027-03-31\",\n  \"applicableSchedule\": \"General Shift\",\n  \"mappings\": [\n    {\n      \"roleId\": 1,\n      \"departmentId\": null,\n      \"employeeId\": null\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1/step-1",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1", "step-1"]
+        },
+        "description": "Updates existing Step 1 details and mappings for policyId 1."
+      },
+      "response": []
+    },
+    {
+      "name": "6. Tab 2: Save Working Hours & Regularisation",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"minFullDayMinutes\": 450,\n  \"minHalfDayMinutes\": 240,\n  \"considerBreakTime\": false,\n  \"missingPunchAction\": \"PENDING_REVIEW\",\n  \"autoMarkAbsentAfterDays\": 3,\n  \"countFullDayOdAsPresent\": true,\n  \"countHalfDayOdAsPresent\": true,\n  \"requireOdApproval\": true,\n  \"allowRegularisation\": true,\n  \"regularisationWindowDays\": 7\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1/step-2",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1", "step-2"]
+        },
+        "description": "Saves Step 2: Minimum hours (Full Day = 450 min / 7h30m, Half Day = 240 min / 4h), missing punch handling, On-Duty settings, and regularisation window."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Tab 3: Save Late Entry, Early Exit & Penalty Slabs",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"enableLateEntry\": true,\n  \"lateGracePeriodMinutes\": 10,\n  \"lateCountCycle\": \"CALENDAR_MONTH\",\n  \"enableEarlyExit\": true,\n  \"earlyGracePeriodMinutes\": 10,\n  \"earlyCountCycle\": \"CALENDAR_MONTH\",\n  \"violationCountingType\": \"SEPARATE\",\n  \"enableExcessiveViolation\": true,\n  \"excessiveLateThresholdMin\": 120,\n  \"excessiveLatePenalty\": \"HALF_DAY\",\n  \"excessiveEarlyThresholdMin\": 120,\n  \"excessiveEarlyPenalty\": \"HALF_DAY\",\n  \"excludeApprovedExceptions\": true,\n  \"maxDailyPenaltyDays\": 1.00,\n  \"penaltySlabs\": [\n    {\n      \"violationType\": \"LATE_ENTRY\",\n      \"fromOccurrence\": 1,\n      \"toOccurrence\": 3,\n      \"attendanceImpact\": \"NO_IMPACT\",\n      \"penaltyApplication\": \"AT_THRESHOLD\"\n    },\n    {\n      \"violationType\": \"LATE_ENTRY\",\n      \"fromOccurrence\": 4,\n      \"toOccurrence\": 6,\n      \"attendanceImpact\": \"HALF_DAY\",\n      \"penaltyApplication\": \"AT_THRESHOLD\"\n    },\n    {\n      \"violationType\": \"LATE_ENTRY\",\n      \"fromOccurrence\": 7,\n      \"toOccurrence\": null,\n      \"attendanceImpact\": \"FULL_DAY\",\n      \"penaltyApplication\": \"EVERY_OCCURRENCE\"\n    },\n    {\n      \"violationType\": \"EARLY_EXIT\",\n      \"fromOccurrence\": 1,\n      \"toOccurrence\": 3,\n      \"attendanceImpact\": \"NO_IMPACT\",\n      \"penaltyApplication\": \"AT_THRESHOLD\"\n    },\n    {\n      \"violationType\": \"EARLY_EXIT\",\n      \"fromOccurrence\": 4,\n      \"toOccurrence\": 6,\n      \"attendanceImpact\": \"HALF_DAY\",\n      \"penaltyApplication\": \"AT_THRESHOLD\"\n    },\n    {\n      \"violationType\": \"EARLY_EXIT\",\n      \"fromOccurrence\": 7,\n      \"toOccurrence\": null,\n      \"attendanceImpact\": \"FULL_DAY\",\n      \"penaltyApplication\": \"EVERY_OCCURRENCE\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1/step-3",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1", "step-3"]
+        },
+        "description": "Saves Step 3: Late grace period, Early exit grace period, excessive delays, daily safeguard cap, and repeated violation impact slabs."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Tab 4: Publish Policy",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1/publish",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1", "publish"]
+        },
+        "description": "Validates that all steps are completed and publishes the policy by marking status as Active."
+      },
+      "response": []
+    },
+    {
+      "name": "9. Duplicate Policy (3-Dots Action)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"newPolicyName\": \"Teaching Staff Attendance (Cloned)\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1/duplicate",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1", "duplicate"]
+        },
+        "description": "Clones the policy along with its working hours, late/early rules, penalty slabs, and role mappings with status Draft."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Create New Version (3-Dots Action)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"versionNumber\": \"v2.0\",\n  \"effectiveFrom\": \"2027-04-01\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1/create-version",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1", "create-version"]
+        },
+        "description": "Creates a new version record of the policy with specified version number and effective start date in Draft status."
+      },
+      "response": []
+    },
+    {
+      "name": "11. Archive Policy (3-Dots Action)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1/archive",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1", "archive"]
+        },
+        "description": "Marks the policy status as Archived."
+      },
+      "response": []
+    },
+    {
+      "name": "12. Delete Policy (Soft Delete)",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Cookie",
+            "value": "accessToken={{token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/attendancePolicy/1",
+          "host": ["{{base_url}}"],
+          "path": ["attendancePolicy", "1"]
+        },
+        "description": "Soft-deletes the attendance policy."
+      },
+      "response": []
+    }
+  ]
+}

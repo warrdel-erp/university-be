@@ -12,30 +12,35 @@ function parentBodyInclude() {
     };
 }
 
-export async function createGovernanceBody(data) {
-    return scoped(model.governanceBodyModel).create(data);
+export async function createGovernanceBody(data, options = {}) {
+    return scoped(model.governanceBodyModel).create(data, {
+        transaction: options.transaction,
+    });
 }
 
-export async function getAllGovernanceBodies() {
+export async function getAllGovernanceBodies(options = {}) {
     return scoped(model.governanceBodyModel).findAll({
         attributes: { exclude: excludeMeta },
         include: [parentBodyInclude()],
         order: [['name', 'ASC']],
+        transaction: options.transaction,
     });
 }
 
-export async function getGovernanceBodyById(governanceBodyId) {
+export async function getGovernanceBodyById(governanceBodyId, options = {}) {
     return scoped(model.governanceBodyModel).findOne({
         where: { governanceBodyId },
         attributes: { exclude: excludeMeta },
         include: [parentBodyInclude()],
+        transaction: options.transaction,
     });
 }
 
-export async function updateGovernanceBody(governanceBodyId, data) {
+export async function updateGovernanceBody(governanceBodyId, data, options = {}) {
     const existing = await scoped(model.governanceBodyModel).findOne({
         where: { governanceBodyId },
         attributes: ['governanceBodyId'],
+        transaction: options.transaction,
     });
     if (!existing) {
         return null;
@@ -43,21 +48,25 @@ export async function updateGovernanceBody(governanceBodyId, data) {
 
     await scoped(model.governanceBodyModel).update(data, {
         where: { governanceBodyId },
+        individualHooks: true,
+        transaction: options.transaction,
     });
 
-    return getGovernanceBodyById(governanceBodyId);
+    return getGovernanceBodyById(governanceBodyId, options);
 }
 
-export async function countChildGovernanceBodies(governanceBodyId) {
+export async function countChildGovernanceBodies(governanceBodyId, options = {}) {
     return scoped(model.governanceBodyModel).count({
         where: { parentBodyId: governanceBodyId },
+        transaction: options.transaction,
     });
 }
 
-export async function deleteGovernanceBody(governanceBodyId) {
+export async function deleteGovernanceBody(governanceBodyId, options = {}) {
     const existing = await scoped(model.governanceBodyModel).findOne({
         where: { governanceBodyId },
         attributes: ['governanceBodyId'],
+        transaction: options.transaction,
     });
     if (!existing) {
         return false;
@@ -65,6 +74,8 @@ export async function deleteGovernanceBody(governanceBodyId) {
 
     const deleted = await scoped(model.governanceBodyModel).destroy({
         where: { governanceBodyId },
+        individualHooks: true,
+        transaction: options.transaction,
     });
     return deleted > 0;
 }

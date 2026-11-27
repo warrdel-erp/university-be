@@ -22,6 +22,7 @@ export async function updateAssignment(id, data, options = {}) {
   return scoped(model.examInvigilatorAssignmentModel).update(data, {
     where: { examInvigilatorAssignmentId: parsedId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -185,6 +186,7 @@ export async function deleteAssignment(id, options = {}) {
   return scoped(model.examInvigilatorAssignmentModel).destroy({
     where: { examInvigilatorAssignmentId: parsedId },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 

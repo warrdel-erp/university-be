@@ -1,5 +1,7 @@
 import sequelize from "../../../database/sequelizeConfig.js";
 import * as repo from "../repository/amcContractRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import { parseMoneyInput } from "../../../utility/decimalMoney.js";
 import {
   currentContractYear,
@@ -90,39 +92,34 @@ export async function addAmcContract(body) {
     throw new Error("contractValue is required");
   }
 
-  const transaction = await sequelize.transaction();
-
   try {
-    await assertVendorAvailable(body.amcVendorId, transaction);
+    return await withAuditEvent(AUDIT_EVENTS.AMC_CONTRACT_CREATE, async ({ transaction }) => {
+      await assertVendorAvailable(body.amcVendorId, transaction);
 
-    const contractNumber = await resolveNextContractNumber(transaction);
+      const contractNumber = await resolveNextContractNumber(transaction);
 
-    const created = await repo.createAmcContract(
-      {
-        contractNumber,
-        contractName: body.contractName,
-        approvalStatus: "DRAFT",
-        amcVendorId: body.amcVendorId,
-        contractType: body.contractType,
-        startDate: body.startDate,
-        endDate: body.endDate,
-        contractValue,
-        paymentTerms: body.paymentTerms,
-        serviceVisitFrequency: body.serviceVisitFrequency,
-        slaResponseHours: body.slaResponseHours,
-        slaResolutionHours: body.slaResolutionHours,
-        description: body.description ?? null,
-      },
-      { transaction }
-    );
+      const created = await repo.createAmcContract(
+        {
+          contractNumber,
+          contractName: body.contractName,
+          approvalStatus: "DRAFT",
+          amcVendorId: body.amcVendorId,
+          contractType: body.contractType,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          contractValue,
+          paymentTerms: body.paymentTerms,
+          serviceVisitFrequency: body.serviceVisitFrequency,
+          slaResponseHours: body.slaResponseHours,
+          slaResolutionHours: body.slaResolutionHours,
+          description: body.description ?? null,
+        },
+        { transaction }
+      );
 
-    const row = await repo.findAmcContractById(created.amcContractId, { transaction });
-
-    await transaction.commit();
-
-    return row;
+      return await repo.findAmcContractById(created.amcContractId, { transaction });
+    });
   } catch (error) {
-    await transaction.rollback();
     throw new Error(`Failed to create AMC contract: ${error.message}`);
   }
 }
@@ -153,122 +150,105 @@ export async function getSingleAmcContract(amcContractId) {
 }
 
 export async function updateAmcContract(amcContractId, body) {
-  const transaction = await sequelize.transaction();
-
   try {
-    const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, { transaction })
-    );
+    return await withAuditEvent(AUDIT_EVENTS.AMC_CONTRACT_UPDATE, async ({ transaction }) => {
+      const existing = assertContractExists(
+        await repo.findAmcContractMetaById(amcContractId, { transaction })
+      );
 
-    assertDraftContract(existing.approvalStatus, "updated");
+      assertDraftContract(existing.approvalStatus, "updated");
 
-    const payload = updatePayload(body);
-    const contractValue = resolveContractValue(body);
-    if (contractValue !== undefined) {
-      payload.contractValue = contractValue;
-    }
-
-    const nextStartDate = payload.startDate ?? existing.startDate;
-    const nextEndDate = payload.endDate ?? existing.endDate;
-    if (nextEndDate < nextStartDate) {
-      throw new Error("endDate must be on or after startDate");
-    }
-
-    if (Object.keys(payload).length) {
-      const affected = await repo.updateAmcContract(amcContractId, payload, {
-        transaction,
-      });
-      if (!affected) {
-        throw new Error("AMC contract not found or not in your institute");
+      const payload = updatePayload(body);
+      const contractValue = resolveContractValue(body);
+      if (contractValue !== undefined) {
+        payload.contractValue = contractValue;
       }
-    }
 
-    const row = await repo.findAmcContractById(amcContractId, { transaction });
+      const nextStartDate = payload.startDate ?? existing.startDate;
+      const nextEndDate = payload.endDate ?? existing.endDate;
+      if (nextEndDate < nextStartDate) {
+        throw new Error("endDate must be on or after startDate");
+      }
 
-    await transaction.commit();
+      if (Object.keys(payload).length) {
+        const affected = await repo.updateAmcContract(amcContractId, payload, {
+          transaction,
+        });
+        if (!affected) {
+          throw new Error("AMC contract not found or not in your institute");
+        }
+      }
 
-    return row;
+      return await repo.findAmcContractById(amcContractId, { transaction });
+    });
   } catch (error) {
-    await transaction.rollback();
     throw new Error(`Failed to update AMC contract: ${error.message}`);
   }
 }
 
 export async function deleteAmcContract(amcContractId) {
-  const transaction = await sequelize.transaction();
-
   try {
-    const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, { transaction })
-    );
+    return await withAuditEvent(AUDIT_EVENTS.AMC_CONTRACT_DELETE, async ({ transaction }) => {
+      const existing = assertContractExists(
+        await repo.findAmcContractMetaById(amcContractId, { transaction })
+      );
 
-    assertDraftContract(existing.approvalStatus, "deleted");
+      assertDraftContract(existing.approvalStatus, "deleted");
 
-    const ok = await repo.deleteAmcContract(amcContractId, { transaction });
-    if (!ok) {
-      throw new Error("AMC contract not found or not in your institute");
-    }
+      const ok = await repo.deleteAmcContract(amcContractId, { transaction });
+      if (!ok) {
+        throw new Error("AMC contract not found or not in your institute");
+      }
 
-    await transaction.commit();
-    return true;
+      return true;
+    });
   } catch (error) {
-    await transaction.rollback();
     throw new Error(`Failed to delete AMC contract: ${error.message}`);
   }
 }
 
 export async function submitAmcContractForApproval(amcContractId) {
-  const transaction = await sequelize.transaction();
-
   try {
-    const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, { transaction })
-    );
+    return await withAuditEvent(AUDIT_EVENTS.AMC_CONTRACT_SUBMIT, async ({ transaction }) => {
+      const existing = assertContractExists(
+        await repo.findAmcContractMetaById(amcContractId, { transaction })
+      );
 
-    assertDraftContract(existing.approvalStatus, "submitted for approval");
+      assertDraftContract(existing.approvalStatus, "submitted for approval");
 
-    await repo.updateAmcContract(
-      amcContractId,
-      { approvalStatus: "PUBLISHED" },
-      { transaction }
-    );
+      await repo.updateAmcContract(
+        amcContractId,
+        { approvalStatus: "PUBLISHED" },
+        { transaction }
+      );
 
-    const row = await repo.findAmcContractById(amcContractId, { transaction });
-
-    await transaction.commit();
-
-    return row;
+      return await repo.findAmcContractById(amcContractId, { transaction });
+    });
   } catch (error) {
-    await transaction.rollback();
     throw new Error(`Failed to submit AMC contract for approval: ${error.message}`);
   }
 }
 
 export async function approveAmcContract(amcContractId) {
-  const transaction = await sequelize.transaction();
-
   try {
-    const existing = assertContractExists(
-      await repo.findAmcContractMetaById(amcContractId, { transaction })
-    );
+    return await withAuditEvent(AUDIT_EVENTS.AMC_CONTRACT_APPROVE, async ({ transaction }) => {
+      const existing = assertContractExists(
+        await repo.findAmcContractMetaById(amcContractId, { transaction })
+      );
 
-    if (existing.approvalStatus !== "PUBLISHED") {
-      throw new Error("Only PUBLISHED contracts can be approved");
-    }
+      if (existing.approvalStatus !== "PUBLISHED") {
+        throw new Error("Only PUBLISHED contracts can be approved");
+      }
 
-    await repo.updateAmcContract(
-      amcContractId,
-      { approvalStatus: "APPROVED" },
-      { transaction }
-    );
+      await repo.updateAmcContract(
+        amcContractId,
+        { approvalStatus: "APPROVED" },
+        { transaction }
+      );
 
-    const row = await repo.findAmcContractById(amcContractId, { transaction });
-
-    await transaction.commit();
-
-    return row;
+      return await repo.findAmcContractById(amcContractId, { transaction });
+    });
   } catch (error) {
-    await transaction.rollback();
     throw new Error(`Failed to approve AMC contract: ${error.message}`);
   }
 }

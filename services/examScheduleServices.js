@@ -13,6 +13,8 @@ import {
 import { decimalSubtract } from "../utility/decimalMoney.js";
 import * as model from "../models/index.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function firstId(value) {
   if (value == null) return null;
@@ -117,9 +119,7 @@ export async function allocateSeatsByStrategy(
   strategy = "random",
   options = {},
 ) {
-  const transaction = options.transaction || (await sequelize.transaction());
-  const isLocalTransaction = !options.transaction;
-  try {
+  const runner = async (transaction) => {
     const schedule = await examScheduleRepository.getExamScheduleById(
       examScheduleId,
       { transaction },
@@ -221,24 +221,23 @@ export async function allocateSeatsByStrategy(
       transaction,
     );
 
-    if (isLocalTransaction) {
-      await transaction.commit();
-    }
     return {
       allocatedCount: result.length,
       totalStudents: orderedStudents.length,
       totalCapacity,
     };
-  } catch (error) {
-    if (isLocalTransaction) {
-      await transaction.rollback();
-    }
-    console.error(
-      `Error in allocateSeatsByStrategy service (${strategy}):`,
-      error,
-    );
-    throw error;
+  };
+
+  if (options.transaction) {
+    return runner(options.transaction);
   }
+
+  return withAuditEvent(
+    AUDIT_EVENTS.EXAM_SEAT_ALLOCATE,
+    async ({ transaction }) => {
+      return runner(transaction);
+    },
+  );
 }
 
 export async function allocateSeatsRandomly(examScheduleId, userId) {
@@ -640,121 +639,126 @@ export async function addExamRoomCapacity(data, userId) {
   const examDate = examSchedule.examDate;
 
   // 6. Execute room capacity allocation & seat assignment within transaction
-  const transaction = await sequelize.transaction();
-  try {
-    const batchId = examSchedule.batchId || examSchedule.batch?.batchId;
-    const term =
-      examSchedule.term || examSchedule.curriculumSubjectTermMapping?.term;
+  return withAuditEvent(
+    AUDIT_EVENTS.EXAM_ROOM_CAPACITY_CREATE,
+    async ({ transaction }) => {
+      const batchId = examSchedule.batchId || examSchedule.batch?.batchId;
+      const term =
+        examSchedule.term || examSchedule.curriculumSubjectTermMapping?.term;
 
-    let students = [];
-    if (batchId && term) {
-      students = await examScheduleRepository.findStudentsByBatchAndTerm(
-        batchId,
-        term,
-        { transaction },
-      );
-    }
-    if (!students.length) {
-      const cohort = buildStudentGroupFromSchedule(examSchedule);
-      students = await findStudentsForExamGroup(
-        cohort.sessionId,
-        cohort.courseId,
-        cohort.term,
-        cohort.academicYearId,
-        {
-          batchId: cohort.batchId,
-          batchYear: cohort.batchYear,
-          yearNumber: cohort.yearNumber,
-          curriculumBatchTermMappingId: cohort.curriculumBatchTermMappingId,
-          curriculumSubjectTermMappingId: cohort.curriculumSubjectTermMappingId,
-          transaction,
-        },
-      );
-    }
-    const totalStudents = students.length;
-
-    const alreadyAssignedCapacity =
-      await examScheduleRepository.getAlreadyAssignedRoomCapacity(
-        resolvedExamScheduleId,
-        { transaction },
-      );
-
-    let remainingStudents = Math.max(
-      0,
-      decimalSubtract(totalStudents, alreadyAssignedCapacity),
-    );
-
-    const assignments = [];
-    for (const candidate of newCandidates) {
-      const roomId = candidate.classRoomSectionId;
-      const room = roomLookup.get(roomId);
-
-      const roomMaxCapacity = room.examCapacity ?? room.capacity;
-      const resolvedExamColumns = room.examCapacityColumns ?? 1;
-
-      if (!roomMaxCapacity || roomMaxCapacity <= 0) {
-        throw new Error(`Room ${room.roomNumber} has invalid capacity`);
+      let students = [];
+      if (batchId && term) {
+        students = await examScheduleRepository.findStudentsByBatchAndTerm(
+          batchId,
+          term,
+          { transaction },
+        );
       }
+      if (!students.length) {
+        const cohort = buildStudentGroupFromSchedule(examSchedule);
+        students = await findStudentsForExamGroup(
+          cohort.sessionId,
+          cohort.courseId,
+          cohort.term,
+          cohort.academicYearId,
+          {
+            batchId: cohort.batchId,
+            batchYear: cohort.batchYear,
+            yearNumber: cohort.yearNumber,
+            curriculumBatchTermMappingId: cohort.curriculumBatchTermMappingId,
+            curriculumSubjectTermMappingId:
+              cohort.curriculumSubjectTermMappingId,
+            transaction,
+          },
+        );
+      }
+      const totalStudents = students.length;
 
-      const usedCapacity =
-        await examScheduleRepository.getOccupiedRoomSlotCapacity(
-          roomId,
-          examDate,
-          examSchedule.examinationSessionSlotId,
+      const alreadyAssignedCapacity =
+        await examScheduleRepository.getAlreadyAssignedRoomCapacity(
+          resolvedExamScheduleId,
           { transaction },
         );
 
-      const remainingRoomCapacity = Math.max(
+      let remainingStudents = Math.max(
         0,
-        decimalSubtract(roomMaxCapacity, usedCapacity),
+        decimalSubtract(totalStudents, alreadyAssignedCapacity),
       );
-      const capacityToSave = Math.min(remainingStudents, remainingRoomCapacity);
 
-      if (remainingRoomCapacity <= 0) {
-        throw new Error(
-          `Room ${room.roomNumber} is not available for the selected time slot. Booked capacity: ${usedCapacity}/${roomMaxCapacity}`,
+      const assignments = [];
+      for (const candidate of newCandidates) {
+        const roomId = candidate.classRoomSectionId;
+        const room = roomLookup.get(roomId);
+
+        const roomMaxCapacity = room.examCapacity ?? room.capacity;
+        const resolvedExamColumns = room.examCapacityColumns ?? 1;
+
+        if (!roomMaxCapacity || roomMaxCapacity <= 0) {
+          throw new Error(`Room ${room.roomNumber} has invalid capacity`);
+        }
+
+        const usedCapacity =
+          await examScheduleRepository.getOccupiedRoomSlotCapacity(
+            roomId,
+            examDate,
+            examSchedule.examinationSessionSlotId,
+            { transaction },
+          );
+
+        const remainingRoomCapacity = Math.max(
+          0,
+          decimalSubtract(roomMaxCapacity, usedCapacity),
+        );
+        const capacityToSave = Math.min(
+          remainingStudents,
+          remainingRoomCapacity,
+        );
+
+        if (remainingRoomCapacity <= 0) {
+          throw new Error(
+            `Room ${room.roomNumber} is not available for the selected time slot. Booked capacity: ${usedCapacity}/${roomMaxCapacity}`,
+          );
+        }
+
+        remainingStudents = Math.max(
+          0,
+          decimalSubtract(remainingStudents, capacityToSave),
+        );
+
+        assignments.push({
+          universityId: examSchedule.universityId || room.universityId,
+          instituteId: examSchedule.instituteId || room.instituteId,
+          classRoomSectionId: room.classRoomSectionId,
+          examScheduleId: resolvedExamScheduleId,
+          capacity: capacityToSave,
+          columns: resolvedExamColumns,
+          orderKey: candidate.orderKey,
+          createdBy: userId,
+          updatedBy: userId,
+        });
+      }
+
+      const result = await examScheduleRepository.bulkCreateRoomAssignments(
+        assignments,
+        { transaction },
+      );
+
+      // Auto-allocate seats using "ascending" strategy
+      try {
+        await allocateSeatsByStrategy(
+          resolvedExamScheduleId,
+          userId,
+          "ascending",
+          { transaction },
+        );
+      } catch (seatErr) {
+        console.error(
+          "Auto seat allocation skipped or failed:",
+          seatErr.message,
         );
       }
 
-      remainingStudents = Math.max(
-        0,
-        decimalSubtract(remainingStudents, capacityToSave),
-      );
-
-      assignments.push({
-        universityId: examSchedule.universityId || room.universityId,
-        instituteId: examSchedule.instituteId || room.instituteId,
-        classRoomSectionId: room.classRoomSectionId,
-        examScheduleId: resolvedExamScheduleId,
-        capacity: capacityToSave,
-        columns: resolvedExamColumns,
-        orderKey: candidate.orderKey,
-        createdBy: userId,
-        updatedBy: userId,
-      });
-    }
-
-    const result = await examScheduleRepository.bulkCreateRoomAssignments(
-      assignments,
-      { transaction },
-    );
-
-    // Auto-allocate seats using "ascending" strategy
-    try {
-      await allocateSeatsByStrategy(
-        resolvedExamScheduleId,
-        userId,
-        "ascending",
-        { transaction },
-      );
-    } catch (seatErr) {
-      console.error("Auto seat allocation skipped or failed:", seatErr.message);
-    }
-
-    await transaction.commit();
-    return result;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+      return result;
+    },
+  );
 }

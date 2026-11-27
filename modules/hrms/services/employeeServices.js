@@ -43,6 +43,8 @@ import moment from "moment";
 import { getTenantStore, getAcademicYearId } from "../../../utility/requestContext.js";
 import { decimalAdd } from "../../../utility/decimalMoney.js";
 import { getDownloadSignedUrl } from "../../../utility/s3Helper.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 async function generateEmployeeNumber(campusId, instituteId) {
   const getCampusCodeDetail = await getCampusCode(campusId);
@@ -285,8 +287,7 @@ export async function addEmployee(data, files, createdBy, roleId) {
   data.campusId = campusId;
   data.universityId = universityId;
 
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.EMPLOYEE_CREATE, async ({ transaction }) => {
     const address = safeParseJsonField(data.address, null);
     const corsAddress = safeParseJsonField(data.corsAddress, null);
     const office = safeParseJsonField(data.office, null) || {};
@@ -682,15 +683,8 @@ export async function addEmployee(data, files, createdBy, roleId) {
       };
       await addHead(headData, transaction);
     }
-    // Commit transaction
-    await transaction.commit();
     return { message: "Employee data successfully added" };
-  } catch (error) {
-    // Rollback transaction in case of error
-    await transaction.rollback();
-    console.error("Error adding employee data:", error);
-    throw error;
-  }
+  });
 }
 
 export async function updateEmployee(
@@ -700,8 +694,7 @@ export async function updateEmployee(
   updatedBy,
   createdBy,
 ) {
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.EMPLOYEE_UPDATE, async ({ transaction }) => {
     const existingEmployee = await employeeRepository.assertScopedEmployee(
       identifier,
       { transaction },
@@ -1191,13 +1184,8 @@ export async function updateEmployee(
       }
     }
 
-    await transaction.commit();
     return { message: "Employee data successfully updated" };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error updating employee data:", error);
-    throw error;
-  }
+  });
 }
 // addEmployee(data,1)
 
@@ -1352,73 +1340,69 @@ export async function getSingleEmployeeDetails(userId) {
 }
 
 export async function deleteEmployeeDetail(userId) {
-  try {
-    const [
-      deleteEmployeeDetails,
-      deleteEmployeeAddresses,
-      deleteEmployeeOffices,
-      deleteEmployeeRoles,
-      deleteEmployeeSkills,
-      deleteEmployeeDocuments,
-      deleteEmployeeQualifications,
-      deleteEmployeeExperiences,
-      deleteEmployeeAchievements,
-      deleteEmployeeWards,
-      deleteEmployeeActivities,
-      deleteEmployeeReferences,
-      deleteEmployeeLongLeaves,
-      deleteEmployeeMetaData,
-    ] = await Promise.all([
-      employeeRepository.deleteEmployeeDetail(userId),
-      employeeAddressRepository.deleteEmployeeAddress(userId),
-      employeeOfficeRepository.deleteEmployeeOffice(userId),
-      employeeRoleRepository.deleteEmployeeRole(userId),
-      employeeSkillRepository.deleteEmployeeSkill(userId),
-      employeeDocumentRepository.deleteEmployeeDocuments(userId),
-      employeeQualificationRepository.deleteEmployeeQualification(userId),
-      employeeExperianceRepository.deleteEmployeeExperiance(userId),
-      employeeAchivementRepository.deleteEmployeeAchievement(userId),
-      employeeWardRepository.deleteEmployeeWard(userId),
-      employeeActivityRepository.deleteEmployeeActivity(userId),
-      employeeReferenceRepository.deleteEmployeeReference(userId),
-      employeeLongLeaveRepository.deleteEmployeeLongLeave(userId),
-      employeeMetaDataRepository.deleteEmployeeMetaData(userId),
-    ]);
+  return withAuditEvent(AUDIT_EVENTS.EMPLOYEE_DELETE, async ({ transaction }) => {
+    try {
+      const [
+        deleteEmployeeDetails,
+        deleteEmployeeAddresses,
+        deleteEmployeeOffices,
+        deleteEmployeeRoles,
+        deleteEmployeeSkills,
+        deleteEmployeeDocuments,
+        deleteEmployeeQualifications,
+        deleteEmployeeExperiences,
+        deleteEmployeeAchievements,
+        deleteEmployeeWards,
+        deleteEmployeeActivities,
+        deleteEmployeeReferences,
+        deleteEmployeeLongLeaves,
+        deleteEmployeeMetaData,
+      ] = await Promise.all([
+        employeeRepository.deleteEmployeeDetail(userId, { transaction }),
+        employeeAddressRepository.deleteEmployeeAddress(userId, { transaction }),
+        employeeOfficeRepository.deleteEmployeeOffice(userId, { transaction }),
+        employeeRoleRepository.deleteEmployeeRole(userId, { transaction }),
+        employeeSkillRepository.deleteEmployeeSkill(userId, { transaction }),
+        employeeDocumentRepository.deleteEmployeeDocuments(userId, { transaction }),
+        employeeQualificationRepository.deleteEmployeeQualification(userId, { transaction }),
+        employeeExperianceRepository.deleteEmployeeExperiance(userId, { transaction }),
+        employeeAchivementRepository.deleteEmployeeAchievement(userId, { transaction }),
+        employeeWardRepository.deleteEmployeeWard(userId, { transaction }),
+        employeeActivityRepository.deleteEmployeeActivity(userId, { transaction }),
+        employeeReferenceRepository.deleteEmployeeReference(userId, { transaction }),
+        employeeLongLeaveRepository.deleteEmployeeLongLeave(userId, { transaction }),
+        employeeMetaDataRepository.deleteEmployeeMetaData(userId, { transaction }),
+      ]);
 
-    const results = [
-      deleteEmployeeDetails,
-      deleteEmployeeAddresses,
-      deleteEmployeeOffices,
-      deleteEmployeeRoles,
-      deleteEmployeeSkills,
-      deleteEmployeeDocuments,
-      deleteEmployeeQualifications,
-      deleteEmployeeExperiences,
-      deleteEmployeeAchievements,
-      deleteEmployeeWards,
-      deleteEmployeeActivities,
-      deleteEmployeeReferences,
-      deleteEmployeeLongLeaves,
-      deleteEmployeeMetaData,
-    ];
+      const results = [
+        deleteEmployeeDetails,
+        deleteEmployeeAddresses,
+        deleteEmployeeOffices,
+        deleteEmployeeRoles,
+        deleteEmployeeSkills,
+        deleteEmployeeDocuments,
+        deleteEmployeeQualifications,
+        deleteEmployeeExperiences,
+        deleteEmployeeAchievements,
+        deleteEmployeeWards,
+        deleteEmployeeActivities,
+        deleteEmployeeReferences,
+        deleteEmployeeLongLeaves,
+        deleteEmployeeMetaData,
+      ];
 
-    const allDeleted = results.every((result) => result !== null);
+      const allDeleted = results.every((result) => result !== null);
 
-    if (allDeleted) {
-      return { message: "Employee and related records deleted successfully" };
-    } else {
-      return { message: "Some records were not found or not deleted" };
-    }
-  } catch (error) {
-    console.error("Error deleting employee:", error);
-    if (error.statusCode) {
+      if (allDeleted) {
+        return { message: "Employee and related records deleted successfully" };
+      } else {
+        return { message: "Some records were not found or not deleted" };
+      }
+    } catch (error) {
+      console.error("Error deleting employee:", error);
       throw error;
     }
-    return {
-      message: "An error occurred while trying to delete the employee",
-      error: error.message,
-    };
-  }
+  });
 }
 
 function validateEmployeeRow(employee) {
@@ -1442,10 +1426,9 @@ function validateEmployeeRow(employee) {
 }
 
 export async function importEmployeeData(excelData, commonData) {
-  const transaction = await sequelize.transaction();
-  const { universityId } = getTenantStore();
+  return withAuditEvent(AUDIT_EVENTS.EMPLOYEE_IMPORT, async ({ transaction }) => {
+    const { universityId } = getTenantStore();
 
-  try {
     for (const [index, employee] of excelData.entries()) {
       const convertedData = { ...employee, ...commonData };
 
@@ -1540,13 +1523,8 @@ export async function importEmployeeData(excelData, commonData) {
       );
     }
 
-    await transaction.commit();
     return { success: true, message: "All employees imported successfully" };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in importing employee data:", error.message);
-    return { success: false, error: error.message };
-  }
+  });
 }
 
 export async function getEmployeeOfficeDetails(userId) {

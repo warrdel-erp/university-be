@@ -79,7 +79,7 @@ export async function bulkInsertLibraryBooks(bookPayloadList, transaction) {
     }
   }
 
-  return scoped(model.libraryBookModel).bulkCreate(bookPayloadList, { transaction });
+  return scoped(model.libraryBookModel).bulkCreate(bookPayloadList, { transaction, individualHooks: true });
 }
 
 export async function bulkInsertLibraryBookInventory(inventoryPayloadList, transaction) {
@@ -98,7 +98,7 @@ export async function bulkInsertLibraryBookInventory(inventoryPayloadList, trans
     }
   }
 
-  return model.libraryBookInventoryModel.bulkCreate(inventoryPayloadList, { transaction });
+  return model.libraryBookInventoryModel.bulkCreate(inventoryPayloadList, { transaction, individualHooks: true });
 }
 
 export async function replaceBookCategoryMappings(libraryBookId, categoryId, transaction) {
@@ -115,6 +115,7 @@ export async function replaceBookCategoryMappings(libraryBookId, categoryId, tra
   await scoped(model.libraryBookCategoryMappingModel).destroy({
     where: { libraryBookId },
     transaction,
+    individualHooks: true,
   });
 
   const uniqueIds = uniquePositiveIds(categoryId);
@@ -125,7 +126,7 @@ export async function replaceBookCategoryMappings(libraryBookId, categoryId, tra
       libraryBookId,
       libraryCategoryId,
     })),
-    { transaction }
+    { transaction, individualHooks: true }
   );
 }
 
@@ -143,6 +144,7 @@ export async function replaceBookSubjectMappings(libraryBookId, subjectId, trans
   await scoped(model.libraryBookSubjectMappingModel).destroy({
     where: { libraryBookId },
     transaction,
+    individualHooks: true,
   });
 
   const uniqueIds = uniquePositiveIds(subjectId);
@@ -153,7 +155,7 @@ export async function replaceBookSubjectMappings(libraryBookId, subjectId, trans
       libraryBookId,
       librarySubjectId,
     })),
-    { transaction }
+    { transaction, individualHooks: true }
   );
 }
 

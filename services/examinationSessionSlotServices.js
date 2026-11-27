@@ -5,6 +5,8 @@ import * as examinationSessionServices from "./examinationSessionServices.js";
 import { deriveScheduleRoomFlags } from "../utility/roomCapacity.js";
 import { EXAM_SCHEDULE_FILTER_STATUS } from "../constant.js";
 import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function addMinutesToTime(timeStr, minutes) {
   if (!timeStr) return null;
@@ -19,6 +21,16 @@ function addMinutesToTime(timeStr, minutes) {
 
   const pad = (n) => String(n).padStart(2, "0");
   return `${pad(newHours)}:${pad(newMins)}:${pad(secs)}`;
+}
+
+function getDurationInMinutes(startTime, endTime) {
+  if (!startTime || !endTime) return null;
+  const partsStart = startTime.split(":").map(Number);
+  const partsEnd = endTime.split(":").map(Number);
+  const startMins = (partsStart[0] || 0) * 60 + (partsStart[1] || 0);
+  const endMins = (partsEnd[0] || 0) * 60 + (partsEnd[1] || 0);
+  const diff = endMins - startMins;
+  return diff > 0 ? diff : null;
 }
 
 async function resolveMissingScheduleMappings(schedules, examinationSessionId, options = {}) {
@@ -235,7 +247,7 @@ export async function createExaminationSessionSlot(
   { payload, user },
   options = {},
 ) {
-  return sequelize.transaction(async (t) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_SLOT_CREATE, async ({ transaction: t }) => {
     const examinationSessionId = Number(payload.examinationSessionId);
     const numberOfSlots = payload.numberOfSlots
       ? Number(payload.numberOfSlots)
@@ -513,7 +525,7 @@ export async function updateExaminationSessionSlots(
   { payloadArray, user },
   options = {},
 ) {
-  return sequelize.transaction(async (t) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_SLOT_UPDATE, async ({ transaction: t }) => {
     const results = [];
     for (const payload of payloadArray) {
       const existingSlot =
@@ -569,10 +581,88 @@ export async function deleteExaminationSessionSlot(
   examinationSessionSlotId,
   options = {},
 ) {
-  return sequelize.transaction(async (t) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAMINATION_SESSION_SLOT_DELETE, async ({ transaction: t }) => {
     return examinationSessionSlotRepository.deleteExaminationSessionSlot(
       examinationSessionSlotId,
       { ...options, transaction: t },
     );
+  });
+}
+
+export async function addMoreSlotsToExaminationSession(
+  { payload, user },
+  options = {},
+) {
+  return sequelize.transaction(async (t) => {
+    const examinationSessionId = Number(payload.examinationSessionId);
+    if (!examinationSessionId || isNaN(examinationSessionId)) {
+      const error = new Error("Valid examinationSessionId is required");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const session = await examinationSessionRepository.getExaminationSessionById(
+      examinationSessionId,
+      { ...options, transaction: t },
+    );
+
+    if (!session) {
+      const error = new Error("Examination session not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const lastSlot = await examinationSessionSlotRepository.getLastSlot(
+      examinationSessionId,
+      { ...options, transaction: t },
+    );
+
+    let nextSlotNumber =(lastSlot?.slotNumber ? Number(lastSlot.slotNumber) : 0) + 1;
+    const fallbackDuration =lastSlot?.durationMinutes !== undefined && lastSlot?.durationMinutes !== null? Number(lastSlot.durationMinutes): null;
+    const fallbackStartTime = lastSlot?.endTime || null;
+
+    const createdSlots = [];
+
+      const numberOfSlots = Number( payload.numberOfSlots);
+
+      let currentStartTime =payload.startTime !== undefined && payload.startTime !== null? payload.startTime: fallbackStartTime;
+
+      const durationMinutes =
+        payload.durationMinutes !== undefined &&
+        payload.durationMinutes !== null
+          ? Number(payload.durationMinutes)
+          : getDurationInMinutes(currentStartTime, payload.endTime) ||
+            fallbackDuration;
+
+      for (let i = 0; i < numberOfSlots; i++) {
+        let currentEndTime = payload.endTime || null;
+
+        if (currentStartTime && durationMinutes) {
+          currentEndTime = addMinutesToTime(currentStartTime, durationMinutes);
+        }
+
+        const slotData = {
+          examinationSessionId,
+          slotNumber: nextSlotNumber++,
+          startTime: currentStartTime,
+          endTime: currentEndTime,
+          durationMinutes,
+          createdBy: user?.userId || null,
+          updatedBy: user?.userId || null,
+        };
+
+        const newSlot = await examinationSessionSlotRepository.createExaminationSessionSlot(
+          slotData,
+          { ...options, transaction: t },
+        );
+        createdSlots.push(newSlot);
+
+        if (currentEndTime && durationMinutes) {
+          currentStartTime = currentEndTime;
+        }
+      }
+   
+
+    return createdSlots;
   });
 }

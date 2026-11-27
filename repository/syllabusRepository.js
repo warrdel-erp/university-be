@@ -136,24 +136,26 @@ export async function getSingleSyllabusDetails(SyllabusId) {
   }
 }
 
-export async function deleteSyllabus(SyllabusId) {
+export async function deleteSyllabus(SyllabusId, options = {}) {
   const existing = await scoped(model.syllabusModel).findOne({
     where: { syllabusId: SyllabusId },
     attributes: ['syllabusId'],
+    ...options,
   });
   if (!existing) {
     return false;
   }
 
-  const deleted = await scoped(model.syllabusModel).destroy({ where: { syllabusId: SyllabusId } });
+  const deleted = await scoped(model.syllabusModel).destroy({ where: { syllabusId: SyllabusId }, ...options });
   return deleted > 0;
 }
 
-export async function updateSyllabus(SyllabusId, syllabusData) {
+export async function updateSyllabus(SyllabusId, syllabusData, options = {}) {
   try {
     const existing = await scoped(model.syllabusModel).findOne({
       where: { syllabusId: SyllabusId },
       attributes: ['syllabusId'],
+      ...options,
     });
     if (!existing) {
       return [0];
@@ -161,6 +163,7 @@ export async function updateSyllabus(SyllabusId, syllabusData) {
 
     return await scoped(model.syllabusModel).update(syllabusData, {
       where: { syllabusId: SyllabusId },
+      ...options,
     });
   } catch (error) {
     console.error(`Error updating Syllabus creation ${SyllabusId}:`, error);
@@ -316,9 +319,9 @@ export async function backfillSubjectCampusId(subjectId) {
   }
 }
 
-export async function addSyllabusUnit(syllabusData) {
+export async function addSyllabusUnit(syllabusData, options = {}) {
   try {
-    return await scoped(model.syllabusUnitModel).bulkCreate(syllabusData);
+    return await scoped(model.syllabusUnitModel).bulkCreate(syllabusData, options);
   } catch (error) {
     console.error('Error in add Syllabus unit :', error);
     throw error;
@@ -339,43 +342,46 @@ export async function syllabusUnitGet(subjectId) {
   }
 }
 
-export async function getSyllabusUnitById(syllabusUnitId, academicYearId) {
+export async function getSyllabusUnitById(syllabusUnitId, academicYearId, options = {}) {
   try {
     return await scoped(model.syllabusUnitModel).findOne({
       where: buildUnitWhere({ syllabusUnitId, academicYearId }),
       attributes: { exclude: ['createdAt', 'updatedAt', 'createdBy', 'updatedBy'] },
+      ...options,
     });  } catch (error) {
     console.error('Error fetching syllabus unit by id:', error);
     throw error;
   }
 }
 
-export async function updateSyllabusUnit(syllabusUnitId, academicYearId, data) {
+export async function updateSyllabusUnit(syllabusUnitId, academicYearId, data, options = {}) {
   try {
-    const existing = await getSyllabusUnitById(syllabusUnitId, academicYearId);
+    const existing = await getSyllabusUnitById(syllabusUnitId, academicYearId, options);
     if (!existing) {
       return null;
     }
 
     await scoped(model.syllabusUnitModel).update(data, {
       where: buildUnitWhere({ syllabusUnitId, academicYearId }),
+      ...options,
     });
-    return getSyllabusUnitById(syllabusUnitId, academicYearId);
+    return getSyllabusUnitById(syllabusUnitId, academicYearId, options);
   } catch (error) {
     console.error('Error updating syllabus unit:', error);
     throw error;
   }
 }
 
-export async function deleteSyllabusUnit(syllabusUnitId) {
+export async function deleteSyllabusUnit(syllabusUnitId, options = {}) {
   try {
-    const existing = await scoped(model.syllabusUnitModel).findByPk(Number(syllabusUnitId));
+    const existing = await scoped(model.syllabusUnitModel).findByPk(Number(syllabusUnitId), options);
     if (!existing) {
       return false;
     }
 
     const deleted = await scoped(model.syllabusUnitModel).destroy({
       where: { syllabusUnitId: Number(syllabusUnitId) },
+      ...options,
     });
     return deleted > 0;
   } catch (error) {

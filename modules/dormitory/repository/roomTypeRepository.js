@@ -1,9 +1,9 @@
 import * as model from '../../../models/index.js';
 import { scoped } from '../../../utility/scoped.js';
 
-export async function addRoomType(RoomTypeData) {
+export async function addRoomType(RoomTypeData, transaction) {
     try {
-        const result = await scoped(model.roomTypeModel).create(RoomTypeData);
+        const result = await scoped(model.roomTypeModel).create(RoomTypeData, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add RoomType :", error);
@@ -24,11 +24,12 @@ export async function getRoomTypeDetails() {
     }
 }
 
-export async function getSingleRoomTypeDetails(roomTypeId) {
+export async function getSingleRoomTypeDetails(roomTypeId, transaction) {
     try {
         const RoomType = await scoped(model.roomTypeModel).findOne({
             attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
             where: { roomTypeId },
+            transaction,
         });
 
         return RoomType;
@@ -38,15 +39,21 @@ export async function getSingleRoomTypeDetails(roomTypeId) {
     }
 }
 
-export async function deleteRoomType(roomTypeId) {
-    const deleted = await scoped(model.roomTypeModel).destroy({ where: { roomTypeId } });
+export async function deleteRoomType(roomTypeId, transaction) {
+    const deleted = await scoped(model.roomTypeModel).destroy({
+        where: { roomTypeId },
+        transaction,
+        individualHooks: true,
+    });
     return deleted > 0;
 }
 
-export async function updateRoomType(roomTypeId, RoomTypeData) {
+export async function updateRoomType(roomTypeId, RoomTypeData, transaction) {
     try {
         const result = await scoped(model.roomTypeModel).update(RoomTypeData, {
-            where: { roomTypeId }
+            where: { roomTypeId },
+            transaction,
+            individualHooks: true,
         });
         return result;
     } catch (error) {
@@ -54,4 +61,3 @@ export async function updateRoomType(roomTypeId, RoomTypeData) {
         throw error;
     }
 }
-

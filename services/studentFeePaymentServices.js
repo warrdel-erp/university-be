@@ -7,6 +7,8 @@ import {
   decimalSum,
   toMoneyNumber,
 } from "../utility/decimalMoney.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -163,7 +165,7 @@ export async function recordStudentFeePaymentFromDetails(body, createdBy) {
   }
 
   const { studentFeePaymentId, resolvedLines } = await executeWithDeadlockRetry(async () => {
-    return sequelize.transaction(async (transaction) => {
+    return withAuditEvent(AUDIT_EVENTS.STUDENT_FEE_PAYMENT_RECORD, async ({ transaction }) => {
       if (body.transactionId) {
         const existingPayment = await paymentRepo.findPaymentByTransactionId(body.transactionId, {
           transaction,

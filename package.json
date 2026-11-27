@@ -53,6 +53,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-poppler": "^0.2.1",
     "pdfjs-dist": "^3.11.174",
+    "qrcode": "^1.5.4",
     "rotating-file-stream": "^3.2.10",
     "sequelize": "^6.37.3",
     "simple-statistics": "^7.12.1",

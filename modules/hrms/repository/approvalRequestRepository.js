@@ -104,6 +104,7 @@ export async function updateApprovalRequest(id, data, options = {}) {
 
   return scoped(model.approvalRequestModel).update(data, {
     where: { id },
+    individualHooks: true,
     transaction: options.transaction,
   });
 }

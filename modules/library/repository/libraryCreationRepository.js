@@ -142,13 +142,15 @@ export async function getAllCategories() {
   });
 }
 
-export async function updateCategory(libraryCategoryId, data) {
-  const existing = await assertScopedCategory(libraryCategoryId);
+export async function updateCategory(libraryCategoryId, data, transaction) {
+  const existing = await assertScopedCategory(libraryCategoryId, transaction);
   if (!existing) {
     return false;
   }
   const [updated] = await scoped(model.libraryCategoryModel).update(data, {
     where: { libraryCategoryId },
+    individualHooks: true,
+    transaction,
   });
   return updated > 0;
 }
@@ -160,6 +162,7 @@ export async function deleteCategoryMappingsByCategoryId(libraryCategoryId, tran
   }
   return scoped(model.libraryBookCategoryMappingModel).destroy({
     where: { libraryCategoryId },
+    individualHooks: true,
     transaction,
   });
 }
@@ -171,6 +174,7 @@ export async function deleteCategoryMappingsByBookId(libraryBookId, transaction)
   }
   return scoped(model.libraryBookCategoryMappingModel).destroy({
     where: { libraryBookId },
+    individualHooks: true,
     transaction,
   });
 }
@@ -182,6 +186,7 @@ export async function deleteSubjectMappingsByBookId(libraryBookId, transaction) 
   }
   return scoped(model.libraryBookSubjectMappingModel).destroy({
     where: { libraryBookId },
+    individualHooks: true,
     transaction,
   });
 }
@@ -247,6 +252,7 @@ export async function deleteCategory(libraryCategoryId, transaction) {
   }
   const deleted = await scoped(model.libraryCategoryModel).destroy({
     where: { libraryCategoryId },
+    individualHooks: true,
     transaction,
   });
   return deleted > 0;
@@ -281,26 +287,30 @@ export async function getSingleLibraryDetails(libraryCreationId) {
   }
 }
 
-export async function deleteLibray(libraryCreationId) {
-  const existing = await assertScopedLibraryCreation(libraryCreationId);
+export async function deleteLibray(libraryCreationId, transaction) {
+  const existing = await assertScopedLibraryCreation(libraryCreationId, transaction);
   if (!existing) {
     return false;
   }
   const deleted = await scoped(model.libraryCreationModel).destroy({
     where: { libraryCreationId },
+    individualHooks: true,
+    ...(transaction ? { transaction } : {}),
   });
   return deleted > 0;
 }
 
-export async function updateLibrary(libraryCreationId, libraryData) {
+export async function updateLibrary(libraryCreationId, libraryData, transaction) {
   try {
-    const existing = await assertScopedLibraryCreation(libraryCreationId);
+    const existing = await assertScopedLibraryCreation(libraryCreationId, transaction);
     if (!existing) {
       return [0];
     }
 
     return await scoped(model.libraryCreationModel).update(libraryData, {
       where: { libraryCreationId },
+      individualHooks: true,
+      ...(transaction ? { transaction } : {}),
     });
   } catch (error) {
     console.error(`Error updating library creation ${libraryCreationId}:`, error);
@@ -758,6 +768,7 @@ export async function updateBook(libraryBookId, data, transaction) {
 
     const result = await scoped(model.libraryBookModel).update(data, {
       where: { libraryBookId },
+      individualHooks: true,
       transaction,
     });
 
@@ -781,6 +792,7 @@ export async function updateInventory(inventoryId, data, transaction) {
 
     const result = await scoped(model.libraryBookInventoryModel).update(data, {
       where: { inventoryId },
+      individualHooks: true,
       transaction,
     });
 
@@ -795,12 +807,13 @@ export async function updateInventory(inventoryId, data, transaction) {
   }
 }
 
-export async function deleteBook(libraryBookId) {
-  const t = await sequelize.transaction();
+export async function deleteBook(libraryBookId, options = {}) {
+  const isExternalTx = !!options.transaction;
+  const t = options.transaction || (await sequelize.transaction());
   try {
     const book = await assertScopedLibraryBook(libraryBookId, t);
     if (!book) {
-      await t.rollback();
+      if (!isExternalTx) await t.rollback();
       throw new Error(`No book found with ID ${libraryBookId}`);
     }
 
@@ -809,38 +822,42 @@ export async function deleteBook(libraryBookId) {
 
     await scoped(model.libraryBookInventoryModel).destroy({
       where: { libraryBookId },
+      individualHooks: true,
       transaction: t,
     });
 
     const deletedBook = await scoped(model.libraryBookModel).destroy({
       where: { libraryBookId },
+      individualHooks: true,
       transaction: t,
     });
 
     if (deletedBook === 0) {
       throw new Error(`No book found with ID ${libraryBookId}`);
     }
-    await t.commit();
+    if (!isExternalTx) await t.commit();
     return {
       message: "Book deleted successfully",
       bookDeleted: true,
     };
   } catch (error) {
-    await t.rollback();
+    if (!isExternalTx) await t.rollback();
     console.error(`Error deleting book (ID: ${libraryBookId}):`, error);
     throw new Error("Failed to delete book. " + error.message);
   }
 }
 
-export async function deleteInventoryCopy(inventoryId) {
+export async function deleteInventoryCopy(inventoryId, transaction) {
   try {
-    const existing = await assertScopedInventory(inventoryId);
+    const existing = await assertScopedInventory(inventoryId, transaction);
     if (!existing) {
       throw new Error(`No inventory copy found with ID ${inventoryId}`);
     }
 
     const deleted = await scoped(model.libraryBookInventoryModel).destroy({
       where: { inventoryId },
+      individualHooks: true,
+      ...(transaction ? { transaction } : {}),
     });
 
     if (deleted === 0) {

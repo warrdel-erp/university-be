@@ -2,6 +2,8 @@ import sequelize from "../../../database/sequelizeConfig.js";
 import * as repo from "../repository/amcVendorRepository.js";
 import * as serviceTicketRepo from "../repository/amcServiceTicketRepository.js";
 import { resolveIssueMemberFromUserId } from "../repository/assetIssueRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import {
   buildVendorCodeFromSlug,
   deriveVendorSlugCandidates,
@@ -90,7 +92,7 @@ async function resolveVendorCode(vendorName, assetCategoryId, transaction, exclu
 
 export async function addAmcVendor(body) {
   try {
-    const row = await sequelize.transaction(async (transaction) => {
+    const row = await withAuditEvent(AUDIT_EVENTS.AMC_VENDOR_CREATE, async ({ transaction }) => {
       const { vendorCode } = await resolveVendorCode(
         body.vendorName,
         body.assetCategoryId,
@@ -169,7 +171,7 @@ export async function getSingleAmcVendor(amcVendorId) {
 
 export async function updateAmcVendor(amcVendorId, body) {
   try {
-    return await sequelize.transaction(async (transaction) => {
+    return await withAuditEvent(AUDIT_EVENTS.AMC_VENDOR_UPDATE, async ({ transaction }) => {
       const existing = await repo.findAmcVendorById(amcVendorId, { transaction });
       if (!existing) {
         throw new Error("AMC vendor not found or not in your institute");
@@ -209,7 +211,7 @@ export async function updateAmcVendor(amcVendorId, body) {
 
 export async function deleteAmcVendor(amcVendorId) {
   try {
-    await sequelize.transaction(async (transaction) => {
+    await withAuditEvent(AUDIT_EVENTS.AMC_VENDOR_DELETE, async ({ transaction }) => {
       const ok = await repo.deleteAmcVendor(amcVendorId, { transaction });
       if (!ok) {
         throw new Error("AMC vendor not found or not in your institute");

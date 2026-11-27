@@ -201,6 +201,7 @@ export async function updateServiceTicket(serviceTicketId, payload, options = {}
   const [affected] = await scoped(model.amcServiceTicketModel).update(payload, {
     where: { serviceTicketId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -209,6 +210,7 @@ export async function deleteServiceTicket(serviceTicketId, options = {}) {
   const deleted = await scoped(model.amcServiceTicketModel).destroy({
     where: { serviceTicketId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }
