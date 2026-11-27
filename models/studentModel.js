@@ -21,6 +21,13 @@ const studentModel = sequelize.define(
             autoIncrement: true,
             field: 'student_id'
         },
+        uuid: {
+            type: DataTypes.UUID,
+            defaultValue: DataTypes.UUIDV4,
+            allowNull: false,
+            unique: true,
+            field: 'uuid'
+        },
         userId: {
             type: DataTypes.INTEGER,
             allowNull: true,

@@ -68,6 +68,17 @@ const updateSlotSchema = {
   ).min(1, "At least one slot update is required"),
 };
 
+const addMoreSlotsSchema = {
+  body: z.object({
+    examinationSessionId: z.coerce.number().int().positive().optional(),
+    numberOfSlots: z.coerce.number().int().positive().optional(),
+    startTime: z.string().optional().nullable(),
+    endTime: z.string().optional().nullable(),
+    durationMinutes: z.coerce.number().int().positive().optional().nullable(),
+  })
+};
+
+router.post('/add-more-slots', userAuth, validate(addMoreSlotsSchema), examinationSessionSlotController.addMoreSlots); 
 router.post('/', userAuth, validate(createSlotSchema), examinationSessionSlotController.createExaminationSessionSlot);
 router.get('/count', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlotsCount);
 router.get('/', userAuth, validate(getSlotsSchema), examinationSessionSlotController.getExaminationSessionSlots);

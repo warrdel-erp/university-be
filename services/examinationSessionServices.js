@@ -977,7 +977,7 @@ export async function createExaminationSession(sessionData, options = {}) {
       if (termsToCreate.length) {
         await assertNoTermOverlap(
           mainData.assessmentTypeId,
-          extractTermNumbers(termsToCreate),
+          termsToCreate,
           tx,
         );
       } else {
@@ -1183,7 +1183,7 @@ export async function updateExaminationSession(
         );
         await assertNoTermOverlap(
           assessmentTypeId,
-          extractTermNumbers(termsToCreate),
+          termsToCreate,
           tx,
           sessionId,
         );
@@ -1289,24 +1289,6 @@ export async function createExaminationSessionTerm(termData, options = {}) {
       throw createBadRequestError("Examination session not found.");
     }
 
-    await assertNoTermOverlap(
-      session.assessmentTypeId,
-      [termNumber],
-      tx,
-      examinationSessionId,
-    );
-
-    await assertCurriculumSubjectsHaveAssessmentPlanMapping(
-      {
-        courseId,
-        sessionId,
-        batchId: termData.batchId != null ? Number(termData.batchId) : null,
-        term: termNumber,
-        academicYearId: session.academicYearId,
-      },
-      tx,
-    );
-
     let batchId = termData.batchId != null ? Number(termData.batchId) : null;
     if (!batchId && sessionId) {
       const sessionBatches = await model.batchModel.findAll({
@@ -1338,6 +1320,29 @@ export async function createExaminationSessionTerm(termData, options = {}) {
             : sessionBatches[sessionBatches.length - 1].batchId;
       }
     }
+
+    await assertNoTermOverlap(
+      session.assessmentTypeId,
+      [{
+        term: termNumber,
+        courseId,
+        sessionId,
+        batchId,
+      }],
+      tx,
+      examinationSessionId,
+    );
+
+    await assertCurriculumSubjectsHaveAssessmentPlanMapping(
+      {
+        courseId,
+        sessionId,
+        batchId,
+        term: termNumber,
+        academicYearId: session.academicYearId,
+      },
+      tx,
+    );
 
     const record =
       await examinationSessionRepository.createExaminationSessionTerm(
@@ -1766,6 +1771,14 @@ export async function getClassSectionTermsBySetupType(
             "regulationName",
             "evaluationPattern",
           ],
+          include: [
+            {
+              model: model.academicRegulationAssesmentSchemeModel,
+              as: "assessmentSchemes",
+              attributes: ["id", "name", "evaluationPattern"],
+              required: false,
+            },
+          ],
           required: false,
         },
       ],
@@ -1808,14 +1821,16 @@ export async function getClassSectionTermsBySetupType(
       const reg = resolvedBatchId
         ? batchRegulationMap.get(Number(resolvedBatchId)) || null
         : null;
-      const evalPattern = reg?.evaluationPattern || null;
+      const schemes = reg?.assessmentSchemes || [];
+      const hasMatchingScheme =
+        schemes.length > 0
+          ? schemes.some((s) => matchesEvaluationPattern(s.evaluationPattern, options.evaluationPattern))
+          : matchesEvaluationPattern(reg?.evaluationPattern, options.evaluationPattern);
 
-      if (
-        options.evaluationPattern &&
-        !matchesEvaluationPattern(evalPattern, options.evaluationPattern)
-      ) {
+      if (options.evaluationPattern && !hasMatchingScheme) {
         continue;
       }
+      const evalPattern = schemes[0]?.evaluationPattern || reg?.evaluationPattern || null;
 
       const mappedSubjects = new Set();
       const byBatchTerm = mappedBatchTermForGroup
