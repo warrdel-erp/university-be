@@ -36,6 +36,15 @@ const questionPaperModel = sequelize.define(
                 key: "id",
             },
         },
+        parentId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: "parent_id",
+            references: {
+                model: 'question_paper',
+                key: "id",
+            },
+        },
         status: {
             type: DataTypes.ENUM(...questionStatus),
             allowNull: false,

@@ -51,12 +51,13 @@ export async function addQuestionPaper(questionPaperData, options = {}) {
 
 export async function getQuestionPapers(filters = {}, pagination = {}) {
   try {
-    const { examScheduleId, createdBy } = filters;
+    const { examScheduleId, createdBy, status } = filters;
     const { limit, offset } = pagination;
 
     const whereClause = {
       ...(examScheduleId && { examScheduleId }),
       ...(createdBy && { createdBy }),
+      ...(status && { status }),
     };
 
     const { count, rows } = await model.questionPaperModel.findAndCountAll({
@@ -69,6 +70,12 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
           model: model.userModel,
           as: "creator",
           attributes: ["userId", "userName"],
+        },
+        {
+          model: model.questionPaperModel,
+          as: "parentQuestionPaper",
+          attributes: ["id", "name"],
+          required: false,
         },
         {
           model: model.examScheduleModel,
@@ -115,6 +122,12 @@ export async function getSingleQuestionPaper(id, ownerId = null) {
           model: model.userModel,
           as: "creator",
           attributes: ["userId", "userName"],
+        },
+        {
+          model: model.questionPaperModel,
+          as: "parentQuestionPaper",
+          attributes: ["id", "name"],
+          required: false,
         },
         {
           model: model.examScheduleModel,

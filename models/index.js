@@ -2265,6 +2265,15 @@ questionPaperBlueprintModel.hasMany(questionPaperModel, {
   as: "questionPapers",
 });
 
+questionPaperModel.belongsTo(questionPaperModel, {
+  foreignKey: "parentId",
+  as: "parentQuestionPaper",
+});
+questionPaperModel.hasMany(questionPaperModel, {
+  foreignKey: "parentId",
+  as: "clonedQuestionPapers",
+});
+
 questionBankModel.belongsTo(universityModel, {
   foreignKey: "universityId",
   as: "university",
