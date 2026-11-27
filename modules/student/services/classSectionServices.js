@@ -5,6 +5,8 @@ import { scoped } from '../../../utility/scoped.js';
 import * as classSectionTermRepository from '../repository/classSectionTermRepository.js';
 import * as batchRepository from '../../../repository/batchRepository.js';
 import * as courseRepository from '../../../repository/courseRepository.js';
+import { withAuditEvent } from '../../../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../../../const/auditEvents.js';
 import { resolveActiveAcademicYearContext } from '../../../utility/curriculumSubjectsByActiveYear.js';
 import {
   buildTermName,
@@ -382,26 +384,29 @@ export async function updateClassSection(body) {
     }
   }
 
-  const updated = await classSectionTermRepository.updateClassSectionFields(
-    classSectionId,
-    updates,
-  );
-  if (!updated) {
-    throw new Error('classSectionId not found');
-  }
+  return await withAuditEvent(AUDIT_EVENTS.CLASS_SECTION_UPDATE, async ({ transaction }) => {
+    const updated = await classSectionTermRepository.updateClassSectionFields(
+      classSectionId,
+      updates,
+      { transaction },
+    );
+    if (!updated) {
+      throw new Error('classSectionId not found');
+    }
 
-  const refreshed = await classSectionTermRepository.findClassSectionInTenantScope(classSectionId);
-  const updatedPlain = refreshed.get ? refreshed.get({ plain: true }) : refreshed;
+    const refreshed = await classSectionTermRepository.findClassSectionInTenantScope(classSectionId, { transaction });
+    const updatedPlain = refreshed.get ? refreshed.get({ plain: true }) : refreshed;
 
-  return {
-    classSectionId: Number(classSectionId),
-    classSectionsId: updatedPlain.classSectionsId,
-    section: updatedPlain.section,
-    expectedCapacity: updatedPlain.expectedCapacity,
-    year: updatedPlain.year,
-    courseId: updatedPlain.courseId,
-    sessionId: updatedPlain.sessionId,
-  };
+    return {
+      classSectionId: Number(classSectionId),
+      classSectionsId: updatedPlain.classSectionsId,
+      section: updatedPlain.section,
+      expectedCapacity: updatedPlain.expectedCapacity,
+      year: updatedPlain.year,
+      courseId: updatedPlain.courseId,
+      sessionId: updatedPlain.sessionId,
+    };
+  });
 }
 
 export async function renameClassSection(classSectionId, section) {
@@ -409,7 +414,7 @@ export async function renameClassSection(classSectionId, section) {
 }
 
 export async function deleteClassSectionTerm(classSectionId) {
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.CLASS_SECTION_DELETE, async ({ transaction }) => {
     const options = { transaction };
     const termRows = await classSectionTermRepository.findClassSectionTermsByClassSectionId(
       classSectionId,

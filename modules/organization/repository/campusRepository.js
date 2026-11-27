@@ -19,29 +19,34 @@ function toCampusRecord(campus, createdBy) {
   };
 }
 
-export async function createCampus(campus, createdBy) {
+export async function createCampus(campus, createdBy, options = {}) {
   try {
     const record = toCampusRecord(campus, createdBy);
-    return scoped(model.campusModel).create(record);
+    return await scoped(model.campusModel).create(record, {
+      transaction: options.transaction,
+    });
   } catch (error) {
     console.error("Error in Campus Repository (createCampus):", error);
     throw error;
   }
 }
 
-export async function getCampuses() {
+export async function getCampuses(options = {}) {
   try {
-    return scoped(model.campusModel).findAll();
+    return await scoped(model.campusModel).findAll({
+      transaction: options.transaction,
+    });
   } catch (error) {
     console.error("Error in Campus Repository (getCampuses):", error);
     throw error;
   }
 }
 
-export async function getCampusById(campusId) {
+export async function getCampusById(campusId, options = {}) {
   try {
-    return scoped(model.campusModel).findOne({
+    return await scoped(model.campusModel).findOne({
       where: { campusId },
+      transaction: options.transaction,
     });
   } catch (error) {
     console.error("Error in Campus Repository (getCampusById):", error);
@@ -49,10 +54,11 @@ export async function getCampusById(campusId) {
   }
 }
 
-export async function updateCampus(campusId, data) {
+export async function updateCampus(campusId, data, options = {}) {
   try {
     const existing = await scoped(model.campusModel).findOne({
       where: { campusId },
+      transaction: options.transaction,
     });
     if (!existing) {
       return null;
@@ -60,10 +66,13 @@ export async function updateCampus(campusId, data) {
 
     await scoped(model.campusModel).update(data, {
       where: { campusId },
+      transaction: options.transaction,
+      individualHooks: true,
     });
 
-    return scoped(model.campusModel).findOne({
+    return await scoped(model.campusModel).findOne({
       where: { campusId },
+      transaction: options.transaction,
     });
   } catch (error) {
     console.error("Error in Campus Repository (updateCampus):", error);
@@ -71,11 +80,12 @@ export async function updateCampus(campusId, data) {
   }
 }
 
-export async function getCampusHierarchy(universityId) {
+export async function getCampusHierarchy(universityId, options = {}) {
   try {
     const campuses = await scoped(model.campusModel).findAll({
       where: { universityId },
       attributes: { exclude: excludeMeta },
+      transaction: options.transaction,
       include: [
         {
           model: model.instituteModel,
@@ -114,6 +124,7 @@ export async function getCampusHierarchy(universityId) {
               universityId,
               instituteId: { [Op.in]: instituteIds },
             },
+            transaction: options.transaction,
           })
         : [];
 

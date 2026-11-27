@@ -116,6 +116,13 @@ const attendancePolicyModel = sequelize.define(
     tableName: "attendance_policies",
     timestamps: true,
     paranoid: true,
+    indexes: [
+      {
+        name: "unique_attendance_policy_code_univ_inst",
+        unique: true,
+        fields: ["university_id", "institute_id", "policy_code"],
+      },
+    ],
   }
 );
 

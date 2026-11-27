@@ -135,8 +135,8 @@ export async function createFloor(payload, transaction) {
   }
 }
 
-export async function addFloor(payload) {
-  return scoped(model.libraryFloorModel).create(payload);
+export async function addFloor(payload, transaction) {
+  return scoped(model.libraryFloorModel).create(payload, { transaction });
 }
 
 export async function getFloorDetails() {
@@ -168,15 +168,17 @@ export async function getSingleFloorDetails(libraryFloorId) {
   }
 }
 
-export async function updateFloor(libraryFloorId, floorData) {
+export async function updateFloor(libraryFloorId, floorData, transaction) {
   try {
-    const existing = await assertScopedFloor(libraryFloorId);
+    const existing = await assertScopedFloor(libraryFloorId, transaction);
     if (!existing) {
       return [0];
     }
 
     return await scoped(model.libraryFloorModel).update(floorData, {
       where: { libraryFloorId },
+      individualHooks: true,
+      transaction,
     });
   } catch (error) {
     console.error(`Error updating Floor creation ${libraryFloorId}:`, error);
@@ -184,13 +186,17 @@ export async function updateFloor(libraryFloorId, floorData) {
   }
 }
 
-export async function deleteFloor(libraryFloorId) {
-  const existing = await assertScopedFloor(libraryFloorId);
+export async function deleteFloor(libraryFloorId, transaction) {
+  const existing = await assertScopedFloor(libraryFloorId, transaction);
   if (!existing) {
     return false;
   }
 
-  const deleted = await scoped(model.libraryFloorModel).destroy({ where: { libraryFloorId } });
+  const deleted = await scoped(model.libraryFloorModel).destroy({
+    where: { libraryFloorId },
+    individualHooks: true,
+    transaction,
+  });
   return deleted > 0;
 }
 
@@ -251,7 +257,7 @@ export async function bulkCreateAisles(rows, transaction) {
   if (!floor) {
     throw new Error("Library floor not found");
   }
-  return model.libraryAisleModel.bulkCreate(rows, { transaction });
+  return model.libraryAisleModel.bulkCreate(rows, { transaction, individualHooks: true });
 }
 
 export async function bulkCreateRacks(rows, transaction) {
@@ -262,7 +268,7 @@ export async function bulkCreateRacks(rows, transaction) {
       throw new Error("Library aisle not found");
     }
   }
-  return model.libraryRackModel.bulkCreate(rows, { transaction });
+  return model.libraryRackModel.bulkCreate(rows, { transaction, individualHooks: true });
 }
 
 export async function bulkCreateRows(rows, transaction) {
@@ -273,15 +279,15 @@ export async function bulkCreateRows(rows, transaction) {
       throw new Error("Library rack not found");
     }
   }
-  return model.libraryRowModel.bulkCreate(rows, { transaction });
+  return model.libraryRowModel.bulkCreate(rows, { transaction, individualHooks: true });
 }
 
-export async function addAisle(data) {
-  const scopedFloor = await assertScopedFloor(data.libraryFloorId);
+export async function addAisle(data, transaction) {
+  const scopedFloor = await assertScopedFloor(data.libraryFloorId, transaction);
   if (!scopedFloor) {
     throw new Error("Library floor not found");
   }
-  return scoped(model.libraryAisleModel).create(data);
+  return scoped(model.libraryAisleModel).create(data, { transaction });
 }
 
 export async function getAisleDetails() {
@@ -299,28 +305,36 @@ export async function getSingleAisle(libraryAisleId) {
   });
 }
 
-export async function updateAisle(libraryAisleId, data) {
-  const existing = await assertScopedAisle(libraryAisleId);
+export async function updateAisle(libraryAisleId, data, transaction) {
+  const existing = await assertScopedAisle(libraryAisleId, transaction);
   if (!existing) {
     return [0];
   }
-  return scoped(model.libraryAisleModel).update(data, { where: { libraryAisleId } });
+  return scoped(model.libraryAisleModel).update(data, {
+    where: { libraryAisleId },
+    individualHooks: true,
+    transaction,
+  });
 }
 
-export async function deleteAisle(libraryAisleId) {
-  const existing = await assertScopedAisle(libraryAisleId);
+export async function deleteAisle(libraryAisleId, transaction) {
+  const existing = await assertScopedAisle(libraryAisleId, transaction);
   if (!existing) {
     return 0;
   }
-  return scoped(model.libraryAisleModel).destroy({ where: { libraryAisleId } });
+  return scoped(model.libraryAisleModel).destroy({
+    where: { libraryAisleId },
+    individualHooks: true,
+    transaction,
+  });
 }
 
-export async function addRack(data) {
-  const aisle = await assertScopedAisle(data.libraryAisleId);
+export async function addRack(data, transaction) {
+  const aisle = await assertScopedAisle(data.libraryAisleId, transaction);
   if (!aisle) {
     throw new Error("Library aisle not found");
   }
-  return scoped(model.libraryRackModel).create(data);
+  return scoped(model.libraryRackModel).create(data, { transaction });
 }
 
 export async function getRackDetails() {
@@ -353,28 +367,36 @@ export async function getSingleRack(libraryRackId) {
   });
 }
 
-export async function updateRack(libraryRackId, data) {
-  const existing = await assertScopedRack(libraryRackId);
+export async function updateRack(libraryRackId, data, transaction) {
+  const existing = await assertScopedRack(libraryRackId, transaction);
   if (!existing) {
     return [0];
   }
-  return scoped(model.libraryRackModel).update(data, { where: { libraryRackId } });
+  return scoped(model.libraryRackModel).update(data, {
+    where: { libraryRackId },
+    individualHooks: true,
+    transaction,
+  });
 }
 
-export async function deleteRack(libraryRackId) {
-  const existing = await assertScopedRack(libraryRackId);
+export async function deleteRack(libraryRackId, transaction) {
+  const existing = await assertScopedRack(libraryRackId, transaction);
   if (!existing) {
     return 0;
   }
-  return scoped(model.libraryRackModel).destroy({ where: { libraryRackId } });
+  return scoped(model.libraryRackModel).destroy({
+    where: { libraryRackId },
+    individualHooks: true,
+    transaction,
+  });
 }
 
-export async function addRow(data) {
-  const rack = await assertScopedRack(data.libraryRackId);
+export async function addRow(data, transaction) {
+  const rack = await assertScopedRack(data.libraryRackId, transaction);
   if (!rack) {
     throw new Error("Library rack not found");
   }
-  return scoped(model.libraryRowModel).create(data);
+  return scoped(model.libraryRowModel).create(data, { transaction });
 }
 
 export async function getRowDetails() {
@@ -423,20 +445,28 @@ export async function getSingleRow(libraryRowId) {
   });
 }
 
-export async function updateRow(libraryRowId, data) {
-  const existing = await assertScopedRow(libraryRowId);
+export async function updateRow(libraryRowId, data, transaction) {
+  const existing = await assertScopedRow(libraryRowId, transaction);
   if (!existing) {
     return [0];
   }
-  return scoped(model.libraryRowModel).update(data, { where: { libraryRowId } });
+  return scoped(model.libraryRowModel).update(data, {
+    where: { libraryRowId },
+    individualHooks: true,
+    transaction,
+  });
 }
 
-export async function deleteRow(libraryRowId) {
-  const existing = await assertScopedRow(libraryRowId);
+export async function deleteRow(libraryRowId, transaction) {
+  const existing = await assertScopedRow(libraryRowId, transaction);
   if (!existing) {
     return 0;
   }
-  return scoped(model.libraryRowModel).destroy({ where: { libraryRowId } });
+  return scoped(model.libraryRowModel).destroy({
+    where: { libraryRowId },
+    individualHooks: true,
+    transaction,
+  });
 }
 
 export async function getAisleIdByName(name) {

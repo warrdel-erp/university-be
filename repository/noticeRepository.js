@@ -30,7 +30,8 @@ const stripWriteFields = (data = {}) => {
   return rest;
 };
 
-export async function addNotice(data, transaction) {
+export async function addNotice(data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : (options?.commit ? options : undefined);
   try {
     return scoped(model.noticeModel).create(stripWriteFields(data), { transaction });
   } catch (error) {
@@ -59,32 +60,42 @@ export async function getAllNotices(academicYearId) {
   }
 }
 
-export async function updateNotice(noticeId, data) {
+export async function updateNotice(noticeId, data, options = {}) {
   try {
     const existing = await scoped(model.noticeModel).findOne({
       attributes: ["noticeId"],
       where: { noticeId },
+      transaction: options.transaction,
     });
     if (!existing) {
       return [0];
     }
 
-    return scoped(model.noticeModel).update(stripWriteFields(data), { where: { noticeId } });
+    return scoped(model.noticeModel).update(stripWriteFields(data), {
+      where: { noticeId },
+      transaction: options.transaction,
+      individualHooks: true,
+    });
   } catch (error) {
     console.error(`Error updating Notice creation ${noticeId}:`, error);
     throw error;
   }
 }
 
-export async function deleteNotice(noticeId) {
+export async function deleteNotice(noticeId, options = {}) {
   const existing = await scoped(model.noticeModel).findOne({
     attributes: ["noticeId"],
     where: { noticeId },
+    transaction: options.transaction,
   });
   if (!existing) {
     return false;
   }
 
-  const deleted = await scoped(model.noticeModel).destroy({ where: { noticeId } });
+  const deleted = await scoped(model.noticeModel).destroy({
+    where: { noticeId },
+    transaction: options.transaction,
+    individualHooks: true,
+  });
   return deleted > 0;
 }

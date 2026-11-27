@@ -7,6 +7,8 @@ import {
 } from "../utility/studentCount.js";
 import { getStudentCountMapByGroups } from "../modules/student/services/studentCountServices.js";
 import { toIntegerNumber, decimalAdd } from "../utility/decimalMoney.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function generateBundleCode(roomNumber, seqId) {
   const cleanRoom = String(roomNumber || "000")
@@ -373,7 +375,7 @@ export async function createBundle(payload, user) {
     issuedTo,
   } = payload;
 
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAM_ROOM_MATERIAL_BUNDLE_CREATE, async ({ transaction }) => {
     const existing = await repo.findBundleByMapping(
       examDate,
       examinationSessionSlotId,
@@ -611,7 +613,7 @@ export async function createBundleAuto(payload, user) {
 export async function updateBundleItems(bundleId, payload, user) {
   const { status, remarks, issuedTo, items } = payload;
 
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAM_ROOM_MATERIAL_BUNDLE_UPDATE, async ({ transaction }) => {
     const bundle = await repo.getBundleById(bundleId, { transaction });
     if (!bundle) {
       const error = new Error("Bundle not found");
@@ -830,7 +832,7 @@ export async function getBundleSummary(examinationSessionId) {
 }
 
 export async function updateBundleStatus(bundleId, status, user) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.EXAM_ROOM_MATERIAL_BUNDLE_STATUS_UPDATE, async ({ transaction }) => {
     const bundle = await repo.getBundleById(bundleId, { transaction });
     if (!bundle) {
       const error = new Error("Bundle not found");

@@ -2,6 +2,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/subjectComponentRepository.js";
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -41,7 +43,7 @@ export async function addSubjectComponent(body) {
     throw httpError("code is required", 400);
   }
 
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.SUBJECT_COMPONENT_CREATE, async ({ transaction }) => {
     const existing = await repo.findSubjectComponentByCode(normalized.code, { transaction });
     if (existing) {
       throw httpError(`Subject component with code '${normalized.code}' already exists`, 409);
@@ -93,7 +95,7 @@ export async function getSubjectComponentById(id) {
 export async function updateSubjectComponent(id, body) {
   const normalized = normalizePayload(body);
 
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.SUBJECT_COMPONENT_UPDATE, async ({ transaction }) => {
     const existing = await repo.findSubjectComponentById(id, { transaction });
     if (!existing) {
       throw httpError(`Subject component not found with ID ${id}`, 404);
@@ -118,7 +120,7 @@ export async function updateSubjectComponent(id, body) {
 }
 
 export async function deleteSubjectComponent(id, options = {}) {
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.SUBJECT_COMPONENT_DELETE, async ({ transaction }) => {
     const existing = await repo.findSubjectComponentById(id, { transaction });
     if (!existing) {
       throw httpError(`Subject component not found with ID ${id}`, 404);

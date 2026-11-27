@@ -85,17 +85,17 @@ export async function createFeePolicy(data, options = {}) {
 
 export async function bulkCreateFeePolicyComponents(rows, options = {}) {
   if (!rows || !rows.length) return [];
-  return model.feePolicyComponentsModel.bulkCreate(rows, { transaction: options.transaction });
+  return model.feePolicyComponentsModel.bulkCreate(rows, { transaction: options.transaction, individualHooks: true });
 }
 
 export async function bulkCreateFeePolicyBatches(rows, options = {}) {
   if (!rows || !rows.length) return [];
-  return model.feePolicyBatchesModel.bulkCreate(rows, { transaction: options.transaction });
+  return model.feePolicyBatchesModel.bulkCreate(rows, { transaction: options.transaction, individualHooks: true });
 }
 
 export async function bulkCreateFeePolicySlabs(rows, options = {}) {
   if (!rows || !rows.length) return [];
-  return model.feePolicySlabsModel.bulkCreate(rows, { transaction: options.transaction });
+  return model.feePolicySlabsModel.bulkCreate(rows, { transaction: options.transaction, individualHooks: true });
 }
 
 export async function findFeePolicyById(feePolicyId, options = {}) {
@@ -208,6 +208,7 @@ export async function updateFeePolicy(feePolicyId, data, options = {}) {
   return scoped(model.feePolicyModel).update(data, {
     where: { feePolicyId: Number(feePolicyId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -215,6 +216,7 @@ export async function deleteFeePolicyComponents(feePolicyId, options = {}) {
   return model.feePolicyComponentsModel.destroy({
     where: { feePolicyId: Number(feePolicyId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -222,6 +224,7 @@ export async function deleteFeePolicyBatches(feePolicyId, options = {}) {
   return model.feePolicyBatchesModel.destroy({
     where: { feePolicyId: Number(feePolicyId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -229,6 +232,7 @@ export async function deleteFeePolicySlabs(feePolicyId, options = {}) {
   return model.feePolicySlabsModel.destroy({
     where: { feePolicyId: Number(feePolicyId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -236,6 +240,7 @@ export async function deleteFeePolicy(feePolicyId, options = {}) {
   return scoped(model.feePolicyModel).destroy({
     where: { feePolicyId: Number(feePolicyId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -244,6 +249,7 @@ export async function bulkCreateFeePolicyStudents(rows, options = {}) {
   return model.feePolicyStudentsModel.bulkCreate(rows, {
     ignoreDuplicates: true,
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -297,6 +303,7 @@ export async function deleteFeePolicyStudents({ feePolicyId, studentId, effect }
   return model.feePolicyStudentsModel.destroy({
     where,
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -312,6 +319,7 @@ export async function updateFeePoliciesStatus(feePolicyIds, data, options = {}) 
   return scoped(model.feePolicyModel).update(data, {
     where: { feePolicyId: { [Op.in]: feePolicyIds.map(Number) } },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 

@@ -100,6 +100,7 @@ export async function upsertAmcVendorAddress(amcVendorId, payload, options = {})
     await model.amcVendorAddressModel.update(payload, {
       where: { amcVendorId },
       transaction: options.transaction,
+      individualHooks: true,
     });
     return;
   }
@@ -233,6 +234,7 @@ export async function updateAmcVendor(amcVendorId, payload, options = {}) {
   const [affected] = await scoped(model.amcVendorModel).update(payload, {
     where: { amcVendorId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -241,6 +243,7 @@ export async function deleteAmcVendor(amcVendorId, options = {}) {
   const deleted = await scoped(model.amcVendorModel).destroy({
     where: { amcVendorId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }

@@ -1,9 +1,13 @@
 import * as libraryStructureRepository from "../repository/libraryStructureRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function addFloor(floorData, createdBy, updatedBy) {
   floorData.createdBy = createdBy;
   floorData.updatedBy = updatedBy;
-  return libraryStructureRepository.addFloor(floorData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_FLOOR_CREATE, async ({ transaction }) => {
+    return libraryStructureRepository.addFloor(floorData, transaction);
+  });
 }
 
 export async function getFloorDetails() {
@@ -16,17 +20,23 @@ export async function getSingleFloorDetails(libraryFloorId) {
 
 export async function updateFloor(libraryFloorId, floorData, updatedBy) {
   floorData.updatedBy = updatedBy;
-  return libraryStructureRepository.updateFloor(libraryFloorId, floorData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_FLOOR_UPDATE, async ({ transaction }) => {
+    return libraryStructureRepository.updateFloor(libraryFloorId, floorData, transaction);
+  });
 }
 
 export async function deleteFloor(libraryFloorId) {
-  return libraryStructureRepository.deleteFloor(libraryFloorId);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_FLOOR_DELETE, async ({ transaction }) => {
+    return libraryStructureRepository.deleteFloor(libraryFloorId, transaction);
+  });
 }
 
 export async function addAisle(aisleData, createdBy, updatedBy) {
   aisleData.createdBy = createdBy;
   aisleData.updatedBy = updatedBy;
-  return libraryStructureRepository.addAisle(aisleData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_AISLE_CREATE, async ({ transaction }) => {
+    return libraryStructureRepository.addAisle(aisleData, transaction);
+  });
 }
 
 export async function getAisleDetails() {
@@ -39,17 +49,23 @@ export async function getSingleAisle(libraryAisleId) {
 
 export async function updateAisle(libraryAisleId, aisleData, updatedBy) {
   aisleData.updatedBy = updatedBy;
-  return libraryStructureRepository.updateAisle(libraryAisleId, aisleData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_AISLE_UPDATE, async ({ transaction }) => {
+    return libraryStructureRepository.updateAisle(libraryAisleId, aisleData, transaction);
+  });
 }
 
 export async function deleteAisle(libraryAisleId) {
-  return libraryStructureRepository.deleteAisle(libraryAisleId);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_AISLE_DELETE, async ({ transaction }) => {
+    return libraryStructureRepository.deleteAisle(libraryAisleId, transaction);
+  });
 }
 
 export async function addRack(rackData, createdBy, updatedBy) {
   rackData.createdBy = createdBy;
   rackData.updatedBy = updatedBy;
-  return libraryStructureRepository.addRack(rackData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_RACK_CREATE, async ({ transaction }) => {
+    return libraryStructureRepository.addRack(rackData, transaction);
+  });
 }
 
 export async function getRackDetails() {
@@ -62,17 +78,23 @@ export async function getSingleRack(libraryRackId) {
 
 export async function updateRack(libraryRackId, rackData, updatedBy) {
   rackData.updatedBy = updatedBy;
-  return libraryStructureRepository.updateRack(libraryRackId, rackData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_RACK_UPDATE, async ({ transaction }) => {
+    return libraryStructureRepository.updateRack(libraryRackId, rackData, transaction);
+  });
 }
 
 export async function deleteRack(libraryRackId) {
-  return libraryStructureRepository.deleteRack(libraryRackId);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_RACK_DELETE, async ({ transaction }) => {
+    return libraryStructureRepository.deleteRack(libraryRackId, transaction);
+  });
 }
 
 export async function addRow(rowData, createdBy, updatedBy) {
   rowData.createdBy = createdBy;
   rowData.updatedBy = updatedBy;
-  return libraryStructureRepository.addRow(rowData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_ROW_CREATE, async ({ transaction }) => {
+    return libraryStructureRepository.addRow(rowData, transaction);
+  });
 }
 
 export async function getRowDetails() {
@@ -85,9 +107,13 @@ export async function getSingleRow(libraryRowId) {
 
 export async function updateRow(libraryRowId, rowData, updatedBy) {
   rowData.updatedBy = updatedBy;
-  return libraryStructureRepository.updateRow(libraryRowId, rowData);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_ROW_UPDATE, async ({ transaction }) => {
+    return libraryStructureRepository.updateRow(libraryRowId, rowData, transaction);
+  });
 }
 
 export async function deleteRow(libraryRowId) {
-  return libraryStructureRepository.deleteRow(libraryRowId);
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_ROW_DELETE, async ({ transaction }) => {
+    return libraryStructureRepository.deleteRow(libraryRowId, transaction);
+  });
 }

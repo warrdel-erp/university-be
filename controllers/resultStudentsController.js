@@ -5,7 +5,7 @@ export const addResultStudent = async (req, res) => {
 
     const fileData = fileHandler.readExcelFile(req.files.students.data)
 
-    const final = resultStudentsService.addResultStudent(fileData);
+    const final = await resultStudentsService.addResultStudent(fileData);
 
     res.json(final)
 }

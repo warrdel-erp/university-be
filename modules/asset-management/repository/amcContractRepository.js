@@ -163,6 +163,7 @@ export async function updateAmcContract(amcContractId, payload, options = {}) {
   const [affected] = await scoped(model.amcContractModel).update(payload, {
     where: { amcContractId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -171,6 +172,7 @@ export async function deleteAmcContract(amcContractId, options = {}) {
   const deleted = await scoped(model.amcContractModel).destroy({
     where: { amcContractId },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }

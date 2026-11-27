@@ -2,33 +2,37 @@ import * as repo from "../repository/leavePolicyRepository.js";
 import * as balanceRepo from "../repository/leaveBalanceRepository.js";
 import * as model from "../../../models/index.js";
 import sequelize from "../../../database/sequelizeConfig.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function addPolicy(data) {
-  try {
-    const { entitlements, leaveEntitlements, roleAssignments, ...policyFields } = data;
-    const finalEntitlements = entitlements || leaveEntitlements;
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_POLICY_CREATE, async ({ transaction }) => {
+    try {
+      const { entitlements, leaveEntitlements, roleAssignments, ...policyFields } = data;
+      const finalEntitlements = entitlements || leaveEntitlements;
 
-    // If payload contains entitlements or roleAssignments, use the full creation flow
-    if ((finalEntitlements && finalEntitlements.length > 0) || (roleAssignments && roleAssignments.length > 0)) {
-      const fullPolicy = await repo.createFullPolicy({
-        policyData: policyFields,
-        entitlements: finalEntitlements || [],
-        roleAssignments: roleAssignments || [],
-      });
+      // If payload contains entitlements or roleAssignments, use the full creation flow
+      if ((finalEntitlements && finalEntitlements.length > 0) || (roleAssignments && roleAssignments.length > 0)) {
+        const fullPolicy = await repo.createFullPolicy({
+          policyData: policyFields,
+          entitlements: finalEntitlements || [],
+          roleAssignments: roleAssignments || [],
+        }, { transaction });
 
-      // If policy is published, auto-allocate initial balances
-      if (policyFields.status === "Published") {
-        await autoAllocateBalancesForPolicy(fullPolicy.policyId);
+        // If policy is published, auto-allocate initial balances
+        if (policyFields.status === "Published") {
+          await autoAllocateBalancesForPolicy(fullPolicy.policyId, { transaction });
+        }
+
+        return fullPolicy;
       }
 
-      return fullPolicy;
+      // Fallback to basic policy creation
+      return await repo.addPolicy(policyFields, { transaction });
+    } catch (err) {
+      throw new Error(err.message);
     }
-
-    // Fallback to basic policy creation
-    return await repo.addPolicy(policyFields);
-  } catch (err) {
-    throw new Error(err.message);
-  }
+  });
 }
 
 export async function getPolicies(filters = {}) {
@@ -44,11 +48,15 @@ export async function getPolicyById(policyId) {
 }
 
 export async function updatePolicy(policyId, data) {
-  return await repo.updatePolicy(policyId, data);
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_POLICY_UPDATE, async ({ transaction }) => {
+    return await repo.updatePolicy(policyId, data, { transaction });
+  });
 }
 
 export async function deletePolicy(policyId) {
-  return await repo.deletePolicy(policyId);
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_POLICY_DELETE, async ({ transaction }) => {
+    return await repo.deletePolicy(policyId, { transaction });
+  });
 }
 
 export async function getRolesSummary(context = {}) {
@@ -63,8 +71,8 @@ export async function getRoleEmployees(roleId, query = {}) {
  * Automatically creates/initializes leave_balance records for all employees
  * assigned to a published policy.
  */
-export async function autoAllocateBalancesForPolicy(policyId) {
-  const policy = await repo.getPolicyById(policyId);
+export async function autoAllocateBalancesForPolicy(policyId, options = {}) {
+  const policy = await repo.getPolicyById(policyId, options);
   if (!policy) return;
 
   const currentYear = new Date().getFullYear();
@@ -85,7 +93,7 @@ export async function autoAllocateBalancesForPolicy(policyId) {
           UNION
           SELECT user_id FROM users WHERE default_role_id = ${ra.roleId}
         ) u
-      `);
+      `, options);
       for (const u of users) {
         if (u.user_id) userIdsToAllocate.add(u.user_id);
       }
@@ -98,7 +106,7 @@ export async function autoAllocateBalancesForPolicy(policyId) {
 
   // Create balance entries if not existing
   for (const userId of userIdsToAllocate) {
-    const existing = await balanceRepo.getBalance(userId, policyId);
+    const existing = await balanceRepo.getBalance(userId, policyId, options);
     if (!existing) {
       await balanceRepo.addBalance({
         userId,
@@ -107,7 +115,7 @@ export async function autoAllocateBalancesForPolicy(policyId) {
         totalAllocated: totalDays,
         usedLeaves: 0,
         remainingLeaves: totalDays,
-      }).catch((e) => console.warn(`Leave balance allocation skipped for user ${userId}:`, e.message));
+      }, options).catch((e) => console.warn(`Leave balance allocation skipped for user ${userId}:`, e.message));
     }
   }
 }

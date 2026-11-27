@@ -1,4 +1,6 @@
 import * as jobSettingsRepository from "../repository/jobSettingsRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 export async function addJobType(data) {
   try {
@@ -6,7 +8,9 @@ export async function addJobType(data) {
       throw new Error("jobTypeName is required");
     }
 
-    return await jobSettingsRepository.addJobType(data);
+    return await withAuditEvent(AUDIT_EVENTS.JOB_TYPE_CREATE, async ({ transaction }) => {
+      return jobSettingsRepository.addJobType(data, { transaction });
+    });
   } catch (error) {
     throw new Error(error.message);
   }
@@ -32,7 +36,9 @@ export async function getSingleJobType(jobSettingId) {
 export async function updateJobType(jobSettingId, data) {
   try {
     if (!jobSettingId) throw new Error("settingId is required");
-    return await jobSettingsRepository.updateJobType(jobSettingId, data);
+    return await withAuditEvent(AUDIT_EVENTS.JOB_TYPE_UPDATE, async ({ transaction }) => {
+      return jobSettingsRepository.updateJobType(jobSettingId, data, { transaction });
+    });
   } catch (error) {
     throw new Error(error.message);
   }
@@ -41,7 +47,9 @@ export async function updateJobType(jobSettingId, data) {
 export async function deleteJobType(jobSettingId) {
   try {
     if (!jobSettingId) throw new Error("settingId is required");
-    return await jobSettingsRepository.deleteJobType(jobSettingId);
+    return await withAuditEvent(AUDIT_EVENTS.JOB_TYPE_DELETE, async ({ transaction }) => {
+      return jobSettingsRepository.deleteJobType(jobSettingId, { transaction });
+    });
   } catch (error) {
     throw new Error(error.message);
   }

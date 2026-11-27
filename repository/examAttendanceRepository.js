@@ -21,14 +21,14 @@ async function assertScopedExamSchedule(examScheduleId, transaction) {
   });
 }
 
-export async function createExamAttendance(data) {
+export async function createExamAttendance(data, options = {}) {
   if (data.examScheduleId) {
-    const schedule = await assertScopedExamSchedule(data.examScheduleId);
+    const schedule = await assertScopedExamSchedule(data.examScheduleId, options.transaction);
     if (!schedule) {
       throw new Error("Exam schedule not found");
     }
   }
-  return await scoped(model.examAttendanceModel).create(data);
+  return await scoped(model.examAttendanceModel).create(data, options);
 }
 
 export async function getAllExamAttendance(academicYearId) {
@@ -121,23 +121,26 @@ export async function getSingleExamAttendance(examAttendanceId) {
   return record;
 }
 
-export async function updateExamAttendances(attendances) {
+export async function updateExamAttendances(attendances, options = {}) {
   const updatedRecords = [];
   for (const record of attendances) {
     const { examAttendanceId, ...data } = record;
     const existing = await scoped(model.examAttendanceModel).findOne({
       where: { examAttendanceId },
       attributes: ["examAttendanceId"],
+      ...options,
     });
     if (!existing) {
       continue;
     }
     const [updatedRows] = await scoped(model.examAttendanceModel).update(data, {
       where: { examAttendanceId },
+      ...options,
     });
     if (updatedRows > 0) {
       const updatedRecord = await scoped(model.examAttendanceModel).findByPk(
         examAttendanceId,
+        options,
       );
       updatedRecords.push(updatedRecord);
     }
@@ -145,16 +148,18 @@ export async function updateExamAttendances(attendances) {
   return updatedRecords;
 }
 
-export async function deleteExamAttendance(examAttendanceId) {
+export async function deleteExamAttendance(examAttendanceId, options = {}) {
   const existing = await scoped(model.examAttendanceModel).findOne({
     where: { examAttendanceId },
     attributes: ["examAttendanceId"],
+    ...options,
   });
   if (!existing) {
     return false;
   }
   const deletedRows = await scoped(model.examAttendanceModel).destroy({
     where: { examAttendanceId },
+    ...options,
   });
   return deletedRows > 0;
 }

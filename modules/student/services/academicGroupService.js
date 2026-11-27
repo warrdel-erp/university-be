@@ -2,6 +2,8 @@ import sequelize from '../../../database/sequelizeConfig.js';
 import { Op } from 'sequelize';
 import * as academicGroupRepository from '../repository/academicGroupRepository.js';
 import * as studentRepository from '../repository/studentRepository.js';
+import { withAuditEvent } from '../../../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../../../const/auditEvents.js';
 
 function asPlain(row) {
     if (row == null) {
@@ -187,11 +189,13 @@ export async function createScope(body, createdBy, updatedBy) {
         );
     }
 
-    return academicGroupRepository.createScope({
-        ...fields,
-        classSectionTermId,
-        createdBy,
-        updatedBy,
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_SCOPE_CREATE, async ({ transaction }) => {
+        return academicGroupRepository.createScope({
+            ...fields,
+            classSectionTermId,
+            createdBy,
+            updatedBy,
+        }, transaction);
     });
 }
 
@@ -252,10 +256,12 @@ export async function updateScope(academicGroupScopeId, body, updatedBy) {
         );
     }
 
-    return academicGroupRepository.updateScope(academicGroupScopeId, {
-        ...fields,
-        classSectionTermId,
-        updatedBy,
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_SCOPE_UPDATE, async ({ transaction }) => {
+        return academicGroupRepository.updateScope(academicGroupScopeId, {
+            ...fields,
+            classSectionTermId,
+            updatedBy,
+        }, transaction);
     });
 }
 
@@ -265,8 +271,7 @@ export async function deleteScope(academicGroupScopeId, updatedBy) {
         return false;
     }
 
-    const transaction = await sequelize.transaction();
-    try {
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_SCOPE_DELETE, async ({ transaction }) => {
         const groups = await academicGroupRepository.findGroupsByScopeId(
             academicGroupScopeId,
             transaction,
@@ -289,17 +294,12 @@ export async function deleteScope(academicGroupScopeId, updatedBy) {
             );
         }
 
-        const deleted = await academicGroupRepository.softDeleteScope(
+        return academicGroupRepository.softDeleteScope(
             academicGroupScopeId,
             updatedBy,
             transaction,
         );
-        await transaction.commit();
-        return deleted;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 export async function createGroup(body, createdBy, updatedBy) {
@@ -321,8 +321,7 @@ export async function createGroup(body, createdBy, updatedBy) {
         }
     }
 
-    const transaction = await sequelize.transaction();
-    try {
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_CREATE, async ({ transaction }) => {
         const group = await academicGroupRepository.createGroup(
             {
                 academicGroupScopeId,
@@ -346,12 +345,8 @@ export async function createGroup(body, createdBy, updatedBy) {
             group.groupCode = groupCode;
         }
 
-        await transaction.commit();
         return group;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 export async function getGroupById(academicGroupId) {
@@ -403,7 +398,9 @@ export async function updateGroup(academicGroupId, body, updatedBy) {
         payload.groupCode = nextCode;
     }
 
-    return academicGroupRepository.updateGroup(academicGroupId, payload);
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_UPDATE, async ({ transaction }) => {
+        return academicGroupRepository.updateGroup(academicGroupId, payload, transaction);
+    });
 }
 
 export async function publishScope(academicGroupScopeId, updatedBy) {
@@ -415,9 +412,11 @@ export async function publishScope(academicGroupScopeId, updatedBy) {
         throw new Error('Scope is already published');
     }
 
-    return academicGroupRepository.updateScope(academicGroupScopeId, {
-        publishStatus: 'published',
-        updatedBy,
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_SCOPE_PUBLISH, async ({ transaction }) => {
+        return academicGroupRepository.updateScope(academicGroupScopeId, {
+            publishStatus: 'published',
+            updatedBy,
+        }, transaction);
     });
 }
 
@@ -427,8 +426,7 @@ export async function deleteGroup(academicGroupId, updatedBy) {
         return false;
     }
 
-    const transaction = await sequelize.transaction();
-    try {
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_DELETE, async ({ transaction }) => {
         await academicGroupRepository.softDeleteGroupUsersByGroupId(
             academicGroupId,
             updatedBy,
@@ -439,17 +437,12 @@ export async function deleteGroup(academicGroupId, updatedBy) {
             updatedBy,
             transaction,
         );
-        const deleted = await academicGroupRepository.softDeleteGroup(
+        return academicGroupRepository.softDeleteGroup(
             academicGroupId,
             updatedBy,
             transaction,
         );
-        await transaction.commit();
-        return deleted;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 function normalizeUsersPayload(body) {
@@ -529,8 +522,7 @@ export async function addUsers(body, createdBy, updatedBy) {
         }
     }
 
-    const transaction = await sequelize.transaction();
-    try {
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_USER_ASSIGN, async ({ transaction }) => {
         const results = [];
         const toCreate = [];
 
@@ -562,12 +554,8 @@ export async function addUsers(body, createdBy, updatedBy) {
             }
         }
 
-        await transaction.commit();
         return results;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 export async function updateUser(academicGroupUserId, body, updatedBy) {
@@ -578,9 +566,11 @@ export async function updateUser(academicGroupUserId, body, updatedBy) {
 
     const nextRole = body.role ?? existing.role;
 
-    return academicGroupRepository.updateGroupUser(academicGroupUserId, {
-        role: nextRole,
-        updatedBy,
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_USER_UPDATE, async ({ transaction }) => {
+        return academicGroupRepository.updateGroupUser(academicGroupUserId, {
+            role: nextRole,
+            updatedBy,
+        }, transaction);
     });
 }
 
@@ -595,8 +585,10 @@ export async function deleteUsers(body, updatedBy) {
         throw new Error('academicGroupUserId or academicGroupId with userId is required');
     }
 
-    const deleted = await academicGroupRepository.softDeleteGroupUsers(where, updatedBy);
-    return deleted > 0;
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_USER_REMOVE, async ({ transaction }) => {
+        const deleted = await academicGroupRepository.softDeleteGroupUsers(where, updatedBy, transaction);
+        return deleted > 0;
+    });
 }
 
 export async function addStudents(body, createdBy, updatedBy) {
@@ -670,8 +662,7 @@ export async function addStudents(body, createdBy, updatedBy) {
         }
     }
 
-    const transaction = await sequelize.transaction();
-    try {
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_STUDENT_ASSIGN, async ({ transaction }) => {
         const results = [];
         const toCreate = [];
 
@@ -704,12 +695,8 @@ export async function addStudents(body, createdBy, updatedBy) {
             }
         }
 
-        await transaction.commit();
         return results;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 /**
@@ -872,6 +859,8 @@ export async function deleteStudents(body, updatedBy) {
         throw new Error('academicGroupStudentId or academicGroupId with studentIds is required');
     }
 
-    const deleted = await academicGroupRepository.softDeleteGroupStudents(where, updatedBy);
-    return deleted > 0;
+    return await withAuditEvent(AUDIT_EVENTS.ACADEMIC_GROUP_STUDENT_REMOVE, async ({ transaction }) => {
+        const deleted = await academicGroupRepository.softDeleteGroupStudents(where, updatedBy, transaction);
+        return deleted > 0;
+    });
 }

@@ -1,10 +1,11 @@
 import * as model from "../../../models/index.js";
 import { buildScope, scoped } from "../../../utility/scoped.js";
 
-export async function addAssignVehicle(assignVehicleData) {
+export async function addAssignVehicle(assignVehicleData, transaction) {
   const route = await scoped(model.transportRouteModel).findOne({
     attributes: ["transportRouteId"],
     where: { transportRouteId: assignVehicleData.transportRouteId },
+    transaction,
   });
   if (!route) {
     throw new Error("Transport route not found");
@@ -13,12 +14,13 @@ export async function addAssignVehicle(assignVehicleData) {
   const vehicle = await scoped(model.vehicleModel).findOne({
     attributes: ["vehicleId"],
     where: { vehicleId: assignVehicleData.vehicleId },
+    transaction,
   });
   if (!vehicle) {
     throw new Error("Vehicle not found");
   }
 
-  return scoped(model.assignVehicleModel).create(assignVehicleData);
+  return scoped(model.assignVehicleModel).create(assignVehicleData, { transaction });
 }
 
 export async function getAssignVehicle() {
@@ -57,7 +59,7 @@ export async function getAssignVehicle() {
   }
 }
 
-export async function getSingleAssignVehicle(assignVehicleId) {
+export async function getSingleAssignVehicle(assignVehicleId, transaction) {
   return scoped(model.assignVehicleModel).findOne({
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
     where: { assignVehicleId },
@@ -84,11 +86,12 @@ export async function getSingleAssignVehicle(assignVehicleId) {
         required: true,
       },
     ],
+    transaction,
   });
 }
 
-export async function updateAssignVehicle(assignVehicleId, vehicleData) {
-  const existing = await getSingleAssignVehicle(assignVehicleId);
+export async function updateAssignVehicle(assignVehicleId, vehicleData, transaction) {
+  const existing = await getSingleAssignVehicle(assignVehicleId, transaction);
   if (!existing) {
     return [0];
   }
@@ -97,6 +100,7 @@ export async function updateAssignVehicle(assignVehicleId, vehicleData) {
     const route = await scoped(model.transportRouteModel).findOne({
       attributes: ["transportRouteId"],
       where: { transportRouteId: vehicleData.transportRouteId },
+      transaction,
     });
     if (!route) {
       return [0];
@@ -107,6 +111,7 @@ export async function updateAssignVehicle(assignVehicleId, vehicleData) {
     const vehicle = await scoped(model.vehicleModel).findOne({
       attributes: ["vehicleId"],
       where: { vehicleId: vehicleData.vehicleId },
+      transaction,
     });
     if (!vehicle) {
       return [0];
@@ -115,17 +120,20 @@ export async function updateAssignVehicle(assignVehicleId, vehicleData) {
 
   return scoped(model.assignVehicleModel).update(vehicleData, {
     where: { assignVehicleId },
+    transaction,
+    individualHooks: true,
   });
 }
 
-export async function deleteAssignVehicle(assignVehicleId) {
-  const existing = await getSingleAssignVehicle(assignVehicleId);
+export async function deleteAssignVehicle(assignVehicleId, transaction) {
+  const existing = await getSingleAssignVehicle(assignVehicleId, transaction);
   if (!existing) {
     return 0;
   }
 
   return scoped(model.assignVehicleModel).destroy({
     where: { assignVehicleId },
+    transaction,
+    individualHooks: true,
   });
 }
-

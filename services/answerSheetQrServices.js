@@ -9,6 +9,8 @@ import sequelize from "../database/sequelizeConfig.js";
 import { buildTermName } from "../utility/courseTerms.js";
 import * as s3Helper from "../utility/s3Helper.js";
 import { resolveSelectionCombinations } from "../utility/examScheduleSelection.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 const MAX_UNUSED_QR_PER_INSTITUTE = 5000;
 
@@ -304,116 +306,121 @@ async function resolveMappedListQueryContext({
 }
 
 export async function generateBulkAnswerSheetQr(count) {
-  const result = await sequelize.transaction(async (transaction) => {
-    if (!Number.isInteger(count) || count <= 0) {
-      {
-        const err = new Error("Please provide a valid positive integer for count.");
-        err.statusCode = 400;
-        throw err;
-      }
-    }
-
-    const unusedCount = await answerSheetQrRepository.countUnusedByInstitute(transaction);
-
-    if (unusedCount + count > MAX_UNUSED_QR_PER_INSTITUTE) {
-      {
-        const err = new Error(`Cannot generate QR codes. This institute already has ${unusedCount} unused codes. Maximum allowed unused codes is ${MAX_UNUSED_QR_PER_INSTITUTE}.`);
-        err.statusCode = 409;
-        throw err;
-      }
-    }
-
-    const requestId = uuidv4();
-    const payload = Array.from({ length: count }, () => ({
-      qr: uuidv4(),
-      requestId,
-    }));
-
-    const created = await answerSheetQrRepository.bulkCreateAnswerSheetQr(payload, transaction);
-
-    return {
-      requestId,
-      createdCount: created.length,
-      unusedCountAfterCreation: unusedCount + created.length,
-      items: created,
-    };
-  });
-  return result;
-}
-
-export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
-  try {
-    return await sequelize.transaction(async (transaction) => {
-      const [student, examSchedule] = await Promise.all([
-        answerSheetQrRepository.getScopedStudent(studentId, transaction),
-        answerSheetQrRepository.getScopedExamSchedule(examScheduleId, transaction),
-      ]);
-
-      if (!student) {
-        const err = new Error("Student not found in your institute.");
-        err.statusCode = 404;
-        throw err;
-      }
-      if (!examSchedule) {
-        const err = new Error("Exam schedule not found in your institute.");
-        err.statusCode = 404;
-        throw err;
-      }
-
-      const hasHallTicket = await answerSheetQrRepository.hasStudentHallTicketForExamSession(
-        studentId,
-        examSchedule.examinationSessionId,
-        transaction
-      );
-      if (!hasHallTicket) {
+  return withAuditEvent(
+    AUDIT_EVENTS.ANSWER_SHEET_QR_BULK_CREATE,
+    async ({ transaction }) => {
+      if (!Number.isInteger(count) || count <= 0) {
         {
-          const err = new Error("Student does not have a hall ticket for this examination session.");
+          const err = new Error("Please provide a valid positive integer for count.");
           err.statusCode = 400;
           throw err;
         }
       }
 
-      const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
-        qr,
-        studentId,
-        examScheduleId,
-        transaction
-      );
+      const unusedCount = await answerSheetQrRepository.countUnusedByInstitute(transaction);
 
-      if (!result) {
-        const err = new Error("QR code not found.");
-        err.statusCode = 404;
-        throw err;
-      }
-      if (result.answerSheetAlreadyMapped) {
+      if (unusedCount + count > MAX_UNUSED_QR_PER_INSTITUTE) {
         {
-          const err = new Error("This answer sheet is already mapped");
-          err.statusCode = 409;
-          throw err;
-        }
-      }
-      if (result.studentExamAlreadyMapped) {
-        {
-          const err = new Error("This student is already assigned to this exam schedule");
+          const err = new Error(`Cannot generate QR codes. This institute already has ${unusedCount} unused codes. Maximum allowed unused codes is ${MAX_UNUSED_QR_PER_INSTITUTE}.`);
           err.statusCode = 409;
           throw err;
         }
       }
 
-      const { row } = result;
+      const requestId = uuidv4();
+      const payload = Array.from({ length: count }, () => ({
+        qr: uuidv4(),
+        requestId,
+      }));
+
+      const created = await answerSheetQrRepository.bulkCreateAnswerSheetQr(payload, transaction);
+
       return {
-        id: row.id,
-        qr: row.qr,
-        requestId: row.requestId ?? null,
-        studentId: row.studentId,
-        examScheduleId: row.examScheduleId,
-        assignedToUser: row.assignedToUser ?? null,
-        evaluatedAt: row.evaluatedAt ?? null,
-        obtainedMarks: row.obtainedMarks ?? null,
-        instituteId: row.instituteId,
-        universityId: row.universityId,
+        requestId,
+        createdCount: created.length,
+        unusedCountAfterCreation: unusedCount + created.length,
+        items: created,
       };
-    });
+    },
+  );
+}
+
+export async function mapAnswerSheetQr(qr, studentId, examScheduleId) {
+  try {
+    return await withAuditEvent(
+      AUDIT_EVENTS.ANSWER_SHEET_QR_MAP,
+      async ({ transaction }) => {
+        const [student, examSchedule] = await Promise.all([
+          answerSheetQrRepository.getScopedStudent(studentId, transaction),
+          answerSheetQrRepository.getScopedExamSchedule(examScheduleId, transaction),
+        ]);
+
+        if (!student) {
+          const err = new Error("Student not found in your institute.");
+          err.statusCode = 404;
+          throw err;
+        }
+        if (!examSchedule) {
+          const err = new Error("Exam schedule not found in your institute.");
+          err.statusCode = 404;
+          throw err;
+        }
+
+        const hasHallTicket = await answerSheetQrRepository.hasStudentHallTicketForExamSession(
+          studentId,
+          examSchedule.examinationSessionId,
+          transaction
+        );
+        if (!hasHallTicket) {
+          {
+            const err = new Error("Student does not have a hall ticket for this examination session.");
+            err.statusCode = 400;
+            throw err;
+          }
+        }
+
+        const result = await answerSheetQrRepository.mapAnswerSheetQrOnce(
+          qr,
+          studentId,
+          examScheduleId,
+          transaction
+        );
+
+        if (!result) {
+          const err = new Error("QR code not found.");
+          err.statusCode = 404;
+          throw err;
+        }
+        if (result.answerSheetAlreadyMapped) {
+          {
+            const err = new Error("This answer sheet is already mapped");
+            err.statusCode = 409;
+            throw err;
+          }
+        }
+        if (result.studentExamAlreadyMapped) {
+          {
+            const err = new Error("This student is already assigned to this exam schedule");
+            err.statusCode = 409;
+            throw err;
+          }
+        }
+
+        const { row } = result;
+        return {
+          id: row.id,
+          qr: row.qr,
+          requestId: row.requestId ?? null,
+          studentId: row.studentId,
+          examScheduleId: row.examScheduleId,
+          assignedToUser: row.assignedToUser ?? null,
+          evaluatedAt: row.evaluatedAt ?? null,
+          obtainedMarks: row.obtainedMarks ?? null,
+          instituteId: row.instituteId,
+          universityId: row.universityId,
+        };
+      },
+    );
   } catch (error) {
     if (error instanceof UniqueConstraintError) {
       {
@@ -612,77 +619,74 @@ export async function assignAnswerSheetsToTeachers(
     uniqueAnswerSheetQrIds.push(id);
   }
 
-  const transaction = await sequelize.transaction();
-  try {
-    const teacher = await answerSheetQrRepository.getScopedUser(
-      assignedToUserId,
-      transaction
-    );
-    if (!teacher) {
-      {
-        const err = new Error(`User not found for userId: ${assignedToUserId}`);
-        err.statusCode = 404;
-        throw err;
+  return withAuditEvent(
+    AUDIT_EVENTS.ANSWER_SHEET_QR_ASSIGN_TEACHERS,
+    async ({ transaction }) => {
+      const teacher = await answerSheetQrRepository.getScopedUser(
+        assignedToUserId,
+        transaction
+      );
+      if (!teacher) {
+        {
+          const err = new Error(`User not found for userId: ${assignedToUserId}`);
+          err.statusCode = 404;
+          throw err;
+        }
       }
-    }
 
-    const answerSheets = await answerSheetQrRepository.getAnswerSheetQrsByIds(
-      uniqueAnswerSheetQrIds,
-      transaction
-    );
+      const answerSheets = await answerSheetQrRepository.getAnswerSheetQrsByIds(
+        uniqueAnswerSheetQrIds,
+        transaction
+      );
 
-    if (answerSheets.length !== uniqueAnswerSheetQrIds.length) {
-      {
-        const err = new Error("One or more answer sheet QR records were not found.");
-        err.statusCode = 404;
-        throw err;
+      if (answerSheets.length !== uniqueAnswerSheetQrIds.length) {
+        {
+          const err = new Error("One or more answer sheet QR records were not found.");
+          err.statusCode = 404;
+          throw err;
+        }
       }
-    }
 
-    const unmappedIds = [];
+      const unmappedIds = [];
 
-    for (const answerSheet of answerSheets) {
-      if (!answerSheet.studentId || !answerSheet.examScheduleId) {
-        unmappedIds.push(answerSheet.id);
+      for (const answerSheet of answerSheets) {
+        if (!answerSheet.studentId || !answerSheet.examScheduleId) {
+          unmappedIds.push(answerSheet.id);
+        }
       }
-    }
 
-    if (unmappedIds.length > 0) {
-      {
-        const err = new Error(
-          `Answer sheet QR records must be mapped before evaluator assignment: ${unmappedIds.join(", ")}`,
-        );
-        err.statusCode = 400;
-        throw err;
+      if (unmappedIds.length > 0) {
+        {
+          const err = new Error(
+            `Answer sheet QR records must be mapped before evaluator assignment: ${unmappedIds.join(", ")}`,
+          );
+          err.statusCode = 400;
+          throw err;
+        }
       }
-    }
 
-    const assignment = await answerSheetQrRepository.createEvaluationUserAssignment(
-      {
-        assignedToUserId: Number(assignedToUserId),
-        notes: notes || null,
-        timestamp: new Date(),
-        createdBy,
-        updatedBy: createdBy,
-      },
-      transaction,
-    );
+      const assignment = await answerSheetQrRepository.createEvaluationUserAssignment(
+        {
+          assignedToUserId: Number(assignedToUserId),
+          notes: notes || null,
+          timestamp: new Date(),
+          createdBy,
+          updatedBy: createdBy,
+        },
+        transaction,
+      );
 
-    const assignmentId = assignment.assignmentId;
+      const assignmentId = assignment.assignmentId;
 
-    await answerSheetQrRepository.assignTeacherByAnswerSheetIds(
-      uniqueAnswerSheetQrIds,
-      assignedToUserId,
-      deadlineDate,
-      assignmentId,
-      transaction
-    );
-
-    await transaction.commit();
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+      await answerSheetQrRepository.assignTeacherByAnswerSheetIds(
+        uniqueAnswerSheetQrIds,
+        assignedToUserId,
+        deadlineDate,
+        assignmentId,
+        transaction
+      );
+    },
+  );
 }
 
 export async function getScriptsAssignedToTeacher(
@@ -823,53 +827,50 @@ export async function assignObtainedMarksToAnswerSheet(
   obtainedMarks,
   assignedToUserId = null,
 ) {
-  const transaction = await sequelize.transaction();
-  try {
-    const answerSheet = await answerSheetQrRepository.getAnswerSheetQrById(
-      answerSheetQrId,
-      transaction,
-    );
-
-    if (!answerSheet) {
-      const err = new Error("Answer sheet QR not found.");
-      err.statusCode = 404;
-      throw err;
-    }
-
-    if (
-      assignedToUserId != null &&
-      Number(answerSheet.assignedToUser) !== Number(assignedToUserId)
-    ) {
-      const err = new Error(
-        `Answer sheet ${answerSheetQrId} is not assigned to the current user.`,
+  return withAuditEvent(
+    AUDIT_EVENTS.ANSWER_SHEET_QR_MARKS_ASSIGN,
+    async ({ transaction }) => {
+      const answerSheet = await answerSheetQrRepository.getAnswerSheetQrById(
+        answerSheetQrId,
+        transaction,
       );
-      err.statusCode = 403;
-      throw err;
-    }
 
-    const evaluatedAt = new Date();
-    await answerSheetQrRepository.assignMarksByAnswerSheetId(
-      answerSheetQrId,
-      obtainedMarks,
-      evaluatedAt,
-      transaction,
-    );
+      if (!answerSheet) {
+        const err = new Error("Answer sheet QR not found.");
+        err.statusCode = 404;
+        throw err;
+      }
 
-    await syncStudentResultItems([answerSheetQrId], transaction);
+      if (
+        assignedToUserId != null &&
+        Number(answerSheet.assignedToUser) !== Number(assignedToUserId)
+      ) {
+        const err = new Error(
+          `Answer sheet ${answerSheetQrId} is not assigned to the current user.`,
+        );
+        err.statusCode = 403;
+        throw err;
+      }
 
-    const result = {
-      answerSheetQrId,
-      evaluatedAt,
-      obtained_marks: obtainedMarks,
-      markingStatus: "pending",
-      updated: true,
-    };
-    await transaction.commit();
-    return result;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+      const evaluatedAt = new Date();
+      await answerSheetQrRepository.assignMarksByAnswerSheetId(
+        answerSheetQrId,
+        obtainedMarks,
+        evaluatedAt,
+        transaction,
+      );
+
+      await syncStudentResultItems([answerSheetQrId], transaction);
+
+      return {
+        answerSheetQrId,
+        evaluatedAt,
+        obtained_marks: obtainedMarks,
+        markingStatus: "pending",
+        updated: true,
+      };
+    },
+  );
 }
 
 /**
@@ -897,79 +898,76 @@ export async function bulkFinalSubmitObtainedMarks(items, assignedToUserId) {
     }
   }
 
-  const transaction = await sequelize.transaction();
-  try {
-    const existingCount = await answerSheetQrRepository.countAnswerSheetQrsByIds(
-      uniqueIds,
-      transaction,
-    );
-    if (existingCount !== uniqueIds.length) {
-      {
-        const err = new Error("One or more answer sheet QR records were not found.");
-        err.statusCode = 404;
-        throw err;
-      }
-    }
-
-    const evaluatedAt = new Date();
-    const idsStatusOnly = [];
-
-    for (const answerSheetQrId of uniqueIds) {
-      if (!marksById.has(answerSheetQrId)) {
-        idsStatusOnly.push(answerSheetQrId);
-        continue;
-      }
-
-      const affected =
-        await answerSheetQrRepository.finalSubmitWithObtainedMarksById(
-          answerSheetQrId,
-          marksById.get(answerSheetQrId),
-          assignedToUserId,
-          evaluatedAt,
-          transaction,
-        );
-      if (affected !== 1) {
+  return withAuditEvent(
+    AUDIT_EVENTS.ANSWER_SHEET_QR_MARKS_FINAL_SUBMIT,
+    async ({ transaction }) => {
+      const existingCount = await answerSheetQrRepository.countAnswerSheetQrsByIds(
+        uniqueIds,
+        transaction,
+      );
+      if (existingCount !== uniqueIds.length) {
         {
-          const err = new Error(
-            assignedToUserId != null
-              ? `Answer sheet ${answerSheetQrId} is not assigned to the current user.`
-              : `Answer sheet ${answerSheetQrId} could not be submitted.`,
-          );
-          err.statusCode = assignedToUserId != null ? 403 : 404;
+          const err = new Error("One or more answer sheet QR records were not found.");
+          err.statusCode = 404;
           throw err;
         }
       }
-    }
 
-    if (idsStatusOnly.length > 0) {
-      const submittedCount =
-        await answerSheetQrRepository.bulkFinalSubmitByIds(
-          idsStatusOnly,
-          assignedToUserId,
-          evaluatedAt,
-          transaction,
-        );
+      const evaluatedAt = new Date();
+      const idsStatusOnly = [];
 
-      if (submittedCount !== idsStatusOnly.length) {
-        {
-          const err = new Error(
-            assignedToUserId != null
-              ? "One or more answer sheets are not assigned to the current user."
-              : "One or more answer sheet QR records could not be submitted.",
+      for (const answerSheetQrId of uniqueIds) {
+        if (!marksById.has(answerSheetQrId)) {
+          idsStatusOnly.push(answerSheetQrId);
+          continue;
+        }
+
+        const affected =
+          await answerSheetQrRepository.finalSubmitWithObtainedMarksById(
+            answerSheetQrId,
+            marksById.get(answerSheetQrId),
+            assignedToUserId,
+            evaluatedAt,
+            transaction,
           );
-          err.statusCode = assignedToUserId != null ? 403 : 404;
-          throw err;
+        if (affected !== 1) {
+          {
+            const err = new Error(
+              assignedToUserId != null
+                ? `Answer sheet ${answerSheetQrId} is not assigned to the current user.`
+                : `Answer sheet ${answerSheetQrId} could not be submitted.`,
+            );
+            err.statusCode = assignedToUserId != null ? 403 : 404;
+            throw err;
+          }
         }
       }
-    }
 
-    await syncStudentResultItems(uniqueIds, transaction);
+      if (idsStatusOnly.length > 0) {
+        const submittedCount =
+          await answerSheetQrRepository.bulkFinalSubmitByIds(
+            idsStatusOnly,
+            assignedToUserId,
+            evaluatedAt,
+            transaction,
+          );
 
-    await transaction.commit();
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+        if (submittedCount !== idsStatusOnly.length) {
+          {
+            const err = new Error(
+              assignedToUserId != null
+                ? "One or more answer sheets are not assigned to the current user."
+                : "One or more answer sheet QR records could not be submitted.",
+            );
+            err.statusCode = assignedToUserId != null ? 403 : 404;
+            throw err;
+          }
+        }
+      }
+
+      await syncStudentResultItems(uniqueIds, transaction);
+    },
+  );
 }
 
 async function syncStudentResultItems(uniqueIds, transaction) {
@@ -1240,6 +1238,7 @@ async function syncStudentResultItems(uniqueIds, transaction) {
         {
           where: { studentResultItemId: existing.studentResultItemId },
           transaction,
+          individualHooks: true,
         },
       );
     } else {
@@ -1496,81 +1495,77 @@ export async function saveAnswerSheetAnnotation({
   assignedToUserId,
   userId,
 }) {
-  const transaction = await sequelize.transaction();
+  return withAuditEvent(
+    AUDIT_EVENTS.ANSWER_SHEET_ANNOTATION_SAVE,
+    async ({ transaction }) => {
+      const answerSheet =
+        await answerSheetAnnotationRepository.findAnswerSheetWithOriginalPdf(
+          answerSheetQrId,
+          assignedToUserId,
+          transaction,
+        );
 
-  try {
-    const answerSheet =
-      await answerSheetAnnotationRepository.findAnswerSheetWithOriginalPdf(
-        answerSheetQrId,
-        assignedToUserId,
+      if (!answerSheet) {
+        const err = new Error(
+          assignedToUserId != null
+            ? "Assigned answer sheet not found."
+            : "Answer sheet QR not found.",
+        );
+        err.statusCode = 404;
+        throw err;
+      }
+
+      if (answerSheet.markingStatus === "submit") {
+        const err = new Error(
+          "Cannot update annotation after final submit.",
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const latestAnnotation =
+        await answerSheetAnnotationRepository.getLatestAnnotationByAnswerSheetQrId(
+          answerSheet.id,
+          transaction,
+        );
+
+      if (latestAnnotation?.status === "submitted") {
+        const err = new Error(
+          "Annotation already submitted. Further changes are not allowed.",
+        );
+        err.statusCode = 400;
+        throw err;
+      }
+
+      const latestVersion =
+        await answerSheetAnnotationRepository.getLatestVersion(
+          answerSheet.id,
+          transaction,
+        );
+
+      const annotation = await answerSheetAnnotationRepository.createAnnotation(
+        {
+          answerSheetQrId: answerSheet.id,
+          annotationData,
+          version: latestVersion + 1,
+          status,
+          createdBy: userId,
+          updatedBy: userId,
+        },
         transaction,
       );
 
-    if (!answerSheet) {
-      const err = new Error(
-        assignedToUserId != null
-          ? "Assigned answer sheet not found."
-          : "Answer sheet QR not found.",
-      );
-      err.statusCode = 404;
-      throw err;
-    }
-
-    if (answerSheet.markingStatus === "submit") {
-      const err = new Error(
-        "Cannot update annotation after final submit.",
-      );
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const latestAnnotation =
-      await answerSheetAnnotationRepository.getLatestAnnotationByAnswerSheetQrId(
-        answerSheet.id,
-        transaction,
-      );
-
-    if (latestAnnotation?.status === "submitted") {
-      const err = new Error(
-        "Annotation already submitted. Further changes are not allowed.",
-      );
-      err.statusCode = 400;
-      throw err;
-    }
-
-    const latestVersion =
-      await answerSheetAnnotationRepository.getLatestVersion(
-        answerSheet.id,
-        transaction,
-      );
-
-    const annotation = await answerSheetAnnotationRepository.createAnnotation(
-      {
-        answerSheetQrId: answerSheet.id,
-        annotationData,
-        version: latestVersion + 1,
-        status,
-        createdBy: userId,
-        updatedBy: userId,
-      },
-      transaction,
-    );
-
-    await transaction.commit();
-
-    return {
-      answerSheetAnnotationId: annotation.answerSheetAnnotationId,
-      answerSheetQrId: annotation.answerSheetQrId,
-      annotationData: annotation.annotationData,
-      version: annotation.version,
-      status: annotation.status,
-      createdAt: annotation.createdAt,
-      updatedAt: annotation.updatedAt,
-    };
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+      return {
+        answerSheetAnnotationId: annotation.answerSheetAnnotationId,
+        answerSheetQrId: annotation.answerSheetQrId,
+        annotationData: annotation.annotationData,
+        version: annotation.version,
+        status: annotation.status,
+        createdAt: annotation.createdAt,
+        updatedAt: annotation.updatedAt,
+      };
+    },
+  );
 }
 
 /**
