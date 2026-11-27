@@ -25,6 +25,30 @@ function getUserContext(user) {
 }
 
 /**
+ * Helper to auto-generate a unique policy code within an institute
+ */
+export async function generateUniquePolicyCode({ baseCode, universityId, instituteId, transaction = null }) {
+  if (!baseCode || !String(baseCode).trim()) return null;
+  const cleanBase = String(baseCode).trim();
+  let candidate = cleanBase;
+  let counter = 1;
+
+  while (true) {
+    const existing = await policyRepo.findPolicyByCode(candidate, {
+      universityId,
+      instituteId,
+      transaction,
+      paranoid: false,
+    });
+    if (!existing) {
+      return candidate;
+    }
+    candidate = `${cleanBase}-${counter}`;
+    counter++;
+  }
+}
+
+/**
  * Step 1: Save General & Applicability Mappings
  */
 export async function saveStep1(payload, user) {
@@ -45,7 +69,22 @@ export async function saveStep1(payload, user) {
     throw httpError("Policy name is required", 422);
   }
 
+  const trimmedCode = policyCode && typeof policyCode === "string" ? policyCode.trim() : null;
+
   return await sequelize.transaction(async (t) => {
+    if (trimmedCode) {
+      const duplicate = await policyRepo.findPolicyByCode(trimmedCode, {
+        universityId,
+        instituteId,
+        excludePolicyId: policyId || null,
+        transaction: t,
+        paranoid: false,
+      });
+      if (duplicate) {
+        throw httpError(`Policy code '${trimmedCode}' already exists for this institute`, 409);
+      }
+    }
+
     let policy;
     if (policyId) {
       policy = await policyRepo.findPolicyById(policyId, { transaction: t, includeRelations: false });
@@ -57,7 +96,7 @@ export async function saveStep1(payload, user) {
         policyId,
         {
           policyName: policyName.trim(),
-          policyCode: policyCode || null,
+          policyCode: trimmedCode,
           description: description || null,
           versionNumber,
           effectiveFrom: effectiveFrom || null,
@@ -74,7 +113,7 @@ export async function saveStep1(payload, user) {
           instituteId,
           campusId,
           policyName: policyName.trim(),
-          policyCode: policyCode || null,
+          policyCode: trimmedCode,
           description: description || null,
           versionNumber,
           status: "Draft",
@@ -370,13 +409,37 @@ export async function duplicatePolicy(policyId, payload, user) {
   const newName = payload.newPolicyName || `${existing.policyName} (Copy)`;
 
   return await sequelize.transaction(async (t) => {
+    let newPolicyCode = payload.newPolicyCode && typeof payload.newPolicyCode === "string"
+      ? payload.newPolicyCode.trim()
+      : null;
+
+    if (newPolicyCode) {
+      const duplicate = await policyRepo.findPolicyByCode(newPolicyCode, {
+        universityId,
+        instituteId,
+        transaction: t,
+        paranoid: false,
+      });
+      if (duplicate) {
+        throw httpError(`Policy code '${newPolicyCode}' already exists for this institute`, 409);
+      }
+    } else if (existing.policyCode) {
+      const cleanBase = existing.policyCode.replace(/(-COPY(-\d+)?)+$/i, "");
+      newPolicyCode = await generateUniquePolicyCode({
+        baseCode: `${cleanBase}-COPY`,
+        universityId,
+        instituteId,
+        transaction: t,
+      });
+    }
+
     const newPolicy = await policyRepo.createPolicy(
       {
         universityId,
         instituteId,
         campusId,
         policyName: newName,
-        policyCode: existing.policyCode ? `${existing.policyCode}-COPY` : null,
+        policyCode: newPolicyCode,
         description: existing.description,
         versionNumber: "v1.0",
         status: "Draft",
@@ -456,13 +519,38 @@ export async function createNewVersion(policyId, payload, user) {
   const effectiveFrom = payload.effectiveFrom || null;
 
   return await sequelize.transaction(async (t) => {
+    let versionPolicyCode = payload.policyCode && typeof payload.policyCode === "string"
+      ? payload.policyCode.trim()
+      : null;
+
+    if (versionPolicyCode) {
+      const duplicate = await policyRepo.findPolicyByCode(versionPolicyCode, {
+        universityId,
+        instituteId,
+        transaction: t,
+        paranoid: false,
+      });
+      if (duplicate) {
+        throw httpError(`Policy code '${versionPolicyCode}' already exists for this institute`, 409);
+      }
+    } else if (existing.policyCode) {
+      const vSuffix = versionNumber.toUpperCase().replace(/^V/, "V");
+      const cleanBase = existing.policyCode.replace(/(-V\d+(\.\d+)?)+$/i, "");
+      versionPolicyCode = await generateUniquePolicyCode({
+        baseCode: `${cleanBase}-${vSuffix}`,
+        universityId,
+        instituteId,
+        transaction: t,
+      });
+    }
+
     const newPolicy = await policyRepo.createPolicy(
       {
         universityId,
         instituteId,
         campusId,
         policyName: existing.policyName,
-        policyCode: existing.policyCode,
+        policyCode: versionPolicyCode,
         description: existing.description,
         versionNumber,
         status: "Draft",
