@@ -10,6 +10,15 @@ const subjectComponentModel = sequelize.define(
       autoIncrement: true,
       field: 'id',
     },
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'university_id',
+      references: {
+        model: 'university',
+        key: 'university_id',
+      },
+    },
     componentName: {
       type: DataTypes.STRING(150),
       allowNull: false,
@@ -18,7 +27,6 @@ const subjectComponentModel = sequelize.define(
     code: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      unique: true,
       field: 'code',
     },
     description: {
@@ -44,14 +52,20 @@ const subjectComponentModel = sequelize.define(
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    indexes: [
+      {
+        unique: true,
+        name: 'unique_university_subject_component_code',
+        fields: ['university_id', 'code'],
+      },
+    ],
   }
 );
 
 subjectComponentModel.scopeConfig = {
-  university: false,
+  university: true,
   institute: false,
   academicYear: false,
 };
 
 export default subjectComponentModel;
-

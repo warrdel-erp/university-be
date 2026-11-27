@@ -24,6 +24,40 @@ import { SYSTEM_ROLE_CODES } from "../const/roles.js";
 import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
 import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
+export async function seedDefaultComponentsAndCategoriesForUniversity(universityId, transaction) {
+  const defaultComponents = [
+    { componentName: 'Theory', code: 'TH', description: 'Classroom-based theoretical instruction' },
+    { componentName: 'Practical', code: 'PR', description: 'Practical coursework and laboratory application' },
+    { componentName: 'Lab', code: 'LB', description: 'Laboratory experiments and technical coursework' },
+    { componentName: 'Studio', code: 'ST', description: 'Studio-based design and drafting instruction' },
+    { componentName: 'Workshop', code: 'WS', description: 'Hands-on workshop and technical training' },
+    { componentName: 'Seminar', code: 'SM', description: 'Interactive seminars and presentations' },
+    { componentName: 'Project', code: 'PJ', description: 'Capstone, dissertation or field project coursework' },
+  ];
+
+  const defaultCategories = [
+    { categoryName: 'Core Coursework', code: 'CC', isElectiveCoursework: false, description: 'Compulsory core coursework curriculum courses' },
+    { categoryName: 'Professional Elective', code: 'PE', isElectiveCoursework: true, description: 'Discipline-specific professional elective coursework' },
+    { categoryName: 'Open Elective', code: 'OE', isElectiveCoursework: true, description: 'Interdisciplinary open elective coursework' },
+  ];
+
+  for (const comp of defaultComponents) {
+    await model.subjectComponentModel.findOrCreate({
+      where: { universityId, code: comp.code },
+      defaults: { ...comp, universityId },
+      transaction,
+    });
+  }
+
+  for (const cat of defaultCategories) {
+    await model.curriculumCategoryModel.findOrCreate({
+      where: { universityId, code: cat.code },
+      defaults: { ...cat, universityId },
+      transaction,
+    });
+  }
+}
+
 //register
 
 export async function register(info) {
@@ -716,6 +750,9 @@ export async function initialSetup(info) {
       },
       { transaction },
     );
+
+    // 2a. Seed Default Components & Curriculum Categories for new University
+    await seedDefaultComponentsAndCategoriesForUniversity(university.universityId, transaction);
 
     // 3. Hash Password & Create User
     const hashedPassword = await bcrypt.hashSync(password, salt);
