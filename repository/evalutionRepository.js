@@ -35,9 +35,12 @@ function mapEvaluationUserShape(row) {
   return row;
 }
 
-export async function addEvaluation(evaluationData) {
+export async function addEvaluation(evaluationData, options = {}) {
   try {
-    const result = await scoped(model.evalutionModel).bulkCreate(evaluationData);
+    const result = await scoped(model.evalutionModel).bulkCreate(evaluationData, {
+      transaction: options.transaction,
+      individualHooks: true,
+    });
     return result;
   } catch (error) {
     console.error("Error in add Evaluation:", error);
@@ -150,29 +153,37 @@ export async function getTeacherSubjectEvalution(userId) {
   }
 }
 
-export async function deleteEvaluation(evalutionId) {
+export async function deleteEvaluation(evalutionId, options = {}) {
     const existing = await scoped(model.evalutionModel).findOne({
         where: { evalutionId },
         attributes: ['evalutionId'],
+        transaction: options.transaction,
     });
     if (!existing) {
         return false;
     }
-    const deleted = await scoped(model.evalutionModel).destroy({ where: { evalutionId } });
+    const deleted = await scoped(model.evalutionModel).destroy({
+        where: { evalutionId },
+        transaction: options.transaction,
+        individualHooks: true,
+    });
     return deleted > 0;
 }
 
-export async function updateEvaluation(evalutionId, evaluationData) {
+export async function updateEvaluation(evalutionId, evaluationData, options = {}) {
     try {
         const existing = await scoped(model.evalutionModel).findOne({
             where: { evalutionId },
             attributes: ['evalutionId'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return [0];
         }
         const result = await scoped(model.evalutionModel).update(evaluationData, {
             where: { evalutionId },
+            transaction: options.transaction,
+            individualHooks: true,
         });
         return result;
     } catch (error) {

@@ -131,20 +131,10 @@ export async function getAttendanceDetails(req, res) {
 };
 
 export async function updateAttendance(req, res) {
-
   try {
     const attendanceRecords = req.body;
-
     const updatedBy = req.user.userId;
-    const updatePromises = attendanceRecords.map(async (record) => {
-      const { attendanceId } = record;
-      if (!attendanceId) {
-        throw new Error('Attendance Id is required for each record');
-      }
-      return AttendanceCreation.updateAttendance(attendanceId, record, updatedBy);
-    });
-
-    await Promise.all(updatePromises);
+    await AttendanceCreation.updateAttendance(attendanceRecords, updatedBy);
     res.status(200).json({ message: "Attendance records updated successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -223,15 +213,7 @@ export async function updateMyAttendance(req, res) {
       }
     }
 
-    const updatePromises = attendanceRecords.map(async (record) => {
-      const { attendanceId } = record;
-      if (!attendanceId) {
-        throw new Error('Attendance Id is required for each record');
-      }
-      return AttendanceCreation.updateAttendance(attendanceId, record, updatedBy);
-    });
-
-    await Promise.all(updatePromises);
+    await AttendanceCreation.updateAttendance(attendanceRecords, updatedBy);
     res.status(200).json({ message: "Attendance records updated successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });

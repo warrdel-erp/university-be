@@ -2,11 +2,12 @@ import { Op } from "sequelize";
 import * as model from "../../../models/index.js";
 import { buildScope, scoped } from "../../../utility/scoped.js";
 
-export async function addFaculityLoad(data) {
+export async function addFaculityLoad(data, options = {}) {
   try {
     const employee = await scoped(model.employeeModel).findOne({
       attributes: ["employeeId", "userId"],
       where: { userId: data.userId },
+      ...(options.transaction ? { transaction: options.transaction } : {}),
     });
     if (!employee) {
       throw new Error("Employee not found");
@@ -14,7 +15,7 @@ export async function addFaculityLoad(data) {
 
     data.employeeId = employee.employeeId;
     delete data.userId;
-    return scoped(model.faculityLoadModel).create(data);
+    return scoped(model.faculityLoadModel).create(data, options);
   } catch (error) {
     console.error("Error in create faculity load:", error);
     throw error;
@@ -115,7 +116,7 @@ export async function getSingleFaculityLoadDetails(userId) {
   }
 }
 
-export async function updateFaculityLoad(faculityLoadId, info) {
+export async function updateFaculityLoad(faculityLoadId, info, options = {}) {
   try {
     const existing = await scoped(model.faculityLoadModel).findOne({
       attributes: ["faculityLoadId"],
@@ -128,6 +129,7 @@ export async function updateFaculityLoad(faculityLoadId, info) {
           required: true,
         },
       ],
+      ...(options.transaction ? { transaction: options.transaction } : {}),
     });
     if (!existing) {
       return [0];
@@ -135,6 +137,8 @@ export async function updateFaculityLoad(faculityLoadId, info) {
 
     return scoped(model.faculityLoadModel).update(info, {
       where: { faculityLoadId },
+      individualHooks: true,
+      ...(options.transaction ? { transaction: options.transaction } : {}),
     });
   } catch (error) {
     console.error(`Error updating faculity load ${faculityLoadId} :`, error);
@@ -142,7 +146,7 @@ export async function updateFaculityLoad(faculityLoadId, info) {
   }
 }
 
-export async function deleteFaculityLoad(faculityLoadId) {
+export async function deleteFaculityLoad(faculityLoadId, options = {}) {
   try {
     const existing = await scoped(model.faculityLoadModel).findOne({
       attributes: ["faculityLoadId"],
@@ -155,6 +159,7 @@ export async function deleteFaculityLoad(faculityLoadId) {
           required: true,
         },
       ],
+      ...(options.transaction ? { transaction: options.transaction } : {}),
     });
     if (!existing) {
       throw new Error("Faculity load not found");
@@ -163,6 +168,7 @@ export async function deleteFaculityLoad(faculityLoadId) {
     await scoped(model.faculityLoadModel).destroy({
       where: { faculityLoadId },
       individualHooks: true,
+      ...(options.transaction ? { transaction: options.transaction } : {}),
     });
     return { message: `faculity load deleted successfully for time Table Creation Id :-${faculityLoadId}` };
   } catch (error) {
@@ -184,6 +190,7 @@ export async function updateFaculityLoadByEmployeeId(userId, info, transaction) 
 
     return scoped(model.faculityLoadModel).update(info, {
       where: { employeeId: employee.employeeId },
+      individualHooks: true,
       transaction,
     });
   } catch (error) {
@@ -289,6 +296,7 @@ export async function updateFaculityCurrentLoadByUserId(userId, currentLoadHours
     { currentLoad: currentLoadHours },
     {
       where: { employeeId: employee.employeeId },
+      individualHooks: true,
       transaction,
     },
   );

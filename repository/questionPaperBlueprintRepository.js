@@ -2,9 +2,11 @@ import { Op } from "sequelize";
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function addBlueprint(blueprintData) {
+export async function addBlueprint(blueprintData, options = {}) {
     try {
-        const result = await scoped(model.questionPaperBlueprintModel).create(blueprintData);
+        const result = await scoped(model.questionPaperBlueprintModel).create(blueprintData, {
+            transaction: options.transaction,
+        });
         return result;
     } catch (error) {
         console.error("Error adding question paper blueprint:", error);
@@ -73,7 +75,7 @@ export async function getBlueprints(filters = {}) {
     }
 }
 
-export async function deleteBlueprint(id, ownerId) {
+export async function deleteBlueprint(id, ownerId, options = {}) {
     try {
         const where = { id };
         if (ownerId != null) {
@@ -82,12 +84,15 @@ export async function deleteBlueprint(id, ownerId) {
         const existing = await scoped(model.questionPaperBlueprintModel).findOne({
             where,
             attributes: ['id'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return false;
         }
         const deleted = await scoped(model.questionPaperBlueprintModel).destroy({
             where,
+            transaction: options.transaction,
+            individualHooks: true,
         });
         return deleted > 0;
     } catch (error) {

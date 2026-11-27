@@ -62,6 +62,7 @@ export async function updateBalance(balanceId, data, options = {}) {
 
   return scoped(model.leaveBalanceModel).update(data, {
     where: { balanceId },
+    individualHooks: true,
     transaction: options.transaction,
   });
 }

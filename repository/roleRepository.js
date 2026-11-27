@@ -4,9 +4,9 @@ import sequelize from "../database/sequelizeConfig.js";
 import { scoped } from "../utility/scoped.js";
 import { isSystemRole } from "../const/roles.js";
 
-export async function addRole(RoleData) {
+export async function addRole(RoleData, options = {}) {
   try {
-    return scoped(model.roleModel).create(RoleData);
+    return scoped(model.roleModel).create(RoleData, options);
   } catch (error) {
     console.error("Error in add Role :", error);
     throw error;
@@ -60,10 +60,11 @@ export async function findRoleByRoleName(roleName) {
   }
 }
 
-export async function deleteRole(roleId) {
+export async function deleteRole(roleId, options = {}) {
   const existing = await scoped(model.roleModel).findOne({
     attributes: ["roleId", "role", "code"],
     where: { roleId },
+    ...options,
   });
   if (!existing) {
     return false;
@@ -75,15 +76,16 @@ export async function deleteRole(roleId) {
     throw error;
   }
 
-  const deleted = await scoped(model.roleModel).destroy({ where: { roleId } });
+  const deleted = await scoped(model.roleModel).destroy({ where: { roleId }, ...options });
   return deleted > 0;
 }
 
-export async function updateRole(roleId, RoleData) {
+export async function updateRole(roleId, RoleData, options = {}) {
   try {
     const existing = await scoped(model.roleModel).findOne({
       attributes: ["roleId", "role", "code"],
       where: { roleId },
+      ...options,
     });
     if (!existing) {
       return [0];
@@ -98,7 +100,7 @@ export async function updateRole(roleId, RoleData) {
     // Ensure client cannot set code on custom roles
     delete RoleData.code;
 
-    return scoped(model.roleModel).update(RoleData, { where: { roleId } });
+    return scoped(model.roleModel).update(RoleData, { where: { roleId }, ...options });
   } catch (error) {
     console.error(`Error updating Role creation ${roleId}:`, error);
     throw error;

@@ -124,7 +124,7 @@ export async function getAllSubjects(filter = {}) {
   }
 }
 
-export async function setSubjectTerms(termsArray) {
+export async function setSubjectTerms(termsArray, options = {}) {
   try {
     const subjectIds = termsArray.map((item) => item.subjectId);
 
@@ -136,6 +136,7 @@ export async function setSubjectTerms(termsArray) {
       },
 
       attributes: ["subjectId", "subjectCode"],
+      transaction: options.transaction,
     });
 
     if (existingTerms.length > 0) {
@@ -150,7 +151,8 @@ export async function setSubjectTerms(termsArray) {
       throw error;
     }
 
-    const t = await sequelize.transaction();
+    const t = options.transaction || (await sequelize.transaction());
+    const ownsTransaction = !options.transaction;
 
     try {
       for (const item of termsArray) {
@@ -171,17 +173,21 @@ export async function setSubjectTerms(termsArray) {
 
           {
             where: { subjectId: item.subjectId },
-
+            individualHooks: true,
             transaction: t,
           },
         );
       }
 
-      await t.commit();
+      if (ownsTransaction) {
+        await t.commit();
+      }
 
       return true;
     } catch (error) {
-      await t.rollback();
+      if (ownsTransaction) {
+        await t.rollback();
+      }
 
       throw error;
     }
@@ -232,10 +238,11 @@ export async function getSubjectById(id) {
   }
 }
 
-export async function deleteSubject(subjectId) {
+export async function deleteSubject(subjectId, options = {}) {
   try {
     const mappingsCount = await scoped(model.teacherSubjectMappingModel).count({
-      where: { subjectId: Number(subjectId) }
+      where: { subjectId: Number(subjectId) },
+      transaction: options.transaction,
     });
 
     if (mappingsCount > 0) {
@@ -245,7 +252,9 @@ export async function deleteSubject(subjectId) {
     }
 
     return await scoped(model.subjectModel).destroy({
-      where: { subjectId: Number(subjectId) }
+      where: { subjectId: Number(subjectId) },
+      individualHooks: true,
+      transaction: options.transaction,
     });
   } catch (error) {
     console.error('Error deleting subject:', error);

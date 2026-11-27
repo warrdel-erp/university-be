@@ -60,6 +60,7 @@ export async function updateTeacherSubstitute(teacherSubstituteId, data, options
 
     await scoped(model.teacherSubstituteModel).update(data, {
         where: { teacherSubstituteId },
+        individualHooks: true,
         ...options,
     });
     return true;
@@ -77,6 +78,7 @@ export async function deleteTeacherSubstitute(teacherSubstituteId, options = {})
 
     const deleted = await scoped(model.teacherSubstituteModel).destroy({
         where: { teacherSubstituteId },
+        individualHooks: true,
         ...options,
     });
     return deleted > 0;

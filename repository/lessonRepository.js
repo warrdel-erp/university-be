@@ -16,11 +16,13 @@ const lectureWindowInclude = {
   },
 };
 
-export async function addLesson(data, transaction) {
+export async function addLesson(data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     if (!data.departmentId && data.subjectId) {
       const subject = await model.subjectModel.findByPk(data.subjectId, {
-        include: [{ model: model.courseModel, as: 'courseInfo', attributes: ['departmentId'] }]
+        include: [{ model: model.courseModel, as: 'courseInfo', attributes: ['departmentId'] }],
+        transaction,
       });
       if (subject?.courseInfo?.departmentId) {
         data.departmentId = subject.courseInfo.departmentId;
@@ -196,9 +198,10 @@ export async function getSingleLessonDetails(lessonId) {
   }
 }
 
-export async function addTopic(data) {
+export async function addTopic(data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
-    return await scoped(model.topicModel).create(data);
+    return await scoped(model.topicModel).create(data, { transaction });
   } catch (error) {
     console.error("Error in add topic :", error);
     throw error;
@@ -290,7 +293,8 @@ export async function countCompletedLessonMappings(lessonId, transaction) {
   });
 }
 
-export async function updateTopic(topicId, data, transaction) {
+export async function updateTopic(topicId, data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   const existing = await getTopicById(topicId, transaction);
   if (!existing) {
     return null;
@@ -298,11 +302,13 @@ export async function updateTopic(topicId, data, transaction) {
   await scoped(model.topicModel).update(data, {
     where: { topicId: Number(topicId) },
     transaction,
+    individualHooks: true,
   });
   return getTopicById(topicId, transaction);
 }
 
-export async function deleteTopic(topicId, transaction) {
+export async function deleteTopic(topicId, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   const existing = await getTopicById(topicId, transaction);
   if (!existing) {
     return 0;
@@ -332,10 +338,12 @@ export async function deleteTopic(topicId, transaction) {
   return scoped(model.topicModel).destroy({
     where: { topicId: Number(topicId) },
     transaction,
+    individualHooks: true,
   });
 }
 
-export async function updateLesson(lessonId, data, transaction) {
+export async function updateLesson(lessonId, data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   const existing = await scoped(model.lessonModel).findOne({
     where: { lessonId: Number(lessonId) },
     attributes: ['lessonId'],
@@ -347,6 +355,7 @@ export async function updateLesson(lessonId, data, transaction) {
   await scoped(model.lessonModel).update(data, {
     where: { lessonId: Number(lessonId) },
     transaction,
+    individualHooks: true,
   });
   return scoped(model.lessonModel).findOne({
     where: { lessonId: Number(lessonId) },
@@ -357,7 +366,8 @@ export async function updateLesson(lessonId, data, transaction) {
   });
 }
 
-export async function deleteLesson(lessonId, transaction) {
+export async function deleteLesson(lessonId, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   const existing = await scoped(model.lessonModel).findOne({
     where: { lessonId: Number(lessonId) },
     attributes: ['lessonId'],
@@ -391,10 +401,12 @@ export async function deleteLesson(lessonId, transaction) {
   return scoped(model.lessonModel).destroy({
     where: { lessonId: Number(lessonId) },
     transaction,
+    individualHooks: true,
   });
 }
 
-export async function addSubTopic(data, transaction) {
+export async function addSubTopic(data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     return await scoped(model.subTopicModel).create(data, { transaction });
   } catch (error) {
@@ -403,7 +415,8 @@ export async function addSubTopic(data, transaction) {
   }
 }
 
-export async function addLessionMapping(data, transaction) {
+export async function addLessionMapping(data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     return await scoped(model.lessonMappingModel).create(data, { transaction });
   } catch (error) {
@@ -585,11 +598,13 @@ export async function getMapping(academicYearId) {
   }
 }
 
-export async function updateMapping(lessonMappingId, data) {
+export async function updateMapping(lessonMappingId, data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     const existing = await scoped(model.lessonMappingModel).findOne({
       where: { lessonMappingId },
       attributes: ['lessonMappingId'],
+      transaction,
     });
     if (!existing) {
       throw new Error("No lesson mapping found with the given ID.");
@@ -597,6 +612,8 @@ export async function updateMapping(lessonMappingId, data) {
 
     const [updatedRowsCount] = await scoped(model.lessonMappingModel).update(data, {
       where: { lessonMappingId },
+      transaction,
+      individualHooks: true,
     });
 
     return { success: true, message: "Mapping updated successfully." };
@@ -606,7 +623,8 @@ export async function updateMapping(lessonMappingId, data) {
   }
 }
 
-export async function updateLessionMapping(lessonMappingId, data, transaction) {
+export async function updateLessionMapping(lessonMappingId, data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     const existing = await scoped(model.lessonMappingModel).findOne({
       where: { lessonMappingId },
@@ -619,6 +637,7 @@ export async function updateLessionMapping(lessonMappingId, data, transaction) {
     return await scoped(model.lessonMappingModel).update(data, {
       where: { lessonMappingId },
       transaction,
+      individualHooks: true,
     });
   } catch (error) {
     console.error("Error in update Lession Mapping:", error);
@@ -626,7 +645,8 @@ export async function updateLessionMapping(lessonMappingId, data, transaction) {
   }
 }
 
-export async function updateSubTopic(subTopicId, data, transaction) {
+export async function updateSubTopic(subTopicId, data, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     const existing = await scoped(model.subTopicModel).findOne({
       where: { subTopicId },
@@ -639,6 +659,7 @@ export async function updateSubTopic(subTopicId, data, transaction) {
     return await scoped(model.subTopicModel).update(data, {
       where: { subTopicId },
       transaction,
+      individualHooks: true,
     });
   } catch (error) {
     console.error("Error in update SubTopic:", error);
@@ -646,7 +667,8 @@ export async function updateSubTopic(subTopicId, data, transaction) {
   }
 }
 
-export async function deleteLessionMapping(lessonMappingId, transaction) {
+export async function deleteLessionMapping(lessonMappingId, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     const existing = await scoped(model.lessonMappingModel).findOne({
       where: { lessonMappingId },
@@ -659,6 +681,7 @@ export async function deleteLessionMapping(lessonMappingId, transaction) {
     return await scoped(model.lessonMappingModel).destroy({
       where: { lessonMappingId },
       transaction,
+      individualHooks: true,
     });
   } catch (error) {
     console.error("Error in delete Lession Mapping:", error);
@@ -666,7 +689,8 @@ export async function deleteLessionMapping(lessonMappingId, transaction) {
   }
 }
 
-export async function deleteSubTopicsByMapping(mappingId, transaction) {
+export async function deleteSubTopicsByMapping(mappingId, options = {}) {
+  const transaction = options?.transaction !== undefined ? options.transaction : options;
   try {
     const topic = await scoped(model.topicModel).findOne({
       where: { topicId: mappingId },
@@ -679,6 +703,7 @@ export async function deleteSubTopicsByMapping(mappingId, transaction) {
     return await scoped(model.subTopicModel).destroy({
       where: { topicId: mappingId },
       transaction,
+      individualHooks: true,
     });
   } catch (error) {
     console.error("Error in delete SubTopics:", error);

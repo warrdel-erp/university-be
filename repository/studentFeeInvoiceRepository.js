@@ -227,6 +227,7 @@ export async function createStudentFeeInvoice(data, options = {}) {
 export async function bulkCreateStudentFeeInvoiceItems(rows, options = {}) {
   return model.studentFeeInvoiceItemsModel.bulkCreate(rows, {
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -283,6 +284,7 @@ export async function updateBillingScheduleItemStatus(billingScheduleItemId, sta
     {
       where: { billingScheduleItemId: Number(billingScheduleItemId) },
       transaction: options.transaction,
+      individualHooks: true,
     }
   );
   if (!affected) {
@@ -291,6 +293,7 @@ export async function updateBillingScheduleItemStatus(billingScheduleItemId, sta
       {
         where: { billingScheduleItemId: Number(billingScheduleItemId) },
         transaction: options.transaction,
+        individualHooks: true,
       }
     );
   }
@@ -486,6 +489,7 @@ export async function updateFeePlanItemById(feePlanItemId, data, options = {}) {
   return scoped(model.feePlanItemModel).update(data, {
     where: { feePlanItemId: Number(feePlanItemId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 

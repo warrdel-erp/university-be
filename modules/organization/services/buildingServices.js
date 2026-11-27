@@ -1,5 +1,7 @@
 import * as buildingCreationService from "../repository/buildingRepository.js";
 import { getTenantStore } from "../../../utility/requestContext.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function addbuilding(buildingData, user, createdBy, updatedBy) {
     const campusId = await buildingCreationService.getCampusIdByInstituteId(getTenantStore().instituteId);
@@ -12,7 +14,9 @@ export async function addbuilding(buildingData, user, createdBy, updatedBy) {
     if (buildingData.closingTime === '' || buildingData.closingTime === undefined) {
         buildingData.closingTime = null;
     }
-    return await buildingCreationService.addbuilding(buildingData);
+    return withAuditEvent(AUDIT_EVENTS.BUILDING_CREATE, async ({ transaction }) => {
+        return await buildingCreationService.addbuilding(buildingData, transaction);
+    });
 }
 
 export async function getbuildingDetails() {
@@ -32,11 +36,15 @@ export async function updatebuilding(buildingId, buildingData, updatedBy) {
     if (updateData.closingTime === '') {
         updateData.closingTime = null;
     }
-    return await buildingCreationService.updatebuilding(buildingId, updateData);
+    return withAuditEvent(AUDIT_EVENTS.BUILDING_UPDATE, async ({ transaction }) => {
+        return await buildingCreationService.updatebuilding(buildingId, updateData, transaction);
+    });
 }
 
 export async function deletebuilding(buildingId) {
-    return await buildingCreationService.deletebuilding(buildingId);
+    return withAuditEvent(AUDIT_EVENTS.BUILDING_DELETE, async ({ transaction }) => {
+        return await buildingCreationService.deletebuilding(buildingId, transaction);
+    });
 }
 
 export async function getAllbuildingNested(buildingType) {

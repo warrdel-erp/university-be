@@ -1,21 +1,18 @@
 import moment from "moment";
 import sequelize from "../../../database/sequelizeConfig.js";
 import * as scheduleCreationRepository from "../repository/scheduleRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function addSchedule(scheduleData, createdBy, updatedBy) {
-
-  try {
-    const data = {
-      ...scheduleData,
-      createdBy,
-      updatedBy
-    };
-    const schedule = await scheduleCreationRepository.addSchedule(data);
-    return schedule;
-  } catch (error) {
-    throw new Error(error.message);
-  }
-
+  const data = {
+    ...scheduleData,
+    createdBy,
+    updatedBy
+  };
+  return await withAuditEvent(AUDIT_EVENTS.SCHEDULE_CREATE, async ({ transaction }) => {
+    return await scheduleCreationRepository.addSchedule(data, { transaction });
+  });
 };
 
 export async function getScheduleDetails() {
@@ -27,12 +24,16 @@ export async function getSingleScheduleDetails(scheduleId) {
 };
 
 export async function deleteSchedule(scheduleId) {
-  return await scheduleCreationRepository.deleteSchedule(scheduleId);
+  return await withAuditEvent(AUDIT_EVENTS.SCHEDULE_DELETE, async ({ transaction }) => {
+    return await scheduleCreationRepository.deleteSchedule(scheduleId, { transaction });
+  });
 };
 
 export async function updateSchedule(scheduleId, ScheduleData, updatedBy) {
   ScheduleData.updatedBy = updatedBy;
-  await scheduleCreationRepository.updateSchedule(scheduleId, ScheduleData);
+  return await withAuditEvent(AUDIT_EVENTS.SCHEDULE_UPDATE, async ({ transaction }) => {
+    return await scheduleCreationRepository.updateSchedule(scheduleId, ScheduleData, { transaction });
+  });
 };
 
 /**
@@ -54,8 +55,10 @@ export async function assignTeacher(scheduleId, userId, createdBy, updatedBy) {
     throw new Error("This teacher is already assigned to this exam schedule");
   }
   
-  const data = { scheduleId, userId, createdBy, updatedBy }
-  return await scheduleCreationRepository.assignTeacher(data);
+  const data = { scheduleId, userId, createdBy, updatedBy };
+  return await withAuditEvent(AUDIT_EVENTS.SCHEDULE_TEACHER_ASSIGN, async ({ transaction }) => {
+    return await scheduleCreationRepository.assignTeacher(data, { transaction });
+  });
 };
 
 export async function getAssignTeacher() {
@@ -63,29 +66,28 @@ export async function getAssignTeacher() {
 };
 
 export async function attendence(data, createdBy, updatedBy) {
-  try {
-    data.createdBy = createdBy;
-    data.updatedBy = updatedBy;
+  data.createdBy = createdBy;
+  data.updatedBy = updatedBy;
 
-    data.date = moment().format("YYYY-MM-DD");
+  data.date = moment().format("YYYY-MM-DD");
 
-    if (data.checkIn) {
-      data.checkIn = moment(data.checkIn, "HH:mm:ss").format("HH:mm:ss");
-    }
-    if (data.checkOut) {
-      data.checkOut = moment(data.checkOut, "HH:mm:ss").format("HH:mm:ss");
-    }
-
-    const attendance = await scheduleCreationRepository.attendence(data);
-    return attendance;
-  } catch (error) {
-    throw new Error(error.message);
+  if (data.checkIn) {
+    data.checkIn = moment(data.checkIn, "HH:mm:ss").format("HH:mm:ss");
   }
+  if (data.checkOut) {
+    data.checkOut = moment(data.checkOut, "HH:mm:ss").format("HH:mm:ss");
+  }
+
+  return await withAuditEvent(AUDIT_EVENTS.SCHEDULE_ATTENDANCE_MARK, async ({ transaction }) => {
+    return await scheduleCreationRepository.attendence(data, { transaction });
+  });
 };
 
 export async function updateAttendence(teacherAttendenceId, data, updatedBy) {
   data.updatedBy = updatedBy;
-  await scheduleCreationRepository.updateAttendence(teacherAttendenceId, data);
+  return await withAuditEvent(AUDIT_EVENTS.SCHEDULE_ATTENDANCE_UPDATE, async ({ transaction }) => {
+    return await scheduleCreationRepository.updateAttendence(teacherAttendenceId, data, { transaction });
+  });
 };
 
 export async function getAllAttendence(page, limit, fromDate, toDate) {

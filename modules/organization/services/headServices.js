@@ -3,8 +3,9 @@ import * as instituteRepository from "../repository/instituteRepository.js";
 import * as registerRepository from "../../../repository/userRepository.js";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
-import sequelize from "../../../database/sequelizeConfig.js";
 import { getTenantStore } from "../../../utility/requestContext.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 function getActiveInstituteId() {
   const instituteId = getTenantStore().instituteId;
@@ -15,9 +16,7 @@ function getActiveInstituteId() {
 }
 
 export async function addHead(headData, createdBy, updatedBy) {
-  const transaction = await sequelize.transaction();
-
-  try {
+  return withAuditEvent(AUDIT_EVENTS.HEAD_CREATE, async ({ transaction }) => {
     const { headName, mobileNumber, registerEmail, alternateEmail } = headData;
     const instituteId = getActiveInstituteId();
 
@@ -54,13 +53,8 @@ export async function addHead(headData, createdBy, updatedBy) {
     const user = await registerRepository.headRegister(userPayload, transaction);
     const head = await headCreationService.addHead(headData, transaction);
 
-    await transaction.commit();
     return { head, user };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in addHead:", error);
-    throw new Error(error.message || "Failed to add head. Please try again.");
-  }
+  });
 }
 
 export async function getHeadDetails() {
@@ -72,7 +66,9 @@ export async function getSingleHeadDetails(headId) {
 }
 
 export async function deleteHead(headId) {
-  return await headCreationService.deleteHead(headId);
+  return withAuditEvent(AUDIT_EVENTS.HEAD_DELETE, async ({ transaction }) => {
+    return await headCreationService.deleteHead(headId, transaction);
+  });
 }
 
 export async function updateHead(headId, headData, updatedBy) {
@@ -84,5 +80,7 @@ export async function updateHead(headId, headData, updatedBy) {
     ...updateData
   } = headData;
   updateData.updatedBy = updatedBy;
-  await headCreationService.updateHead(headId, updateData);
+  return withAuditEvent(AUDIT_EVENTS.HEAD_UPDATE, async ({ transaction }) => {
+    return await headCreationService.updateHead(headId, updateData, transaction);
+  });
 }

@@ -10,8 +10,10 @@ import { Op } from "sequelize";
 import { formatDateKey } from "../utility/dateFormat.js";
 import * as model from "../models/index.js";
 import sequelize from "../database/sequelizeConfig.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
-export async function addExamAttendance(data, createdBy, updatedBy) {
+export async function addExamAttendance(data, createdBy, updatedBy, options = {}) {
   const {
     examScheduleId,
     examScheduleRoomCapacityId,
@@ -41,7 +43,12 @@ export async function addExamAttendance(data, createdBy, updatedBy) {
       createdBy,
       updatedBy,
     };
-    return await examAttendanceRepository.createExamAttendance(newAttendance);
+    if (options?.transaction) {
+      return await examAttendanceRepository.createExamAttendance(newAttendance, options);
+    }
+    return await withAuditEvent(AUDIT_EVENTS.EXAM_ATTENDANCE_CREATE, async ({ transaction }) => {
+      return await examAttendanceRepository.createExamAttendance(newAttendance, { ...options, transaction });
+    });
   } catch (error) {
     throw new Error(`Error creating exam attendance: ${error.message}`);
   }
@@ -76,26 +83,31 @@ export async function getSingleExamAttendance(examAttendanceId) {
   }
 }
 
-export async function updateExamAttendances(attendances, updatedBy) {
+export async function updateExamAttendances(attendances, updatedBy, options = {}) {
   try {
     const updates = attendances.map((record) => ({
       ...record,
       updatedBy,
     }));
-    const updatedRecords =
-      await examAttendanceRepository.updateExamAttendances(updates);
-
-    return updatedRecords;
+    if (options?.transaction) {
+      return await examAttendanceRepository.updateExamAttendances(updates, options);
+    }
+    return await withAuditEvent(AUDIT_EVENTS.EXAM_ATTENDANCE_UPDATE, async ({ transaction }) => {
+      return await examAttendanceRepository.updateExamAttendances(updates, { ...options, transaction });
+    });
   } catch (error) {
     throw new Error(`Error updating exam attendances: ${error.message}`);
   }
 }
 
-export async function deleteExamAttendance(examAttendanceId) {
+export async function deleteExamAttendance(examAttendanceId, options = {}) {
   try {
-    return await examAttendanceRepository.deleteExamAttendance(
-      examAttendanceId,
-    );
+    if (options?.transaction) {
+      return await examAttendanceRepository.deleteExamAttendance(examAttendanceId, options);
+    }
+    return await withAuditEvent(AUDIT_EVENTS.EXAM_ATTENDANCE_DELETE, async ({ transaction }) => {
+      return await examAttendanceRepository.deleteExamAttendance(examAttendanceId, { ...options, transaction });
+    });
   } catch (error) {
     throw new Error(`Error deleting exam attendance record: ${error.message}`);
   }
@@ -326,23 +338,22 @@ export async function getExamOperationsAttendanceRoom(
   };
 }
 
-export async function markExamAttendance(attendanceData, user) {
-  const { examScheduleId, examScheduleRoomCapacityId, students } =
-    attendanceData;
-  const { userId, universityId, defaultInstituteId, defaultAcademicYearId } =
-    user;
+export async function markExamAttendance(attendanceData, user, options = {}) {
+  const runner = async (transaction) => {
+    const { examScheduleId, examScheduleRoomCapacityId, students } =
+      attendanceData;
+    const { userId, universityId, defaultInstituteId, defaultAcademicYearId } =
+      user;
 
-  const seats = await examAttendanceRepository.getStudentSeats(
-    examScheduleRoomCapacityId,
-  );
+    const seats = await examAttendanceRepository.getStudentSeats(
+      examScheduleRoomCapacityId,
+    );
 
-  const seatMap = new Map();
-  seats.forEach((seat) => {
-    seatMap.set(seat.studentId, seat.studentExamSeatId);
-  });
+    const seatMap = new Map();
+    seats.forEach((seat) => {
+      seatMap.set(seat.studentId, seat.studentExamSeatId);
+    });
 
-  const transaction = await examAttendanceRepository.sequelize.transaction();
-  try {
     const results = [];
     for (const stud of students) {
       const studentExamSeatId = seatMap.get(stud.studentId) || null;
@@ -394,50 +405,63 @@ export async function markExamAttendance(attendanceData, user) {
       transaction,
     );
 
-    await transaction.commit();
     return results;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
+  };
+
+  if (options?.transaction) {
+    return runner(options.transaction);
   }
+  return withAuditEvent(AUDIT_EVENTS.EXAM_ATTENDANCE_MARK, async ({ transaction }) => {
+    return runner(transaction);
+  });
 }
 
-export async function updateRoomAttendanceStatus(statusData) {
-  const { examScheduleId, examScheduleRoomCapacityId, status } = statusData;
+export async function updateRoomAttendanceStatus(statusData, options = {}) {
+  const runner = async (transaction) => {
+    const { examScheduleId, examScheduleRoomCapacityId, status } = statusData;
 
-  const roomCapacity = await examAttendanceRepository.getRoomCapacityById(
-    examScheduleRoomCapacityId,
-  );
-  if (!roomCapacity) {
-    throw new Error("Room capacity not found");
-  }
+    const roomCapacity = await examAttendanceRepository.getRoomCapacityById(
+      examScheduleRoomCapacityId,
+    );
+    if (!roomCapacity) {
+      throw new Error("Room capacity not found");
+    }
 
-  const seats = await examAttendanceRepository.getStudentSeats(
-    examScheduleRoomCapacityId,
-  );
-  const attendances = await examAttendanceRepository.getAttendances(
-    examScheduleId,
-    examScheduleRoomCapacityId,
-  );
+    const seats = await examAttendanceRepository.getStudentSeats(
+      examScheduleRoomCapacityId,
+    );
+    const attendances = await examAttendanceRepository.getAttendances(
+      examScheduleId,
+      examScheduleRoomCapacityId,
+    );
 
-  const presentCount = attendances.filter(
-    (att) => att.attendanceStatus === "PRESENT",
-  ).length;
-  const absentCount = attendances.filter(
-    (att) => att.attendanceStatus === "ABSENT",
-  ).length;
+    const presentCount = attendances.filter(
+      (att) => att.attendanceStatus === "PRESENT",
+    ).length;
+    const absentCount = attendances.filter(
+      (att) => att.attendanceStatus === "ABSENT",
+    ).length;
 
-  await examAttendanceRepository.updateRoomCapacityStatus(
-    examScheduleRoomCapacityId,
-    status,
-  );
+    await examAttendanceRepository.updateRoomCapacityStatus(
+      examScheduleRoomCapacityId,
+      status,
+      transaction,
+    );
 
-  return {
-    status,
-    totalStudents: seats.length,
-    present: presentCount,
-    absent: absentCount,
+    return {
+      status,
+      totalStudents: seats.length,
+      present: presentCount,
+      absent: absentCount,
+    };
   };
+
+  if (options?.transaction) {
+    return runner(options.transaction);
+  }
+  return withAuditEvent(AUDIT_EVENTS.EXAM_ROOM_ATTENDANCE_STATUS_UPDATE, async ({ transaction }) => {
+    return runner(transaction);
+  });
 }
 export async function getExamAttendanceDetailsByRoom(
   classRoomSectionId,

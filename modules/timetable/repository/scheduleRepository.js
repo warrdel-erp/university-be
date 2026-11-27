@@ -9,9 +9,9 @@ export async function getScheduleInScope(scheduleId) {
     });
 }
 
-export async function addSchedule(scheduleData) {
+export async function addSchedule(scheduleData, options = {}) {
     try {
-        return await scoped(model.scheduleModel).create(scheduleData);
+        return await scoped(model.scheduleModel).create(scheduleData, options);
     } catch (error) {
         console.error('Error in add Schedule :', error);
         throw error;
@@ -41,17 +41,21 @@ export async function getSingleScheduleDetails(scheduleId) {
     }
 }
 
-export async function deleteSchedule(scheduleId) {
+export async function deleteSchedule(scheduleId, options = {}) {
     const deleted = await scoped(model.scheduleModel).destroy({
         where: { scheduleId },
+        transaction: options.transaction,
+        individualHooks: true,
     });
     return deleted > 0;
 }
 
-export async function updateSchedule(scheduleId, scheduleData) {
+export async function updateSchedule(scheduleId, scheduleData, options = {}) {
     try {
         return await scoped(model.scheduleModel).update(scheduleData, {
             where: { scheduleId },
+            transaction: options.transaction,
+            individualHooks: true,
         });
     } catch (error) {
         console.error(`Error updating Schedule ${scheduleId}:`, error);
@@ -59,9 +63,9 @@ export async function updateSchedule(scheduleId, scheduleData) {
     }
 }
 
-export async function assignTeacher(data) {
+export async function assignTeacher(data, options = {}) {
     try {
-        return await model.scheduleAssignModel.create(data);
+        return await model.scheduleAssignModel.create(data, options);
     } catch (error) {
         console.error('Error in add assign Teacher :', error);
         throw error;
@@ -115,19 +119,21 @@ export async function getAssignTeacher() {
     }
 }
 
-export async function attendence(data) {
+export async function attendence(data, options = {}) {
     try {
-        return await model.teacherAttendeceModel.create(data);
+        return await model.teacherAttendeceModel.create(data, options);
     } catch (error) {
         console.error('Error in add teacher attendence:', error);
         throw error;
     }
 }
 
-export async function updateAttendence(teacherAttendenceId, data) {
+export async function updateAttendence(teacherAttendenceId, data, options = {}) {
     try {
         return await model.teacherAttendeceModel.update(data, {
             where: { teacherAttendenceId },
+            transaction: options.transaction,
+            individualHooks: true,
         });
     } catch (error) {
         console.error(`Error updating teacher attendence ${teacherAttendenceId}:`, error);

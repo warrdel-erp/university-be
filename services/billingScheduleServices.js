@@ -6,6 +6,8 @@ import * as repoPaymentTerms from "../repository/billingSchedulePaymentTermsRepo
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
 import { resolveBatchCurrentPosition, buildCurrentTermsForYear, termsForYear, buildTermName } from "../utility/courseTerms.js";
 import { decimalAdd, decimalSubtract, toMoneyNumber } from "../utility/decimalMoney.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -200,7 +202,7 @@ export async function createBillingSchedule(payload, user = {}) {
   const createdIds = [];
 
   // 2. Execute all creation in a single transaction
-  await sequelize.transaction(async (t) => {
+  await withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_CREATE, async ({ transaction: t }) => {
     const termCounterMap = new Map();
 
     for (const item of scheduleItems) {
@@ -403,7 +405,7 @@ export async function updateBillingSchedule(
     }
   }
 
-  await sequelize.transaction(async (t) => {
+  await withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_UPDATE, async ({ transaction: t }) => {
     const updateData = {};
 
     if (payload.name !== undefined) updateData.name = payload.name;
@@ -469,18 +471,21 @@ export async function updateBillingScheduleStatus(
     throw httpError("status is required", 400);
   }
 
-  const existing = await repo.findBillingScheduleItemById(
-    billingScheduleItemId,
-  );
-  if (!existing) {
-    throw httpError(
-      `Billing schedule item with ID ${billingScheduleItemId} not found`,
-      404,
+  return withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_STATUS_UPDATE, async ({ transaction }) => {
+    const existing = await repo.findBillingScheduleItemById(
+      billingScheduleItemId,
+      { transaction }
     );
-  }
+    if (!existing) {
+      throw httpError(
+        `Billing schedule item with ID ${billingScheduleItemId} not found`,
+        404,
+      );
+    }
 
-  await repo.updateBillingScheduleItem(billingScheduleItemId, { status });
-  return repo.findBillingScheduleItemById(billingScheduleItemId);
+    await repo.updateBillingScheduleItem(billingScheduleItemId, { status }, { transaction });
+    return repo.findBillingScheduleItemById(billingScheduleItemId, { transaction });
+  });
 }
 
 /**
@@ -501,7 +506,7 @@ export async function deleteBillingSchedule(billingScheduleItemId) {
     );
   }
 
-  await sequelize.transaction(async (t) => {
+  await withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_DELETE, async ({ transaction: t }) => {
     await repo.deleteBillingScheduleSubItemsByItemId(billingScheduleItemId, {
       transaction: t,
     });
@@ -541,7 +546,7 @@ export async function addBillingScheduleSubItem(payload, user = {}) {
   const instituteId = user?.instituteId || scheduleItem.instituteId;
 
   let newSubItem;
-  await sequelize.transaction(async (t) => {
+  await withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_SUB_ITEM_CREATE, async ({ transaction: t }) => {
     newSubItem = await repo.createBillingScheduleSubItem(
       {
         billingScheduleItemId,
@@ -586,7 +591,7 @@ export async function deleteBillingScheduleSubItem(billingScheduleSubItemId) {
     );
   }
 
-  await sequelize.transaction(async (t) => {
+  await withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_SUB_ITEM_DELETE, async ({ transaction: t }) => {
     const parent = await repo.findBillingScheduleItemById(
       subItem.billingScheduleItemId,
       {
@@ -625,25 +630,32 @@ export async function addBillingSchedulePaymentTerm(payload) {
     throw httpError("installment must be an integer", 400);
   }
 
-  const scheduleItem = await repo.findBillingScheduleItemById(
-    billingScheduleItemId,
-  );
-  if (!scheduleItem) {
-    throw httpError(
-      `Billing schedule item with ID ${billingScheduleItemId} not found`,
-      404,
+  return withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_PAYMENT_TERM_CREATE, async ({ transaction }) => {
+    const scheduleItem = await repo.findBillingScheduleItemById(
+      billingScheduleItemId,
+      { transaction }
     );
-  }
+    if (!scheduleItem) {
+      throw httpError(
+        `Billing schedule item with ID ${billingScheduleItemId} not found`,
+        404,
+      );
+    }
 
-  const newTerm = await repoPaymentTerms.createPaymentTerm({
-    billingScheduleItemId,
-    installment: Number(installment),
-    isDefault: payload.isDefault != null ? Boolean(payload.isDefault) : false,
+    const newTerm = await repoPaymentTerms.createPaymentTerm(
+      {
+        billingScheduleItemId,
+        installment: Number(installment),
+        isDefault: payload.isDefault != null ? Boolean(payload.isDefault) : false,
+      },
+      { transaction }
+    );
+
+    return repoPaymentTerms.findPaymentTermById(
+      newTerm.billingSchedulePaymentTermsId,
+      { transaction }
+    );
   });
-
-  return repoPaymentTerms.findPaymentTermById(
-    newTerm.billingSchedulePaymentTermsId,
-  );
 }
 
 /**
@@ -656,18 +668,21 @@ export async function deleteBillingSchedulePaymentTerm(
     throw httpError("billingSchedulePaymentTermsId is required", 400);
   }
 
-  const term = await repoPaymentTerms.findPaymentTermById(
-    billingSchedulePaymentTermsId,
-  );
-  if (!term) {
-    throw httpError(
-      `Billing schedule payment term with ID ${billingSchedulePaymentTermsId} not found`,
-      404,
+  return withAuditEvent(AUDIT_EVENTS.BILLING_SCHEDULE_PAYMENT_TERM_DELETE, async ({ transaction }) => {
+    const term = await repoPaymentTerms.findPaymentTermById(
+      billingSchedulePaymentTermsId,
+      { transaction }
     );
-  }
+    if (!term) {
+      throw httpError(
+        `Billing schedule payment term with ID ${billingSchedulePaymentTermsId} not found`,
+        404,
+      );
+    }
 
-  await repoPaymentTerms.deletePaymentTerm(billingSchedulePaymentTermsId);
-  return { billingSchedulePaymentTermsId };
+    await repoPaymentTerms.deletePaymentTerm(billingSchedulePaymentTermsId, { transaction });
+    return { billingSchedulePaymentTermsId };
+  });
 }
 
 function formatCurrency(val) {

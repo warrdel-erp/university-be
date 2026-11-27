@@ -4,6 +4,8 @@ import * as feeTypeCatalogRepo from "../repository/feeTypeCatalogRepository.js";
 import * as studentRepo from "../repository/studentBillingBreakdownRepository.js";
 import * as feePlanRepo from "../repository/feePlanItemRepository.js";
 import { resolveActiveAcademicYearContext } from "../utility/curriculumSubjectsByActiveYear.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 import {
   decimalAdd,
   decimalSubtract,
@@ -139,7 +141,7 @@ function buildFeePolicyBatchRows(
 }
 
 export async function createFeePolicy(body, authUser = {}) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_POLICY_CREATE, async ({ transaction }) => {
     const {
       policyName,
       description,
@@ -320,7 +322,7 @@ export async function getSingleFeePolicy(feePolicyId) {
 }
 
 export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_POLICY_UPDATE, async ({ transaction }) => {
     const existing = await feePolicyRepo.findFeePolicyById(feePolicyId, {
       transaction,
     });
@@ -482,53 +484,59 @@ export async function updateFeePolicy(feePolicyId, body, authUser = {}) {
 }
 
 export async function publishFeePolicy(feePolicyId, authUser = {}) {
-  const policy = await feePolicyRepo.findFeePolicyById(feePolicyId);
-  if (!policy) {
-    throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
-  }
+  return withAuditEvent(AUDIT_EVENTS.FEE_POLICY_PUBLISH, async ({ transaction }) => {
+    const policy = await feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    if (!policy) {
+      throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
+    }
 
-  if (policy.publishStatus === "published") {
-    throw httpError("Fee policy is already published", 400);
-  }
+    if (policy.publishStatus === "published") {
+      throw httpError("Fee policy is already published", 400);
+    }
 
-  await feePolicyRepo.updateFeePolicy(feePolicyId, {
-    publishStatus: "published",
-    publishedAt: new Date(),
-    publishedBy: authUser.userId ?? null,
-    updatedBy: authUser.userId ?? null,
+    await feePolicyRepo.updateFeePolicy(feePolicyId, {
+      publishStatus: "published",
+      publishedAt: new Date(),
+      publishedBy: authUser.userId ?? null,
+      updatedBy: authUser.userId ?? null,
+    }, { transaction });
+
+    const updated = await feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    return formatPolicyResponse(updated);
   });
-
-  const updated = await feePolicyRepo.findFeePolicyById(feePolicyId);
-  return formatPolicyResponse(updated);
 }
 
 export async function unpublishFeePolicy(feePolicyId, authUser = {}) {
-  const policy = await feePolicyRepo.findFeePolicyById(feePolicyId);
-  if (!policy) {
-    throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
-  }
+  return withAuditEvent(AUDIT_EVENTS.FEE_POLICY_UNPUBLISH, async ({ transaction }) => {
+    const policy = await feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    if (!policy) {
+      throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
+    }
 
-  if (policy.publishStatus === "draft") {
-    throw httpError("Fee policy is already in draft status", 400);
-  }
+    if (policy.publishStatus === "draft") {
+      throw httpError("Fee policy is already in draft status", 400);
+    }
 
-  await feePolicyRepo.updateFeePolicy(feePolicyId, {
-    publishStatus: "draft",
-    updatedBy: authUser.userId ?? null,
+    await feePolicyRepo.updateFeePolicy(feePolicyId, {
+      publishStatus: "draft",
+      updatedBy: authUser.userId ?? null,
+    }, { transaction });
+
+    const updated = await feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    return formatPolicyResponse(updated);
   });
-
-  const updated = await feePolicyRepo.findFeePolicyById(feePolicyId);
-  return formatPolicyResponse(updated);
 }
 
 export async function deleteFeePolicy(feePolicyId) {
-  const policy = await feePolicyRepo.findFeePolicyById(feePolicyId);
-  if (!policy) {
-    throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
-  }
+  return withAuditEvent(AUDIT_EVENTS.FEE_POLICY_DELETE, async ({ transaction }) => {
+    const policy = await feePolicyRepo.findFeePolicyById(feePolicyId, { transaction });
+    if (!policy) {
+      throw httpError(`Fee policy with ID ${feePolicyId} not found`, 404);
+    }
 
-  await feePolicyRepo.deleteFeePolicy(feePolicyId);
-  return true;
+    await feePolicyRepo.deleteFeePolicy(feePolicyId, { transaction });
+    return true;
+  });
 }
 
 export async function mapStudentWithFeePolicies(body, authUser = {}) {
@@ -622,7 +630,7 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
     }
   }
 
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_POLICY_STUDENT_MAP, async ({ transaction }) => {
     if (replace) {
       for (const sid of distinctStudentIds) {
         if (effect) {
@@ -668,34 +676,36 @@ export async function mapStudentWithFeePolicies(body, authUser = {}) {
 }
 
 export async function removeStudentFeePolicyMapping(query = {}, authUser = {}) {
-  const { studentId, feePolicyId, effect } = query;
-  if (!studentId && !feePolicyId) {
-    throw httpError("Either studentId or feePolicyId must be provided to remove mapping", 400);
-  }
+  return withAuditEvent(AUDIT_EVENTS.FEE_POLICY_STUDENT_UNMAP, async ({ transaction }) => {
+    const { studentId, feePolicyId, effect } = query;
+    if (!studentId && !feePolicyId) {
+      throw httpError("Either studentId or feePolicyId must be provided to remove mapping", 400);
+    }
 
-  let targetPolicyIds = [];
-  if (feePolicyId) {
-    targetPolicyIds = [Number(feePolicyId)];
-  } else if (studentId) {
-    const existingMappings = await feePolicyRepo.findFeePolicyStudents({
-      studentId: Number(studentId),
+    let targetPolicyIds = [];
+    if (feePolicyId) {
+      targetPolicyIds = [Number(feePolicyId)];
+    } else if (studentId) {
+      const existingMappings = await feePolicyRepo.findFeePolicyStudents({
+        studentId: Number(studentId),
+        effect: effect ? String(effect) : undefined,
+      }, { transaction });
+      targetPolicyIds = [...new Set(existingMappings.map((m) => m.feePolicyId))];
+    }
+
+    const deletedCount = await feePolicyRepo.deleteFeePolicyStudents({
+      studentId: studentId ? Number(studentId) : undefined,
+      feePolicyId: feePolicyId ? Number(feePolicyId) : undefined,
       effect: effect ? String(effect) : undefined,
-    });
-    targetPolicyIds = [...new Set(existingMappings.map((m) => m.feePolicyId))];
-  }
+    }, { transaction });
 
-  const deletedCount = await feePolicyRepo.deleteFeePolicyStudents({
-    studentId: studentId ? Number(studentId) : undefined,
-    feePolicyId: feePolicyId ? Number(feePolicyId) : undefined,
-    effect: effect ? String(effect) : undefined,
+    for (const pid of targetPolicyIds) {
+      const remainingCount = await feePolicyRepo.countFeePolicyStudents({ feePolicyId: pid }, { transaction });
+      await feePolicyRepo.updateFeePolicy(pid, { isStudentMapped: remainingCount > 0 }, { transaction });
+    }
+
+    return { deletedCount };
   });
-
-  for (const pid of targetPolicyIds) {
-    const remainingCount = await feePolicyRepo.countFeePolicyStudents({ feePolicyId: pid });
-    await feePolicyRepo.updateFeePolicy(pid, { isStudentMapped: remainingCount > 0 });
-  }
-
-  return { deletedCount };
 }
 
 export async function getStudentFeePolicies(query = {}, authUser = {}) {

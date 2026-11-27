@@ -1,4 +1,6 @@
 import * as campusRepository from "../repository/campusRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 function flattenCampusInput(item) {
   return {
@@ -61,9 +63,11 @@ export function mapCampusRow(row) {
 
 export async function createCampus(campus, createdBy) {
   try {
-    const payload = flattenCampusInput(campus);
-    const row = await campusRepository.createCampus(payload, createdBy);
-    return mapCampusRow(row);
+    return await withAuditEvent(AUDIT_EVENTS.CAMPUS_CREATE, async ({ transaction }) => {
+      const payload = flattenCampusInput(campus);
+      const row = await campusRepository.createCampus(payload, createdBy, { transaction });
+      return mapCampusRow(row);
+    });
   } catch (error) {
     console.error("Error in Campus Service (createCampus):", error);
     throw error;
@@ -72,14 +76,16 @@ export async function createCampus(campus, createdBy) {
 
 export async function updateCampus(campusId, body) {
   try {
-    const data = flattenCampusUpdateInput(body);
-    const row = await campusRepository.updateCampus(campusId, data);
-    if (!row) {
-      const error = new Error("Campus not found");
-      error.statusCode = 404;
-      throw error;
-    }
-    return mapCampusRow(row);
+    return await withAuditEvent(AUDIT_EVENTS.CAMPUS_UPDATE, async ({ transaction }) => {
+      const data = flattenCampusUpdateInput(body);
+      const row = await campusRepository.updateCampus(campusId, data, { transaction });
+      if (!row) {
+        const error = new Error("Campus not found");
+        error.statusCode = 404;
+        throw error;
+      }
+      return mapCampusRow(row);
+    });
   } catch (error) {
     console.error("Error in Campus Service (updateCampus):", error);
     throw error;
