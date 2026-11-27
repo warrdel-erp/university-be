@@ -14,6 +14,12 @@ function httpError(message, statusCode = 400) {
 function normalizePayload(body = {}) {
   const payload = {};
 
+  if (body.universityId !== undefined) {
+    payload.universityId = body.universityId;
+  } else if (body.university_id !== undefined) {
+    payload.universityId = body.university_id;
+  }
+
   if (body.componentName !== undefined) {
     payload.componentName = body.componentName;
   } else if (body.component_name !== undefined) {
@@ -51,6 +57,7 @@ export async function addSubjectComponent(body) {
 
     const created = await repo.createSubjectComponent(
       {
+        ...(normalized.universityId ? { universityId: normalized.universityId } : {}),
         componentName: normalized.componentName,
         code: normalized.code,
         description: normalized.description ?? null,

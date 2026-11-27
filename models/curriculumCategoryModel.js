@@ -10,6 +10,15 @@ const curriculumCategoryModel = sequelize.define(
       autoIncrement: true,
       field: 'id',
     },
+    universityId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      field: 'university_id',
+      references: {
+        model: 'university',
+        key: 'university_id',
+      },
+    },
     categoryName: {
       type: DataTypes.STRING(150),
       allowNull: false,
@@ -18,7 +27,6 @@ const curriculumCategoryModel = sequelize.define(
     code: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      unique: true,
       field: 'code',
     },
     isElectiveCoursework: {
@@ -50,14 +58,20 @@ const curriculumCategoryModel = sequelize.define(
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    indexes: [
+      {
+        unique: true,
+        name: 'unique_university_curriculum_category_code',
+        fields: ['university_id', 'code'],
+      },
+    ],
   }
 );
 
 curriculumCategoryModel.scopeConfig = {
-  university: false,
+  university: true,
   institute: false,
   academicYear: false,
 };
 
 export default curriculumCategoryModel;
-
