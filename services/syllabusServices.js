@@ -1,10 +1,11 @@
 import sequelize from '../database/sequelizeConfig.js';
 import * as SyllabusCreationRepository from '../repository/syllabusRepository.js';
 import { buildTermName } from '../utility/courseTerms.js';
+import { withAuditEvent } from '../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../const/auditEvents.js';
 
 export async function addSyllabus(syllabusData, createdBy, updatedBy) {
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.SYLLABUS_CREATE, async ({ transaction }) => {
     const allSyllabusResults = [];
 
     const syllabus = await SyllabusCreationRepository.addSyllabus(
@@ -38,13 +39,8 @@ export async function addSyllabus(syllabusData, createdBy, updatedBy) {
     await SyllabusCreationRepository.addSyllabusDetails(syllabusDetailsData, { transaction });
     allSyllabusResults.push(syllabus);
 
-    await transaction.commit();
     return allSyllabusResults;
-  } catch (error) {
-    await transaction.rollback();
-    console.error('Error creating syllabus:', error);
-    throw error;
-  }
+  });
 }
 
 export async function getSyllabusDetails(academicYearId) {
@@ -56,12 +52,16 @@ export async function getSingleSyllabusDetails(SyllabusId) {
 }
 
 export async function deleteSyllabus(SyllabusId) {
-  return await SyllabusCreationRepository.deleteSyllabus(SyllabusId);
+  return withAuditEvent(AUDIT_EVENTS.SYLLABUS_DELETE, async ({ transaction }) => {
+    return await SyllabusCreationRepository.deleteSyllabus(SyllabusId, { transaction });
+  });
 }
 
 export async function updateSyllabus(SyllabusId, syllabusData, updatedBy) {
-  syllabusData.updatedBy = updatedBy;
-  await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData);
+  return withAuditEvent(AUDIT_EVENTS.SYLLABUS_UPDATE, async ({ transaction }) => {
+    syllabusData.updatedBy = updatedBy;
+    return await SyllabusCreationRepository.updateSyllabus(SyllabusId, syllabusData, { transaction });
+  });
 }
 
 export async function courseAllSubject(courseId, sessionId) {
@@ -69,34 +69,36 @@ export async function courseAllSubject(courseId, sessionId) {
 }
 
 export async function addSyllabusUnit(data, createdBy, updatedBy) {
-  const { academicYearId, term: inputTerm, subjectId, slab, sessionId } = data;
+  return withAuditEvent(AUDIT_EVENTS.SYLLABUS_UNIT_CREATE, async ({ transaction }) => {
+    const { academicYearId, term: inputTerm, subjectId, slab, sessionId } = data;
 
-  await SyllabusCreationRepository.validateSubjectForSyllabusUnit({
-    subjectId,
-    academicYearId,
-    sessionId,
+    await SyllabusCreationRepository.validateSubjectForSyllabusUnit({
+      subjectId,
+      academicYearId,
+      sessionId,
+    });
+
+    await SyllabusCreationRepository.backfillSubjectCampusId(subjectId);
+
+    const subject = await SyllabusCreationRepository.getSubjectForUnitResolution(subjectId);
+    const subjectPlain = subject?.get ? subject.get({ plain: true }) : subject;
+    const resolvedTerm = inputTerm ?? subjectPlain?.term ?? null;
+
+    const syllabusUnits = slab.map((unit) => ({
+      sessionId,
+      academicYearId,
+      subjectId,
+      ...(resolvedTerm != null && { term: Number(resolvedTerm) }),
+      unitNumber: unit.unitNumber,
+      name: unit.name,
+      description: unit.description,
+      contactHours: unit.contactHours,
+      createdBy,
+      updatedBy,
+    }));
+
+    return await SyllabusCreationRepository.addSyllabusUnit(syllabusUnits, { transaction });
   });
-
-  await SyllabusCreationRepository.backfillSubjectCampusId(subjectId);
-
-  const subject = await SyllabusCreationRepository.getSubjectForUnitResolution(subjectId);
-  const subjectPlain = subject?.get ? subject.get({ plain: true }) : subject;
-  const resolvedTerm = inputTerm ?? subjectPlain?.term ?? null;
-
-  const syllabusUnits = slab.map((unit) => ({
-    sessionId,
-    academicYearId,
-    subjectId,
-    ...(resolvedTerm != null && { term: Number(resolvedTerm) }),
-    unitNumber: unit.unitNumber,
-    name: unit.name,
-    description: unit.description,
-    contactHours: unit.contactHours,
-    createdBy,
-    updatedBy,
-  }));
-
-  return await SyllabusCreationRepository.addSyllabusUnit(syllabusUnits);
 }
 
 function mapSyllabusUnit(unit) {
@@ -133,39 +135,44 @@ export async function syllabusUnitGet(subjectId) {
 }
 
 export async function updateSyllabusUnit(syllabusUnitId, academicYearId, data, updatedBy) {
-  const payload = {
-    ...(data.unitNumber != null && { unitNumber: data.unitNumber }),
-    ...(data.name != null && { name: data.name }),
-    ...(data.description != null && { description: data.description }),
-    ...(data.contactHours != null && { contactHours: data.contactHours }),
-    updatedBy,
-  };
+  return withAuditEvent(AUDIT_EVENTS.SYLLABUS_UNIT_UPDATE, async ({ transaction }) => {
+    const payload = {
+      ...(data.unitNumber != null && { unitNumber: data.unitNumber }),
+      ...(data.name != null && { name: data.name }),
+      ...(data.description != null && { description: data.description }),
+      ...(data.contactHours != null && { contactHours: data.contactHours }),
+      updatedBy,
+    };
 
-  const updated = await SyllabusCreationRepository.updateSyllabusUnit(
-    syllabusUnitId,
-    academicYearId,
-    payload
-  );
+    const updated = await SyllabusCreationRepository.updateSyllabusUnit(
+      syllabusUnitId,
+      academicYearId,
+      payload,
+      { transaction }
+    );
 
-  if (!updated) {
-    return null;
-  }
+    if (!updated) {
+      return null;
+    }
 
-  return {
-    syllabusUnitId: updated.syllabusUnitId,
-    academicYearId: updated.academicYearId,
-    subjectId: updated.subjectId,
-    sessionId: updated.sessionId,
-    term: updated.term,
-    unitNumber: updated.unitNumber,
-    name: updated.name,
-    description: updated.description,
-    contactHours: updated.contactHours,
-  };
+    return {
+      syllabusUnitId: updated.syllabusUnitId,
+      academicYearId: updated.academicYearId,
+      subjectId: updated.subjectId,
+      sessionId: updated.sessionId,
+      term: updated.term,
+      unitNumber: updated.unitNumber,
+      name: updated.name,
+      description: updated.description,
+      contactHours: updated.contactHours,
+    };
+  });
 }
 
 export async function deleteSyllabusUnit(syllabusUnitId) {
-  return SyllabusCreationRepository.deleteSyllabusUnit(syllabusUnitId);
+  return withAuditEvent(AUDIT_EVENTS.SYLLABUS_UNIT_DELETE, async ({ transaction }) => {
+    return SyllabusCreationRepository.deleteSyllabusUnit(syllabusUnitId, { transaction });
+  });
 }
 
 export async function termAllSubject(courseId, term) {

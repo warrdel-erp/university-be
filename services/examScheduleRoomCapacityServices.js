@@ -8,6 +8,8 @@ import { z } from "zod";
 import { getTimeSlotRange, minutesToTime } from "../utility/timeSlot.js";
 import { decimalSubtract } from "../utility/decimalMoney.js";
 import { scoped } from "../utility/scoped.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -116,9 +118,7 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
 
     updatePayload.updatedBy = userId;
 
-    const transaction = await sequelize.transaction();
-
-    try {
+    return withAuditEvent(AUDIT_EVENTS.EXAM_ROOM_CAPACITY_UPDATE, async ({ transaction }) => {
         const seatCount = await examRoomCapacityRepository.getSeatAllocationCountByCapacityId(examScheduleRoomCapacityId, transaction);
         if (seatCount > 0) {
             if (Number(existing.columns) !== Number(columns)) {
@@ -134,12 +134,8 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, u
             updatePayload,
             transaction
         );
-        await transaction.commit();
         return result;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 export async function getExamScheduleRooms(examScheduleId) {
@@ -177,9 +173,8 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, userId)
     if (schedule?.published) {
         throw new Error("Room assignment cannot be changed because the exam schedule is already published.");
     }
-    const transaction = await sequelize.transaction();
 
-    try {
+    return withAuditEvent(AUDIT_EVENTS.EXAM_ROOM_CAPACITY_DELETE, async ({ transaction }) => {
         await examRoomCapacityRepository.deleteAssociatedSeatsAndAttendance(
             examScheduleRoomCapacityId,
             transaction
@@ -211,12 +206,8 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, userId)
             console.error("Auto seat allocation after room deletion skipped or failed:", seatErr.message);
         }
 
-        await transaction.commit();
         return result;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 export async function getAvailableRoomsForExamSchedule(examScheduleId) {

@@ -3,6 +3,8 @@ import * as model from '../../../models/index.js';
 import * as academicGroupRepository from '../../student/repository/academicGroupRepository.js';
 import sequelize from '../../../database/sequelizeConfig.js';
 import { formatQueryDate } from '../../../utility/helper.js';
+import { withAuditEvent } from '../../../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../../../const/auditEvents.js';
 
 function toDateOnlyString(value) {
     if (value == null || value === '') {
@@ -477,9 +479,12 @@ export async function deleteTimeTableName(timeTableNameId) {
 }
 
 export async function deleteStructureCourseMapping(timetableStructureCourseMapperId) {
-    return await timeTableRepository.deleteStructureCourseMappingById(
-        timetableStructureCourseMapperId,
-    );
+    return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_STRUCTURE_MAPPING_DELETE, async ({ transaction }) => {
+        return await timeTableRepository.deleteStructureCourseMappingById(
+            timetableStructureCourseMapperId,
+            { transaction }
+        );
+    });
 }
 
 export async function updateStructure(body, updatedBy) {
@@ -753,8 +758,7 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
         timeTableNameId: data.timeTableNameId,
     });
 
-    const transaction = await sequelize.transaction();
-    try {
+    return await withAuditEvent(AUDIT_EVENTS.TIMETABLE_STRUCTURE_MAPPING_CREATE, async ({ transaction }) => {
         let mapping;
         if (existingMapping) {
             mapping = existingMapping;
@@ -808,17 +812,12 @@ export async function addStructureCourseMapping(data, createdBy, updatedBy) {
 
         await timeTableRepository.bulkCreateVariantCourseMappings(variantRows, transaction);
 
-        await transaction.commit();
-
         const plainMapping = mapping.get ? mapping.get({ plain: true }) : { ...mapping };
         plainMapping.startingDate = res.start;
         plainMapping.endingDate = res.end;
         plainMapping.variants = validatedVariants;
         return plainMapping;
-    } catch (error) {
-        await transaction.rollback();
-        throw error;
-    }
+    });
 }
 
 function parseTimeString(timeString) {

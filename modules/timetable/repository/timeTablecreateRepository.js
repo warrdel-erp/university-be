@@ -389,10 +389,12 @@ async function destroyCellGraphByCellIds(mappingIds, transaction) {
     await model.timeTableCellTeachersDateWiseModel.destroy({
       where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
       transaction,
+      individualHooks: true,
     });
     await model.timeTableCellDateWiseModel.destroy({
       where: { timeTableCellDateWiseId: { [Op.in]: dateWiseIds } },
       transaction,
+      individualHooks: true,
     });
   }
 
@@ -414,6 +416,7 @@ async function destroyCellGraphByCellIds(mappingIds, transaction) {
         timeTableCellTeacherId: { [Op.in]: deletedTimeTableCellTeacherIds },
       },
       transaction,
+      individualHooks: true,
     });
   }
 
@@ -421,6 +424,7 @@ async function destroyCellGraphByCellIds(mappingIds, transaction) {
   await model.timeTableCellModel.destroy({
     where: { timeTableCellId: { [Op.in]: numericIds } },
     transaction,
+    individualHooks: true,
   });
 
   return {
@@ -464,6 +468,7 @@ export async function deleteTimeTableRoutineRepository(
   return scoped(model.timeTableRoutineModel).destroy({
     where: { timeTableRoutineId: Number(timeTableRoutineId) },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -1223,23 +1228,26 @@ export async function changeTimeTableCreate(
     {
       where: { timeTableRoutineId },
       transaction,
+      individualHooks: true,
     },
   );
   return result;
 }
 
-export async function updatetimeTableCreate(timeTableCellId, data) {
-  const schedule = await assertScopedSchedule(timeTableCellId);
+export async function updatetimeTableCreate(timeTableCellId, data, options = {}) {
+  const schedule = await assertScopedSchedule(timeTableCellId, options);
   if (!schedule) {
     return [0];
   }
   const result = await model.timeTableCellModel.update(data, {
     where: { timeTableCellId },
+    transaction: options.transaction,
+    individualHooks: true,
   });
   return result;
 }
 
-export async function findMappingById(id) {
+export async function findMappingById(id, options = {}) {
   const result = await assertScopedSchedule(id, {
     attributes: [
       "timeTableCellId",
@@ -1258,6 +1266,7 @@ export async function findMappingById(id) {
       "isSameTeacher",
       "isOverridingSyblingElectives",
     ],
+    transaction: options.transaction,
   });
 
   return result;
@@ -1282,6 +1291,7 @@ export async function updateMapping(id, data, transaction) {
     await model.timeTableCellModel.update(cellData, {
       where: { timeTableCellId: id },
       transaction,
+      individualHooks: true,
     });
   }
 
@@ -1300,6 +1310,7 @@ export async function updateMapping(id, data, transaction) {
     await model.timeTableCellTeachersModel.update(teacherData, {
       where: teacherWhere,
       transaction,
+      individualHooks: true,
     });
   }
 
@@ -1404,6 +1415,7 @@ export async function updateCellTeacherRepository(
   return model.timeTableCellTeachersModel.update(data, {
     where: { timeTableCellTeacherId: Number(timeTableCellTeacherId) },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -2045,7 +2057,11 @@ export async function publishTimeTableRepository(
   }
   return scoped(model.timeTableRoutineModel).update(
     { isPublish: true },
-    { where: { timeTableRoutineId: Number(timeTableRoutineId) }, transaction },
+    {
+      where: { timeTableRoutineId: Number(timeTableRoutineId) },
+      transaction,
+      individualHooks: true,
+    },
   );
 }
 
@@ -3454,6 +3470,7 @@ export async function updateDateWiseCellTeacherByIdRepository(
         ),
       },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
 }
@@ -3513,6 +3530,7 @@ export async function updateDateWiseCellSubjectRepository(
   await model.timeTableCellDateWiseModel.update(updateData, {
     where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -3527,6 +3545,7 @@ export async function updateDateWiseCellRoomRepository(
     {
       where: { timeTableCellDateWiseId: Number(timeTableCellDateWiseId) },
       transaction: options.transaction,
+      individualHooks: true,
     },
   );
 }
@@ -3584,6 +3603,7 @@ export async function deleteCellTeacherRepository(
   return await model.timeTableCellTeachersModel.destroy({
     where: { timeTableCellTeacherId: Number(timeTableCellTeacherId) },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -3608,6 +3628,7 @@ export async function deleteDateWiseTeachersByCellAndUserRepository(
       userId: Number(userId),
     },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -3630,6 +3651,7 @@ export async function deleteTeachersDateWiseByIds(ids, transaction) {
   return scoped(model.timeTableCellTeachersDateWiseModel).destroy({
     where: { timeTableCellDateWiseId: { [Op.in]: ids } },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -3639,6 +3661,7 @@ export async function deleteDateWiseDependentsByIds(ids, transaction) {
     where: { timeTableCellDateWiseId: { [Op.in]: ids } },
     transaction,
     force: true,
+    individualHooks: true,
   });
   await model.lessonMappingModel.destroy({
     where: { timeTableCellDateWiseId: { [Op.in]: ids } },
@@ -3648,6 +3671,7 @@ export async function deleteDateWiseDependentsByIds(ids, transaction) {
   await model.timeTableCellTeachersDateWiseModel.destroy({
     where: { timeTableCellDateWiseId: { [Op.in]: ids } },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -3662,6 +3686,7 @@ export async function deleteDateWiseCellsByMappingsAndDates(
       date: { [Op.in]: dates },
     },
     transaction,
+    individualHooks: true,
   });
 }
 

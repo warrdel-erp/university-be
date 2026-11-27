@@ -114,8 +114,9 @@ export async function departmentExists(departmentId) {
     });
 }
 
-export async function addDepartment(departmentData, parentDepartmentId) {
-    const transaction = await sequelize.transaction();
+export async function addDepartment(departmentData, parentDepartmentId, options = {}) {
+    const transaction = options.transaction || await sequelize.transaction();
+    const ownsTransaction = !options.transaction;
     try {
         if (parentDepartmentId) {
             const parentDepartment = await scoped(model.departmentModel).findOne({
@@ -134,17 +135,22 @@ export async function addDepartment(departmentData, parentDepartmentId) {
         const department = await scoped(model.departmentModel).create(departmentData, { transaction });
         await createDefaultHodPositionForDepartment(department, transaction);
 
-        await transaction.commit();
+        if (ownsTransaction) {
+            await transaction.commit();
+        }
         return department.get({ plain: true });
     } catch (error) {
-        await transaction.rollback();
+        if (ownsTransaction) {
+            await transaction.rollback();
+        }
         console.error('Error in add Department :', error);
         throw error;
     }
 }
 
-export async function addParentDepartment(childDepartmentId, departmentData) {
-    const transaction = await sequelize.transaction();
+export async function addParentDepartment(childDepartmentId, departmentData, options = {}) {
+    const transaction = options.transaction || await sequelize.transaction();
+    const ownsTransaction = !options.transaction;
     try {
         const childId = Number(childDepartmentId);
 
@@ -173,11 +179,14 @@ export async function addParentDepartment(childDepartmentId, departmentData) {
             },
             {
                 where: { departmentId: childId },
+                individualHooks: true,
                 transaction,
             },
         );
 
-        await transaction.commit();
+        if (ownsTransaction) {
+            await transaction.commit();
+        }
 
         return {
             parentDepartment: parentDepartment.get({ plain: true }),
@@ -187,7 +196,9 @@ export async function addParentDepartment(childDepartmentId, departmentData) {
             },
         };
     } catch (error) {
-        await transaction.rollback();
+        if (ownsTransaction) {
+            await transaction.rollback();
+        }
         console.error('Error in add parent Department :', error);
         throw error;
     }
@@ -219,25 +230,26 @@ export async function getSingleDepartmentDetails(departmentId) {
     }
 }
 
-export async function deleteDepartment(departmentId, transaction) {
+export async function deleteDepartment(departmentId, options = {}) {
     const id = Number(departmentId);
-    const ownsTransaction = !transaction;
-    const txn = transaction || await sequelize.transaction();
+    const txn = options?.transaction || (options && !options.transaction && options.commit ? options : null);
+    const ownsTransaction = !txn;
+    const transaction = txn || await sequelize.transaction();
 
     try {
         const existing = await scoped(model.departmentModel).findOne({
             where: { departmentId: id },
             attributes: ['departmentId', 'departmentName', 'isDefault'],
-            transaction: txn,
+            transaction,
         });
         if (!existing) {
             if (ownsTransaction) {
-                await txn.rollback();
+                await transaction.rollback();
             }
             return false;
         }
 
-        await assertDepartmentDeletable(id, txn);
+        await assertDepartmentDeletable(id, transaction);
 
         const children = await scoped(model.departmentModel).findAll({
             where: {
@@ -245,40 +257,43 @@ export async function deleteDepartment(departmentId, transaction) {
                 departmentId: { [Op.ne]: id },
             },
             attributes: ['departmentId', 'departmentName', 'isDefault'],
-            transaction: txn,
+            transaction,
         });
 
         for (const child of children) {
-            await deleteDepartment(child.departmentId, txn);
+            await deleteDepartment(child.departmentId, { transaction });
         }
 
         await scoped(model.departmentPositionsModel).destroy({
             where: { departmentId: id, isDefault: true },
-            transaction: txn,
+            individualHooks: true,
+            transaction,
         });
 
         const deleted = await scoped(model.departmentModel).destroy({
             where: { departmentId: id },
-            transaction: txn,
+            individualHooks: true,
+            transaction,
         });
 
         if (ownsTransaction) {
-            await txn.commit();
+            await transaction.commit();
         }
         return deleted > 0;
     } catch (error) {
         if (ownsTransaction) {
-            await txn.rollback();
+            await transaction.rollback();
         }
         throw error;
     }
 }
 
-export async function updateDepartment(departmentId, departmentData) {
+export async function updateDepartment(departmentId, departmentData, options = {}) {
     try {
         const existing = await scoped(model.departmentModel).findOne({
             where: { departmentId },
             attributes: ['departmentId', 'departmentName', 'isDefault'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return false;
@@ -297,6 +312,7 @@ export async function updateDepartment(departmentId, departmentData) {
             const parentDepartment = await scoped(model.departmentModel).findOne({
                 attributes: ['departmentId', 'departmentName', 'isDefault'],
                 where: { departmentId: parentId },
+                transaction: options.transaction,
             });
             if (!parentDepartment) {
                 throw new Error('Parent department not found');
@@ -305,6 +321,8 @@ export async function updateDepartment(departmentId, departmentData) {
 
         await scoped(model.departmentModel).update(departmentData, {
             where: { departmentId },
+            individualHooks: true,
+            transaction: options.transaction,
         });
         return true;
     } catch (error) {

@@ -57,7 +57,7 @@ async function findTeacherSectionMappingInInstitute(teacherSectionMappingId) {
     });
 }
 
-export async function teacherSectionMapping(data) {
+export async function teacherSectionMapping(data, options = {}) {
     try {
         const employee = await findEmployeeInInstitute(data.userId);
         if (!employee) {
@@ -69,7 +69,9 @@ export async function teacherSectionMapping(data) {
             throw new Error(`Class section ID ${data.classSectionsId} not found`);
         }
 
-        return await scoped(model.teacherSectionMappingModel).create(data);
+        return await scoped(model.teacherSectionMappingModel).create(data, {
+            transaction: options.transaction,
+        });
     } catch (error) {
         console.error('Error in student mapping course:', error);
         throw error;
@@ -201,7 +203,7 @@ export async function getTeacherSectionMapping({
     }
 }
 
-export async function updateTeachersSectionMapping(teacherSectionMappingId, info) {
+export async function updateTeachersSectionMapping(teacherSectionMappingId, info, options = {}) {
     try {
         const existing = await findTeacherSectionMappingInInstitute(teacherSectionMappingId);
         if (!existing) {
@@ -224,6 +226,8 @@ export async function updateTeachersSectionMapping(teacherSectionMappingId, info
 
         return await scoped(model.teacherSectionMappingModel).update(info, {
             where: { teacherSectionMappingId },
+            individualHooks: true,
+            transaction: options.transaction,
         });
     } catch (error) {
         console.error(`Error updating teacher subject mapping ${teacherSectionMappingId} :`, error);
@@ -231,7 +235,7 @@ export async function updateTeachersSectionMapping(teacherSectionMappingId, info
     }
 }
 
-export async function deleteTeachersSectionMapping(teacherSectionMappingId) {
+export async function deleteTeachersSectionMapping(teacherSectionMappingId, options = {}) {
     try {
         const existing = await findTeacherSectionMappingInInstitute(teacherSectionMappingId);
         if (!existing) {
@@ -241,6 +245,7 @@ export async function deleteTeachersSectionMapping(teacherSectionMappingId) {
         await scoped(model.teacherSectionMappingModel).destroy({
             where: { teacherSectionMappingId },
             individualHooks: true,
+            transaction: options.transaction,
         });
         return { message: 'delete Teacher Section Mapping deleted successfully' };
     } catch (error) {

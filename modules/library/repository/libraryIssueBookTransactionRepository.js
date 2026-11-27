@@ -512,6 +512,7 @@ export async function markInventoriesIssued(inventoryIds, payload, transaction) 
       inventoryId: { [Op.in]: scopedIds },
       status: "available",
     },
+    individualHooks: true,
     transaction,
   });
   return affected;
@@ -540,6 +541,7 @@ export async function markInventoriesAvailable(inventoryIds, transaction) {
     },
     {
       where: { inventoryId: { [Op.in]: scopedIds } },
+      individualHooks: true,
       transaction,
     },
   );
@@ -558,6 +560,7 @@ export async function markIssueItemsReturned(
         libraryBookIssueInventoryItemId: { [Op.in]: libraryBookIssueInventoryItemIds },
         libraryReturnBookTransactionId: null,
       },
+      individualHooks: true,
       transaction,
     },
   );
@@ -599,6 +602,7 @@ export async function syncOutstandingInventoryDueDate(
     { dueDate },
     {
       where: { inventoryId: { [Op.in]: scopedIds } },
+      individualHooks: true,
       transaction,
     },
   );
@@ -778,6 +782,7 @@ export async function updateLibraryIssueBookTransaction(
 
   return scoped(model.libraryIssueBookTransactionModel).update(data, {
     where: { libraryIssueBookTransactionId },
+    individualHooks: true,
     transaction,
   });
 }

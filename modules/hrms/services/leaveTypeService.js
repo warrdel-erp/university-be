@@ -1,4 +1,6 @@
 import * as repo from "../repository/leaveTypeRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 const VALID_CLASSIFICATIONS = ["Paid", "Unpaid", "Duty"];
 const VALID_STATUSES = ["Active", "Inactive", "Draft", "Published"];
@@ -56,7 +58,9 @@ export async function createLeaveType(data, user = {}) {
     updatedBy: user?.userId || user?.dataValues?.userId || null,
   };
 
-  return repo.createLeaveType(payload);
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_TYPE_CREATE, async ({ transaction }) => {
+    return repo.createLeaveType(payload, { transaction });
+  });
 }
 
 export async function getAllLeaveTypes(filters = {}, pagination = {}) {
@@ -115,7 +119,9 @@ export async function updateLeaveType(id, data, user = {}) {
     updatedBy: user?.userId || user?.dataValues?.userId || null,
   };
 
-  return repo.updateLeaveType(id, payload);
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_TYPE_UPDATE, async ({ transaction }) => {
+    return repo.updateLeaveType(id, payload, { transaction });
+  });
 }
 
 export async function updateLeaveTypeStatus(id, status, user = {}) {
@@ -137,7 +143,9 @@ export async function updateLeaveTypeStatus(id, status, user = {}) {
   }
 
   const updatedBy = user?.userId || user?.dataValues?.userId || null;
-  return repo.updateLeaveTypeStatus(id, status, updatedBy);
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_TYPE_STATUS_UPDATE, async ({ transaction }) => {
+    return repo.updateLeaveTypeStatus(id, status, updatedBy, { transaction });
+  });
 }
 
 export async function deleteLeaveType(id, options = {}) {
@@ -156,5 +164,7 @@ export async function deleteLeaveType(id, options = {}) {
     );
   }
 
-  return repo.deleteLeaveType(id);
+  return withAuditEvent(AUDIT_EVENTS.LEAVE_TYPE_DELETE, async ({ transaction }) => {
+    return repo.deleteLeaveType(id, { transaction });
+  });
 }

@@ -8,6 +8,8 @@ import sequelize from '../database/sequelizeConfig.js';
 import { getTenantStore, getAcademicYearId } from '../utility/requestContext.js';
 import moment from 'moment';
 import { parseCustomDate } from '../utility/dateFormat.js';
+import { withAuditEvent } from '../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../const/auditEvents.js';
 
 const ACADEMIC_YEAR_DATE_FORMAT = 'YYYY-MM-DD';
 
@@ -221,7 +223,9 @@ async function copyYearData(copyacademicYearId, copyData, academicYearId, update
 
 /** Create or update by yearTitle — always activates for the active institute. */
 export async function addacedmicYear(acedmicYearData, updatedBy) {
-    return upsertAndActivateAcedmicYear(acedmicYearData, updatedBy);
+    return withAuditEvent(AUDIT_EVENTS.ACADEMIC_YEAR_CREATE, async ({ transaction }) => {
+        return upsertAndActivateAcedmicYear(acedmicYearData, updatedBy, { transaction });
+    });
 }
 
 export async function getacedmicYearDetails() {
@@ -233,33 +237,37 @@ export async function getSingleacedmicYearDetailsByTitle(yearTitle) {
 }
 
 export async function updateacedmicYear(academicYearId, acedmicYearData, updatedBy) {
-    const resolvedId = academicYearId ?? getAcademicYearId();
-    if (!resolvedId) {
-        const error = new Error('Active academic year is required');
-        error.statusCode = 400;
-        throw error;
-    }
+    return withAuditEvent(AUDIT_EVENTS.ACADEMIC_YEAR_UPDATE, async ({ transaction }) => {
+        const resolvedId = academicYearId ?? getAcademicYearId();
+        if (!resolvedId) {
+            const error = new Error('Active academic year is required');
+            error.statusCode = 400;
+            throw error;
+        }
 
-    const {
-        instituteId: _instituteId,
-        universityId: _universityId,
-        academicYearId: _id,
-        isActive: _isActive,
-        ...updateData
-    } = acedmicYearData;
+        const {
+            instituteId: _instituteId,
+            universityId: _universityId,
+            academicYearId: _id,
+            isActive: _isActive,
+            ...updateData
+        } = acedmicYearData;
 
-    if (updateData.startingDate != null && String(updateData.startingDate).trim() !== '') {
-        Object.assign(updateData, resolveAcademicYearFields(updateData));
-    } else if (updateData.endingDate != null && String(updateData.endingDate).trim() !== '') {
-        updateData.endingDate = requireFormattedDate(updateData.endingDate, 'endingDate');
-    }
+        if (updateData.startingDate != null && String(updateData.startingDate).trim() !== '') {
+            Object.assign(updateData, resolveAcademicYearFields(updateData));
+        } else if (updateData.endingDate != null && String(updateData.endingDate).trim() !== '') {
+            updateData.endingDate = requireFormattedDate(updateData.endingDate, 'endingDate');
+        }
 
-    updateData.updatedBy = updatedBy;
-    return await acedmicYearCreationService.updateacedmicYear(resolvedId, updateData);
+        updateData.updatedBy = updatedBy;
+        return await acedmicYearCreationService.updateacedmicYear(resolvedId, updateData, { transaction });
+    });
 }
 
 export async function deleteacedmicYear(academicYearId) {
-    return await acedmicYearCreationService.deleteacedmicYear(academicYearId);
+    return withAuditEvent(AUDIT_EVENTS.ACADEMIC_YEAR_DELETE, async ({ transaction }) => {
+        return await acedmicYearCreationService.deleteacedmicYear(academicYearId, { transaction });
+    });
 }
 
 export async function getActiveAcedmicYearByInstitute() {
@@ -291,7 +299,7 @@ export async function getActiveAcedmicYearListByInstituteId(instituteId) {
 export async function newActivateAndCopyData(data, updatedBy) {
     const { copyacademicYearId, copyData, ...activateData } = data;
 
-    return sequelize.transaction(async (transaction) => {
+    return withAuditEvent(AUDIT_EVENTS.ACADEMIC_YEAR_ACTIVATE_AND_COPY, async ({ transaction }) => {
         const options = { transaction };
 
         const created = await createAndActivateAcedmicYear(activateData, updatedBy, options);

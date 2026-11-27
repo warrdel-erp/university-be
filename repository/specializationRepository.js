@@ -1,10 +1,11 @@
 import * as model from "../models/index.js";
 import { scoped } from "../utility/scoped.js";
 
-export async function updateSpecialization(specializationId, data) {
+export async function updateSpecialization(specializationId, data, options = {}) {
   try {
     const existing = await scoped(model.specializationModel).findOne({
       where: { specializationId },
+      ...options,
     });
     if (!existing) {
       return null;
@@ -12,10 +13,12 @@ export async function updateSpecialization(specializationId, data) {
 
     await scoped(model.specializationModel).update(data, {
       where: { specializationId },
+      ...options,
     });
 
     return scoped(model.specializationModel).findOne({
       where: { specializationId },
+      ...options,
     });
   } catch (error) {
     console.error("Error in Specialization Repository (updateSpecialization):", error);

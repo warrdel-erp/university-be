@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as feeTypeCategoryRepo from "../repository/feeTypeCategoryRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function categoryUpdatePayload(body) {
   const { feeTypeCategoryId, ...rest } = body;
@@ -7,7 +9,7 @@ function categoryUpdatePayload(body) {
 }
 
 export async function addFeeTypeCategory(body) {
-  const row = await sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_TYPE_CATEGORY_CREATE, async ({ transaction }) => {
     const { name, description } = body;
     const created = await feeTypeCategoryRepo.createFeeTypeCategory(
       {
@@ -18,8 +20,6 @@ export async function addFeeTypeCategory(body) {
     );
     return created.get({ plain: true });
   });
-
-  return row;
 }
 
 export async function listFeeTypeCategories() {
@@ -35,7 +35,7 @@ export async function getSingleFeeTypeCategory(feeTypeCategoryId) {
 }
 
 export async function updateFeeTypeCategory(feeTypeCategoryId, body) {
-  return sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_TYPE_CATEGORY_UPDATE, async ({ transaction }) => {
     const payload = categoryUpdatePayload(body);
     const affected = await feeTypeCategoryRepo.updateFeeTypeCategory(feeTypeCategoryId, payload, {
       transaction,
@@ -48,7 +48,7 @@ export async function updateFeeTypeCategory(feeTypeCategoryId, body) {
 }
 
 export async function deleteFeeTypeCategory(feeTypeCategoryId) {
-  await sequelize.transaction(async (transaction) => {
+  return withAuditEvent(AUDIT_EVENTS.FEE_TYPE_CATEGORY_DELETE, async ({ transaction }) => {
     const inUse = await feeTypeCategoryRepo.countCatalogRowsForCategory(feeTypeCategoryId, {
       transaction,
     });
@@ -61,7 +61,6 @@ export async function deleteFeeTypeCategory(feeTypeCategoryId) {
     if (!ok) {
       throw new Error("Fee type category not found or not in your university");
     }
+    return true;
   });
-
-  return true;
 }

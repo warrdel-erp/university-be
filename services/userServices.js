@@ -21,27 +21,31 @@ import { PERMISSIONS } from "../const/permissions.js";
 import { SCOPES } from "../const/scopes.js";
 import * as userRoleService from "./userRoleService.js";
 import { SYSTEM_ROLE_CODES } from "../const/roles.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 //register
 
 export async function register(info) {
-  let { userName, password, phone, email, universityId, role } = info;
-  password = await bcrypt.hashSync(password, salt);
+  return withAuditEvent(AUDIT_EVENTS.USER_REGISTER, async ({ transaction }) => {
+    let { userName, password, phone, email, universityId, role } = info;
+    password = await bcrypt.hashSync(password, salt);
 
-  const data = {
-    userName,
-    universityId: universityId,
-    password,
-    phone,
-    email: email.toLowerCase().trim(),
-    uniqueId: uuidv4(),
-  };
+    const data = {
+      userName,
+      universityId: universityId,
+      password,
+      phone,
+      email: email.toLowerCase().trim(),
+      uniqueId: uuidv4(),
+    };
 
-  const user = await registerRepository.register(data);
-  const userData = user?.toJSON ? user.toJSON() : { ...user };
-  delete userData.password;
-  delete userData.dummyPassword;
-  return userData;
+    const user = await registerRepository.register(data, { transaction });
+    const userData = user?.toJSON ? user.toJSON() : { ...user };
+    delete userData.password;
+    delete userData.dummyPassword;
+    return userData;
+  });
 }
 
 export async function getEmployeeRolePermissionUserId(userId) {
@@ -147,56 +151,55 @@ const formatEmployeeDetailsDeep = (employee) => {
 };
 
 export async function adminRegisterStudentAndEmployee(info) {
-  const transaction = await sequelize.transaction();
-  const { role, courseId, classSectionId, userId, roleId } = info;
+  return withAuditEvent(AUDIT_EVENTS.USER_REGISTER, async ({ transaction }) => {
+    const { role, courseId, classSectionId, userId, roleId } = info;
 
-  const course = await getCourseByCourseId(courseId);
-  const section = await getStudentBySectionId(classSectionId);
-  const employee = await getEmployeeByuserId(userId);
-  const salt = await bcrypt.genSalt(10);
+    const course = await getCourseByCourseId(courseId);
+    const section = await getStudentBySectionId(classSectionId);
+    const employee = await getEmployeeByuserId(userId);
+    const salt = await bcrypt.genSalt(10);
 
-  const createStudentData = (item) => {
-    const dummyPassword = uuidv4();
-    const password = bcrypt.hashSync(dummyPassword, salt);
+    const createStudentData = (item) => {
+      const dummyPassword = uuidv4();
+      const password = bcrypt.hashSync(dummyPassword, salt);
 
-    return {
-      userName: item.studentMapped.scholarNumber,
-      universityId: 1,
-      password,
-      phone: item.studentMapped.phoneNumber || null,
-      email: item.studentMapped.email,
-      uniqueId: uuidv4(),
-      role,
-      studentId: item.studentId,
-      dummyPassword,
+      return {
+        userName: item.studentMapped.scholarNumber,
+        universityId: 1,
+        password,
+        phone: item.studentMapped.phoneNumber || null,
+        email: item.studentMapped.email,
+        uniqueId: uuidv4(),
+        role,
+        studentId: item.studentId,
+        dummyPassword,
+      };
     };
-  };
 
-  const createEmployeeData = (item) => {
-    const dummyPassword = uuidv4();
-    const password = bcrypt.hashSync(dummyPassword, salt);
+    const createEmployeeData = (item) => {
+      const dummyPassword = uuidv4();
+      const password = bcrypt.hashSync(dummyPassword, salt);
 
-    return {
-      userName: item.employeeName,
-      universityId: 1,
-      password,
-      phone:
-        item.personalMobileNumber ||
-        item.mobileNumber ||
-        item.office?.officialMobileNumber ||
-        null,
-      email: item.personalEmail || item.email || null,
-      uniqueId: uuidv4(),
-      role,
-      dummyPassword,
-      employeeId: item.employeeId,
+      return {
+        userName: item.employeeName,
+        universityId: 1,
+        password,
+        phone:
+          item.personalMobileNumber ||
+          item.mobileNumber ||
+          item.office?.officialMobileNumber ||
+          null,
+        email: item.personalEmail || item.email || null,
+        uniqueId: uuidv4(),
+        role,
+        dummyPassword,
+        employeeId: item.employeeId,
+      };
     };
-  };
 
-  const studentData = section.map(createStudentData);
-  const employeeData = employee.map(createEmployeeData);
+    const studentData = section.map(createStudentData);
+    const employeeData = employee.map(createEmployeeData);
 
-  try {
     let results;
 
     if (role === "Student") {
@@ -261,13 +264,8 @@ export async function adminRegisterStudentAndEmployee(info) {
       throw new Error("Invalid role");
     }
 
-    await transaction.commit();
     return results;
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error during registration:", error);
-    throw error;
-  }
+  });
 }
 
 export async function getAdminRegisterStudentAndEmployee() {
@@ -293,16 +291,23 @@ export async function emptyPassword(email, transaction) {
 }
 
 export async function changePassword(info, transaction) {
-  let { email, password } = info;
-  const newPassword = await bcrypt.hashSync(password, salt);
+  const runner = async (activeTransaction) => {
+    let { email, password } = info;
+    const newPassword = await bcrypt.hashSync(password, salt);
 
-  const data = {
-    password: newPassword,
-    dummyPassword: "",
-    status: "active",
+    const data = {
+      password: newPassword,
+      dummyPassword: "",
+      status: "active",
+    };
+
+    return await registerRepository.changePassword(email, data, activeTransaction);
   };
 
-  return await registerRepository.changePassword(email, data, transaction);
+  if (transaction) return runner(transaction);
+  return withAuditEvent(AUDIT_EVENTS.USER_PASSWORD_CHANGE, async ({ transaction: auditTx }) => {
+    return runner(auditTx);
+  });
 }
 
 export async function getUserRoleAndPermissionsByUserId(userId) {
@@ -310,7 +315,7 @@ export async function getUserRoleAndPermissionsByUserId(userId) {
 }
 
 export const studentRegister = async (registerStudentData, transaction) => {
-  try {
+  const runner = async (activeTransaction) => {
     const {
       studentId,
       email,
@@ -339,7 +344,7 @@ export const studentRegister = async (registerStudentData, transaction) => {
     // Register the student and employee
     const results = await registerRepository.adminRegisterStudentAndEmployee(
       data,
-      transaction,
+      activeTransaction,
     );
 
     const userId = results.dataValues.userId;
@@ -347,7 +352,7 @@ export const studentRegister = async (registerStudentData, transaction) => {
     // Associate user and student
     await registerRepository.adminUser(
       { userId: userId, studentId: studentId },
-      transaction,
+      activeTransaction,
     );
 
     // Roles are dynamic — only assign a role if a valid roleId was resolved.
@@ -359,16 +364,18 @@ export const studentRegister = async (registerStudentData, transaction) => {
       await userRoleService.assignRoleToUser(
         userId,
         roleName?.dataValues?.role || role,
-        resourceIds,
-        transaction,
+       resourceIds,
+        activeTransaction,
       );
     }
 
     return userId;
-  } catch (error) {
-    console.error("Error in student registration:", error);
-    throw error;
-  }
+  };
+
+  if (transaction) return runner(transaction);
+  return withAuditEvent(AUDIT_EVENTS.USER_STUDENT_REGISTER, async ({ transaction: auditTx }) => {
+    return runner(auditTx);
+  });
 };
 
 export const employeeRegister = async (
@@ -376,7 +383,7 @@ export const employeeRegister = async (
   employeeRegisterData,
   transaction,
 ) => {
-  try {
+  const runner = async (activeTransaction) => {
     const { personalEmail, mobileNumber } = employeePersonalDetail;
     const {
       universityId,
@@ -401,7 +408,7 @@ export const employeeRegister = async (
     // Register the student and employee
     const results = await registerRepository.adminRegisterStudentAndEmployee(
       data,
-      transaction,
+      activeTransaction,
     );
 
     const userId = results.dataValues.userId;
@@ -410,29 +417,28 @@ export const employeeRegister = async (
     if (employeeId) {
       await registerRepository.adminUser(
         { userId: userId, employeeId: employeeId },
-        transaction,
+        activeTransaction,
       );
     }
 
     return userId;
-  } catch (error) {
-    console.error("Error in employee registration:", error);
-    throw error;
-  }
+  };
+
+  if (transaction) return runner(transaction);
+  return withAuditEvent(AUDIT_EVENTS.USER_EMPLOYEE_REGISTER, async ({ transaction: auditTx }) => {
+    return runner(auditTx);
+  });
 };
 
 export async function changeStatus(userId) {
-  try {
-    const userData = await registerRepository.findStatusByUserId(userId);
+  return withAuditEvent(AUDIT_EVENTS.USER_STATUS_CHANGE, async ({ transaction }) => {
+    const userData = await registerRepository.findStatusByUserId(userId, { transaction });
     const status = userData.dataValues.status;
     const newStatus = status === "active" ? "InActive" : "active";
 
     // Update the status
-    await registerRepository.changeStatus(userId, { status: newStatus });
-  } catch (error) {
-    console.error(`Error changing status for user ${userId}:`, error);
-    throw error;
-  }
+    await registerRepository.changeStatus(userId, { status: newStatus }, transaction);
+  });
 }
 
 export const forgotSendLink = async (email) => {
@@ -547,12 +553,14 @@ export async function getMyDetails(userId) {
 }
 
 export async function saveUserDefaults(userId, data) {
-  try {
-    return await registerRepository.updateUser(userId, data);
-  } catch (error) {
-    console.error("Error in saveUserDefaults service:", error);
-    throw error;
-  }
+  return withAuditEvent(AUDIT_EVENTS.USER_DEFAULTS_SAVE, async ({ transaction }) => {
+    try {
+      return await registerRepository.updateUser(userId, data, transaction);
+    } catch (error) {
+      console.error("Error in saveUserDefaults service:", error);
+      throw error;
+    }
+  });
 }
 
 async function assignNewRolesAndPermissions(userId, transaction) {
@@ -700,9 +708,7 @@ export async function initialSetup(info) {
     throw new Error("Email already exists");
   }
 
-  const transaction = await sequelize.transaction();
-
-  try {
+  return withAuditEvent(AUDIT_EVENTS.USER_INITIAL_SETUP, async ({ transaction }) => {
     // 2. Create University
     const university = await model.universityModel.create(
       {
@@ -795,8 +801,6 @@ export async function initialSetup(info) {
 
     await user.update({ defaultRoleId: clientAdminRoleId }, { transaction });
 
-    await transaction.commit();
-
     // Prepare return data (safe)
     const userData = user.toJSON();
     delete userData.password;
@@ -813,11 +817,7 @@ export async function initialSetup(info) {
         user: userData,
       },
     };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in initialSetup service:", error);
-    throw error;
-  }
+  });
 }
 
 async function fetchGrantedAccessRoles(userId) {
@@ -1070,9 +1070,7 @@ export async function giveFullAccess(info) {
     }
   }
 
-  const transaction = await sequelize.transaction();
-
-  try {
+  return withAuditEvent(AUDIT_EVENTS.USER_FULL_ACCESS_GRANT, async ({ transaction }) => {
     // 1. Find or create the CLIENT_ADMIN role
     let clientAdminRole = await model.roleModel.findOne({
       where: {
@@ -1142,8 +1140,6 @@ export async function giveFullAccess(info) {
 
     await user.update(userUpdates, { transaction });
 
-    await transaction.commit();
-
     return {
       success: true,
       message: "Full access granted successfully",
@@ -1154,9 +1150,5 @@ export async function giveFullAccess(info) {
         instituteId,
       },
     };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in giveFullAccess service:", error);
-    throw error;
-  }
+  });
 }

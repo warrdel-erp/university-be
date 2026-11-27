@@ -21,15 +21,15 @@ function floorBuildingInclude() {
     };
 }
 
-export async function addfloor(floorData) {
+export async function addfloor(floorData, transaction) {
     try {
-        const result = await scoped(model.floorModel).create(floorData);
+        const result = await scoped(model.floorModel).create(floorData, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add floor :", error);
         throw error;
     }
-};
+}
 
 export async function getfloorDetails() {
     try {
@@ -60,18 +60,21 @@ export async function getSinglefloorDetails(floorId) {
     }
 }
 
-export async function updatefloor(floorId, floorData) {
+export async function updatefloor(floorId, floorData, transaction) {
     try {
         const existing = await scoped(model.floorModel).findOne({
             where: { floorId },
             include: [floorBuildingInclude()],
+            transaction,
         });
         if (!existing) {
             return [0];
         }
 
         const result = await scoped(model.floorModel).update(floorData, {
-            where: { floorId }
+            where: { floorId },
+            transaction,
+            individualHooks: true,
         });
         return result;
     } catch (error) {
@@ -80,15 +83,20 @@ export async function updatefloor(floorId, floorData) {
     }
 }
 
-export async function deletefloor(floorId) {
+export async function deletefloor(floorId, transaction) {
     const existing = await scoped(model.floorModel).findOne({
         where: { floorId },
         include: [floorBuildingInclude()],
+        transaction,
     });
     if (!existing) {
         return false;
     }
 
-    const deleted = await scoped(model.floorModel).destroy({ where: { floorId } });
+    const deleted = await scoped(model.floorModel).destroy({
+        where: { floorId },
+        transaction,
+        individualHooks: true,
+    });
     return deleted > 0;
 }

@@ -129,6 +129,7 @@ export async function updateClassSectionFields(classSectionId, fields, options =
 
   return scoped(model.classSectionModel).update(payload, {
     where: { classSectionsId: Number(classSectionId) },
+    individualHooks: true,
     transaction: options.transaction,
   });
 }
@@ -254,6 +255,7 @@ export async function deleteTeacherSectionMappingsByClassSectionId(
 ) {
   return scoped(model.teacherSectionMappingModel).destroy({
     where: { classSectionsId: Number(classSectionId) },
+    individualHooks: true,
     transaction: options.transaction,
   });
 }
@@ -345,6 +347,7 @@ export async function deleteClassSectionTermsByClassSectionId(classSectionId, op
 
   return model.classSectionTermModel.destroy({
     where: { classSectionsId: Number(classSectionId) },
+    individualHooks: true,
     transaction: options.transaction,
   });
 }
@@ -357,6 +360,7 @@ export async function deleteClassSectionById(classSectionId, options = {}) {
 
   return scoped(model.classSectionModel).destroy({
     where: { classSectionsId: Number(classSectionId) },
+    individualHooks: true,
     transaction: options.transaction,
   });
 }

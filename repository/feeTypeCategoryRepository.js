@@ -46,6 +46,7 @@ export async function updateFeeTypeCategory(feeTypeCategoryId, payload, options 
   const [affected] = await scoped(model.feeTypeCategoryModel).update(payload, {
     where: { feeTypeCategoryId },
     transaction,
+    individualHooks: true,
   });
   return affected;
 }
@@ -55,6 +56,7 @@ export async function deleteFeeTypeCategory(feeTypeCategoryId, options = {}) {
   const deleted = await scoped(model.feeTypeCategoryModel).destroy({
     where: { feeTypeCategoryId },
     transaction,
+    individualHooks: true,
   });
   return deleted > 0;
 }

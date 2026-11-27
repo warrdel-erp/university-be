@@ -7,8 +7,9 @@ function universityWhere(extra = {}) {
   return { universityId: getTenantStore().universityId, ...extra };
 }
 
-export async function createInstitute(data, affiliatedUniversities = [], academicYear) {
-  const transaction = await sequelize.transaction();
+export async function createInstitute(data, affiliatedUniversities = [], academicYear, options = {}) {
+  const isExternalTransaction = Boolean(options.transaction);
+  const transaction = options.transaction || (await sequelize.transaction());
   try {
     const institute = await model.instituteModel.create(data, { transaction });
 
@@ -49,21 +50,26 @@ export async function createInstitute(data, affiliatedUniversities = [], academi
       { transaction },
     );
 
-    await transaction.commit();
+    if (!isExternalTransaction) {
+      await transaction.commit();
+    }
     institute.setDataValue("affiliateInstitute", affiliateRows);
     institute.setDataValue("academicYear", createdAcademicYear);
     return institute;
   } catch (error) {
-    await transaction.rollback();
+    if (!isExternalTransaction) {
+      await transaction.rollback();
+    }
     console.error("Error in Institute Repository (createInstitute):", error);
     throw error;
   }
 }
 
-export async function getInstitutes(campusId) {
+export async function getInstitutes(campusId, options = {}) {
   try {
     return await model.instituteModel.findAll({
       where: universityWhere(campusId ? { campusId } : {}),
+      transaction: options.transaction,
       include: [
         {
           model: model.campusModel,
@@ -87,10 +93,11 @@ export async function getInstitutes(campusId) {
   }
 }
 
-export async function getInstituteByCampusAndId(campusId, instituteId) {
+export async function getInstituteByCampusAndId(campusId, instituteId, options = {}) {
   try {
     return await model.instituteModel.findOne({
       where: universityWhere({ campusId, instituteId }),
+      transaction: options.transaction,
     });
   } catch (error) {
     console.error("Error in Institute Repository (getInstituteByCampusAndId):", error);
@@ -98,10 +105,11 @@ export async function getInstituteByCampusAndId(campusId, instituteId) {
   }
 }
 
-export async function getInstituteById(instituteId) {
+export async function getInstituteById(instituteId, options = {}) {
   try {
     return model.instituteModel.findOne({
       where: universityWhere({ instituteId }),
+      transaction: options.transaction,
       include: [
         {
           model: model.affiliatedIniversityModel,
@@ -119,10 +127,11 @@ export async function getInstituteById(instituteId) {
   }
 }
 
-export async function updateInstitute(instituteId, data) {
+export async function updateInstitute(instituteId, data, options = {}) {
   try {
     const existing = await model.instituteModel.findOne({
       where: universityWhere({ instituteId }),
+      transaction: options.transaction,
     });
     if (!existing) {
       return null;
@@ -130,19 +139,22 @@ export async function updateInstitute(instituteId, data) {
 
     await model.instituteModel.update(data, {
       where: universityWhere({ instituteId }),
+      transaction: options.transaction,
+      individualHooks: true,
     });
 
-    return getInstituteById(instituteId);
+    return getInstituteById(instituteId, options);
   } catch (error) {
     console.error("Error in Institute Repository (updateInstitute):", error);
     throw error;
   }
 }
 
-export async function getAffiliatedUniversityById(affiliatedUniversityId) {
+export async function getAffiliatedUniversityById(affiliatedUniversityId, options = {}) {
   try {
     return model.affiliatedIniversityModel.findOne({
       where: universityWhere({ affiliatedUniversityId }),
+      transaction: options.transaction,
     });
   } catch (error) {
     console.error("Error in Institute Repository (getAffiliatedUniversityById):", error);
@@ -150,12 +162,13 @@ export async function getAffiliatedUniversityById(affiliatedUniversityId) {
   }
 }
 
-export async function findDefaultAffiliatedUniversityId() {
+export async function findDefaultAffiliatedUniversityId(options = {}) {
   try {
     const row = await model.affiliatedIniversityModel.findOne({
       attributes: ["affiliatedUniversityId"],
       where: universityWhere(),
       order: [["affiliatedUniversityId", "ASC"]],
+      transaction: options.transaction,
     });
     return row?.get("affiliatedUniversityId") ?? null;
   } catch (error) {
@@ -164,18 +177,20 @@ export async function findDefaultAffiliatedUniversityId() {
   }
 }
 
-export async function updateAffiliatedUniversity(affiliatedUniversityId, data) {
+export async function updateAffiliatedUniversity(affiliatedUniversityId, data, options = {}) {
   try {
-    const existing = await getAffiliatedUniversityById(affiliatedUniversityId);
+    const existing = await getAffiliatedUniversityById(affiliatedUniversityId, options);
     if (!existing) {
       return null;
     }
 
     await model.affiliatedIniversityModel.update(data, {
       where: universityWhere({ affiliatedUniversityId }),
+      transaction: options.transaction,
+      individualHooks: true,
     });
 
-    return getAffiliatedUniversityById(affiliatedUniversityId);
+    return getAffiliatedUniversityById(affiliatedUniversityId, options);
   } catch (error) {
     console.error("Error in Institute Repository (updateAffiliatedUniversity):", error);
     throw error;

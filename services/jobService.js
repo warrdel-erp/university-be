@@ -1,5 +1,7 @@
 import * as jobRepository from "../repository/jobRepository.js";
 import { Op } from "sequelize";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function to24(timeStr) {
   try {
@@ -75,8 +77,9 @@ export async function addJob(data) {
       location: data.location
     });
 
-    const job = await jobRepository.addJob(data);
-    return job;
+    return await withAuditEvent(AUDIT_EVENTS.JOB_CREATE, async ({ transaction }) => {
+      return jobRepository.addJob(data, { transaction });
+    });
   } catch (error) {
     console.error("Error in addJob:", error.message);
     throw new Error(error.message || "Unable to add job");
@@ -104,8 +107,9 @@ export async function updateJob(jobId, data) {
       excludeId: jobId
     });
 
-    const updatedJob = await jobRepository.updateJob(jobId, data);
-    return updatedJob;
+    return await withAuditEvent(AUDIT_EVENTS.JOB_UPDATE, async ({ transaction }) => {
+      return jobRepository.updateJob(jobId, data, { transaction });
+    });
 
   } catch (error) {
     console.error("Error in updateJob:", error.message);
@@ -136,7 +140,9 @@ export async function getSingleJob(id) {
 // DELETE JOB
 export async function deleteJob(id) {
   try {
-    return await jobRepository.deleteJob(id);
+    return await withAuditEvent(AUDIT_EVENTS.JOB_DELETE, async ({ transaction }) => {
+      return jobRepository.deleteJob(id, { transaction });
+    });
   } catch (error) {
     console.error("Error in deleteJob:", error.message);
     throw new Error("Unable to delete job");

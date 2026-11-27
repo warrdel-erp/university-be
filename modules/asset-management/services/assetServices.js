@@ -1,6 +1,8 @@
 import { randomUUID } from "crypto";
 import sequelize from "../../../database/sequelizeConfig.js";
 import * as repo from "../repository/assetRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import {
   decimalCompare,
   decimalGreaterThanOrEqual,
@@ -285,7 +287,7 @@ export async function previewAssetCode(query) {
 }
 
 export async function addAsset(body) {
-  const row = await sequelize.transaction(async (transaction) => {
+  const row = await withAuditEvent(AUDIT_EVENTS.ASSET_CREATE, async ({ transaction }) => {
     await validateAssetReferences(body, transaction);
 
     const { code: assetCode } = await resolveNextAssetCode(
@@ -348,7 +350,7 @@ export async function getSingleAsset(assetId) {
 }
 
 export async function updateAsset(assetId, body) {
-  const updated = await sequelize.transaction(async (transaction) => {
+  const updated = await withAuditEvent(AUDIT_EVENTS.ASSET_UPDATE, async ({ transaction }) => {
     const existing = await repo.findAssetById(assetId, { transaction });
     if (!existing) {
       throw httpError("Asset not found or not in your institute", 404);
@@ -381,7 +383,7 @@ export async function updateAsset(assetId, body) {
 }
 
 export async function deleteAsset(assetId) {
-  await sequelize.transaction(async (transaction) => {
+  await withAuditEvent(AUDIT_EVENTS.ASSET_DELETE, async ({ transaction }) => {
     const existing = await repo.findAssetById(assetId, { transaction });
     if (!existing) {
       throw httpError("Asset not found or not in your institute", 404);
@@ -413,7 +415,7 @@ export async function deleteAsset(assetId) {
 }
 
 export async function deleteAssetInventoryItem(assetInventoryItemId) {
-  await sequelize.transaction(async (transaction) => {
+  await withAuditEvent(AUDIT_EVENTS.ASSET_INVENTORY_DELETE, async ({ transaction }) => {
     const item = await repo.findInventoryItemById(assetInventoryItemId, { transaction });
     if (!item) {
       throw httpError("Inventory item not found or not in your institute", 404);

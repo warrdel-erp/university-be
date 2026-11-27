@@ -30,9 +30,10 @@ export async function checkIdsBelongToSameCourse(examSetupTypeTermId, subjectId,
   return subject.courseId;
 }
 
-export async function createOrUpdateWeightageBulk(dataList) {
+export async function createOrUpdateWeightageBulk(dataList, options = {}) {
   return await scoped(model.subjectWeightageModel).bulkCreate(dataList, {
     updateOnDuplicate: ['weightage', 'sessionId', 'updatedBy', 'updatedAt'],
+    ...options,
   });
 }
 
