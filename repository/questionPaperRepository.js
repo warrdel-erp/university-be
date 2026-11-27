@@ -48,12 +48,13 @@ export async function addQuestionPaper(questionPaperData) {
 
 export async function getQuestionPapers(filters = {}, pagination = {}) {
   try {
-    const { examScheduleId, createdBy } = filters;
+    const { examScheduleId, createdBy, status } = filters;
     const { limit, offset } = pagination;
 
     const whereClause = {
       ...(examScheduleId && { examScheduleId }),
       ...(createdBy && { createdBy }),
+      ...(status && { status }),
     };
 
     const { count, rows } = await model.questionPaperModel.findAndCountAll({

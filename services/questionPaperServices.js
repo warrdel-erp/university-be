@@ -126,6 +126,7 @@ function transformQuestionPaper(paper, schedule) {
             }
             : null,
         status: paper.status,
+        remarks: paper.remarks ?? null,
         totalMarks: paper.totalMarks,
         duration: transformedSchedule?.duration ?? null,
         maximumMarks: transformedSchedule?.maximumMarks ?? null,
