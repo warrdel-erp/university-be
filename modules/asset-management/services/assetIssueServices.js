@@ -2,6 +2,8 @@ import { v4 as uuidv4 } from "uuid";
 import sequelize from "../../../database/sequelizeConfig.js";
 import * as repo from "../repository/assetIssueRepository.js";
 import * as paymentRepo from "../../../repository/studentFeePaymentRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 import { decimalCompare, toMoneyNumber } from "../../../utility/decimalMoney.js";
 import { syncAssetStatusesFromInventory } from "./assetServices.js";
 
@@ -350,7 +352,7 @@ async function createSecurityPaymentForAssetIssue(
 }
 
 export async function createAssetIssue(body, createdBy) {
-  const row = await sequelize.transaction(async (transaction) => {
+  const row = await withAuditEvent(AUDIT_EVENTS.ASSET_ISSUE_CREATE, async ({ transaction }) => {
     assertDueDateOnOrAfterIssueDate(body.issueDate, body.dueDate);
     const member = await normalizeIssueMember(body.memberType, body.memberId, transaction);
     await validateIssueInventoryItems(body.items, transaction);
@@ -541,7 +543,7 @@ export async function getSingleAssetIssue(assetIssueTransactionId) {
 }
 
 export async function updateAssetIssue(assetIssueTransactionId, body) {
-  const data = await sequelize.transaction(async (transaction) => {
+  const data = await withAuditEvent(AUDIT_EVENTS.ASSET_ISSUE_UPDATE, async ({ transaction }) => {
     const existing = await repo.findAssetIssueById(assetIssueTransactionId, { transaction });
     if (!existing) {
       throw httpError("Asset issue not found", 404);

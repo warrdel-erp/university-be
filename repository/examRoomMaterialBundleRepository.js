@@ -396,6 +396,7 @@ export async function updateBundle(
   await scoped(model.examRoomMaterialBundleModel).update(updateData, {
     where: { examRoomMaterialBundleId: Number(examRoomMaterialBundleId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
   return getBundleById(examRoomMaterialBundleId, options);
 }
@@ -418,6 +419,7 @@ export async function createBundle(bundleData, itemsData, transaction) {
 
   const createdItems = await model.examRoomMaterialItemModel.bulkCreate(items, {
     transaction,
+    individualHooks: true,
   });
 
   const plainItems = [];
@@ -439,6 +441,7 @@ export async function updateBundleItems(
   // Use bulkCreate with updateOnDuplicate to upsert items efficiently
   await model.examRoomMaterialItemModel.bulkCreate(items, {
     transaction,
+    individualHooks: true,
     updateOnDuplicate: [
       "plannedQuantity",
       "issuedQuantity",

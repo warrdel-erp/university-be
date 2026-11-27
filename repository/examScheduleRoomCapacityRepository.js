@@ -121,7 +121,7 @@ export async function bulkAddExamRoomCapacity(data, transaction) {
       throw new Error('Exam schedule not found');
     }
   }
-  return scoped(model.examScheduleRoomCapacityModel).bulkCreate(data, { transaction });
+  return scoped(model.examScheduleRoomCapacityModel).bulkCreate(data, { transaction, individualHooks: true });
 }
 
 export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, transaction) {
@@ -132,6 +132,7 @@ export async function updateExamRoomCapacity(examScheduleRoomCapacityId, data, t
   await model.examScheduleRoomCapacityModel.update(data, {
     where: { examScheduleRoomCapacityId },
     transaction,
+    individualHooks: true,
   });
   return true;
 }
@@ -144,6 +145,7 @@ export async function deleteExamRoomCapacity(examScheduleRoomCapacityId, transac
   return await model.examScheduleRoomCapacityModel.destroy({
     where: { examScheduleRoomCapacityId },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -194,6 +196,7 @@ export async function updateExamRoomCapacityOrderKey(examScheduleRoomCapacityId,
     {
       where: { examScheduleRoomCapacityId },
       transaction,
+      individualHooks: true,
     }
   );
 }
@@ -474,13 +477,15 @@ export async function deleteAssociatedSeatsAndAttendance(examScheduleRoomCapacit
   // Delete attendance records first
   await model.examAttendanceModel.destroy({
     where: { examScheduleRoomCapacityId },
-    transaction
+    transaction,
+    individualHooks: true,
   });
 
   // Delete seating records
   await model.studentExamSeatModel.destroy({
     where: { examScheduleRoomCapacityId },
-    transaction
+    transaction,
+    individualHooks: true,
   });
 }
 

@@ -1,9 +1,9 @@
 import * as model from "../models/index.js";
 import { buildScope, scoped } from "../utility/scoped.js";
 
-export async function addJobType(data) {
+export async function addJobType(data, options = {}) {
   try {
-    return scoped(model.jobSettingModel).create(data);
+    return scoped(model.jobSettingModel).create(data, { transaction: options.transaction });
   } catch (error) {
     console.error("Repository Error - addJobType:", error.message);
     throw new Error(error.message);
@@ -60,33 +60,43 @@ export async function getSingleJobType(jobSettingId) {
   }
 }
 
-export async function updateJobType(jobSettingId, data) {
+export async function updateJobType(jobSettingId, data, options = {}) {
   try {
     const existing = await scoped(model.jobSettingModel).findOne({
       attributes: ["jobSettingId"],
       where: { jobSettingId },
+      transaction: options.transaction,
     });
     if (!existing) {
       return [0];
     }
 
-    return scoped(model.jobSettingModel).update(data, { where: { jobSettingId } });
+    return scoped(model.jobSettingModel).update(data, {
+      where: { jobSettingId },
+      transaction: options.transaction,
+      individualHooks: true,
+    });
   } catch (error) {
     throw new Error(error.message);
   }
 }
 
-export async function deleteJobType(jobSettingId) {
+export async function deleteJobType(jobSettingId, options = {}) {
   try {
     const existing = await scoped(model.jobSettingModel).findOne({
       attributes: ["jobSettingId"],
       where: { jobSettingId },
+      transaction: options.transaction,
     });
     if (!existing) {
       return 0;
     }
 
-    return scoped(model.jobSettingModel).destroy({ where: { jobSettingId } });
+    return scoped(model.jobSettingModel).destroy({
+      where: { jobSettingId },
+      transaction: options.transaction,
+      individualHooks: true,
+    });
   } catch (error) {
     throw new Error(error.message);
   }

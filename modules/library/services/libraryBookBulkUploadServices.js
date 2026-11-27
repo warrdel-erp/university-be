@@ -6,6 +6,8 @@ import * as libraryCreationRepository from "../repository/libraryCreationReposit
 import sequelize from "../../../database/sequelizeConfig.js";
 import { parseCustomDate } from "../../../utility/dateFormat.js";
 import { readLibraryBulkUploadFile } from "../../../utility/fileHandler.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 // =============================================================================
 // CONFIG — allowed DB columns, Excel aliases, limits
@@ -1176,14 +1178,15 @@ async function executeBulkUploadInTransaction({
   subjectNameToIdMap,
   createdBy,
   updatedBy,
+  transaction,
 }) {
-  const existingBooks = await libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(
-    libraryCreationId,
-  );
-  const { byTitle: bookIndexByTitle, byIsbn: bookIndexByIsbn } =
-    buildExistingBookLookupIndexes(existingBooks);
+  const runner = async (txn) => {
+    const existingBooks = await libraryBookBulkUploadRepository.findExistingBookKeysByLibraryId(
+      libraryCreationId,
+    );
+    const { byTitle: bookIndexByTitle, byIsbn: bookIndexByIsbn } =
+      buildExistingBookLookupIndexes(existingBooks);
 
-  return sequelize.transaction(async (transaction) => {
     const bookCache = {};
     const aisleCache = new Map();
     const rackCache = new Map();
@@ -1213,7 +1216,7 @@ async function executeBulkUploadInTransaction({
         aisleCache,
         rackCache,
         rowCache,
-        transaction,
+        transaction: txn,
       });
 
       const batchMs = Date.now() - batchStartedAt;
@@ -1232,7 +1235,12 @@ async function executeBulkUploadInTransaction({
       importedRows: parsedRows.length,
       uniqueBooks: Object.keys(bookCache).length,
     };
-  });
+  };
+
+  if (transaction) {
+    return runner(transaction);
+  }
+  return sequelize.transaction(runner);
 }
 
 const bulkUploadHttpError = (message, statusCode = 400, details = null) => {
@@ -1267,19 +1275,22 @@ export async function bulkUploadLibraryBooks(uploadFile, user, query) {
     throw bulkUploadHttpError("File has no data rows");
   }
 
-  const result = await importLibraryBooksFromExcel(
-    rows,
-    user.userId,
-    user.userId,
-    query.libraryCreationId,
-  );
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_BOOK_BULK_UPLOAD, async ({ transaction }) => {
+    const result = await importLibraryBooksFromExcel(
+      rows,
+      user.userId,
+      user.userId,
+      query.libraryCreationId,
+      transaction,
+    );
 
-  throwIfBulkUploadFailed(result);
+    throwIfBulkUploadFailed(result);
 
-  return {
-    importedRows: result.importedRows,
-    uniqueBooks: result.uniqueBooks,
-  };
+    return {
+      importedRows: result.importedRows,
+      uniqueBooks: result.uniqueBooks,
+    };
+  });
 }
 
 export async function importLibraryBooksFromExcel(
@@ -1287,6 +1298,7 @@ export async function importLibraryBooksFromExcel(
   createdBy,
   updatedBy,
   libraryCreationId,
+  transaction,
 ) {
   if (libraryCreationId == null || libraryCreationId === "") {
     return { status: "error", message: "libraryCreationId is required" };
@@ -1336,6 +1348,7 @@ export async function importLibraryBooksFromExcel(
       subjectNameToIdMap: preUpload.subjectNameToIdMap,
       createdBy,
       updatedBy,
+      transaction,
     });
   } catch (error) {
     console.error(

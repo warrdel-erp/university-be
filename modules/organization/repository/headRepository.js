@@ -60,24 +60,30 @@ export async function getSingleHeadDetails(headId) {
   }
 }
 
-export async function deleteHead(headId) {
+export async function deleteHead(headId, transaction) {
   const existing = await scoped(model.headModel).findOne({
     where: { headId },
     attributes: ["headId"],
+    transaction,
   });
   if (!existing) {
     return false;
   }
 
-  const deleted = await scoped(model.headModel).destroy({ where: { headId } });
+  const deleted = await scoped(model.headModel).destroy({
+    where: { headId },
+    transaction,
+    individualHooks: true,
+  });
   return deleted > 0;
 }
 
-export async function updateHead(headId, headData) {
+export async function updateHead(headId, headData, transaction) {
   try {
     const existing = await scoped(model.headModel).findOne({
       where: { headId },
       attributes: ["headId"],
+      transaction,
     });
     if (!existing) {
       return [0];
@@ -85,6 +91,8 @@ export async function updateHead(headId, headData) {
 
     return await scoped(model.headModel).update(headData, {
       where: { headId },
+      transaction,
+      individualHooks: true,
     });
   } catch (error) {
     console.error(`Error updating head creation ${headId}:`, error);

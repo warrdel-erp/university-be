@@ -116,10 +116,11 @@ export async function updateacedmicYear(academicYearId, acedmicYearData, options
     }
 }
 
-export async function deleteacedmicYear(academicYearId) {
+export async function deleteacedmicYear(academicYearId, options = {}) {
     const existing = await scoped(model.acedmicYearModel).findOne({
         where: { academicYearId },
         attributes: ['academicYearId'],
+        ...options,
     });
     if (!existing) {
         return false;
@@ -127,6 +128,7 @@ export async function deleteacedmicYear(academicYearId) {
 
     const deleted = await scoped(model.acedmicYearModel).destroy({
         where: { academicYearId },
+        ...options,
     });
     return deleted > 0;
 }

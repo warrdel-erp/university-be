@@ -1,5 +1,7 @@
 import sequelize from "../../../database/sequelizeConfig.js";
 import * as repo from "../repository/libraryIssueBookTransactionRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -125,8 +127,7 @@ async function processReturnItems(libraryIssueBookTransactionId, returnItems, is
 }
 
 export async function createLibraryIssueBookTransaction(body) {
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_ISSUE_BOOK_CREATE, async ({ transaction }) => {
     const member = await normalizeIssueMember(body.memberId, body.memberType, transaction);
     assertDueDateOnOrAfterIssueDate(body.issueDate, body.dueDate);
     await assertInventoryItemsIssuable(body.inventoryItems, transaction);
@@ -163,12 +164,8 @@ export async function createLibraryIssueBookTransaction(body) {
         transaction,
       );
     }
-
-    await transaction.commit();
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+    return created;
+  });
 }
 
 export async function getLibraryIssueBookTransactions(query) {
@@ -203,8 +200,7 @@ export async function getLibraryIssueBookTransactionById(libraryIssueBookTransac
 }
 
 export async function updateLibraryIssueBookTransaction(body) {
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.LIBRARY_ISSUE_BOOK_UPDATE, async ({ transaction }) => {
     const { libraryIssueBookTransactionId, inventoryItems, returnItems, ...updateFields } = body;
 
     const existing = await repo.getLibraryIssueBookTransactionById(
@@ -273,12 +269,8 @@ export async function updateLibraryIssueBookTransaction(body) {
       if (!updated) throw httpError("Library issue book transaction not found", 404);
     }
 
-    await transaction.commit();
-    return repo.getLibraryIssueBookTransactionById(libraryIssueBookTransactionId);
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+    return repo.getLibraryIssueBookTransactionById(libraryIssueBookTransactionId, transaction);
+  });
 }
 
 export async function getLibraryBookInventoryIssueHistory(inventoryId) {

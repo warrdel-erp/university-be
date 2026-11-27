@@ -9,9 +9,11 @@ function resolveAcademicYearId(explicit) {
   return buildScope(model.acedmicYearModel).academicYearId;
 }
 
-export async function addExamType(examDetail) {
+export async function addExamType(examDetail, options = {}) {
   try {
-    const result = await scoped(model.examSetupTypeModel).create(examDetail);
+    const result = await scoped(model.examSetupTypeModel).create(examDetail, {
+      transaction: options.transaction,
+    });
     return result;
   } catch (error) {
     console.error("Error adding exam setup type:", error);
@@ -89,11 +91,12 @@ export async function getAllExamTypes(academicYearId, termNumber, options = {}) 
   }
 };
 
-export async function deleteExamType(examSetupTypeId) {
+export async function deleteExamType(examSetupTypeId, options = {}) {
   try {
     const existing = await scoped(model.examSetupTypeModel).findOne({
       where: { examSetupTypeId },
       attributes: ['examSetupTypeId'],
+      transaction: options.transaction,
     });
     if (!existing) {
       return false;
@@ -102,6 +105,7 @@ export async function deleteExamType(examSetupTypeId) {
     const inUse = await scoped(model.assessmentPlanComponentModel).findOne({
       where: { examSetupTypeId: Number(examSetupTypeId) },
       attributes: ['assessmentPlanComponentId'],
+      transaction: options.transaction,
     });
 
     if (inUse) {
@@ -110,7 +114,11 @@ export async function deleteExamType(examSetupTypeId) {
       throw error;
     }
 
-    const deleted = await scoped(model.examSetupTypeModel).destroy({ where: { examSetupTypeId } });
+    const deleted = await scoped(model.examSetupTypeModel).destroy({
+      where: { examSetupTypeId },
+      transaction: options.transaction,
+      individualHooks: true,
+    });
     return deleted > 0;
   } catch (error) {
     console.error("Error deleting exam type:", error);
@@ -118,17 +126,20 @@ export async function deleteExamType(examSetupTypeId) {
   }
 };
 
-export async function updateExamType(examSetupTypeId, examDetail) {
+export async function updateExamType(examSetupTypeId, examDetail, options = {}) {
   try {
     const existing = await scoped(model.examSetupTypeModel).findOne({
       where: { examSetupTypeId },
       attributes: ['examSetupTypeId'],
+      transaction: options.transaction,
     });
     if (!existing) {
       return [0];
     }
     const result = await scoped(model.examSetupTypeModel).update(examDetail, {
       where: { examSetupTypeId },
+      transaction: options.transaction,
+      individualHooks: true,
     });
     return result;
   } catch (error) {

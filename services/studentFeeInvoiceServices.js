@@ -15,6 +15,8 @@ import {
 } from "../utility/decimalMoney.js";
 import { FEE_PLAN_PUBLISH_STATUS } from "../constant.js";
 import { getStudentBillingBreakdown } from "./studentBillingBreakdownServices.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function netInvoiceItemAmount(amount, waiver) {
   const lineAmount = toMoneyNumber(amount);
@@ -204,7 +206,7 @@ export async function generateStudentFeeInvoice({
   billingScheduleItemId,
   dueDate,
 }) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.STUDENT_FEE_INVOICE_GENERATE, async ({ transaction }) => {
     let effectiveScheduleItem = null;
     let feePlanItem = null;
 
@@ -437,7 +439,7 @@ export async function generateAdhocStudentFeeInvoice({
     throw httpError("total must equal sum of feeTypeCatalogs amounts after waivers", 400);
   }
 
-  const studentFeeInvoiceId = await sequelize.transaction(async (transaction) => {
+  const studentFeeInvoiceId = await withAuditEvent(AUDIT_EVENTS.STUDENT_FEE_INVOICE_ADHOC_GENERATE, async ({ transaction }) => {
     if (!(await repo.findStudentById(studentId, { transaction }))) {
       throw httpError("Student not found", 404);
     }

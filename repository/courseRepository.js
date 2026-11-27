@@ -25,11 +25,12 @@ export async function getCourseByCourseId(courseId) {
   }
 }
 
-export async function updateCourseById(courseId, data) {
+export async function updateCourseById(courseId, data, options = {}) {
   try {
     const existing = await scoped(model.courseModel).findOne({
       where: { courseId },
       attributes: ['courseId'],
+      transaction: options.transaction,
     });
     if (!existing) {
       return null;
@@ -37,11 +38,14 @@ export async function updateCourseById(courseId, data) {
 
     await scoped(model.courseModel).update(data, {
       where: { courseId },
+      individualHooks: true,
+      transaction: options.transaction,
     });
 
     return scoped(model.courseModel).findOne({
       where: { courseId },
       attributes: { exclude: ['createdAt', 'updatedAt', 'deletedAt'] },
+      transaction: options.transaction,
     });
   } catch (error) {
     console.error(`Error updating course ${courseId}:`, error);
@@ -49,20 +53,24 @@ export async function updateCourseById(courseId, data) {
   }
 }
 
-export async function addBulkCourse(courseData) {
+export async function addBulkCourse(courseData, options = {}) {
   try {
-    return await scoped(model.courseModel).bulkCreate(courseData);
+    return await scoped(model.courseModel).bulkCreate(courseData, {
+      individualHooks: true,
+      transaction: options.transaction,
+    });
   } catch (error) {
     console.error('Error in add course bulk:', error);
     throw error;
   }
 }
 
-export async function changeCourseStatuss(courseId, status) {
+export async function changeCourseStatuss(courseId, status, options = {}) {
   try {
     const existing = await scoped(model.courseModel).findOne({
       where: { courseId },
       attributes: ['courseId'],
+      transaction: options.transaction,
     });
     if (!existing) {
       return [0];
@@ -70,6 +78,8 @@ export async function changeCourseStatuss(courseId, status) {
 
     return await scoped(model.courseModel).update(status, {
       where: { courseId },
+      individualHooks: true,
+      transaction: options.transaction,
     });
   } catch (error) {
     console.error(`Error change coursse status ${courseId}:`, error);
@@ -672,13 +682,14 @@ export async function getSemestersByCourseAndYear(courseId, academicYearId) {
   }
 }
 
-export async function deleteCourseById(courseId) {
+export async function deleteCourseById(courseId, options = {}) {
   try {
     const numericCourseId = Number(courseId);
 
     const course = await scoped(model.courseModel).findOne({
       where: { courseId: numericCourseId },
       attributes: ['courseId', 'courseName'],
+      transaction: options.transaction,
     });
 
     if (!course) {
@@ -687,6 +698,7 @@ export async function deleteCourseById(courseId) {
 
     const sessionCount = await model.sessionModel.count({
       where: { courseId: numericCourseId },
+      transaction: options.transaction,
     });
 
     if (sessionCount > 0) {
@@ -695,6 +707,8 @@ export async function deleteCourseById(courseId) {
 
     await scoped(model.courseModel).destroy({
       where: { courseId: numericCourseId },
+      individualHooks: true,
+      transaction: options.transaction,
     });
 
     return {

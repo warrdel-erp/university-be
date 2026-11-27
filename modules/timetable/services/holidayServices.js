@@ -1,11 +1,13 @@
-import * as holidayCreationService  from "../repository/holidayRepository.js";
+import * as holidayCreationService from "../repository/holidayRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function addHoliday(holidayData, createdBy, updatedBy) {
-
     holidayData.createdBy = createdBy;
     holidayData.updatedBy = updatedBy;
-    const Holiday = await holidayCreationService.addHoliday(holidayData);
-    return Holiday;
+    return await withAuditEvent(AUDIT_EVENTS.HOLIDAY_CREATE, async ({ transaction }) => {
+        return await holidayCreationService.addHoliday(holidayData, { transaction });
+    });
 };
 
 export async function getAllHolidays(filter) {
@@ -21,11 +23,14 @@ export async function getSingleHolidayDetails(holidayId) {
 }
 
 export async function deleteHoliday(holidayId) {
-    return await holidayCreationService.deleteHoliday(holidayId);
+    return await withAuditEvent(AUDIT_EVENTS.HOLIDAY_DELETE, async ({ transaction }) => {
+        return await holidayCreationService.deleteHoliday(holidayId, { transaction });
+    });
 }
 
 export async function updateHoliday(holidayId, holidayData, updatedBy) {    
-
     holidayData.updatedBy = updatedBy;
-    await holidayCreationService.updateHoliday(holidayId, holidayData);
+    return await withAuditEvent(AUDIT_EVENTS.HOLIDAY_UPDATE, async ({ transaction }) => {
+        return await holidayCreationService.updateHoliday(holidayId, holidayData, { transaction });
+    });
 }

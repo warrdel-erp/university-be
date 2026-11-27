@@ -134,6 +134,25 @@ export async function getMaxSlotNumber(examinationSessionId, options = {}) {
   return highestSlot?.slotNumber ? Number(highestSlot.slotNumber) : 0;
 }
 
+export async function getLastSlot(examinationSessionId, options = {}) {
+  return scoped(model.examinationSessionSlotModel).findOne({
+    where: { examinationSessionId: Number(examinationSessionId) },
+    order: [["slotNumber", "DESC"]],
+    attributes: [
+      "examinationSessionSlotId",
+      "slotNumber",
+      "startTime",
+      "endTime",
+      "durationMinutes",
+      "universityId",
+      "instituteId",
+    ],
+    transaction: options.transaction,
+    paranoid: false,
+    raw: true,
+  });
+}
+
 export async function createExaminationSessionSlot(slotData, options = {}) {
   return scoped(model.examinationSessionSlotModel).create(slotData, {
     transaction: options.transaction,
@@ -264,7 +283,7 @@ export async function updateExaminationSessionSlot(
     error.statusCode = 404;
     throw error;
   }
-  return slot.update(updateData, { transaction: options.transaction });
+  return slot.update(updateData, { transaction: options.transaction, individualHooks: true });
 }
 
 export async function deleteExaminationSessionSlot(
@@ -293,7 +312,7 @@ export async function deleteExaminationSessionSlot(
     throw error;
   }
 
-  return slot.destroy({ transaction: options.transaction });
+  return slot.destroy({ transaction: options.transaction, individualHooks: true });
 }
 
 /**

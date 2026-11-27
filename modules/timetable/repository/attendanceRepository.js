@@ -8,7 +8,10 @@ import { studentClassSectionTermWithSectionInclude, timeTableRoutineClassSection
 
 export async function addAttendance(attendanceRecords, options = {}) {
     try {
-        return await scoped(model.attendanceModel).bulkCreate(attendanceRecords, options);
+        return await scoped(model.attendanceModel).bulkCreate(attendanceRecords, {
+            ...options,
+            individualHooks: true,
+        });
     } catch (error) {
         console.error("Error in adding attendance:", error);
         throw error;
@@ -275,11 +278,12 @@ export async function getAttendanceDetails() {
     }
 };
 
-export async function updateAttendance(attendanceId, record) {
+export async function updateAttendance(attendanceId, record, options = {}) {
     try {
         const existing = await scoped(model.attendanceModel).findOne({
             where: { attendanceId },
             attributes: ['attendanceId'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return [0];
@@ -287,6 +291,8 @@ export async function updateAttendance(attendanceId, record) {
 
         return await scoped(model.attendanceModel).update(record, {
             where: { attendanceId },
+            transaction: options.transaction,
+            individualHooks: true,
         });
     } catch (error) {
         console.error(`Error updating attendance ${attendanceId}:`, error);
@@ -294,9 +300,9 @@ export async function updateAttendance(attendanceId, record) {
     }
 };
 
-export async function addImportAttendance(attendanceRecords) {
+export async function addImportAttendance(attendanceRecords, options = {}) {
     try {
-        return await scoped(model.attendanceModel).create(attendanceRecords);
+        return await scoped(model.attendanceModel).create(attendanceRecords, options);
     } catch (error) {
         console.error("Error in adding attendance bulk import:", error);
         throw error;

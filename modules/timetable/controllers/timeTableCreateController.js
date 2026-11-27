@@ -428,13 +428,13 @@ export const getMyRoutineByTeacherAndAcademicYear = async (req, res) => {
 };
 
 export const getDateWiseCellsBySection = async (req, res) => {
-  const { courseId, sessionId, classSectionTermId, date } = req.query;
+  const { courseId, sessionId, classSectionTermId, date, ...restQuery } = req.query;
   try {
     const result = await timeTableCreateServices.getDateWiseCellsBySection(
       courseId,
       sessionId,
       classSectionTermId,
-      { date },
+      { date, ...restQuery },
     );
     return SuccessResponse(
       res,

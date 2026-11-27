@@ -26,15 +26,15 @@ export async function getCampusIdByInstituteId(instituteId) {
     return institute.campusId;
 }
 
-export async function addbuilding(buildingData) {
+export async function addbuilding(buildingData, transaction) {
     try {
-        const result = await scoped(model.buildingModel).create(buildingData);
+        const result = await scoped(model.buildingModel).create(buildingData, { transaction });
         return result;
     } catch (error) {
         console.error("Error in add building :", error);
         throw error;
     }
-};
+}
 
 export async function getbuildingDetails() {
     try {
@@ -65,18 +65,21 @@ export async function getSinglebuildingDetails(buildingId) {
     }
 }
 
-export async function updatebuilding(buildingId, buildingData) {
+export async function updatebuilding(buildingId, buildingData, transaction) {
     try {
         const existing = await scoped(model.buildingModel).findOne({
             where: { buildingId },
             include: [campusBuildingInclude()],
+            transaction,
         });
         if (!existing) {
             return [0];
         }
 
         const result = await scoped(model.buildingModel).update(buildingData, {
-            where: { buildingId }
+            where: { buildingId },
+            transaction,
+            individualHooks: true,
         });
         return result;
     } catch (error) {
@@ -85,16 +88,21 @@ export async function updatebuilding(buildingId, buildingData) {
     }
 }
 
-export async function deletebuilding(buildingId) {
+export async function deletebuilding(buildingId, transaction) {
     const existing = await scoped(model.buildingModel).findOne({
         where: { buildingId },
         include: [campusBuildingInclude()],
+        transaction,
     });
     if (!existing) {
         return false;
     }
 
-    const deleted = await scoped(model.buildingModel).destroy({ where: { buildingId } });
+    const deleted = await scoped(model.buildingModel).destroy({
+        where: { buildingId },
+        transaction,
+        individualHooks: true,
+    });
     return deleted > 0;
 }
 

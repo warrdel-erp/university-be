@@ -1,4 +1,5 @@
 
+import sequelize from "../database/sequelizeConfig.js";
 import curriculumModel from "./curriculumModel.js";
 import curriculumCategoryModel from "./curriculumCategoryModel.js";
 import subjectComponentModel from "./subjectComponentModel.js";
@@ -155,6 +156,11 @@ import leaveTypeModel from "./leaveTypeModel.js";
 import leaveTypeEligibilityModel from "./leaveTypeEligibilityModel.js";
 import leaveTypeHolidaysCarryForwardModel from "./leaveTypeHolidaysCarryForwardModel.js";
 import leaveTypeEncashmentModel from "./leaveTypeEncashmentModel.js";
+import attendancePolicyModel from "./attendancePolicyModel.js";
+import attendancePolicyMappingModel from "./attendancePolicyMappingModel.js";
+import attendancePolicyWorkingHoursModel from "./attendancePolicyWorkingHoursModel.js";
+import attendancePolicyLateEarlyRuleModel from "./attendancePolicyLateEarlyRuleModel.js";
+import attendancePolicyPenaltySlabModel from "./attendancePolicyPenaltySlabModel.js";
 import approvalRequestModel from "./approvalRequestModel.js";
 import examScheduleModel from "./examScheduleModel.js";
 import libraryFloorModel from "./libraryFloorModel.js";
@@ -260,6 +266,14 @@ previousAcademicUploadLogModel.belongsTo(sessionModel, {
 // Event / EventLog associations
 eventModel.hasMany(eventLogModel, { foreignKey: "eventId", as: "eventLogs" });
 eventLogModel.belongsTo(eventModel, { foreignKey: "eventId", as: "event" });
+eventModel.belongsTo(userModel, { foreignKey: "userId", as: "user" });
+userModel.hasMany(eventModel, { foreignKey: "userId", as: "events" });
+eventModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+eventModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+eventModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "academicYear" });
+eventLogModel.belongsTo(universityModel, { foreignKey: "universityId", as: "university" });
+eventLogModel.belongsTo(instituteModel, { foreignKey: "instituteId", as: "institute" });
+eventLogModel.belongsTo(acedmicYearModel, { foreignKey: "academicYearId", as: "academicYear" });
 
 // Examination Session associations
 examinationSessionSlotModel.belongsTo(examinationSessionModel, {
@@ -4549,9 +4563,8 @@ export {
   billingScheduleSubItemsModel,
   billingSchedulePaymentTermsModel,
   refreshTokenModel,
+  sequelize,
 };
-
-import sequelize from "../database/sequelizeConfig.js";
 
 // Session Batch Mapping Associations
 sessionModel.hasMany(batchModel, { foreignKey: 'session_id', as: 'batches' });
@@ -4661,6 +4674,72 @@ curriculumElectiveAssignmentModel.belongsTo(acedmicYearModel, { foreignKey: 'aca
 // Refresh Token Associations
 userModel.hasMany(refreshTokenModel, { foreignKey: 'user_id', as: 'refreshTokens' });
 refreshTokenModel.belongsTo(userModel, { foreignKey: 'user_id', as: 'user' });
+
+// Attendance Policy Associations
+attendancePolicyModel.hasOne(attendancePolicyWorkingHoursModel, {
+  foreignKey: "policy_id",
+  as: "workingHours",
+});
+attendancePolicyWorkingHoursModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+attendancePolicyModel.hasOne(attendancePolicyLateEarlyRuleModel, {
+  foreignKey: "policy_id",
+  as: "lateEarlyRules",
+});
+attendancePolicyLateEarlyRuleModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+attendancePolicyModel.hasMany(attendancePolicyPenaltySlabModel, {
+  foreignKey: "policy_id",
+  as: "penaltySlabs",
+});
+attendancePolicyPenaltySlabModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+
+attendancePolicyModel.hasMany(attendancePolicyMappingModel, {
+  foreignKey: "policy_id",
+  as: "mappings",
+});
+attendancePolicyMappingModel.belongsTo(attendancePolicyModel, {
+  foreignKey: "policy_id",
+  as: "policy",
+});
+attendancePolicyMappingModel.belongsTo(roleModel, {
+  foreignKey: "role_id",
+  as: "role",
+});
+attendancePolicyMappingModel.belongsTo(departmentModel, {
+  foreignKey: "department_id",
+  as: "department",
+});
+attendancePolicyMappingModel.belongsTo(employeeModel, {
+  foreignKey: "employee_id",
+  as: "employee",
+});
+
+attendancePolicyModel.belongsTo(universityModel, {
+  foreignKey: "university_id",
+  as: "university",
+});
+attendancePolicyModel.belongsTo(instituteModel, {
+  foreignKey: "institute_id",
+  as: "institute",
+});
+attendancePolicyModel.belongsTo(userModel, {
+  foreignKey: "created_by",
+  as: "creator",
+});
+attendancePolicyModel.belongsTo(userModel, {
+  foreignKey: "updated_by",
+  as: "updater",
+});
 
 import { registerAuditedModels } from "../utility/audit/registerAuditHooks.js";
 
