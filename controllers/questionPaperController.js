@@ -154,19 +154,19 @@ export async function getMyQuestionPapers(req, res) {
         return ErrorResponse(res, validation.status, validation.message);
     }
     const { userId } = validation;
-    const { page = 1, limit = 10, examScheduleId } = req.query;
+    const { page = 1, limit = 10, examScheduleId, status } = req.query;
     const offset = (page - 1) * limit;
 
     try {
+        const filters = { examScheduleId, createdBy: userId };
+        if (status && status !== "all") {
+            filters.status = status;
+        }
         const result = await questionPaperServices.getQuestionPapers(
-            { examScheduleId, createdBy: userId },
+            filters,
             { limit, offset }
         );
-        const papersWithoutAdminStatus = (result.questionPapers || []).map((paper) => {
-            const { status, ...rest } = paper;
-            return rest;
-        });
-        return SuccessResponse(res, 200, "Question papers fetched successfully", papersWithoutAdminStatus, {
+        return SuccessResponse(res, 200, "Question papers fetched successfully", result.questionPapers, {
             total: result.total,
             limit: parseInt(limit, 10),
             page: parseInt(page, 10)
@@ -282,5 +282,55 @@ export async function generateMyQuestionPaper(req, res) {
     } catch (error) {
         console.error("Generate My Question Paper Error:", error);
         return ErrorResponse(res, error.statusCode || 400, error.message);
+    }
+}
+
+export async function cloneQuestionPaper(req, res) {
+    const createdBy = req.user.userId;
+    const updatedBy = req.user.userId;
+    const { id } = req.params;
+
+    try {
+        const result = await questionPaperServices.cloneQuestionPaper(
+            id,
+            req.body,
+            createdBy,
+            updatedBy
+        );
+
+        if (!result) {
+            return ErrorResponse(res, 404, "Question paper not found");
+        }
+
+        return SuccessResponse(res, 201, "Question paper cloned successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message);
+    }
+}
+
+export async function cloneMyQuestionPaper(req, res) {
+    const validation = await validateEmployeeUser(req, res);
+    if (!validation.valid) {
+        return ErrorResponse(res, validation.status, validation.message);
+    }
+    const { userId } = validation;
+    const { id } = req.params;
+
+    try {
+        const result = await questionPaperServices.cloneQuestionPaper(
+            id,
+            req.body,
+            userId,
+            userId,
+            userId
+        );
+
+        if (!result) {
+            return ErrorResponse(res, 404, "Question paper not found or unauthorized");
+        }
+
+        return SuccessResponse(res, 201, "Question paper cloned successfully", result);
+    } catch (error) {
+        return ErrorResponse(res, error.statusCode || 500, error.message);
     }
 }

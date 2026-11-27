@@ -156,6 +156,7 @@ export async function updateElectivePool(id, data, options = {}) {
   const { transaction } = options;
   const [affected] = await scoped(model.electivePoolModel).update(data, {
     where: { id },
+    individualHooks: true,
     transaction,
   });
   return affected;
@@ -165,6 +166,7 @@ export async function deleteElectivePool(id, options = {}) {
   const { transaction } = options;
   return scoped(model.electivePoolModel).destroy({
     where: { id },
+    individualHooks: true,
     transaction,
   });
 }

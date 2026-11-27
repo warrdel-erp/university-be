@@ -206,33 +206,40 @@ export async function addSpecialization(data) {
     }
 }
 
-export async function addSubject(data) {
+export async function addSubject(data, options = {}) {
     try {
         const existing = await scoped(model.subjectModel).findOne({
             where: { subjectCode: data.subjectCode },
-            attributes: ['subjectId']
+            attributes: ['subjectId'],
+            transaction: options.transaction,
         });
         if (existing) {
             throw new Error(`Course code ${data.subjectCode} already exists in this institute.`);
         }
 
         if (!data.departmentId && data.courseId) {
-            const course = await model.courseModel.findByPk(data.courseId, { attributes: ['departmentId'] });
+            const course = await model.courseModel.findByPk(data.courseId, {
+                attributes: ['departmentId'],
+                transaction: options.transaction,
+            });
             if (course?.departmentId) data.departmentId = course.departmentId;
         }
-        return scoped(model.subjectModel).create(data);
+        return scoped(model.subjectModel).create(data, {
+            transaction: options.transaction,
+        });
     } catch (error) {
         console.error("Error in add subject :", error);
         throw error;
     }
 }
 
-export async function updateSubject(subjectId, data) {
+export async function updateSubject(subjectId, data, options = {}) {
     try {
         if (data.subjectCode) {
             const existingCode = await scoped(model.subjectModel).findOne({
                 where: { subjectCode: data.subjectCode, subjectId: { [Op.ne]: subjectId } },
-                attributes: ['subjectId']
+                attributes: ['subjectId'],
+                transaction: options.transaction,
             });
             if (existingCode) {
                 throw new Error(`Course code ${data.subjectCode} already exists in this institute.`);
@@ -242,12 +249,15 @@ export async function updateSubject(subjectId, data) {
         const existing = await scoped(model.subjectModel).findOne({
             where: { subjectId },
             attributes: ['subjectId'],
+            transaction: options.transaction,
         });
         if (!existing) {
             return [0];
         }
         return scoped(model.subjectModel).update(data, {
-            where: { subjectId }
+            where: { subjectId },
+            individualHooks: true,
+            transaction: options.transaction,
         });
     } catch (error) {
         console.error(`Error updating subject update for ${subjectId}:`, error);

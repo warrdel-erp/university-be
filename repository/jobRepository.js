@@ -43,9 +43,9 @@ function mapJobRowsUserShape(rows) {
   return rows;
 }
 
-export async function addJob(data) {
+export async function addJob(data, options = {}) {
   try {
-    return scoped(model.jobModel).create(data);
+    return scoped(model.jobModel).create(data, { transaction: options.transaction });
   } catch (error) {
     console.error("Error in addJob:", error);
     throw new Error("Unable to create job");
@@ -88,11 +88,12 @@ export async function getAllJobs() {
   }
 }
 
-export async function getSingleJob(jobId) {
+export async function getSingleJob(jobId, options = {}) {
   try {
     const row = await scoped(model.jobModel).findOne({
       where: { jobId, deletedAt: null },
       attributes: { exclude: ["createdAt", "updatedAt", "deletedAt"] },
+      transaction: options.transaction,
       include: [
         {
           model: model.jobSettingModel,
@@ -124,35 +125,45 @@ export async function getSingleJob(jobId) {
   }
 }
 
-export async function updateJob(jobId, data) {
+export async function updateJob(jobId, data, options = {}) {
   try {
     const existing = await scoped(model.jobModel).findOne({
       attributes: ["jobId"],
       where: { jobId, deletedAt: null },
+      transaction: options.transaction,
     });
     if (!existing) {
       throw new Error("Job not found");
     }
 
-    await scoped(model.jobModel).update(data, { where: { jobId } });
-    return getSingleJob(jobId);
+    await scoped(model.jobModel).update(data, {
+      where: { jobId },
+      transaction: options.transaction,
+      individualHooks: true,
+    });
+    return getSingleJob(jobId, options);
   } catch (error) {
     console.error("Error in updateJob:", error);
     throw new Error("Unable to update job");
   }
 }
 
-export async function deleteJob(jobId) {
+export async function deleteJob(jobId, options = {}) {
   try {
     const existing = await scoped(model.jobModel).findOne({
       attributes: ["jobId"],
       where: { jobId },
+      transaction: options.transaction,
     });
     if (!existing) {
       return 0;
     }
 
-    return scoped(model.jobModel).destroy({ where: { jobId } });
+    return scoped(model.jobModel).destroy({
+      where: { jobId },
+      transaction: options.transaction,
+      individualHooks: true,
+    });
   } catch (error) {
     console.error("Error in deleteJob:", error);
     throw new Error("Unable to delete job");

@@ -9,9 +9,9 @@ const stripTenantFields = (data = {}) => {
     return rest;
 };
 
-export async function addHoliday(holidayData) {
+export async function addHoliday(holidayData, options = {}) {
     try {
-        return await scoped(model.holidayModel).create(stripTenantFields(holidayData));
+        return await scoped(model.holidayModel).create(stripTenantFields(holidayData), options);
     } catch (error) {
         console.error('Error in add Holiday :', error);
         throw error;
@@ -80,17 +80,21 @@ export async function getHolidayStartEndDate(startDate, endingDate) {
     }
 }
 
-export async function deleteHoliday(holidayId) {
+export async function deleteHoliday(holidayId, options = {}) {
     const deleted = await scoped(model.holidayModel).destroy({
         where: { holidayId: Number(holidayId) },
+        transaction: options.transaction,
+        individualHooks: true,
     });
     return deleted > 0;
 }
 
-export async function updateHoliday(holidayId, holidayData) {
+export async function updateHoliday(holidayId, holidayData, options = {}) {
     try {
         const result = await scoped(model.holidayModel).update(stripTenantFields(holidayData), {
             where: { holidayId: Number(holidayId) },
+            transaction: options.transaction,
+            individualHooks: true,
         });
         return result;
     } catch (error) {

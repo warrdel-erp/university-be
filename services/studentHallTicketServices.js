@@ -3,6 +3,8 @@ import { getAcademicYearId } from "../utility/requestContext.js";
 import * as studentHallTicketRepository from "../repository/studentHallTicketRepository.js";
 import * as examinationSessionEligibilityRepo from "../repository/examinationSessionEligibilityRepository.js";
 import * as examinationSessionEligibilityServices from "./examinationSessionEligibilityServices.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 import {
   ELIGIBILITY_STATUS,
   ELIGIBILITY_STATUS_LABEL,
@@ -535,7 +537,7 @@ async function buildGenerationReadiness({ examinationSessionId, transaction }) {
 }
 
 export async function generateHallTickets({ examinationSessionId, studentIds, user }) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.HALL_TICKET_GENERATE, async ({ transaction }) => {
     const readiness = await buildGenerationReadiness({ examinationSessionId, transaction });
 
     if (!readiness.canGenerate) {
@@ -585,7 +587,7 @@ export async function generateHallTickets({ examinationSessionId, studentIds, us
 // -- Mark as eligible --
 
 export async function markAsEligible({ examinationSessionId, studentIds, user }) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.HALL_TICKET_MARK_ELIGIBLE, async ({ transaction }) => {
     const requestedCount = studentIds.length;
     const approvedCount = await examinationSessionEligibilityRepo.bulkApproveEligibility(
       examinationSessionId,
@@ -605,24 +607,20 @@ export async function markAsEligible({ examinationSessionId, studentIds, user })
 // -- Publishing and blocking --
 
 export async function publishHallTickets({ examinationSessionId, studentIds }) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.HALL_TICKET_PUBLISH, async ({ transaction }) => {
     let targets = null;
     if (studentIds && studentIds.length > 0) {
-      const membership =
-        await studentHallTicketRepository.getStudentsByExaminationSessionId(
+      const generatedCountForTargets = await studentHallTicketRepository.countHallTickets(
+        {
           examinationSessionId,
-          {
-            studentId: studentIds,
-            page: 1,
-            limit: 1,
-            purpose: HALL_TICKET_STUDENT_QUERY_PURPOSE.SUMMARY,
-          },
-          transaction,
-        );
+          studentId: studentIds,
+        },
+        transaction,
+      );
 
-      if (membership.total !== studentIds.length) {
+      if (generatedCountForTargets === 0) {
         const error = new Error(
-          `One or more students are not associated with examination session ${examinationSessionId}`,
+          "No generated hall tickets found for the specified student(s). Please generate them first.",
         );
         error.statusCode = 400;
         throw error;
@@ -658,7 +656,7 @@ export async function publishHallTickets({ examinationSessionId, studentIds }) {
 }
 
 export async function blockHallTicket(id) {
-  return await sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.HALL_TICKET_BLOCK, async ({ transaction }) => {
     const ticket = await studentHallTicketRepository.blockHallTicket(id, transaction);
     if (!ticket) {
       const error = new Error("Hall ticket not found");

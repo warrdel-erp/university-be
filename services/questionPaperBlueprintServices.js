@@ -1,4 +1,6 @@
 import * as questionPaperBlueprintRepository from "../repository/questionPaperBlueprintRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 /**
  * Calculates total marks from all sections of a blueprint.
@@ -17,7 +19,9 @@ export async function addBlueprint(blueprintData, createdBy, updatedBy) {
     blueprintData.createdBy = createdBy;
     blueprintData.updatedBy = updatedBy;
     blueprintData.totalMarks = calculateTotalMarks(blueprintData.blueprint);
-    return await questionPaperBlueprintRepository.addBlueprint(blueprintData);
+    return withAuditEvent(AUDIT_EVENTS.QUESTION_PAPER_BLUEPRINT_CREATE, async ({ transaction }) => {
+        return await questionPaperBlueprintRepository.addBlueprint(blueprintData, { transaction });
+    });
 }
 
 export async function getBlueprints(filters) {
@@ -45,5 +49,7 @@ export async function getBlueprints(filters) {
 }
 
 export async function deleteBlueprint(id, ownerId) {
-    return await questionPaperBlueprintRepository.deleteBlueprint(id, ownerId);
+    return withAuditEvent(AUDIT_EVENTS.QUESTION_PAPER_BLUEPRINT_DELETE, async ({ transaction }) => {
+        return await questionPaperBlueprintRepository.deleteBlueprint(id, ownerId, { transaction });
+    });
 }

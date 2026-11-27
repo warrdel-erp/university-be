@@ -171,12 +171,14 @@ export const scoped = (model, options = {}) => {
 
     update: (data, options = {}) =>
       getOriginal(model, "update")(data, {
+        individualHooks: true,
         ...options,
         where: mergeScopedWhere(baseWhere, options.where),
       }),
 
     delete: (options = {}) =>
       getOriginal(model, "destroy")({
+        individualHooks: true,
         ...options,
         where: mergeScopedWhere(baseWhere, options.where),
       }),
@@ -195,6 +197,7 @@ export const scoped = (model, options = {}) => {
 
     destroy: (options = {}) =>
       getOriginal(model, "destroy")({
+        individualHooks: true,
         ...options,
         where: mergeScopedWhere(baseWhere, options.where),
       }),
@@ -205,7 +208,7 @@ export const scoped = (model, options = {}) => {
     bulkCreate: (rows, options = {}) =>
       getOriginal(model, "bulkCreate")(
         rows.map((row) => ({ ...row, ...writeScope })),
-        { validate: true, ...options }
+        { validate: true, individualHooks: true, ...options }
       ),
   };
 };

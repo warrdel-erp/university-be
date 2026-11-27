@@ -840,9 +840,11 @@ export async function getInternalAssessmentsBySubject(filters) {
   };
 }
 
-export async function getInternalAssessmentById(internalAssessmentId) {
+export async function getInternalAssessmentById(internalAssessmentId, options = {}) {
+  const transaction = options?.transaction || (options?.commit ? options : undefined);
   const assessment = await scoped(model.internalAssessmentModel).findOne({
     where: { internalAssessmentId },
+    transaction,
     attributes: internalAssessmentAttributes,
     include: [
       {
@@ -1083,6 +1085,7 @@ export async function updateInternalAssessment(
   return scoped(model.internalAssessmentModel).update(payload, {
     where: { internalAssessmentId },
     transaction,
+    individualHooks: true,
   });
 }
 
@@ -1458,9 +1461,15 @@ export async function getStudentEvaluationByStudentAndAssessment(filters) {
 export async function getStudentEvaluationsByAssessmentId(
   internalAssessmentId,
   studentId,
+  options = {},
 ) {
+  const opts = typeof studentId === "object" ? studentId : options;
+  const targetStudentId = typeof studentId === "object" ? undefined : studentId;
+  const transaction = opts?.transaction || (opts?.commit ? opts : undefined);
+
   const assessment = await scoped(model.internalAssessmentModel).findOne({
     where: { internalAssessmentId },
+    transaction,
     attributes: [
       "internalAssessmentId",
       "title",
@@ -1473,14 +1482,15 @@ export async function getStudentEvaluationsByAssessmentId(
   });
 
   const evaluationWhere = { internalAssessmentId };
-  if (studentId) {
-    evaluationWhere.studentId = studentId;
+  if (targetStudentId) {
+    evaluationWhere.studentId = targetStudentId;
   }
 
   const evaluations = await scoped(
     model.internalAssessmentStudentEvaluationModel,
   ).findAll({
     where: evaluationWhere,
+    transaction,
     attributes: studentEvaluationAttributes,
     include: [
       {
@@ -1574,6 +1584,7 @@ export async function createStudentEvaluationPlaceholders(
     {
       transaction,
       ignoreDuplicates: true,
+      individualHooks: true,
     },
   );
 }
@@ -1624,6 +1635,7 @@ export async function upsertStudentEvaluations(rows, transaction) {
             keep.internalAssessmentStudentEvaluationId,
         },
         transaction,
+        individualHooks: true,
       },
     );
 
@@ -1643,6 +1655,7 @@ export async function upsertStudentEvaluations(rows, transaction) {
           internalAssessmentStudentEvaluationId: { [Op.in]: duplicateIds },
         },
         transaction,
+        individualHooks: true,
       });
     }
   }

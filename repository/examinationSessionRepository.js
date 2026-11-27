@@ -161,7 +161,7 @@ export async function updateExaminationSession(id, updateData, options = {}) {
   return scoped(model.examinationSessionModel).update(updateData, {
     where: { examinationSessionId: Number(id) },
     transaction: options.transaction,
-    individualHooks: options.individualHooks === true,
+    individualHooks: true,
   });
 }
 
@@ -169,6 +169,7 @@ export async function deleteExaminationSession(id, options = {}) {
   return scoped(model.examinationSessionModel).destroy({
     where: { examinationSessionId: Number(id) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -214,6 +215,7 @@ export async function createExaminationSessionTerms(termData, options = {}) {
   if (!termData.length) return [];
   return scoped(model.examinationSessionTermModel).bulkCreate(termData, {
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -225,6 +227,7 @@ export async function deleteExaminationSessionTermsBySessionId(examinationSessio
   return scoped(model.examinationSessionTermModel).destroy({
     where: { examinationSessionId: Number(examinationSessionId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -240,6 +243,7 @@ export async function deleteExaminationSessionTermsByTerms(
       term: { [Op.in]: terms },
     },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -308,6 +312,7 @@ export async function deleteExaminationSessionTerm(examinationSessionTermId, opt
   return model.examinationSessionTermModel.destroy({
     where: { examinationSessionTermId: Number(examinationSessionTermId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -487,6 +492,7 @@ export async function findCurriculumSubjectsByCourseAndTerm(
   });
 }
 
+
 /**
  * SubjectIds that have assessment_plan_subject_mapping for courseId + sessionId.
  * Term is already enforced by the curriculum subject list passed in.
@@ -512,23 +518,23 @@ export async function findMappedSubjectIdsForCourseSessionTerm(
       batchId != null
         ? []
         : [
-            {
-              model: model.batchModel,
-              as: "batch",
-              attributes: ["batchId", "sessionId"],
-              where: sessionId ? { sessionId: Number(sessionId) } : undefined,
-              required: Boolean(sessionId),
-              include: [
-                {
-                  model: model.sessionModel,
-                  as: "session",
-                  attributes: ["sessionId", "courseId"],
-                  where: courseId ? { courseId: Number(courseId) } : undefined,
-                  required: Boolean(courseId),
-                },
-              ],
-            },
-          ],
+          {
+            model: model.batchModel,
+            as: "batch",
+            attributes: ["batchId", "sessionId"],
+            where: sessionId ? { sessionId: Number(sessionId) } : undefined,
+            required: Boolean(sessionId),
+            include: [
+              {
+                model: model.sessionModel,
+                as: "session",
+                attributes: ["sessionId", "courseId"],
+                where: courseId ? { courseId: Number(courseId) } : undefined,
+                required: Boolean(courseId),
+              },
+            ],
+          },
+        ],
     attributes: ["subjectId"],
     transaction: options.transaction,
   });
@@ -745,11 +751,29 @@ export async function findExamSchedulesBySlotIds(slotIds, options = {}) {
   });
 }
 
+function buildTermOverlapWhere(terms) {
+  if (!Array.isArray(terms) || terms.length === 0) return null;
+
+  const conditions = terms.map((item) => {
+    if (typeof item === "number" || typeof item === "string") {
+      return { term: Number(item) };
+    }
+    const cond = { term: Number(item.term) };
+    if (item.courseId != null) cond.courseId = Number(item.courseId);
+    if (item.sessionId != null) cond.sessionId = Number(item.sessionId);
+    if (item.batchId != null) cond.batchId = Number(item.batchId);
+    return cond;
+  });
+
+  return conditions.length === 1 ? conditions[0] : { [Op.or]: conditions };
+}
+
 export async function findOverlapTermForAssessmentType(assessmentTypeId, terms, options = {}) {
+  const whereClause = buildTermOverlapWhere(terms);
+  if (!whereClause) return null;
+
   return scoped(model.examinationSessionTermModel).findOne({
-    where: {
-      term: { [Op.in]: terms },
-    },
+    where: whereClause,
     include: [
       {
         model: model.examinationSessionModel,
@@ -763,10 +787,11 @@ export async function findOverlapTermForAssessmentType(assessmentTypeId, terms, 
 }
 
 export async function findOverlapTermForAssessmentTypeExcludingSession(assessmentTypeId, sessionId, terms, options = {}) {
+  const whereClause = buildTermOverlapWhere(terms);
+  if (!whereClause) return null;
+
   return scoped(model.examinationSessionTermModel).findOne({
-    where: {
-      term: { [Op.in]: terms },
-    },
+    where: whereClause,
     include: [
       {
         model: model.examinationSessionModel,
@@ -1534,11 +1559,11 @@ export async function countStudentsAndHallTicketsForScheduleSessionIds(
       }),
       uniqueSessionIds.length
         ? scoped(model.studentModel).count({
-            where: { sessionId: { [Op.in]: uniqueSessionIds } },
-            distinct: true,
-            col: "student_id",
-            transaction: options.transaction,
-          })
+          where: { sessionId: { [Op.in]: uniqueSessionIds } },
+          distinct: true,
+          col: "student_id",
+          transaction: options.transaction,
+        })
         : 0,
       scoped(model.studentHallTicketModel).count({
         where: { examinationSessionId: Number(examinationSessionId) },
@@ -1590,7 +1615,11 @@ export async function countHallTicketCoverageByExamScheduleIds(
 
   const [tickets, results, seats] = await Promise.all([
     scoped(model.studentHallTicketModel).findAll({
-      where: { examinationSessionId: Number(examinationSessionId) },
+      where: {
+        examinationSessionId: Number(examinationSessionId),
+        isPublished: true,
+        isBlocked: false,
+      },
       attributes: ["studentId"],
       raw: true,
       transaction: options.transaction,
@@ -1919,42 +1948,42 @@ export async function getDashboardOverviewStats({
   ] = await Promise.all([
     studentGroups.length
       ? (async () => {
-          const countMap = new Map();
-          const unique = [];
-          const seen = new Set();
-          for (const group of studentGroups) {
-            const key = buildTermCohortGroupKey(group);
-            if (seen.has(key)) continue;
-            seen.add(key);
-            unique.push(group);
-          }
-          await Promise.all(
-            unique.map(async (group) => {
-              countMap.set(
-                buildTermCohortGroupKey(group),
-                await studentCountRepository.countTermCohortStudents(group),
-              );
-            }),
-          );
-          return countMap;
-        })()
+        const countMap = new Map();
+        const unique = [];
+        const seen = new Set();
+        for (const group of studentGroups) {
+          const key = buildTermCohortGroupKey(group);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          unique.push(group);
+        }
+        await Promise.all(
+          unique.map(async (group) => {
+            countMap.set(
+              buildTermCohortGroupKey(group),
+              await studentCountRepository.countTermCohortStudents(group),
+            );
+          }),
+        );
+        return countMap;
+      })()
       : Promise.resolve(new Map()),
     examScheduleIds.length
       ? scoped(model.answerSheetQrModel).count({
-          where: {
-            examScheduleId: { [Op.in]: examScheduleIds },
-            studentId: { [Op.ne]: null },
-          },
-        })
+        where: {
+          examScheduleId: { [Op.in]: examScheduleIds },
+          studentId: { [Op.ne]: null },
+        },
+      })
       : 0,
     examScheduleIds.length
       ? scoped(model.answerSheetQrModel).count({
-          where: {
-            examScheduleId: { [Op.in]: examScheduleIds },
-            studentId: { [Op.ne]: null },
-            fileUploadId: { [Op.ne]: null },
-          },
-        })
+        where: {
+          examScheduleId: { [Op.in]: examScheduleIds },
+          studentId: { [Op.ne]: null },
+          fileUploadId: { [Op.ne]: null },
+        },
+      })
       : 0,
     scoped(model.studentResultModel).count({
       where: {
@@ -1967,20 +1996,20 @@ export async function getDashboardOverviewStats({
     }),
     dates.length && slotIds.length
       ? scoped(model.examRoomMaterialBundleModel).count({
-          where: {
-            examDate: { [Op.in]: dates },
-            examinationSessionSlotId: { [Op.in]: slotIds },
-          },
-        })
+        where: {
+          examDate: { [Op.in]: dates },
+          examinationSessionSlotId: { [Op.in]: slotIds },
+        },
+      })
       : 0,
     dates.length && slotIds.length
       ? scoped(model.examRoomMaterialBundleModel).count({
-          where: {
-            examDate: { [Op.in]: dates },
-            examinationSessionSlotId: { [Op.in]: slotIds },
-            status: { [Op.in]: ["RECEIVED", "VERIFIED", "CLOSED"] },
-          },
-        })
+        where: {
+          examDate: { [Op.in]: dates },
+          examinationSessionSlotId: { [Op.in]: slotIds },
+          status: { [Op.in]: ["RECEIVED", "VERIFIED", "CLOSED"] },
+        },
+      })
       : 0,
   ]);
 

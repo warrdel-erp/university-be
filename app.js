@@ -23,6 +23,7 @@ import libraryModule from "./modules/library/index.js";
 import feeTypeCategory from "./router/feeTypeCategoryRoute.js";
 import feeTypeCatalog from "./router/feeTypeCatalogRoute.js";
 import feePolicy from "./router/feePolicyRoute.js";
+import attendancePolicy from "./router/attendancePolicyRoute.js";
 import assetManagementModule from "./modules/asset-management/index.js";
 import role from "./router/roleRoute.js";
 import permission from "./router/permissionRoute.js";
@@ -86,6 +87,7 @@ import examResult from "./router/examResultRoute.js";
 import examOperations from "./router/examOperationsRoute.js";
 import s3FileRoute from "./router/s3FileRoute.js";
 import logsRoute from "./router/logsRoute.js";
+import auditLogRoute from "./router/auditLogRoute.js";
 
 // middleware
 setupLogging(app);
@@ -122,6 +124,9 @@ app.use(httpAuditLogger);
 // API Request Inspector & Logs Dashboard
 app.use("/api/logs", logsRoute);
 
+// Database Event Audit Logs API
+app.use("/api/audit-logs", auditLogRoute);
+
 //routes
 
 // Tenant setup — campus, institute, and academic year use explicit scoped() in repositories
@@ -148,6 +153,7 @@ app.use("/feePlanItem", feePlanItem);
 app.use("/billingSchedule", billingSchedule);
 app.use("/billingSchedulePaymentTerms", billingSchedulePaymentTerms);
 app.use("/feePolicy", feePolicy);
+app.use("/attendancePolicy", attendancePolicy);
 app.use("/authorization", userPermission);
 app.use(libraryModule);
 

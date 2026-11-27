@@ -4,6 +4,8 @@ import sequelize from '../database/sequelizeConfig.js';
 import { resolveSourcePeriodByDateWiseId } from '../utility/attendancePlacement.js';
 import { resolveProgramTerm } from '../utility/classSectionIncludes.js';
 import { timeTableCellDateWiseModel } from '../models/index.js';
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -508,21 +510,24 @@ export async function getRoutineByTeacherForLesson(userId, courseId, sessionId, 
 }
 
 export async function addLesson(data, createdBy, updatedBy) {
+  return withAuditEvent(AUDIT_EVENTS.LESSON_CREATE, async ({ transaction }) => {
     const window = await lectureWindowRepository.getLectureWindowById(
-        data.lectureWindowId,
-        data.academicYearId,
+      data.lectureWindowId,
+      data.academicYearId,
+      { transaction }
     );
     if (!window) {
-        throw new Error("Lecture window not found");
+      throw new Error("Lecture window not found");
     }
 
     const payload = {
-        ...data,
-        lectureWindowId: window.lectureWindowId,
-        createdBy,
-        updatedBy,
+      ...data,
+      lectureWindowId: window.lectureWindowId,
+      createdBy,
+      updatedBy,
     };
-    return lesson.addLesson(payload);
+    return lesson.addLesson(payload, { transaction });
+  });
 }
 
 export async function getLessonDetails(academicYearId) {
@@ -534,105 +539,97 @@ export async function getSingleLessonDetails(lessonId) {
 }
 
 export async function addTopice(data, createdBy, updatedBy) {
-    try {
-        const payload = {
-            ...data,
-            createdBy,
-            updatedBy,
-        };
-        return await lesson.addTopic(payload);
-    } catch (error) {
-        console.error("Error in add topic:", error);
-        throw error;
-    }
+  return withAuditEvent(AUDIT_EVENTS.TOPIC_CREATE, async ({ transaction }) => {
+    const payload = {
+      ...data,
+      createdBy,
+      updatedBy,
+    };
+    return lesson.addTopic(payload, { transaction });
+  });
 }
 
 export async function updateTopic(topicId, data, updatedBy) {
-  const payload = { updatedBy };
-  if (data.name !== undefined) {
-    payload.name = data.name;
-  }
-  if (data.description !== undefined) {
-    payload.description = data.description;
-  }
-  if (data.lessonId !== undefined) {
-    payload.lessonId = Number(data.lessonId);
-  }
+  return withAuditEvent(AUDIT_EVENTS.TOPIC_UPDATE, async ({ transaction }) => {
+    const payload = { updatedBy };
+    if (data.name !== undefined) {
+      payload.name = data.name;
+    }
+    if (data.description !== undefined) {
+      payload.description = data.description;
+    }
+    if (data.lessonId !== undefined) {
+      payload.lessonId = Number(data.lessonId);
+    }
 
-  const updated = await lesson.updateTopic(topicId, payload);
-  if (!updated) {
-    throw Object.assign(new Error('Topic not found'), { statusCode: 404 });
-  }
-  return updated;
+    const updated = await lesson.updateTopic(topicId, payload, { transaction });
+    if (!updated) {
+      throw Object.assign(new Error('Topic not found'), { statusCode: 404 });
+    }
+    return updated;
+  });
 }
 
 export async function deleteTopic(topicId) {
-  const transaction = await sequelize.transaction();
-  try {
-    const deleted = await lesson.deleteTopic(topicId, transaction);
+  return withAuditEvent(AUDIT_EVENTS.TOPIC_DELETE, async ({ transaction }) => {
+    const deleted = await lesson.deleteTopic(topicId, { transaction });
     if (!deleted) {
       throw Object.assign(new Error('Topic not found'), { statusCode: 404 });
     }
-    await transaction.commit();
     return true;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function updateLesson(lessonId, data, updatedBy) {
-  const payload = { updatedBy };
-  if (data.name !== undefined) {
-    payload.name = data.name;
-  }
-  if (data.description !== undefined) {
-    payload.description = data.description;
-  }
-  if (data.subjectId !== undefined) {
-    payload.subjectId = Number(data.subjectId);
-  }
-  if (data.sessionId !== undefined) {
-    payload.sessionId = Number(data.sessionId);
-  }
-  if (data.userId !== undefined) {
-    payload.userId = Number(data.userId);
-  }
-  if (data.lectureWindowId !== undefined) {
-    if (data.lectureWindowId != null) {
-      const window = await lectureWindowRepository.getLectureWindowById(
-        data.lectureWindowId,
-        data.academicYearId,
-      );
-      if (!window) {
-        throw Object.assign(new Error('Lecture window not found'), { statusCode: 404 });
-      }
-      payload.lectureWindowId = window.lectureWindowId;
-    } else {
-      payload.lectureWindowId = null;
+  return withAuditEvent(AUDIT_EVENTS.LESSON_UPDATE, async ({ transaction }) => {
+    const payload = { updatedBy };
+    if (data.name !== undefined) {
+      payload.name = data.name;
     }
-  }
+    if (data.description !== undefined) {
+      payload.description = data.description;
+    }
+    if (data.subjectId !== undefined) {
+      payload.subjectId = Number(data.subjectId);
+    }
+    if (data.sessionId !== undefined) {
+      payload.sessionId = Number(data.sessionId);
+    }
+    if (data.userId !== undefined) {
+      payload.userId = Number(data.userId);
+    }
+    if (data.lectureWindowId !== undefined) {
+      if (data.lectureWindowId != null) {
+        const window = await lectureWindowRepository.getLectureWindowById(
+          data.lectureWindowId,
+          data.academicYearId,
+          { transaction }
+        );
+        if (!window) {
+          throw Object.assign(new Error('Lecture window not found'), { statusCode: 404 });
+        }
+        payload.lectureWindowId = window.lectureWindowId;
+      } else {
+        payload.lectureWindowId = null;
+      }
+    }
 
-  const updated = await lesson.updateLesson(lessonId, payload);
-  if (!updated) {
-    throw Object.assign(new Error('Lesson not found'), { statusCode: 404 });
-  }
-  return updated;
+    const updated = await lesson.updateLesson(lessonId, payload, { transaction });
+    if (!updated) {
+      throw Object.assign(new Error('Lesson not found'), { statusCode: 404 });
+    }
+    return updated;
+  });
 }
 
 export async function deleteLesson(lessonId) {
-  const transaction = await sequelize.transaction();
-  try {
-    const deleted = await lesson.deleteLesson(lessonId, transaction);
+  return withAuditEvent(AUDIT_EVENTS.LESSON_DELETE, async ({ transaction }) => {
+    const deleted = await lesson.deleteLesson(lessonId, { transaction });
     if (!deleted) {
       throw Object.assign(new Error('Lesson not found'), { statusCode: 404 });
     }
-    await transaction.commit();
     return true;
-  } catch (error) {
-    await transaction.rollback();
-    throw error;
-  }
+  });
 }
 
 export async function resolveMappingDateWiseIdFromPayload(data, transaction) {
@@ -653,9 +650,7 @@ export async function resolveMappingDateWiseIdFromPayload(data, transaction) {
 }
 
 export async function addMapping(data, createdBy, updatedBy) {
-  const transaction = await sequelize.transaction();
-
-  try {
+  return withAuditEvent(AUDIT_EVENTS.LESSON_MAPPING_CREATE, async ({ transaction }) => {
     const resolvedDateWiseId = await resolveMappingDateWiseIdFromPayload(data, transaction);
 
     if (!resolvedDateWiseId) {
@@ -684,7 +679,7 @@ export async function addMapping(data, createdBy, updatedBy) {
       updatedBy,
     };
 
-    await lesson.addLessionMapping(payload, transaction);
+    await lesson.addLessionMapping(payload, { transaction });
 
     if (data.subTopic && Array.isArray(data.subTopic)) {
       for (const sub of data.subTopic) {
@@ -695,26 +690,19 @@ export async function addMapping(data, createdBy, updatedBy) {
           createdBy,
           updatedBy,
         };
-        await lesson.addSubTopic(subTopicData, transaction);
+        await lesson.addSubTopic(subTopicData, { transaction });
       }
     }
 
-    await transaction.commit();
     return { message: "Lesson mapping and sub-topics added successfully" };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in addMapping:", error);
-    throw error;
-  }
+  });
 }
 
 /**
  * Copy an existing lesson/topic mapping onto one or more date-wise periods.
  */
 export async function copyMapping(data, createdBy, updatedBy) {
-  const transaction = await sequelize.transaction();
-
-  try {
+  return withAuditEvent(AUDIT_EVENTS.LESSON_MAPPING_COPY, async ({ transaction }) => {
     const source = await lesson.getLessonMappingById(data.sourceLessonMappingId, transaction);
     if (!source) {
       throw Object.assign(new Error("Source lesson mapping not found"), { statusCode: 404 });
@@ -746,7 +734,7 @@ export async function copyMapping(data, createdBy, updatedBy) {
           createdBy,
           updatedBy,
         },
-        transaction,
+        { transaction },
       );
 
       copied.push({
@@ -759,17 +747,12 @@ export async function copyMapping(data, createdBy, updatedBy) {
       });
     }
 
-    await transaction.commit();
     return {
       message: `Lesson mapping copied to ${copied.length} period(s) successfully`,
       copied,
       sourceLessonMappingId: Number(data.sourceLessonMappingId),
     };
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in copyMapping:", error);
-    throw error;
-  }
+  });
 }
 
 function pickTeacherFromCell(cell) {
@@ -862,21 +845,17 @@ export async function getMapping(academicYearId) {
 }
 
 export async function updateMapping(completeDate, lessonMappingId) {
-  try {
+  return withAuditEvent(AUDIT_EVENTS.LESSON_MAPPING_UPDATE, async ({ transaction }) => {
     const data = {
       completeDate,
       status: 'complete'
     };
-    return await lesson.updateMapping(lessonMappingId, data);
-  } catch (error) {
-    console.error('Error updating mapping:', error);
-    throw error;
-  }
+    return await lesson.updateMapping(lessonMappingId, data, { transaction });
+  });
 }
 
 export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
-  const transaction = await sequelize.transaction();
-  try {
+  return withAuditEvent(AUDIT_EVENTS.LESSON_MAPPING_UPDATE, async ({ transaction }) => {
     const payload = {
       topicId: data.topicId,
       completeDate: data.completeDate || null,
@@ -903,7 +882,7 @@ export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
     const updatedLesson = await lesson.updateLessionMapping(
       lessonMappingId,
       payload,
-      transaction
+      { transaction }
     );
 
     if (data.subTopic && Array.isArray(data.subTopic)) {
@@ -916,32 +895,21 @@ export async function updateCompleteMapping(lessonMappingId, data, updatedBy) {
               description: sub.description || null,
               updatedBy
             },
-            transaction
+            { transaction }
           );
         }
       }
     }
 
-    await transaction.commit();
     return updatedLesson;
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in updateCompleteMapping:", error);
-    throw error;
-  }
+  });
 }
 
 export async function deleteMapping(lessonMappingId) {
-  const transaction = await sequelize.transaction();
-  try {
-    await lesson.deleteLessionMapping(lessonMappingId, transaction);
-    await transaction.commit();
+  return withAuditEvent(AUDIT_EVENTS.LESSON_MAPPING_DELETE, async ({ transaction }) => {
+    await lesson.deleteLessionMapping(lessonMappingId, { transaction });
     return true;
-  } catch (error) {
-    await transaction.rollback();
-    console.error("Error in deleteMapping:", error);
-    throw error;
-  }
+  });
 }
 
 export async function getEmployeeSubjectAndLesson(userId, courseId, sessionId, subjectSearch, subjectId) {
@@ -961,12 +929,14 @@ export async function getSimpleLessonList(whereClause) {
 }
 
 export async function linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, academicYearId) {
-    const window = await lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId);
+  return withAuditEvent(AUDIT_EVENTS.LESSON_WINDOW_LINK, async ({ transaction }) => {
+    const window = await lectureWindowRepository.getLectureWindowById(lectureWindowId, academicYearId, { transaction });
     if (!window) {
-        throw new Error("Lecture window not found");
+      throw new Error("Lecture window not found");
     }
 
-    return lectureWindowRepository.linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy);
+    return lectureWindowRepository.linkLessonsToWindow(lectureWindowId, lessonIds, updatedBy, { transaction });
+  });
 }
 
 export async function getLectureWindowById(lectureWindowId, academicYearId) {

@@ -5,8 +5,8 @@ import { getTenantStore } from "../utility/requestContext.js";
 import { studentClassSectionTermWithSectionInclude } from "../utility/classSectionIncludes.js";
 import { getEffectiveScope } from "../utility/permissionUtility.js";
 
-export async function register(data) {
-  return scoped(model.userModel).create(data);
+export async function register(data, options = {}) {
+  return scoped(model.userModel).create(data, options);
 }
 
 export async function adminUser(data, transaction) {
@@ -211,17 +211,19 @@ export async function findStatusByUserId(userId) {
   });
 }
 
-export async function changeStatus(userId, data) {
+export async function changeStatus(userId, data, options = {}) {
   try {
+    const opts = options?.transaction ? options : (options instanceof Object && !Array.isArray(options) && options.where ? options : (options ? { transaction: options } : {}));
     const existing = await scoped(model.userModel).findOne({
       attributes: ["userId"],
       where: { userId },
+      ...opts,
     });
     if (!existing) {
       return [0];
     }
 
-    return scoped(model.userModel).update(data, { where: { userId } });
+    return scoped(model.userModel).update(data, { where: { userId }, ...opts });
   } catch (error) {
     console.error(`Error updating status ${userId}:`, error);
     throw error;

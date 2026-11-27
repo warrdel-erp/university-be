@@ -24,13 +24,15 @@ async function isFloorInInstitute(floorId) {
     return Boolean(floor);
 }
 
-export async function addClassRoom(ClassRoomData) {
+export async function addClassRoom(ClassRoomData, options = {}) {
     try {
         if (!(await isFloorInInstitute(ClassRoomData.floorId))) {
             throw new Error('Floor not found for this institute');
         }
 
-        return await scoped(model.classRoomModel).create(ClassRoomData);
+        return await scoped(model.classRoomModel).create(ClassRoomData, {
+            transaction: options.transaction,
+        });
     } catch (error) {
         console.error('Error in add ClassRoom :', error);
         throw error;
@@ -87,14 +89,16 @@ export async function getSingleClassRoomDetails(classRoomSectionId) {
         throw error;
     }
 }
-export async function deleteClassRoom(classRoomSectionId) {
+export async function deleteClassRoom(classRoomSectionId, options = {}) {
     const deleted = await scoped(model.classRoomModel).destroy({
         where: { classRoomSectionId },
+        transaction: options.transaction,
+        individualHooks: true,
     });
     return deleted > 0;
 }
 
-export async function updateClassRoom(classRoomSectionId, ClassRoomData) {
+export async function updateClassRoom(classRoomSectionId, ClassRoomData, options = {}) {
     try {
         if (ClassRoomData.floorId && !(await isFloorInInstitute(ClassRoomData.floorId))) {
             throw new Error('Floor not found for this institute');
@@ -102,6 +106,8 @@ export async function updateClassRoom(classRoomSectionId, ClassRoomData) {
 
         const [updatedCount] = await scoped(model.classRoomModel).update(ClassRoomData, {
             where: { classRoomSectionId },
+            transaction: options.transaction,
+            individualHooks: true,
         });
         return updatedCount;
     } catch (error) {

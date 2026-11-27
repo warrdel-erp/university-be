@@ -30,15 +30,18 @@ async function assertScopedQuestionPaper(id, transaction, ownerId = null) {
   });
 }
 
-export async function addQuestionPaper(questionPaperData) {
+export async function addQuestionPaper(questionPaperData, options = {}) {
   try {
     const schedule = await assertScopedExamSchedule(
       questionPaperData.examScheduleId,
+      options.transaction,
     );
     if (!schedule) {
       throw new Error("Exam schedule not found");
     }
-    const result = await model.questionPaperModel.create(questionPaperData);
+    const result = await model.questionPaperModel.create(questionPaperData, {
+      transaction: options.transaction,
+    });
     return result;
   } catch (error) {
     console.error("Error adding question paper:", error);
@@ -48,12 +51,13 @@ export async function addQuestionPaper(questionPaperData) {
 
 export async function getQuestionPapers(filters = {}, pagination = {}) {
   try {
-    const { examScheduleId, createdBy } = filters;
+    const { examScheduleId, createdBy, status } = filters;
     const { limit, offset } = pagination;
 
     const whereClause = {
       ...(examScheduleId && { examScheduleId }),
       ...(createdBy && { createdBy }),
+      ...(status && { status }),
     };
 
     const { count, rows } = await model.questionPaperModel.findAndCountAll({
@@ -66,6 +70,12 @@ export async function getQuestionPapers(filters = {}, pagination = {}) {
           model: model.userModel,
           as: "creator",
           attributes: ["userId", "userName"],
+        },
+        {
+          model: model.questionPaperModel,
+          as: "parentQuestionPaper",
+          attributes: ["id", "name"],
+          required: false,
         },
         {
           model: model.examScheduleModel,
@@ -112,6 +122,12 @@ export async function getSingleQuestionPaper(id, ownerId = null) {
           model: model.userModel,
           as: "creator",
           attributes: ["userId", "userName"],
+        },
+        {
+          model: model.questionPaperModel,
+          as: "parentQuestionPaper",
+          attributes: ["id", "name"],
+          required: false,
         },
         {
           model: model.examScheduleModel,
@@ -180,6 +196,7 @@ export async function updateQuestionPaper(
     const result = await model.questionPaperModel.update(questionPaperData, {
       where: { id },
       transaction,
+      individualHooks: true,
     });
     return result;
   } catch (error) {
@@ -214,13 +231,17 @@ export async function getApprovedQuestionPapersByScheduleId(
   }
 }
 
-export async function deleteQuestionPaper(id, ownerId = null) {
+export async function deleteQuestionPaper(id, ownerId = null, options = {}) {
   try {
-    const existing = await assertScopedQuestionPaper(id, null, ownerId);
+    const existing = await assertScopedQuestionPaper(id, options.transaction, ownerId);
     if (!existing) {
       return false;
     }
-    const deleted = await model.questionPaperModel.destroy({ where: { id } });
+    const deleted = await model.questionPaperModel.destroy({
+      where: { id },
+      transaction: options.transaction,
+      individualHooks: true,
+    });
     return deleted > 0;
   } catch (error) {
     console.error("Error deleting question paper:", error);

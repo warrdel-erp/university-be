@@ -135,6 +135,7 @@ export async function updateFinalResultById(
   return scoped(model.assessmentEvaluationModel).update(payload, {
     where: { assessmentEvalutionId: Number(assessmentEvalutionId) },
     transaction,
+    individualHooks: true,
   });
 }
 

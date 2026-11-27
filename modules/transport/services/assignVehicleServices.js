@@ -5,13 +5,13 @@ import {
   updateAssignVehicle as updateAssignVehicleRepo,
   deleteAssignVehicle as deleteAssignVehicleRepo,
 } from "../repository/assignVehicleRepository.js";
+import { withAuditEvent } from "../../../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../../../const/auditEvents.js";
 
 export async function addAssignVehicle(assignVehicleData) {
-  try {
-    return addAssignVehicleRepo(assignVehicleData);
-  } catch (error) {
-    throw new Error(`Failed to create vehicle assignment: ${error.message}`);
-  }
+  return withAuditEvent(AUDIT_EVENTS.ASSIGN_VEHICLE_CREATE, async ({ transaction }) => {
+    return addAssignVehicleRepo(assignVehicleData, transaction);
+  });
 }
 
 export async function getAssignVehicle() {
@@ -33,24 +33,19 @@ export async function getSingleAssignVehicle(assignVehicleId) {
 }
 
 export async function updateAssignVehicle(assignVehicleId, assignVehicleData, userId) {
-  try {
+  return withAuditEvent(AUDIT_EVENTS.ASSIGN_VEHICLE_UPDATE, async ({ transaction }) => {
     const updatedBy = userId;
     const vehicleUpdate = { ...assignVehicleData, updatedBy };
-    const [updatedRows] = await updateAssignVehicleRepo(assignVehicleId, vehicleUpdate);
+    const [updatedRows] = await updateAssignVehicleRepo(assignVehicleId, vehicleUpdate, transaction);
     if (updatedRows === 0) throw new Error("Vehicle assignment not found or no changes made");
     return updatedRows;
-  } catch (error) {
-    throw new Error(`Failed to update vehicle assignment: ${error.message}`);
-  }
+  });
 }
 
 export async function deleteAssignVehicle(assignVehicleId) {
-  try {
-    const deletedRows = await deleteAssignVehicleRepo(assignVehicleId);
+  return withAuditEvent(AUDIT_EVENTS.ASSIGN_VEHICLE_DELETE, async ({ transaction }) => {
+    const deletedRows = await deleteAssignVehicleRepo(assignVehicleId, transaction);
     if (deletedRows === 0) throw new Error("Vehicle assignment not found");
     return deletedRows;
-  } catch (error) {
-    throw new Error(`Failed to delete vehicle assignment: ${error.message}`);
-  }
+  });
 }
-

@@ -9,6 +9,8 @@ import {
 } from '../utility/decimalMoney.js';
 import { FEE_PLAN_PUBLISH_STATUS } from '../constant.js';
 import { getTenantStore } from '../utility/requestContext.js';
+import { withAuditEvent } from '../utility/audit/withAuditEvent.js';
+import { AUDIT_EVENTS } from '../const/auditEvents.js';
 
 function httpError(message, statusCode) {
   const err = new Error(message);
@@ -763,7 +765,7 @@ export async function createFeePlanItemWithSubItems(body) {
     }
   }
 
-  const createdItemIds = await sequelize.transaction(async (transaction) => {
+  const createdItemIds = await withAuditEvent(AUDIT_EVENTS.FEE_PLAN_ITEM_CREATE, async ({ transaction }) => {
     const batchId = Number(body.batchId);
     const batch = await repo.findBatchBasics(batchId, { transaction });
     if (!batch) {
@@ -876,7 +878,7 @@ export async function createFeePlanItemWithSubItems(body) {
 export async function updateFeePlanItem(body) {
   const feePlanItemId = Number(body.feePlanItemId);
 
-  await sequelize.transaction(async (transaction) => {
+  await withAuditEvent(AUDIT_EVENTS.FEE_PLAN_ITEM_UPDATE, async ({ transaction }) => {
     const existing = await repo.findFeePlanItemById(feePlanItemId, { transaction });
     if (!existing) {
       httpError(`Fee plan item (ID: ${feePlanItemId}) not found`, 404);
@@ -976,7 +978,7 @@ export async function updateFeePlanItem(body) {
 export async function deleteFeePlanItem(feePlanItemId) {
   const resolvedId = Number(feePlanItemId);
 
-  await sequelize.transaction(async (transaction) => {
+  await withAuditEvent(AUDIT_EVENTS.FEE_PLAN_ITEM_DELETE, async ({ transaction }) => {
     const existing = await repo.findFeePlanItemById(resolvedId, { transaction });
     if (!existing) {
       httpError(`Fee plan item (ID: ${resolvedId}) not found`, 404);
@@ -1005,7 +1007,7 @@ export async function deleteFeePlanItem(feePlanItemId) {
 export async function addFeePlanSubItem(body) {
   const feePlanItemId = body.feePlanItemId;
 
-  const feePlanSubitemId = await sequelize.transaction(async (transaction) => {
+  const feePlanSubitemId = await withAuditEvent(AUDIT_EVENTS.FEE_PLAN_SUB_ITEM_CREATE, async ({ transaction }) => {
     const item = await repo.findFeePlanItemById(feePlanItemId, { transaction });
     if (!item) {
       httpError(`Fee plan item (ID: ${feePlanItemId}) not found`, 404);
@@ -1051,7 +1053,7 @@ export async function addFeePlanSubItem(body) {
 export async function deleteFeePlanSubItem(feePlanSubitemId) {
   const resolvedId = Number(feePlanSubitemId);
 
-  const feePlanItemId = await sequelize.transaction(async (transaction) => {
+  const feePlanItemId = await withAuditEvent(AUDIT_EVENTS.FEE_PLAN_SUB_ITEM_DELETE, async ({ transaction }) => {
     const sub = await repo.findFeePlanSubItemById(resolvedId, { transaction });
     if (!sub) {
       httpError(`Fee plan sub-item (ID: ${resolvedId}) not found`, 404);
@@ -1089,7 +1091,7 @@ export async function publishBatchFeePlanYear({ batchId, year, term }) {
   let yearNum = year != null ? Number(year) : null;
   let termNum = term != null ? Number(term) : null;
 
-  const result = await sequelize.transaction(async (transaction) => {
+  const result = await withAuditEvent(AUDIT_EVENTS.FEE_PLAN_PUBLISH, async ({ transaction }) => {
     const batch = await repo.findBatchBasics(resolvedBatchId, { transaction });
     if (!batch) {
       httpError(`Batch (ID: ${resolvedBatchId}) not found`, 404);
@@ -1205,7 +1207,7 @@ export async function unpublishBatchFeePlanYear({ batchId, year, term }) {
   let yearNum = year != null ? Number(year) : null;
   let termNum = term != null ? Number(term) : null;
 
-  const result = await sequelize.transaction(async (transaction) => {
+  const result = await withAuditEvent(AUDIT_EVENTS.FEE_PLAN_UNPUBLISH, async ({ transaction }) => {
     let items = [];
     if (termNum != null) {
       items = await repo.findFeePlanItemsByBatchAndTerm(resolvedBatchId, termNum, {

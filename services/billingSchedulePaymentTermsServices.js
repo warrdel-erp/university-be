@@ -1,5 +1,7 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/billingSchedulePaymentTermsRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -12,56 +14,58 @@ function httpError(message, statusCode = 400) {
  * Supports a single object or an array of objects.
  */
 export async function createPaymentTerm(payload) {
-  let items = [];
-  let isSingle = false;
+  return withAuditEvent(AUDIT_EVENTS.PAYMENT_TERM_CREATE, async ({ transaction }) => {
+    let items = [];
+    let isSingle = false;
 
-  if (Array.isArray(payload)) {
-    items = payload;
-  } else if (payload && typeof payload === "object") {
-    items = [payload];
-    isSingle = true;
-  }
-
-  if (items.length === 0) {
-    throw httpError("At least one payment term record is required", 400);
-  }
-
-  // Validate all billingScheduleItemIds exist
-  const itemIds = [...new Set(items.map((i) => i.billingScheduleItemId))];
-  for (const id of itemIds) {
-    if (!id) {
-      throw httpError("billingScheduleItemId is required for each payment term", 400);
+    if (Array.isArray(payload)) {
+      items = payload;
+    } else if (payload && typeof payload === "object") {
+      items = [payload];
+      isSingle = true;
     }
-    const scheduleItem = await repo.findBillingScheduleItemById(id);
-    if (!scheduleItem) {
-      throw httpError(`Billing schedule item with ID ${id} not found`, 404);
+
+    if (items.length === 0) {
+      throw httpError("At least one payment term record is required", 400);
     }
-  }
 
-  // Validate installments
-  for (const item of items) {
-    if (item.installment == null || !Number.isInteger(Number(item.installment))) {
-      throw httpError("installment must be an integer", 400);
+    // Validate all billingScheduleItemIds exist
+    const itemIds = [...new Set(items.map((i) => i.billingScheduleItemId))];
+    for (const id of itemIds) {
+      if (!id) {
+        throw httpError("billingScheduleItemId is required for each payment term", 400);
+      }
+      const scheduleItem = await repo.findBillingScheduleItemById(id, { transaction });
+      if (!scheduleItem) {
+        throw httpError(`Billing schedule item with ID ${id} not found`, 404);
+      }
     }
-  }
 
-  if (isSingle) {
-    const created = await repo.createPaymentTerm({
-      billingScheduleItemId: items[0].billingScheduleItemId,
-      installment: Number(items[0].installment),
-      isDefault: items[0].isDefault != null ? Boolean(items[0].isDefault) : false,
-    });
-    return repo.findPaymentTermById(created.billingSchedulePaymentTermsId);
-  }
+    // Validate installments
+    for (const item of items) {
+      if (item.installment == null || !Number.isInteger(Number(item.installment))) {
+        throw httpError("installment must be an integer", 400);
+      }
+    }
 
-  const recordsToCreate = items.map((i) => ({
-    billingScheduleItemId: i.billingScheduleItemId,
-    installment: Number(i.installment),
-    isDefault: i.isDefault != null ? Boolean(i.isDefault) : false,
-  }));
+    if (isSingle) {
+      const created = await repo.createPaymentTerm({
+        billingScheduleItemId: items[0].billingScheduleItemId,
+        installment: Number(items[0].installment),
+        isDefault: items[0].isDefault != null ? Boolean(items[0].isDefault) : false,
+      }, { transaction });
+      return repo.findPaymentTermById(created.billingSchedulePaymentTermsId, { transaction });
+    }
 
-  const createdRecords = await repo.bulkCreatePaymentTerms(recordsToCreate);
-  return createdRecords;
+    const recordsToCreate = items.map((i) => ({
+      billingScheduleItemId: i.billingScheduleItemId,
+      installment: Number(i.installment),
+      isDefault: i.isDefault != null ? Boolean(i.isDefault) : false,
+    }));
+
+    const createdRecords = await repo.bulkCreatePaymentTerms(recordsToCreate, { transaction });
+    return createdRecords;
+  });
 }
 
 /**
@@ -126,44 +130,46 @@ export async function updatePaymentTerm(billingSchedulePaymentTermsId, payload) 
     throw httpError("billingSchedulePaymentTermsId is required", 400);
   }
 
-  const existing = await repo.findPaymentTermById(billingSchedulePaymentTermsId);
-  if (!existing) {
-    throw httpError(
-      `Billing schedule payment term with ID ${billingSchedulePaymentTermsId} not found`,
-      404
-    );
-  }
-
-  const updateData = {};
-
-  if (payload.billingScheduleItemId !== undefined) {
-    const parent = await repo.findBillingScheduleItemById(payload.billingScheduleItemId);
-    if (!parent) {
+  return withAuditEvent(AUDIT_EVENTS.PAYMENT_TERM_UPDATE, async ({ transaction }) => {
+    const existing = await repo.findPaymentTermById(billingSchedulePaymentTermsId, { transaction });
+    if (!existing) {
       throw httpError(
-        `Billing schedule item with ID ${payload.billingScheduleItemId} not found`,
+        `Billing schedule payment term with ID ${billingSchedulePaymentTermsId} not found`,
         404
       );
     }
-    updateData.billingScheduleItemId = payload.billingScheduleItemId;
-  }
 
-  if (payload.installment !== undefined) {
-    if (!Number.isInteger(Number(payload.installment))) {
-      throw httpError("installment must be an integer", 400);
+    const updateData = {};
+
+    if (payload.billingScheduleItemId !== undefined) {
+      const parent = await repo.findBillingScheduleItemById(payload.billingScheduleItemId, { transaction });
+      if (!parent) {
+        throw httpError(
+          `Billing schedule item with ID ${payload.billingScheduleItemId} not found`,
+          404
+        );
+      }
+      updateData.billingScheduleItemId = payload.billingScheduleItemId;
     }
-    updateData.installment = Number(payload.installment);
-  }
 
-  if (payload.isDefault !== undefined) {
-    updateData.isDefault = Boolean(payload.isDefault);
-  }
+    if (payload.installment !== undefined) {
+      if (!Number.isInteger(Number(payload.installment))) {
+        throw httpError("installment must be an integer", 400);
+      }
+      updateData.installment = Number(payload.installment);
+    }
 
-  if (Object.keys(updateData).length === 0) {
-    return existing;
-  }
+    if (payload.isDefault !== undefined) {
+      updateData.isDefault = Boolean(payload.isDefault);
+    }
 
-  await repo.updatePaymentTerm(billingSchedulePaymentTermsId, updateData);
-  return repo.findPaymentTermById(billingSchedulePaymentTermsId);
+    if (Object.keys(updateData).length === 0) {
+      return existing;
+    }
+
+    await repo.updatePaymentTerm(billingSchedulePaymentTermsId, updateData, { transaction });
+    return repo.findPaymentTermById(billingSchedulePaymentTermsId, { transaction });
+  });
 }
 
 /**
@@ -174,14 +180,16 @@ export async function deletePaymentTerm(billingSchedulePaymentTermsId) {
     throw httpError("billingSchedulePaymentTermsId is required", 400);
   }
 
-  const existing = await repo.findPaymentTermById(billingSchedulePaymentTermsId);
-  if (!existing) {
-    throw httpError(
-      `Billing schedule payment term with ID ${billingSchedulePaymentTermsId} not found`,
-      404
-    );
-  }
+  return withAuditEvent(AUDIT_EVENTS.PAYMENT_TERM_DELETE, async ({ transaction }) => {
+    const existing = await repo.findPaymentTermById(billingSchedulePaymentTermsId, { transaction });
+    if (!existing) {
+      throw httpError(
+        `Billing schedule payment term with ID ${billingSchedulePaymentTermsId} not found`,
+        404
+      );
+    }
 
-  await repo.deletePaymentTerm(billingSchedulePaymentTermsId);
-  return { billingSchedulePaymentTermsId };
+    await repo.deletePaymentTerm(billingSchedulePaymentTermsId, { transaction });
+    return { billingSchedulePaymentTermsId };
+  });
 }

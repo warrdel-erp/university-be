@@ -1,6 +1,8 @@
 import sequelize from "../database/sequelizeConfig.js";
 import * as repo from "../repository/electivePoolRepository.js";
 import { requestContext } from "../utility/requestContext.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -98,7 +100,7 @@ export async function addElectivePool(body) {
     throw httpError("instituteId is required", 400);
   }
 
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.ELECTIVE_POOL_CREATE, async ({ transaction }) => {
     const existing = await repo.findElectivePoolByCode(normalized.code, { transaction });
     if (existing) {
       throw httpError(`Elective pool with code '${normalized.code}' already exists`, 409);
@@ -173,7 +175,7 @@ export async function updateElectivePool(id, body) {
   const normalized = normalizePayload(body);
   const store = requestContext.getStore() || {};
 
-  return sequelize.transaction(async (transaction) => {
+  return await withAuditEvent(AUDIT_EVENTS.ELECTIVE_POOL_UPDATE, async ({ transaction }) => {
     if (normalized.code && normalized.code !== existing.code) {
       const codeCheck = await repo.findElectivePoolByCode(normalized.code, { transaction });
       if (codeCheck && codeCheck.id !== parseInt(id, 10)) {
@@ -205,8 +207,10 @@ export async function toggleStatusElectivePool(id) {
   }
 
   const newStatus = !existing.isActive;
-  await repo.updateElectivePool(id, { isActive: newStatus });
-  return repo.findElectivePoolById(id);
+  return await withAuditEvent(AUDIT_EVENTS.ELECTIVE_POOL_UPDATE, async ({ transaction }) => {
+    await repo.updateElectivePool(id, { isActive: newStatus }, { transaction });
+    return repo.findElectivePoolById(id, { transaction });
+  });
 }
 
 export async function deleteElectivePool(id) {
@@ -214,6 +218,8 @@ export async function deleteElectivePool(id) {
   if (!existing) {
     throw httpError("Elective pool not found", 404);
   }
-  return repo.deleteElectivePool(id);
+  return await withAuditEvent(AUDIT_EVENTS.ELECTIVE_POOL_DELETE, async ({ transaction }) => {
+    return repo.deleteElectivePool(id, { transaction });
+  });
 }
 

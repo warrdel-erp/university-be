@@ -228,6 +228,7 @@ export async function updateFeePlanItemById(feePlanItemId, data, options = {}) {
   return scoped(model.feePlanItemModel).update(data, {
     where: { feePlanItemId: Number(feePlanItemId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -235,6 +236,7 @@ export async function deleteFeePlanItemById(feePlanItemId, options = {}) {
   return scoped(model.feePlanItemModel).destroy({
     where: { feePlanItemId: Number(feePlanItemId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -248,6 +250,7 @@ export async function updateFeePlanSubItemById(feePlanSubitemId, data, options =
   return scoped(model.feePlanSubItemsModel).update(data, {
     where: { feePlanSubitemId: Number(feePlanSubitemId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -255,6 +258,7 @@ export async function deleteFeePlanSubItemById(feePlanSubitemId, options = {}) {
   return scoped(model.feePlanSubItemsModel).destroy({
     where: { feePlanSubitemId: Number(feePlanSubitemId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -262,6 +266,7 @@ export async function deleteFeePlanSubItemsByItemId(feePlanItemId, options = {})
   return scoped(model.feePlanSubItemsModel).destroy({
     where: { feePlanItemId: Number(feePlanItemId) },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 
@@ -396,6 +401,7 @@ export async function updateFeePlanItemsPublishByIds(feePlanItemIds, data, optio
   return scoped(model.feePlanItemModel).update(data, {
     where: { feePlanItemId: { [Op.in]: feePlanItemIds } },
     transaction: options.transaction,
+    individualHooks: true,
   });
 }
 

@@ -157,6 +157,7 @@ export async function create(data, options = {}) {
 export async function update(id, data, options = {}) {
   return scoped(model.curriculumModel).update(data, {
     where: { curriculumId: id },
+    individualHooks: true,
     ...options,
   });
 }
@@ -164,6 +165,7 @@ export async function update(id, data, options = {}) {
 export async function remove(id, options = {}) {
   return scoped(model.curriculumModel).destroy({
     where: { curriculumId: id },
+    individualHooks: true,
     ...options,
   });
 }
@@ -290,6 +292,7 @@ export async function updateSubjectTermMapping(
 ) {
   await model.curriculumSubjectTermMappingModel.update(data, {
     where: { curriculumSubjectTermMappingId },
+    individualHooks: true,
     ...options,
   });
 
@@ -302,6 +305,7 @@ export async function deleteSubjectTermMapping(
 ) {
   return model.curriculumSubjectTermMappingModel.destroy({
     where: { curriculumSubjectTermMappingId },
+    individualHooks: true,
     ...options,
   });
 }
@@ -312,6 +316,7 @@ export async function deleteSubjectTermMappingsByCurriculumId(
 ) {
   return model.curriculumSubjectTermMappingModel.destroy({
     where: { curriculumId },
+    individualHooks: true,
     ...options,
   });
 }

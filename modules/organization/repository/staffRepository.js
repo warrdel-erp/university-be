@@ -25,17 +25,18 @@ const staffInclude = [
     },
 ];
 
-async function assertDepartmentExists(departmentId) {
+async function assertDepartmentExists(departmentId, transaction) {
     const department = await scoped(model.departmentModel).findOne({
         attributes: ['departmentId'],
         where: { departmentId: Number(departmentId) },
+        transaction,
     });
     if (!department) {
         throw new Error('Department not found');
     }
 }
 
-async function resolveEmployeeId({ userId, employeeId }) {
+async function resolveEmployeeId({ userId, employeeId }, transaction) {
     const resolvedUserId = userId != null ? Number(userId) : null;
     const resolvedEmployeeId = employeeId != null ? Number(employeeId) : null;
 
@@ -43,6 +44,7 @@ async function resolveEmployeeId({ userId, employeeId }) {
         const employee = await scoped(model.employeeModel).findOne({
             attributes: ['employeeId', 'userId'],
             where: { employeeId: resolvedEmployeeId },
+            transaction,
         });
         if (!employee) {
             throw new Error('Employee not found');
@@ -57,6 +59,7 @@ async function resolveEmployeeId({ userId, employeeId }) {
         const employee = await scoped(model.employeeModel).findOne({
             attributes: ['employeeId'],
             where: { userId: resolvedUserId },
+            transaction,
         });
         if (!employee) {
             throw new Error('Employee not found for userId');
@@ -67,17 +70,17 @@ async function resolveEmployeeId({ userId, employeeId }) {
     throw new Error('userId or employeeId is required');
 }
 
-export async function addStaff(staffData) {
+export async function addStaff(staffData, transaction) {
     try {
-        await assertDepartmentExists(staffData.departmentId);
-        const employeeId = await resolveEmployeeId(staffData);
+        await assertDepartmentExists(staffData.departmentId, transaction);
+        const employeeId = await resolveEmployeeId(staffData, transaction);
         const payload = {
             departmentId: Number(staffData.departmentId),
             employeeId,
             createdBy: staffData.createdBy,
             updatedBy: staffData.updatedBy,
         };
-        return await scoped(model.staffModel).create(payload);
+        return await scoped(model.staffModel).create(payload, { transaction });
     } catch (error) {
         console.error('Error in add Staff :', error);
         throw error;
@@ -109,18 +112,21 @@ export async function getSingleStaffDetails(staffId) {
     }
 }
 
-export async function deleteStaff(staffId) {
+export async function deleteStaff(staffId, transaction) {
     const deleted = await scoped(model.staffModel).destroy({
         where: { staffId: Number(staffId) },
+        transaction,
+        individualHooks: true,
     });
     return deleted > 0;
 }
 
-export async function updateStaff(staffId, staffData) {
+export async function updateStaff(staffId, staffData, transaction) {
     try {
         const existing = await scoped(model.staffModel).findOne({
             attributes: ['staffId'],
             where: { staffId: Number(staffId) },
+            transaction,
         });
         if (!existing) {
             return false;
@@ -131,16 +137,18 @@ export async function updateStaff(staffId, staffData) {
         };
 
         if (staffData.departmentId != null) {
-            await assertDepartmentExists(staffData.departmentId);
+            await assertDepartmentExists(staffData.departmentId, transaction);
             payload.departmentId = Number(staffData.departmentId);
         }
 
         if (staffData.userId != null || staffData.employeeId != null) {
-            payload.employeeId = await resolveEmployeeId(staffData);
+            payload.employeeId = await resolveEmployeeId(staffData, transaction);
         }
 
         await scoped(model.staffModel).update(payload, {
             where: { staffId: Number(staffId) },
+            transaction,
+            individualHooks: true,
         });
         return true;
     } catch (error) {

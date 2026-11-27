@@ -1,16 +1,17 @@
 import * as model from "../../../models/index.js";
 import { buildScope, scoped } from "../../../utility/scoped.js";
 
-export async function createVehicle(vehicleData) {
+export async function createVehicle(vehicleData, transaction) {
   const employee = await scoped(model.employeeModel).findOne({
     attributes: ["userId"],
     where: { userId: vehicleData.userId },
+    transaction,
   });
   if (!employee) {
     throw new Error("Employee not found");
   }
 
-  return scoped(model.vehicleModel).create(vehicleData);
+  return scoped(model.vehicleModel).create(vehicleData, { transaction });
 }
 
 export async function getAllVehicles() {
@@ -35,7 +36,7 @@ export async function getAllVehicles() {
   }
 }
 
-export async function getVehicleById(vehicleId) {
+export async function getVehicleById(vehicleId, transaction) {
   return scoped(model.vehicleModel).findOne({
     attributes: { exclude: ["createdAt", "updatedAt", "deletedAt", "createdBy", "updatedBy"] },
     where: { vehicleId },
@@ -48,13 +49,15 @@ export async function getVehicleById(vehicleId) {
         required: true,
       },
     ],
+    transaction,
   });
 }
 
-export async function updateVehicle(vehicleId, vehicleData) {
+export async function updateVehicle(vehicleId, vehicleData, transaction) {
   const existing = await scoped(model.vehicleModel).findOne({
     attributes: ["vehicleId"],
     where: { vehicleId },
+    transaction,
   });
   if (!existing) {
     return [0];
@@ -62,13 +65,16 @@ export async function updateVehicle(vehicleId, vehicleData) {
 
   return scoped(model.vehicleModel).update(vehicleData, {
     where: { vehicleId },
+    transaction,
+    individualHooks: true,
   });
 }
 
-export async function deleteVehicle(vehicleId) {
+export async function deleteVehicle(vehicleId, transaction) {
   const existing = await scoped(model.vehicleModel).findOne({
     attributes: ["vehicleId"],
     where: { vehicleId },
+    transaction,
   });
   if (!existing) {
     return 0;
@@ -76,6 +82,7 @@ export async function deleteVehicle(vehicleId) {
 
   return scoped(model.vehicleModel).destroy({
     where: { vehicleId },
+    transaction,
+    individualHooks: true,
   });
 }
-

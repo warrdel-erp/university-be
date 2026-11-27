@@ -1,4 +1,6 @@
 import * as specializationRepository from "../repository/specializationRepository.js";
+import { withAuditEvent } from "../utility/audit/withAuditEvent.js";
+import { AUDIT_EVENTS } from "../const/auditEvents.js";
 
 function mapSpecializationRow(row) {
   const plain = row.get ? row.get({ plain: true }) : row;
@@ -13,21 +15,23 @@ function mapSpecializationRow(row) {
 }
 
 export async function updateSpecialization(specializationId, body) {
-  try {
-    const data = {};
-    if (body.specializationName !== undefined) data.specializationName = body.specializationName;
-    if (body.specializationCode !== undefined) data.specializationCode = body.specializationCode;
-    if (body.course_Id !== undefined) data.course_Id = body.course_Id;
+  return withAuditEvent(AUDIT_EVENTS.SPECIALIZATION_UPDATE, async ({ transaction }) => {
+    try {
+      const data = {};
+      if (body.specializationName !== undefined) data.specializationName = body.specializationName;
+      if (body.specializationCode !== undefined) data.specializationCode = body.specializationCode;
+      if (body.course_Id !== undefined) data.course_Id = body.course_Id;
 
-    const row = await specializationRepository.updateSpecialization(specializationId, data);
-    if (!row) {
-      const error = new Error("Specialization not found");
-      error.statusCode = 404;
+      const row = await specializationRepository.updateSpecialization(specializationId, data, { transaction });
+      if (!row) {
+        const error = new Error("Specialization not found");
+        error.statusCode = 404;
+        throw error;
+      }
+      return mapSpecializationRow(row);
+    } catch (error) {
+      console.error("Error in Specialization Service (updateSpecialization):", error);
       throw error;
     }
-    return mapSpecializationRow(row);
-  } catch (error) {
-    console.error("Error in Specialization Service (updateSpecialization):", error);
-    throw error;
-  }
+  });
 }
