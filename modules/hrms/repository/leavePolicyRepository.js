@@ -383,16 +383,45 @@ export async function deletePolicy(policyId, options = {}) {
 export async function getRolesSummary({ instituteId, universityId } = {}) {
   const currentUniversityId = universityId || requestContext.getStore()?.universityId;
 
-  // 1. Get all active roles belonging to the current university
-  const roleWhere = { deletedAt: null };
+  // 1. Get all active non-student roles belonging to the current university
+  const roleWhere = {
+    deletedAt: null,
+    [Op.and]: [
+      {
+        [Op.or]: [
+          { code: null },
+          { code: { [Op.ne]: "SYS_STUDENT" } },
+        ],
+      },
+      {
+        role: {
+          [Op.notLike]: "%student%",
+        },
+      },
+      {
+        role: {
+          [Op.notLike]: "%studnet%",
+        },
+      },
+    ],
+  };
   if (currentUniversityId) {
     roleWhere.universityId = currentUniversityId;
   }
 
-  const roles = await model.roleModel.findAll({
+  const rawRoles = await model.roleModel.findAll({
     where: roleWhere,
     attributes: ["roleId", "role", "code", "scope"],
     order: [["role", "ASC"]],
+  });
+
+  // Extra safety: Filter out any student or studnet roles
+  const roles = rawRoles.filter((r) => {
+    const roleName = (r.role || "").toLowerCase();
+    const code = (r.code || "").toUpperCase();
+    if (code === "SYS_STUDENT") return false;
+    if (roleName.includes("student") || roleName.includes("studnet")) return false;
+    return true;
   });
 
   // 2. Get active policy role mappings with parent policy details
@@ -487,10 +516,6 @@ export async function getRolesSummary({ instituteId, universityId } = {}) {
   return summary;
 }
 
-/**
- * Returns employees belonging to a specific role, along with their current policy.
- * Powers the "Select Employees" side drawer in the UI.
- */
 export async function getRoleEmployees(roleId, { search, policyId, instituteId, universityId } = {}) {
   const currentUniversityId = universityId || requestContext.getStore()?.universityId;
 
