@@ -339,6 +339,12 @@ export async function getPolicies(query, user) {
           applicableTo.push(m.role.role);
           roleIds.push(m.roleId);
         }
+        if (m.department?.departmentName) {
+          applicableTo.push(m.department.departmentName);
+        }
+        if (m.user?.userName) {
+          applicableTo.push(m.user.userName);
+        }
         if (m.employeeId) {
           employeeIds.push(m.employeeId);
         }

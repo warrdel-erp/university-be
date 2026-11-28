@@ -103,6 +103,18 @@ export async function findPolicies({ where = {}, limit = 10, offset = 0, order =
             attributes: ["roleId", "role", "code"],
             required: false,
           },
+          {
+            model: department,
+            as: "department",
+            attributes: ["departmentId", "departmentName", "departmentCode"],
+            required: false,
+          },
+          {
+            model: userModel,
+            as: "user",
+            attributes: ["userId", "userName", "email"],
+            required: false,
+          },
         ],
       },
     ],
