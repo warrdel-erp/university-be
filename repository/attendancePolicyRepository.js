@@ -7,8 +7,8 @@ import attendancePolicyPenaltySlabModel from "../models/attendancePolicyPenaltyS
 import attendancePolicyMappingModel from "../models/attendancePolicyMappingModel.js";
 import role from "../models/roleModel.js";
 import department from "../models/departmentModel.js";
-import employee from "../models/employeeModel.js";
 import userModel from "../models/userModel.js";
+import sequelize from "../database/sequelizeConfig.js";
 
 /**
  * Standard includes for fetching complete policy details
@@ -222,47 +222,37 @@ export async function getPolicyMetrics(filter = {}) {
   }
 
   if (roleIds.size > 0 || directEmployeeIds.size > 0) {
-    const directIds = Array.from(directEmployeeIds);
-    const rIds = Array.from(roleIds);
+    const directIds = Array.from(directEmployeeIds).map(Number).filter(Boolean);
+    const rIds = Array.from(roleIds).map(Number).filter(Boolean);
 
-    const whereEmp = {
+    const userWhere = {
       [Op.or]: [],
     };
-    if (rIds.length > 0) {
-      whereEmp[Op.or].push({ roleId: rIds });
-    }
-    if (directIds.length > 0) {
-      whereEmp[Op.or].push({ employeeId: directIds });
-      whereEmp[Op.or].push({ userId: directIds });
-    }
-    if (filter.instituteId) {
-      whereEmp.instituteId = filter.instituteId;
-    }
-    const empCount = await employee.count({
-      where: whereEmp,
-      distinct: true,
-      col: "employee_id",
-    });
 
-    const whereUser = {
-      [Op.or]: [],
-    };
-    if (rIds.length > 0) {
-      whereUser[Op.or].push({ defaultRoleId: rIds });
-    }
     if (directIds.length > 0) {
-      whereUser[Op.or].push({ userId: directIds });
+      userWhere[Op.or].push({ userId: directIds });
     }
+
+    if (rIds.length > 0) {
+      userWhere[Op.or].push({ defaultRoleId: rIds });
+      userWhere[Op.or].push({
+        userId: {
+          [Op.in]: sequelize.literal(
+            `(SELECT user_id FROM user_role_permission WHERE role_id IN (${rIds.join(",")}) AND deleted_at IS NULL)`
+          ),
+        },
+      });
+    }
+
     if (filter.instituteId) {
-      whereUser.defaultInstituteId = filter.instituteId;
+      userWhere.defaultInstituteId = filter.instituteId;
     }
-    const userCount = await userModel.count({
-      where: whereUser,
+
+    uniqueEmployees = await userModel.count({
+      where: userWhere,
       distinct: true,
       col: "user_id",
     });
-
-    uniqueEmployees = Math.max(empCount, userCount);
   }
 
   return {

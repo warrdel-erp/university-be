@@ -3,7 +3,6 @@ import { DataTypes } from "sequelize";
 import attendancePolicyModel from "./attendancePolicyModel.js";
 import role from "./roleModel.js";
 import department from "./departmentModel.js";
-import employee from "./employeeModel.js";
 import users from "./userModel.js";
 
 /**

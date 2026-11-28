@@ -1,7 +1,6 @@
 import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as policyRepo from "../repository/attendancePolicyRepository.js";
-import employee from "../models/employeeModel.js";
 import userModel from "../models/userModel.js";
 
 function httpError(message, statusCode = 400) {
@@ -347,36 +346,34 @@ export async function getPolicies(query, user) {
 
       let employeesCount = 0;
       if (roleIds.length > 0 || employeeIds.length > 0) {
-        const empWhere = {
-          instituteId,
-          [Op.or]: [],
-        };
-        if (roleIds.length > 0) empWhere[Op.or].push({ roleId: roleIds });
-        if (employeeIds.length > 0) {
-          empWhere[Op.or].push({ employeeId: employeeIds });
-          empWhere[Op.or].push({ userId: employeeIds });
-        }
-
-        const empCount = await employee.count({
-          where: empWhere,
-          distinct: true,
-          col: "employee_id",
-        });
+        const cleanRoleIds = roleIds.map(Number).filter(Boolean);
+        const cleanEmpIds = employeeIds.map(Number).filter(Boolean);
 
         const userWhere = {
           defaultInstituteId: instituteId,
           [Op.or]: [],
         };
-        if (roleIds.length > 0) userWhere[Op.or].push({ defaultRoleId: roleIds });
-        if (employeeIds.length > 0) userWhere[Op.or].push({ userId: employeeIds });
 
-        const userCount = await userModel.count({
+        if (cleanEmpIds.length > 0) {
+          userWhere[Op.or].push({ userId: cleanEmpIds });
+        }
+
+        if (cleanRoleIds.length > 0) {
+          userWhere[Op.or].push({ defaultRoleId: cleanRoleIds });
+          userWhere[Op.or].push({
+            userId: {
+              [Op.in]: sequelize.literal(
+                `(SELECT user_id FROM user_role_permission WHERE role_id IN (${cleanRoleIds.join(",")}) AND deleted_at IS NULL)`
+              ),
+            },
+          });
+        }
+
+        employeesCount = await userModel.count({
           where: userWhere,
           distinct: true,
           col: "user_id",
         });
-
-        employeesCount = Math.max(empCount, userCount);
       }
 
       return {
