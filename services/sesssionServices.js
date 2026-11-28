@@ -51,13 +51,45 @@ export async function updateSession(sessionId, sessionData, updatedBy) {
 
 export async function deleteSession(sessionId) {
   return withAuditEvent(AUDIT_EVENTS.SESSION_DELETE, async ({ transaction }) => {
-    const isSessionAlreadyMapped = await sessionCreationService.isSessionMappedwithcourse(sessionId);
-
-    if (isSessionAlreadyMapped.length > 0) {
-      throw new Error('Session already mapped with courses unable to delete');
+    const numericSessionId = Number(sessionId);
+    if (!numericSessionId || isNaN(numericSessionId)) {
+      throw new Error("Valid sessionId is required");
     }
 
-    return await sessionCreationService.deleteSession(sessionId, { transaction });
+    // 1. Check if any batches exist under this session
+    const [batches] = await sequelize.query(
+      "SELECT batch_id FROM batch WHERE session_id = ? LIMIT 1",
+      { replacements: [numericSessionId], transaction }
+    );
+    if (batches && batches.length > 0) {
+      throw new Error("Cannot delete session: Batches have already been created under this session.");
+    }
+
+    // 2. Check if any students are enrolled under this session
+    const [students] = await sequelize.query(
+      "SELECT student_id FROM students WHERE session_id = ? AND deleted_at IS NULL LIMIT 1",
+      { replacements: [numericSessionId], transaction }
+    );
+    if (students && students.length > 0) {
+      throw new Error("Cannot delete session: Students are enrolled under this session.");
+    }
+
+    // 3. Check if any examination sessions are linked to this session
+    const [exams] = await sequelize.query(
+      "SELECT examination_session_term_id FROM examination_session_term WHERE session_id = ? LIMIT 1",
+      { replacements: [numericSessionId], transaction }
+    );
+    if (exams && exams.length > 0) {
+      throw new Error("Cannot delete session: Examination sessions are linked to this session.");
+    }
+
+    // Clean up course mapping and delete session
+    await sequelize.query(
+      "DELETE FROM session_course_mapping WHERE session_id = ?",
+      { replacements: [numericSessionId], transaction }
+    );
+
+    return await sessionCreationService.deleteSession(numericSessionId, { transaction });
   });
 }
 

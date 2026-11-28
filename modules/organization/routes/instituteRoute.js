@@ -73,6 +73,10 @@ const updateInstituteSchema = z
     { message: "At least one field to update is required" }
   );
 
+const deleteAffiliatedUniversitySchema = z.object({
+  affiliatedUniversityId: z.coerce.number({ required_error: "Affiliated university Id is required" }),
+});
+
 const updateAffiliatedUniversitySchema = z
   .object({
     affiliatedUniversityId: z.number({ required_error: "Affiliated university Id is required" }),
@@ -95,6 +99,13 @@ router.patch(
   checkAccess(PERMISSIONS.MASTER_SECTION_EDIT.value, "institute"),
   validate({ body: updateAffiliatedUniversitySchema }),
   instituteController.updateAffiliatedUniversity
+);
+router.delete(
+  "/affiliatedUniversity/:affiliatedUniversityId",
+  userAuth,
+  checkAccess(PERMISSIONS.MASTER_SECTION_DELETE.value, "institute"),
+  validate({ params: deleteAffiliatedUniversitySchema }),
+  instituteController.deleteAffiliatedUniversity
 );
 router.get("/", userAuth, checkAccess(PERMISSIONS.MASTER_SECTION.value, null), validate({ query: listInstituteSchema }), instituteController.listInstitutes);
 

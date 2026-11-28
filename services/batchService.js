@@ -262,6 +262,7 @@ export async function getBatchFullDetails(batchId) {
     },
     course: {
       courseId: course.courseId,
+      courseLevelId: course.course_levelId,
       courseName: course.courseName,
       courseCode: course.courseCode,
       capacity: parseCapacity(course.capacity),

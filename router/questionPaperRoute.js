@@ -16,6 +16,8 @@ import {
   updateMyQuestionPaper,
   deleteMyQuestionPaper,
   generateMyQuestionPaper,
+  cloneQuestionPaper,
+  cloneMyQuestionPaper,
 } from "../controllers/questionPaperController.js";
 
 import userAuth from "../middleware/authUser.js";
@@ -149,6 +151,17 @@ const updateQuestionPaperSchema = z.object({
     .optional(),
 });
 
+const cloneQuestionPaperSchema = z.object({
+  name: z.string().optional(),
+  examScheduleId: z.number().optional(),
+  blueprintId: z.number().nullable().optional(),
+  questionPaper: z
+    .array(questionPaperSectionSchema)
+    .min(1, "Question paper must have at least one section")
+    .optional(),
+  remarks: z.string().nullable().optional(),
+});
+
 const generateQuestionPaperSchema = z.object({
   name: z.string({ required_error: "name is required" }),
   blueprintId: z.number({ required_error: "blueprintId is required" }),
@@ -199,6 +212,21 @@ router.post(
   userAuth,
   validate({ body: generateQuestionPaperSchema }),
   generateMyQuestionPaper,
+);
+
+router.post(
+  "/clone/:id",
+  userAuth,
+  checkAccess(PERMISSIONS.QUESTION_PAPER_BUILDER_ADD.value, null),
+  validate({ body: cloneQuestionPaperSchema }),
+  cloneQuestionPaper,
+);
+
+router.post(
+  "/my/clone/:id",
+  userAuth,
+  validate({ body: cloneQuestionPaperSchema }),
+  cloneMyQuestionPaper,
 );
 
 router.get(

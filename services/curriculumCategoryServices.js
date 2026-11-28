@@ -12,6 +12,12 @@ function httpError(message, statusCode = 400) {
 function normalizePayload(body = {}) {
   const payload = {};
 
+  if (body.universityId !== undefined) {
+    payload.universityId = body.universityId;
+  } else if (body.university_id !== undefined) {
+    payload.universityId = body.university_id;
+  }
+
   if (body.categoryName !== undefined) {
     payload.categoryName = body.categoryName;
   } else if (body.category_name !== undefined) {
@@ -53,6 +59,7 @@ export async function addCurriculumCategory(body) {
 
     const created = await repo.createCurriculumCategory(
       {
+        ...(normalized.universityId ? { universityId: normalized.universityId } : {}),
         categoryName: normalized.categoryName,
         code: normalized.code,
         isElectiveCoursework: normalized.isElectiveCoursework ?? true,
