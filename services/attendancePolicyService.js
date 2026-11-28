@@ -2,6 +2,7 @@ import { Op } from "sequelize";
 import sequelize from "../database/sequelizeConfig.js";
 import * as policyRepo from "../repository/attendancePolicyRepository.js";
 import employee from "../models/employeeModel.js";
+import userModel from "../models/userModel.js";
 
 function httpError(message, statusCode = 400) {
   const err = new Error(message);
@@ -351,13 +352,31 @@ export async function getPolicies(query, user) {
           [Op.or]: [],
         };
         if (roleIds.length > 0) empWhere[Op.or].push({ roleId: roleIds });
-        if (employeeIds.length > 0) empWhere[Op.or].push({ employeeId: employeeIds });
+        if (employeeIds.length > 0) {
+          empWhere[Op.or].push({ employeeId: employeeIds });
+          empWhere[Op.or].push({ userId: employeeIds });
+        }
 
-        employeesCount = await employee.count({
+        const empCount = await employee.count({
           where: empWhere,
           distinct: true,
           col: "employee_id",
         });
+
+        const userWhere = {
+          defaultInstituteId: instituteId,
+          [Op.or]: [],
+        };
+        if (roleIds.length > 0) userWhere[Op.or].push({ defaultRoleId: roleIds });
+        if (employeeIds.length > 0) userWhere[Op.or].push({ userId: employeeIds });
+
+        const userCount = await userModel.count({
+          where: userWhere,
+          distinct: true,
+          col: "user_id",
+        });
+
+        employeesCount = Math.max(empCount, userCount);
       }
 
       return {

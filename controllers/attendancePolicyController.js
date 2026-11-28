@@ -3,8 +3,11 @@ import { SuccessResponse, ErrorResponse } from "../utility/response.js";
 
 export async function saveStep1(req, res) {
   try {
-    const result = await service.saveStep1(req.body, req.user);
-    return SuccessResponse(res, 201, "Step 1 (General & Applicability) saved successfully", result);
+    const policyId = req.params.policyId ? Number(req.params.policyId) : req.body.policyId;
+    const payload = { ...req.body, ...(policyId ? { policyId } : {}) };
+    const result = await service.saveStep1(payload, req.user);
+    const statusCode = req.params.policyId ? 200 : 201;
+    return SuccessResponse(res, statusCode, "Step 1 (General & Applicability) saved successfully", result);
   } catch (error) {
     return ErrorResponse(res, error.statusCode || 500, error.message || "Internal Server Error");
   }

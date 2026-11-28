@@ -4719,7 +4719,11 @@ attendancePolicyMappingModel.belongsTo(departmentModel, {
   foreignKey: "department_id",
   as: "department",
 });
-attendancePolicyMappingModel.belongsTo(employeeModel, {
+attendancePolicyMappingModel.belongsTo(userModel, {
+  foreignKey: "employee_id",
+  as: "user",
+});
+attendancePolicyMappingModel.belongsTo(userModel, {
   foreignKey: "employee_id",
   as: "employee",
 });

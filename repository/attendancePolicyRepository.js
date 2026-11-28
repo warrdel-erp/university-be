@@ -48,18 +48,16 @@ export function getFullPolicyIncludes() {
           required: false,
         },
         {
-          model: employee,
-          as: "employee",
-          attributes: ["employeeId", "userId"],
+          model: userModel,
+          as: "user",
+          attributes: ["userId", "userName", "email"],
           required: false,
-          include: [
-            {
-              model: userModel,
-              as: "user",
-              attributes: ["userId", "userName", "email"],
-              required: false,
-            },
-          ],
+        },
+        {
+          model: userModel,
+          as: "employee",
+          attributes: ["userId", "userName", "email"],
+          required: false,
         },
       ],
     },
@@ -224,23 +222,47 @@ export async function getPolicyMetrics(filter = {}) {
   }
 
   if (roleIds.size > 0 || directEmployeeIds.size > 0) {
+    const directIds = Array.from(directEmployeeIds);
+    const rIds = Array.from(roleIds);
+
     const whereEmp = {
       [Op.or]: [],
     };
-    if (roleIds.size > 0) {
-      whereEmp[Op.or].push({ roleId: Array.from(roleIds) });
+    if (rIds.length > 0) {
+      whereEmp[Op.or].push({ roleId: rIds });
     }
-    if (directEmployeeIds.size > 0) {
-      whereEmp[Op.or].push({ employeeId: Array.from(directEmployeeIds) });
+    if (directIds.length > 0) {
+      whereEmp[Op.or].push({ employeeId: directIds });
+      whereEmp[Op.or].push({ userId: directIds });
     }
     if (filter.instituteId) {
       whereEmp.instituteId = filter.instituteId;
     }
-    uniqueEmployees = await employee.count({
+    const empCount = await employee.count({
       where: whereEmp,
       distinct: true,
       col: "employee_id",
     });
+
+    const whereUser = {
+      [Op.or]: [],
+    };
+    if (rIds.length > 0) {
+      whereUser[Op.or].push({ defaultRoleId: rIds });
+    }
+    if (directIds.length > 0) {
+      whereUser[Op.or].push({ userId: directIds });
+    }
+    if (filter.instituteId) {
+      whereUser.defaultInstituteId = filter.instituteId;
+    }
+    const userCount = await userModel.count({
+      where: whereUser,
+      distinct: true,
+      col: "user_id",
+    });
+
+    uniqueEmployees = Math.max(empCount, userCount);
   }
 
   return {

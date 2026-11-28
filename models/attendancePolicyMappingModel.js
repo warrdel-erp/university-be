@@ -50,8 +50,8 @@ const attendancePolicyMappingModel = sequelize.define(
       allowNull: true,
       field: "employee_id",
       references: {
-        model: employee,
-        key: "employee_id",
+        model: users,
+        key: "user_id",
       },
     },
     isActive: {
